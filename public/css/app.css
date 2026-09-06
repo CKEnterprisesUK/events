@@ -561,8 +561,14 @@ main.public-main.event-main { max-width: 1040px; padding-top: 0; }
 .checkout-note--secure::before { content: '🔒 '; }
 
 /* Terms modal */
-/* z-index sits above Leaflet map panes/controls (which reach ~1000) so the
-   modal and its backdrop cover the map instead of being drawn under it. */
+/* The Leaflet map creates its own stacking context; `isolation: isolate` plus a
+   low z-index confines its internal panes/controls (which use z-indexes up to
+   ~1000) so they can never paint above the fixed modal overlay. */
+#public-map { position: relative; z-index: 0; isolation: isolate; }
+.leaflet-container { z-index: 0; }
+
+/* z-index sits above the map's isolated stacking context so the modal and its
+   backdrop cover the map instead of being drawn under it. */
 .terms-modal { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1.25rem; }
 .terms-modal[hidden] { display: none; }
 .terms-modal__backdrop { position: absolute; inset: 0; background: rgba(8,11,26,0.55); }

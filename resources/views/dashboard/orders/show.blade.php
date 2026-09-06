@@ -43,6 +43,15 @@
 
     <a class="back-link panel__link" href="{{ route('dashboard.orders.index') }}">&larr; Back to orders</a>
 
+    @php
+        $canRefund = ! $terminal
+            && $order->status === \App\Models\Order::STATUS_PAID
+            && $order->refundableRemainingMinor() > 0
+            && auth()->user()->can('refund_order');
+        $canCancel = ! $terminal && auth()->user()->can('cancel_order');
+        $canManage = $canRefund || $canCancel;
+    @endphp
+
     <div class="page-head">
         <h1>{{ $order->order_reference }}</h1>
         <div class="page-head__actions">
@@ -56,6 +65,9 @@
                     </form>
                 @endif
             @endcan
+            @if ($canManage)
+                <button type="button" class="btn btn-danger" data-open-manage>Manage order</button>
+            @endif
         </div>
     </div>
 
