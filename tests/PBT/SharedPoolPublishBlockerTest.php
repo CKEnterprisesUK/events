@@ -77,12 +77,15 @@ class SharedPoolPublishBlockerTest extends PbtTestCase
                 // publishBlockers()) resolves against this Company's rows.
                 app(TenantContext::class)->setCompany($event->company);
 
+                // Free ticket types throughout: this property isolates the
+                // shared-pool capacity blocker, so the payments blocker (which
+                // only fires for paid tickets without Stripe) must never enter.
                 if ($hasSharedPool) {
-                    TicketType::factory()->forEvent($event)->sharedPool()->create();
+                    TicketType::factory()->forEvent($event)->sharedPool()->free()->create();
                 }
 
                 if ($hasCappedType) {
-                    TicketType::factory()->forEvent($event)->create();
+                    TicketType::factory()->forEvent($event)->free()->create();
                 }
 
                 // Re-read so publishBlockers() evaluates the ticketTypes()

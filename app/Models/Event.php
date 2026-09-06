@@ -196,6 +196,19 @@ class Event extends Model
                 'Set an overall event capacity: a shared-pool ticket type needs an overall ceiling to draw from.';
         }
 
+        // Payment readiness: if this Event sells any paid ticket type, the
+        // Company must be able to take card payments before it goes live —
+        // otherwise Customers would see paid tickets they cannot actually buy
+        // (checkout refuses payment when the account is not charges-enabled).
+        // Free-only Events (every type priced 0) never need Stripe. The Company
+        // is the single source of truth for payment readiness. (Requirements
+        // 11.1, 11.5, 12.1)
+        if ($this->ticketTypes()->where('price_minor', '>', 0)->exists()
+            && ! ($this->company?->canAcceptPayments() ?? false)) {
+            $blockers['payments'] =
+                'Connect Stripe and enable charges before publishing: this event sells paid tickets.';
+        }
+
         return $blockers;
     }
 

@@ -55,7 +55,7 @@ class EventReadinessTest extends TestCase
     // ---- Checklist item set ---------------------------------------------------
 
     /**
-     * Requirement 2.1 — the checklist exposes exactly the five items, in order.
+     * Requirement 2.1 — the checklist exposes exactly the seven items, in order.
      */
     public function test_checklist_item_keys_are_the_fixed_ordered_set(): void
     {
@@ -67,7 +67,7 @@ class EventReadinessTest extends TestCase
         $keys = array_map(fn ($item) => $item->key, $report->items());
 
         $this->assertSame(
-            ['name', 'starts_at', 'venue', 'ticket_types', 'shared_pool_capacity', 'capacity'],
+            ['name', 'starts_at', 'venue', 'ticket_types', 'shared_pool_capacity', 'payments', 'capacity'],
             $keys,
         );
     }
@@ -94,6 +94,7 @@ class EventReadinessTest extends TestCase
             'venue' => false,
             'ticket_types' => true,
             'shared_pool_capacity' => true,
+            'payments' => true,
             'capacity' => false,
         ], $blocking);
     }
@@ -107,7 +108,10 @@ class EventReadinessTest extends TestCase
      */
     public function test_fully_set_event_satisfies_every_item(): void
     {
-        $event = Event::factory()->create([
+        // A Stripe-ready Company so the payments item is satisfied even though
+        // the ticket type below is paid.
+        $company = \App\Models\Company::factory()->stripeReady()->create();
+        $event = Event::factory()->for($company)->create([
             'name' => 'Summer Gala',
             'venue' => 'Grand Hall',
             'starts_at' => now()->addWeek(),

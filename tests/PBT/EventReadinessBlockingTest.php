@@ -18,11 +18,11 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
  * test database.
  *
  * The rule under test: the checklist's blocking items are always exactly the
- * publish prerequisites ({starts_at, ticket_types, shared_pool_capacity}); the
- * venue and capacity items are never blocking; and each blocking item's
- * satisfied state agrees with Event::publishBlockers() — the single source of
- * truth the publish controller enforces — so presentation and enforcement never
- * drift. (Requirements 2.3, 2.4)
+ * publish prerequisites ({starts_at, ticket_types, shared_pool_capacity,
+ * payments}); the venue and capacity items are never blocking; and each
+ * blocking item's satisfied state agrees with Event::publishBlockers() — the
+ * single source of truth the publish controller enforces — so presentation and
+ * enforcement never drift. (Requirements 2.3, 2.4)
  */
 class EventReadinessBlockingTest extends PbtTestCase
 {
@@ -38,9 +38,9 @@ class EventReadinessBlockingTest extends PbtTestCase
     /**
      * Property 4: Blocking checklist items match the publish source of truth —
      * for any combination of (has start date, has ticket type), the set of
-     * blocking items is exactly {starts_at, ticket_types, shared_pool_capacity},
-     * the venue and capacity items are never blocking, and every blocking item
-     * agrees with publishBlockers().
+     * blocking items is exactly {starts_at, ticket_types, shared_pool_capacity,
+     * payments}, the venue and capacity items are never blocking, and every
+     * blocking item agrees with publishBlockers().
      *
      * **Validates: Requirements 2.3, 2.4**
      */
@@ -97,12 +97,12 @@ class EventReadinessBlockingTest extends PbtTestCase
                 sort($blockingKeys);
 
                 // Sorted to match the sort() applied to $blockingKeys above.
-                $expectedBlockingKeys = ['shared_pool_capacity', 'starts_at', 'ticket_types'];
+                $expectedBlockingKeys = ['payments', 'shared_pool_capacity', 'starts_at', 'ticket_types'];
 
                 $this->assertSame(
                     $expectedBlockingKeys,
                     $blockingKeys,
-                    'blocking checklist items must be exactly {starts_at, ticket_types, shared_pool_capacity}',
+                    'blocking checklist items must be exactly {starts_at, ticket_types, shared_pool_capacity, payments}',
                 );
 
                 // Venue and capacity items are advisory only — never blocking.

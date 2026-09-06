@@ -82,10 +82,12 @@ class CapacityNeverBlocksPublishTest extends PbtTestCase
                 // Company's rows.
                 app(TenantContext::class)->setCompany($event->company);
 
-                // Always attach at least one Ticket_Type with a known capacity
-                // so the ticket-type prerequisite is met and the comparison sum
-                // is deterministic.
-                TicketType::factory()->forEvent($event)->create([
+                // Always attach at least one FREE Ticket_Type with a known
+                // capacity so the ticket-type prerequisite is met and the
+                // comparison sum is deterministic. Free tickets keep the
+                // payments blocker out, so this property stays about capacity
+                // only.
+                TicketType::factory()->forEvent($event)->free()->create([
                     'capacity' => self::TYPE_CAPACITY,
                 ]);
 

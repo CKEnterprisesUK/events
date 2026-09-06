@@ -71,6 +71,12 @@ class EventReadiness
                 blocking: true,
             ),
             new ChecklistItem(
+                key: 'payments',
+                label: 'Stripe ready for paid tickets',
+                satisfied: ! isset($blockers['payments']),
+                blocking: true,
+            ),
+            new ChecklistItem(
                 key: 'capacity',
                 label: 'Capacity sanity',
                 satisfied: $this->capacity($event)->isSane(),

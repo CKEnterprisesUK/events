@@ -185,6 +185,19 @@ class Company extends Model
     }
 
     /**
+     * Whether the Company can actually take card payments: it has a connected
+     * Stripe account AND that account has charges enabled. This is the single
+     * source of truth for payment readiness, reused at checkout (to gate a paid
+     * purchase) and at publish time (to gate publishing an Event that sells paid
+     * tickets). (Requirements 11.1, 11.5, 12.1)
+     */
+    public function canAcceptPayments(): bool
+    {
+        return $this->stripe_account_id !== null
+            && (bool) $this->stripe_charges_enabled;
+    }
+
+    /**
      * Set and persist the Company's Fee_Handling_Mode. The Owner role gates the
      * call site (Requirement 13.3); this method enforces the value is one of
      * the supported modes (Requirement 13.1). Changing the mode affects only

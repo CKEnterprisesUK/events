@@ -1,24 +1,38 @@
 {{--
   Accessible tab strip for the manage-event page (Requirements 1.1, 1.2, 1.3, 1.8).
 
-  This partial renders ONLY the tab strip (the tablist of buttons). The panels
-  themselves are rendered as <section role="tabpanel"> elements in
-  show.blade.php. The tablist is `hidden` by default so no-JS users are not
-  shown dead controls (Requirement 1.3); the JS controller reveals it on init
-  and adds `hidden` to the inactive panels (which the server renders visible).
+  Renders ONLY the tab strip. The panels themselves are <section role="tabpanel">
+  elements in show.blade.php. The tablist is `hidden` by default so no-JS users
+  are not shown dead controls (Requirement 1.3); the JS controller reveals it on
+  init and adds `hidden` to the inactive panels (which the server renders visible).
+
+  Uses the shared .tabs > .tab-list > .tab-btn styling (same as branding/settings)
+  so the strip reads as a clean underline tab bar rather than boxed buttons.
 
   Expects:
-    $tabs — ordered associative array of key => label, e.g.
-      ['overview' => 'Overview', 'ticket-types' => 'Ticket types', ...]
+    $tabs      — ordered associative array of key => label.
+    $tabStatus — optional map of tab key => 'done'|'todo' for mandatory sections.
+                 Keys absent from the map render no status glyph (advisory tabs).
 --}}
+@php $tabStatus = $tabStatus ?? []; @endphp
 <div class="tabs" data-tabs>
-    <div class="tablist" role="tablist" aria-label="Manage event sections" hidden>
+    <div class="tab-list" role="tablist" aria-label="Manage event sections" hidden>
         @foreach ($tabs as $key => $label)
+            @php $status = $tabStatus[$key] ?? null; @endphp
             <button type="button" role="tab" id="tab-{{ $key }}"
-                    class="tab" data-tab="{{ $key }}"
+                    class="tab-btn" data-tab="{{ $key }}"
                     aria-controls="panel-{{ $key }}"
                     aria-selected="false"
-                    tabindex="-1">{{ $label }}</button>
+                    tabindex="-1">
+                @if ($status === 'done')
+                    <span class="tab-status tab-status--done" aria-hidden="true">&check;</span>
+                    <span class="sr-only">(complete)</span>
+                @elseif ($status === 'todo')
+                    <span class="tab-status tab-status--todo" aria-hidden="true">&times;</span>
+                    <span class="sr-only">(needs attention)</span>
+                @endif
+                {{ $label }}
+            </button>
         @endforeach
     </div>
 </div>
@@ -99,10 +113,9 @@
             });
         });
 
-        // Any element with [data-tab-link="KEY"] (e.g. the "setup checklist"
-        // pointers near the Publish control) activates that tab and moves focus
-        // to it, so those links behave like tab navigation rather than jumping
-        // to a hidden panel.
+        // Any element with [data-tab-link="KEY"] (e.g. the checklist's "fix"
+        // links) activates that tab and moves focus to it, so those links behave
+        // like tab navigation rather than jumping to a hidden panel.
         document.querySelectorAll('[data-tab-link]').forEach(function (link) {
             link.addEventListener('click', function (event) {
                 var key = link.getAttribute('data-tab-link');

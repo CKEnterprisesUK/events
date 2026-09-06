@@ -19,9 +19,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
  *
  * The rule under test: for any Event, EventReadiness::checklist() returns
  * exactly the items keyed {name, starts_at, venue, ticket_types,
- * shared_pool_capacity, capacity} in that fixed order, and each item's
+ * shared_pool_capacity, payments, capacity} in that fixed order, and each item's
  * `satisfied` flag equals the predicate evaluated independently against the
- * Event's current persisted state. (Requirements 2.1, 2.2)
+ * Event's current persisted state. This test uses free ticket types, so the
+ * payments item is always satisfied. (Requirements 2.1, 2.2)
  */
 class EventReadinessChecklistTest extends PbtTestCase
 {
@@ -37,8 +38,8 @@ class EventReadinessChecklistTest extends PbtTestCase
     /**
      * Property 3: Checklist reflects event state — for any generated Event, the
      * checklist contains exactly {name, starts_at, venue, ticket_types,
-     * shared_pool_capacity, capacity} in order and each `satisfied` flag matches
-     * the predicate on the Event.
+     * shared_pool_capacity, payments, capacity} in order and each `satisfied`
+     * flag matches the predicate on the Event.
      *
      * **Validates: Requirements 2.1, 2.2**
      */
@@ -87,7 +88,10 @@ class EventReadinessChecklistTest extends PbtTestCase
                 app(TenantContext::class)->setCompany($event->company);
 
                 if ($hasTicketType) {
-                    TicketType::factory()->forEvent($event)->create([
+                    // Free ticket types so the payments item is always
+                    // satisfied and this property stays focused on the other
+                    // checklist predicates.
+                    TicketType::factory()->forEvent($event)->free()->create([
                         'capacity' => $typeCapacity,
                     ]);
                 }
@@ -97,11 +101,11 @@ class EventReadinessChecklistTest extends PbtTestCase
 
                 $items = app(EventReadiness::class)->checklist($event)->items();
 
-                // The item keys must be exactly these six, in this order.
+                // The item keys must be exactly these seven, in this order.
                 $this->assertSame(
-                    ['name', 'starts_at', 'venue', 'ticket_types', 'shared_pool_capacity', 'capacity'],
+                    ['name', 'starts_at', 'venue', 'ticket_types', 'shared_pool_capacity', 'payments', 'capacity'],
                     array_map(fn ($item) => $item->key, $items),
-                    'checklist items must be exactly {name, starts_at, venue, ticket_types, shared_pool_capacity, capacity} in order',
+                    'checklist items must be exactly {name, starts_at, venue, ticket_types, shared_pool_capacity, payments, capacity} in order',
                 );
 
                 // Independently computed expected `satisfied` per key.
@@ -122,12 +126,21 @@ class EventReadinessChecklistTest extends PbtTestCase
                     ->exists();
                 $expectedSharedPoolSatisfied = ! ($eventCapacity === null && $hasSharedPoolType);
 
+                // Payments item: satisfied unless the Event sells a paid ticket
+                // type while the Company cannot take payments. This test only
+                // creates FREE ticket types, so no paid type exists and the item
+                // is always satisfied — computed from the inputs to stay an
+                // independent oracle. (Requirements 11.5, 12.1)
+                $hasPaidType = $event->ticketTypes()->where('price_minor', '>', 0)->exists();
+                $expectedPaymentsSatisfied = ! ($hasPaidType && ! $event->company->canAcceptPayments());
+
                 $expected = [
                     'name' => $event->name !== null && trim($event->name) !== '',
                     'starts_at' => $event->starts_at !== null,
                     'venue' => $event->venue !== null && trim($event->venue) !== '',
                     'ticket_types' => $event->ticketTypes()->exists(),
                     'shared_pool_capacity' => $expectedSharedPoolSatisfied,
+                    'payments' => $expectedPaymentsSatisfied,
                     'capacity' => $expectedCapacitySane,
                 ];
 

@@ -247,14 +247,23 @@ class GdprDataToolsTest extends TestCase
         $this->assertSame('shared@example.com', $foreign->customer_email);
     }
 
-    // ---- Validation ----------------------------------------------------------
+    // ---- Customer addressing -------------------------------------------------
 
-    public function test_export_requires_a_valid_email(): void
+    public function test_a_malformed_customer_token_is_not_found(): void
     {
         $owner = User::factory()->owner()->create();
 
+        // An empty-decoding token yields a 404 rather than acting on nothing.
         $this->actingAs($owner)
-            ->post('/dashboard/gdpr/export', ['customer_email' => 'not-an-email'])
-            ->assertSessionHasErrors('customer_email');
+            ->post('/dashboard/customers/'.CustomerController::tokenFor('').'/export')
+            ->assertNotFound();
+    }
+
+    public function test_customer_detail_404s_for_an_unknown_customer(): void
+    {
+        $owner = User::factory()->owner()->create();
+
+        $token = CustomerController::tokenFor('nobody@example.com');
+        $this->actingAs($owner)->get("/dashboard/customers/{$token}")->assertNotFound();
     }
 }

@@ -145,8 +145,9 @@ class EventManagementTest extends TestCase
             ->create();
 
         // Publish gating requires a start date (set by the factory default) and
-        // at least one ticket type, so give the event one before publishing.
-        TicketType::factory()->forEvent($event)->create();
+        // at least one ticket type; a FREE ticket type also keeps the payments
+        // gate satisfied without needing a connected Stripe account.
+        TicketType::factory()->forEvent($event)->free()->create();
 
         // Requirement 5.4 — publishing makes the event available.
         $this->actingAs($admin)->post("/dashboard/events/{$event->id}/publish")

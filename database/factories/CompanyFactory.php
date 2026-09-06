@@ -56,6 +56,19 @@ class CompanyFactory extends Factory
     }
 
     /**
+     * Indicate the Company has a connected Stripe account with charges enabled,
+     * so it can take card payments (and therefore publish Events selling paid
+     * tickets). Mirrors the {@see Company::canAcceptPayments()} predicate.
+     */
+    public function stripeReady(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'stripe_account_id' => 'acct_'.fake()->unique()->bothify('##########'),
+            'stripe_charges_enabled' => true,
+        ]);
+    }
+
+    /**
      * Indicate that the Company is suspended.
      */
     public function suspended(): static

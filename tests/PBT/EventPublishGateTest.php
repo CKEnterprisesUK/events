@@ -15,10 +15,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
  * iterations, per the design's Testing Strategy. Runs against the real MySQL
  * test database.
  *
- * The rule under test: an Event is publishable if and only if BOTH publish
- * prerequisites are met — a non-null `starts_at` AND at least one Ticket_Type —
- * and `publishBlockers()` reports exactly the unmet prerequisites, keyed
- * `starts_at` and/or `ticket_types`. (Requirements 1.1, 1.2)
+ * The rule under test: an Event is publishable if and only if ALL publish
+ * prerequisites are met — a non-null `starts_at`, at least one Ticket_Type, and
+ * (when any Ticket_Type is paid) a Stripe-ready Company — and
+ * `publishBlockers()` reports exactly the unmet prerequisites, keyed
+ * `starts_at`, `ticket_types` and/or `payments`. This test uses a free ticket
+ * type so the payments rule is never triggered; the paid-ticket gate is
+ * exercised in {@see PaidTicketPublishGateTest}. (Requirements 1.1, 1.2, 11.5)
  */
 class EventPublishGateTest extends PbtTestCase
 {
@@ -64,9 +67,11 @@ class EventPublishGateTest extends PbtTestCase
                 // than the unsatisfiable no-tenant predicate.
                 app(TenantContext::class)->setCompany($event->company);
 
-                // Conditionally add a Ticket_Type belonging to this Event.
+                // Conditionally add a FREE Ticket_Type belonging to this Event.
+                // Free tickets never trigger the payments blocker, keeping this
+                // property focused on the starts_at + ticket_types predicate.
                 if ($hasTicketType) {
-                    TicketType::factory()->forEvent($event)->create();
+                    TicketType::factory()->forEvent($event)->free()->create();
                 }
 
                 // Re-read from the database so publishBlockers() evaluates the
