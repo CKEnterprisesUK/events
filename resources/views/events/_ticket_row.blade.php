@@ -17,7 +17,7 @@
                 {{ $money($type['price_minor']) }}
             @endif
         </span>
-        <span class="ticket-type-availability">
+        <span class="ticket-type-availability" data-availability="{{ $type['availability_status'] }}">
             @if ($type['sold_out'])
                 Sold out
             @elseif ($type['sale_state'] === 'not_yet')
@@ -25,9 +25,17 @@
             @elseif ($type['sale_state'] === 'ended')
                 Sale ended
             @elseif ($type['sale_state'] === 'on_sale')
-                On sale &middot; {{ number_format($type['available']) }} remaining
+                @if ($type['availability_status'] === 'limited')
+                    On sale &middot; Limited availability
+                @else
+                    On sale
+                @endif
             @else
-                {{ number_format($type['available']) }} remaining
+                @if ($type['availability_status'] === 'limited')
+                    Limited availability
+                @else
+                    Available
+                @endif
             @endif
         </span>
     </div>

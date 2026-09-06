@@ -35,7 +35,7 @@ class StorefrontListing
      * The published Events to show on the Company's Storefront, newest first.
      * Served from cache when warm; otherwise built from the database and cached.
      *
-     * @return Collection<int, array{id:int, name:string, venue:?string, starts_at:?string, poster_path:?string}>
+     * @return Collection<int, array{id:int, name:string, venue:?string, starts_at:?string, poster_path:?string, sponsor_top_path:?string, sponsor_bottom_path:?string}>
      */
     public function forCompany(Company $company): Collection
     {
@@ -61,7 +61,7 @@ class StorefrontListing
      * Build the listing payload from the database: the Company's published
      * Events only, newest first, as plain arrays. (Requirements 5.4, 8.2)
      *
-     * @return list<array{id:int, name:string, venue:?string, starts_at:?string, poster_path:?string}>
+     * @return list<array{id:int, name:string, venue:?string, starts_at:?string, poster_path:?string, sponsor_top_path:?string, sponsor_bottom_path:?string}>
      */
     private function build(Company $company): array
     {
@@ -89,6 +89,10 @@ class StorefrontListing
                 // Event poster else the Company hero, so the listing thumbnail
                 // is populated even for Events that don't set their own.
                 'poster_path' => $this->firstFilled($event->poster_path, $companyPoster),
+                // Per-Event sponsor banners, surfaced in the storefront's
+                // combined "Sponsors" strip alongside the event listing.
+                'sponsor_top_path' => $event->sponsor_top_path,
+                'sponsor_bottom_path' => $event->sponsor_bottom_path,
             ])
             ->all();
     }

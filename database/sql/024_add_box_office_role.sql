@@ -56,10 +56,10 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 ALTER TABLE `users`
-  MODIFY `role` enum('owner','admin','box_office','accountant','scanner') DEFAULT NULL;
+  MODIFY COLUMN `role` enum('owner','admin','box_office','accountant','scanner') DEFAULT NULL;
 
 ALTER TABLE `invitations`
-  MODIFY `role` enum('admin','box_office','accountant','scanner') NOT NULL;
+  MODIFY COLUMN `role` enum('admin','box_office','accountant','scanner') NOT NULL;
 
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;

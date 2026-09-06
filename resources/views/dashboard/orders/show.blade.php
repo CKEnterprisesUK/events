@@ -32,6 +32,16 @@
     <div class="page-head">
         <h1>{{ $order->order_reference }}</h1>
         <div class="page-head__actions">
+            @can('orders')
+                @if ($canIssueTicket)
+                    <a class="btn btn-outline" href="{{ route('dashboard.orders.ticket-pdf', $order) }}">Download ticket</a>
+                    <form method="POST" action="{{ route('dashboard.orders.resend', $order) }}" class="inline-form"
+                          onsubmit="return confirm('Resend the ticket email to {{ $order->customer_email }}?');">
+                        @csrf
+                        <button type="submit" class="btn btn-outline">Resend to customer</button>
+                    </form>
+                @endif
+            @endcan
             @unless ($terminal)
                 @can('refund_order')
                     @if ($order->status === \App\Models\Order::STATUS_PAID)

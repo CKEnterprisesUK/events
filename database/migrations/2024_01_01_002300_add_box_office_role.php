@@ -19,12 +19,12 @@ return new class extends Migration
     public function up(): void
     {
         DB::statement(
-            "ALTER TABLE `users` MODIFY `role` "
+            "ALTER TABLE `users` MODIFY COLUMN `role` "
             ."enum('owner','admin','box_office','accountant','scanner') DEFAULT NULL"
         );
 
         DB::statement(
-            "ALTER TABLE `invitations` MODIFY `role` "
+            "ALTER TABLE `invitations` MODIFY COLUMN `role` "
             ."enum('admin','box_office','accountant','scanner') NOT NULL"
         );
     }
@@ -42,12 +42,12 @@ return new class extends Migration
         DB::table('invitations')->where('role', 'box_office')->update(['role' => 'scanner']);
 
         DB::statement(
-            "ALTER TABLE `users` MODIFY `role` "
+            "ALTER TABLE `users` MODIFY COLUMN `role` "
             ."enum('owner','admin','accountant','scanner') DEFAULT NULL"
         );
 
         DB::statement(
-            "ALTER TABLE `invitations` MODIFY `role` "
+            "ALTER TABLE `invitations` MODIFY COLUMN `role` "
             ."enum('admin','accountant','scanner') NOT NULL"
         );
     }

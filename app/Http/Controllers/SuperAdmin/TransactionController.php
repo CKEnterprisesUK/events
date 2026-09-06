@@ -5,6 +5,7 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Order;
+use App\Support\Money;
 use Illuminate\Contracts\View\View;
 
 /**
@@ -66,12 +67,15 @@ class TransactionController extends Controller
             'order_reference' => $order->order_reference,
             'status' => $order->status,
             'order_total_minor' => $order->order_total_minor,
+            'order_total_gbp' => Money::gbp((int) $order->order_total_minor),
             'application_fee_minor' => $order->application_fee_minor,
+            'application_fee_gbp' => Money::gbp((int) $order->application_fee_minor),
         ])->all();
 
         return view('admin.transactions.index', [
             'transactions' => $transactions,
             'totalApplicationFeesMinor' => $totalApplicationFeesMinor,
+            'totalApplicationFeesGbp' => Money::gbp($totalApplicationFeesMinor),
             'companyCount' => $companyNames->count(),
         ]);
     }

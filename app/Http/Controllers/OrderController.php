@@ -5,13 +5,17 @@ namespace App\Http\Controllers;
 use App\Exceptions\InsufficientCapacityException;
 use App\Models\Event;
 use App\Models\Order;
+use App\Jobs\SendTicketEmailJob;
 use App\Services\CompTicketService;
 use App\Services\OrderCancellationService;
+use App\Services\QrService;
 use App\Services\RoleAuthorization;
 use App\Services\TenantContext;
+use App\Services\TicketPdfService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -98,7 +102,54 @@ class OrderController extends Controller
         return view('dashboard.orders.show', [
             'order' => $order,
             'terminal' => $this->isTerminal($order),
+            'canIssueTicket' => $this->canIssueTicket($order),
         ]);
+    }
+
+    /**
+     * Stream the Order's e-ticket as a downloadable A4 PDF for the box office
+     * to print or hand out manually. Gated on `ACTION_MANAGE_ORDERS` and scoped
+     * to the acting Company by the tenant scope (foreign Orders 404). Only a
+     * confirmed (paid / free-confirmed) Order carries a valid QR, so an
+     * unconfirmed or terminal Order is refused rather than issuing a ticket that
+     * would not scan.
+     */
+    public function downloadTicket(Order $order, TicketPdfService $tickets): Response
+    {
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_ORDERS);
+
+        abort_unless($this->canIssueTicket($order), 403, 'This order has no issuable ticket.');
+
+        $order->loadMissing('event');
+
+        return $tickets->make($order)->download($tickets->filename($order));
+    }
+
+    /**
+     * Re-send the branded ticket email to the customer on the Order's recorded
+     * address. Reuses the same fulfilment path/QR as the original send — the QR
+     * payload is a pure function of the Order reference, so the resent ticket
+     * scans identically. Gated on `ACTION_MANAGE_ORDERS`; only a confirmed Order
+     * (which has a QR and a fulfilment) can be resent.
+     */
+    public function resend(Order $order, QrService $qr): RedirectResponse
+    {
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_ORDERS);
+
+        abort_unless($this->canIssueTicket($order), 403, 'This order has no ticket to resend.');
+
+        SendTicketEmailJob::dispatch($order->getKey(), $qr->payloadFor($order));
+
+        return back()->with('status', 'Ticket email queued to '.$order->customer_email.'.');
+    }
+
+    /**
+     * Whether the Order can have a ticket issued (downloaded/resent): it must be
+     * confirmed (paid or free-confirmed) so it carries a valid, scannable QR.
+     */
+    private function canIssueTicket(Order $order): bool
+    {
+        return $order->isConfirmed();
     }
 
     /**

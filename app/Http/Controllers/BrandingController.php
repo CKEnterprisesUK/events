@@ -51,6 +51,11 @@ class BrandingController extends Controller
      */
     private const POSTER_DIRECTORY = 'branding/posters';
 
+    /**
+     * Where uploaded per-Event sponsor banner images live on the `public` disk.
+     */
+    private const SPONSOR_DIRECTORY = 'branding/sponsors';
+
     public function __construct(
         private readonly BrandingResolver $resolver,
         private readonly BrandingImageStore $imageStore,
@@ -192,8 +197,10 @@ class BrandingController extends Controller
 
     /**
      * Persist Event-level branding overrides (logo, poster, primary colour) for
-     * one Event. Blank values clear the override so the Event falls back to the
-     * Company-level branding. (Requirement 7.5)
+     * one Event, plus the per-Event printed-ticket design: two optional sponsor
+     * banner images (top/bottom) and the custom entry instructions printed on
+     * the ticket. Blank override fields clear the override so the Event falls
+     * back to the Company-level branding. (Requirement 7.5)
      */
     public function updateEvent(Request $request, Event $event): RedirectResponse
     {
@@ -203,10 +210,20 @@ class BrandingController extends Controller
             'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp,svg', 'max:5120'],
             'poster' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:8192'],
             'primary_colour' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+
+            // Per-event printed-ticket design.
+            'ticket_instructions' => ['nullable', 'string', 'max:2000'],
+            'sponsor_top' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:8192'],
+            'sponsor_bottom' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:8192'],
+            // Explicit "remove this sponsor" checkboxes so a blank file input
+            // does not silently keep a banner the organiser wanted gone.
+            'remove_sponsor_top' => ['nullable', 'boolean'],
+            'remove_sponsor_bottom' => ['nullable', 'boolean'],
         ]);
 
         $attributes = [
             'primary_colour' => $data['primary_colour'] ?? null,
+            'ticket_instructions' => $data['ticket_instructions'] ?? null,
         ];
 
         if ($request->hasFile('logo')) {
@@ -217,11 +234,45 @@ class BrandingController extends Controller
             $attributes['poster_path'] = $this->imageStore->store($request->file('poster'), self::POSTER_DIRECTORY, $event->poster_path);
         }
 
+        $attributes['sponsor_top_path'] = $this->resolveSponsor(
+            $request,
+            'sponsor_top',
+            $request->boolean('remove_sponsor_top'),
+            $event->sponsor_top_path,
+        );
+
+        $attributes['sponsor_bottom_path'] = $this->resolveSponsor(
+            $request,
+            'sponsor_bottom',
+            $request->boolean('remove_sponsor_bottom'),
+            $event->sponsor_bottom_path,
+        );
+
         $event->update($attributes);
 
         return redirect()
             ->route('dashboard.branding.event.edit', $event)
             ->with('status', 'Event branding updated.');
+    }
+
+    /**
+     * Resolve the stored path for one sponsor banner slot on save: a newly
+     * uploaded file replaces (and deletes) the old one; an explicit "remove"
+     * clears and deletes it; otherwise the existing path is kept unchanged.
+     */
+    private function resolveSponsor(Request $request, string $field, bool $remove, ?string $currentPath): ?string
+    {
+        if ($request->hasFile($field)) {
+            return $this->imageStore->store($request->file($field), self::SPONSOR_DIRECTORY, $currentPath);
+        }
+
+        if ($remove) {
+            $this->imageStore->delete($currentPath);
+
+            return null;
+        }
+
+        return $currentPath;
     }
 
     // ---- Helpers -------------------------------------------------------------

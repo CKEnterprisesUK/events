@@ -207,6 +207,12 @@ Route::middleware(['auth', 'company.active', 'session.timeout', 'dashboard.tenan
         Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
         Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
         Route::post('/orders/{order}/refund', [OrderController::class, 'refund'])->name('orders.refund');
+        // Manual ticket handling on a confirmed Order (Admin/Box_Office via
+        // ACTION_MANAGE_ORDERS): download the A4 e-ticket PDF, or re-send the
+        // branded ticket email to the customer. Both reuse the same QR the
+        // original email/scanner use (a pure function of the order reference).
+        Route::get('/orders/{order}/ticket.pdf', [OrderController::class, 'downloadTicket'])->name('orders.ticket-pdf');
+        Route::post('/orders/{order}/resend', [OrderController::class, 'resend'])->name('orders.resend');
 
         // Complimentary ticket issuance (Admin-gated in the controller:
         // ACTION_ISSUE_COMP). Creates a confirmed zero-money Order for the

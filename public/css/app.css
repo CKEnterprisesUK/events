@@ -479,6 +479,10 @@ main.public-main.event-main { max-width: 1040px; padding-top: 0; }
 .event-organiser__logo { max-height: 40px; width: auto; }
 .event-organiser__name { font-weight: 600; color: var(--ink); }
 
+.event-sponsors { margin-top: 1.75rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+.event-sponsors h2 { margin-top: 0; }
+.event-sponsors__img { display: block; max-width: 100%; height: auto; margin: 0 0 1rem; border-radius: 8px; }
+
 /* ---- Checkout card ---- */
 .checkout-card {
     background: var(--surface); border: 1px solid var(--border); border-radius: 1rem;
@@ -830,3 +834,71 @@ fieldset.field > legend {
 /* Capacity advisory sits inside the Overall capacity panel, below the form. */
 .capacity-advisory { padding: 0 1.15rem 1.15rem; }
 .capacity-advisory .hint { margin-top: 0; }
+
+/* =============================================================================
+   Super-admin portal
+   Reusable presentation for the /admin surface: a page header, stat cards,
+   panels, data tables and pills. Mirrors the Company dashboard look so the two
+   surfaces feel like one product. All amounts on this surface are GBP.
+   ============================================================================= */
+
+/* Page header: title + supporting copy + optional actions on the right. */
+.admin-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.admin-head h1 { margin: 0 0 0.25rem; }
+.admin-head p { margin: 0; color: var(--muted); max-width: 60ch; }
+.admin-head__actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+
+/* Stat cards: the headline figures, matching the Company dashboard. */
+.admin-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem; margin-bottom: 1.75rem; }
+.admin-stat {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem;
+    padding: 1.1rem 1.25rem; border-top: 3px solid var(--brand);
+    display: flex; flex-direction: column; gap: 0.35rem;
+}
+.admin-stat__label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.admin-stat__value { font-size: 1.7rem; font-weight: 700; color: var(--ink); line-height: 1.1; }
+.admin-stat__sub { font-size: 0.8rem; color: var(--muted); }
+
+/* Panels: a titled card frame for grouped content (tables, forms, figures). */
+.admin-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem; overflow: hidden; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(17,24,39,0.04); }
+.admin-panel__head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.9rem 1.25rem; border-bottom: 1px solid var(--border); }
+.admin-panel__head h2 { margin: 0; font-size: 1.05rem; }
+.admin-panel__body { padding: 1.25rem; }
+.admin-panel__body > :first-child { margin-top: 0; }
+.admin-panel__body > :last-child { margin-bottom: 0; }
+.admin-panel > .admin-table { margin: 0; }
+
+/* Tables inside the admin surface. */
+.admin-table { width: 100%; border-collapse: collapse; }
+.admin-table th, .admin-table td { padding: 0.8rem 1.25rem; border-bottom: 1px solid var(--border); vertical-align: middle; text-align: left; }
+.admin-table thead th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); font-weight: 600; }
+.admin-table tbody tr:last-child td { border-bottom: none; }
+.admin-table tbody tr:hover { background: #fafafa; }
+.admin-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.admin-table .cell-strong { font-weight: 600; color: var(--ink); text-decoration: none; }
+.admin-table .cell-strong:hover { color: var(--brand); }
+.admin-table .cell-dim { display: block; font-size: 0.8rem; color: var(--muted); }
+
+/* Key/value list for a small block of facts (settings, a client's profile). */
+.admin-facts { width: 100%; border-collapse: collapse; }
+.admin-facts th, .admin-facts td { padding: 0.6rem 1.25rem; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.admin-facts th { font-weight: 500; color: var(--muted); width: 40%; }
+.admin-facts tr:last-child th, .admin-facts tr:last-child td { border-bottom: none; }
+.admin-facts td { color: var(--ink); }
+.admin-facts .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9rem; }
+
+/* Status pills for company/order state. */
+.admin-pill { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.72rem; font-weight: 600; line-height: 1; padding: 0.28rem 0.55rem; border-radius: 999px; text-transform: capitalize; background: #f3f4f6; color: var(--muted); }
+.admin-pill--active { background: #ecfdf5; color: #047857; }
+.admin-pill--suspended { background: #fef2f2; color: #b91c1c; }
+.admin-pill--pending { background: #fef3c7; color: #92400e; }
+.admin-pill--closed { background: #f3f4f6; color: #6b7280; }
+
+/* An empty-state block inside a panel. */
+.admin-empty { padding: 2rem 1.25rem; text-align: center; color: var(--muted); }
+
+/* Back link above a detail page title. */
+.admin-back { display: inline-block; font-size: 0.85rem; margin-bottom: 0.5rem; text-decoration: none; }
+
+/* A red error flash, mirroring .status but for failures. */
+.status--error { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }

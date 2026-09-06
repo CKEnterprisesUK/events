@@ -158,9 +158,11 @@ class StorefrontAndEventPageTest extends TestCase
 
     // ---- Event page ----------------------------------------------------------
 
-    public function test_published_event_page_renders_ticket_types_with_availability(): void
+    public function test_published_event_page_renders_ticket_types_without_exposing_counts(): void
     {
-        // Requirements 8.3, 6.10 — availability = capacity - sold - reserved.
+        // The storefront must not expose exact inventory counts to Customers.
+        // 100 - 30 - 20 = 50 remaining (50% of capacity) => healthy stock, so
+        // the page shows "Available" and never the raw remaining number.
         $company = Company::factory()->create();
         $event = Event::factory()->for($company)->published()->create(['name' => 'Concert']);
         TicketType::factory()->forEvent($event)->create([
@@ -168,6 +170,8 @@ class StorefrontAndEventPageTest extends TestCase
             'capacity' => 100,
             'sold_count' => 30,
             'reserved_count' => 20,
+            'sale_starts_at' => Carbon::now()->subDay(),
+            'sale_ends_at' => Carbon::now()->addDay(),
         ]);
 
         $response = $this->get("/{$company->slug}/{$event->id}");
@@ -175,8 +179,34 @@ class StorefrontAndEventPageTest extends TestCase
         $response->assertOk();
         $response->assertSee('Concert');
         $response->assertSee('General Admission');
-        // 100 - 30 - 20 = 50 remaining. (Requirement 6.10)
-        $response->assertSee('50 remaining');
+        // Healthy stock within the sale window renders "On sale" with no count.
+        $response->assertSee('On sale');
+        $response->assertDontSee('Limited availability');
+        // Never leak the exact remaining count to Customers.
+        $response->assertDontSee('50 remaining');
+        $response->assertDontSee('remaining');
+    }
+
+    public function test_event_page_shows_limited_availability_when_stock_is_low(): void
+    {
+        // 100 capacity, 90 sold => 10 remaining (10% <= 20% threshold), so the
+        // page shows "Limited availability" without revealing the count.
+        $company = Company::factory()->create();
+        $event = Event::factory()->for($company)->published()->create();
+        TicketType::factory()->forEvent($event)->create([
+            'name' => 'Nearly Gone',
+            'capacity' => 100,
+            'sold_count' => 90,
+            'reserved_count' => 0,
+            'sale_starts_at' => Carbon::now()->subDay(),
+            'sale_ends_at' => Carbon::now()->addDay(),
+        ]);
+
+        $response = $this->get("/{$company->slug}/{$event->id}");
+
+        $response->assertOk();
+        $response->assertSee('Limited availability');
+        $response->assertDontSee('10 remaining');
     }
 
     public function test_event_page_shows_sold_out_when_no_availability(): void

@@ -91,6 +91,24 @@
                     </section>
                 @endif
 
+                {{-- Event sponsors: the same landscape banners printed on the
+                     e-ticket, surfaced publicly on the event page. --}}
+                @if ($event->sponsor_top_path || $event->sponsor_bottom_path)
+                    <section class="event-sponsors">
+                        <h2>Our sponsors</h2>
+                        @if ($event->sponsor_top_path)
+                            <img class="event-sponsors__img"
+                                 src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($event->sponsor_top_path) }}"
+                                 alt="Event sponsor">
+                        @endif
+                        @if ($event->sponsor_bottom_path)
+                            <img class="event-sponsors__img"
+                                 src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($event->sponsor_bottom_path) }}"
+                                 alt="Event sponsor">
+                        @endif
+                    </section>
+                @endif
+
                 {{-- Show the company logo in the body when it differs from the
                      event's own logo, so the organiser is always credited. --}}
                 @if ($branding->hasEventLogo() && $branding->hasCompanyLogo() && $branding->eventLogoPath !== $branding->companyLogoPath)

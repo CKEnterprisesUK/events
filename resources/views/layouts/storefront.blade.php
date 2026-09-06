@@ -97,6 +97,16 @@
             padding: 1.35rem 1.5rem; margin: 0; color: var(--body);
         }
 
+        /* Sponsor banners */
+        .store-sponsors__grid {
+            display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;
+        }
+        .store-sponsors__img {
+            max-width: 100%; max-height: 90px; width: auto; height: auto;
+            background: var(--surface); border: 1px solid var(--line);
+            border-radius: 12px; padding: .6rem 1rem;
+        }
+
         /* Social / website + legal links */
         .store-links { display: flex; flex-direction: column; gap: .9rem; }
         .store-links__list, .store-links__legal {

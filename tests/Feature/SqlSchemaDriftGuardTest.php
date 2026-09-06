@@ -203,7 +203,16 @@ class SqlSchemaDriftGuardTest extends TestCase
                     // CREATE TABLE body.
                     $col = preg_replace('/\s+(AFTER\s+`?\w+`?|FIRST)\s*$/is', '', $m[1]);
                     $tables[$table][] = trim($col);
-                } elseif (preg_match('/^MODIFY\s+COLUMN\s+`?(?<col>\w+)`?\s+(?<def>.*)$/is', $clause, $m)) {
+                } elseif (preg_match('/^DROP\s+COLUMN\s+(?:IF\s+EXISTS\s+)?`?(?<col>\w+)`?\s*$/is', $clause, $m)) {
+                    // DROP COLUMN removes a previously-added/created column from
+                    // the reconstructed schema so a dropped column no longer
+                    // registers as drift against the migrated table.
+                    $name = $m['col'];
+                    $tables[$table] = array_values(array_filter(
+                        $tables[$table],
+                        fn (string $existing): bool => preg_match('/^`?'.preg_quote($name, '/').'`?\s/i', trim($existing)) !== 1,
+                    ));
+                } elseif (preg_match('/^MODIFY\s+(?:COLUMN\s+)?`?(?<col>\w+)`?\s+(?<def>.*)$/is', $clause, $m)) {
                     // MODIFY COLUMN redefines an existing column in place (e.g.
                     // widening an enum). Replace the column's prior definition
                     // so the reconstructed schema reflects the new type rather
@@ -215,6 +224,15 @@ class SqlSchemaDriftGuardTest extends TestCase
                         fn (string $existing): bool => preg_match('/^`?'.preg_quote($name, '/').'`?\s/i', trim($existing)) !== 1,
                     ));
                     $tables[$table][] = trim('`'.$name.'` '.$def);
+                } elseif (preg_match('/^DROP\s+COLUMN\s+`?(?<col>\w+)`?/is', $clause, $m)) {
+                    // DROP COLUMN removes an existing column: filter out the
+                    // column's prior definition so the reconstructed schema no
+                    // longer carries a column the migration has since dropped.
+                    $name = $m['col'];
+                    $tables[$table] = array_values(array_filter(
+                        $tables[$table],
+                        fn (string $existing): bool => preg_match('/^`?'.preg_quote($name, '/').'`?\s/i', trim($existing)) !== 1,
+                    ));
                 } elseif (preg_match('/^ADD\s+(CONSTRAINT\s+.*)$/is', $clause, $m)) {
                     $tables[$table][] = trim($m[1]);
                 } elseif (preg_match('/^ADD\s+(KEY|UNIQUE\s+KEY|INDEX|PRIMARY\s+KEY|FOREIGN\s+KEY)\s+(.*)$/is', $clause, $m)) {

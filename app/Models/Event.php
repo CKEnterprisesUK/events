@@ -40,6 +40,9 @@ use Illuminate\Support\Facades\DB;
  * @property string|null $primary_colour
  * @property string|null $logo_path
  * @property string|null $poster_path
+ * @property string|null $ticket_instructions
+ * @property string|null $sponsor_top_path
+ * @property string|null $sponsor_bottom_path
  */
 class Event extends Model
 {
@@ -71,6 +74,9 @@ class Event extends Model
         'primary_colour',
         'logo_path',
         'poster_path',
+        'ticket_instructions',
+        'sponsor_top_path',
+        'sponsor_bottom_path',
     ];
 
     /**

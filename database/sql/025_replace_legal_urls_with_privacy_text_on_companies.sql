@@ -54,9 +54,10 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 ALTER TABLE `companies`
-  ADD COLUMN `privacy_text` text DEFAULT NULL AFTER `terms_text`,
-  DROP COLUMN `terms_url`,
-  DROP COLUMN `privacy_url`;
+  ADD COLUMN `privacy_text` text DEFAULT NULL AFTER `terms_text`;
+
+ALTER TABLE `companies` DROP COLUMN IF EXISTS `terms_url`;
+ALTER TABLE `companies` DROP COLUMN IF EXISTS `privacy_url`;
 
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
