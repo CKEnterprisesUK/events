@@ -104,6 +104,31 @@ class SessionTimeoutTest extends TestCase
         $this->assertAuthenticatedAs($user->fresh());
     }
 
+    public function test_login_resets_a_stale_idle_window_and_does_not_bounce(): void
+    {
+        // Regression: a returning user whose stored last_activity_at is long
+        // past the idle threshold must be able to sign in and reach an
+        // authenticated page — the login must reset the idle window rather than
+        // leave the stale timestamp that SessionTimeout would immediately reject
+        // on the first post-login request. (Requirement 3.11)
+        $user = User::factory()->admin()->create([
+            'email' => 'returning@example.com',
+            'password' => bcrypt('secret-password'),
+            'last_activity_at' => Carbon::now()->subDays(3),
+        ]);
+
+        $this->post('/login', [
+            'email' => 'returning@example.com',
+            'password' => 'secret-password',
+        ])->assertRedirect('/dashboard');
+
+        // The idle window was reset at sign-in, so the dashboard is reachable
+        // and the session is NOT torn down by SessionTimeout.
+        $this->get('/dashboard')->assertOk();
+        $this->assertAuthenticatedAs($user->fresh());
+        $this->assertNotNull($user->fresh()->last_activity_at);
+    }
+
     public function test_user_without_recorded_activity_is_seeded_and_allowed(): void
     {
         // A user with no last_activity_at is treated as active and stamped.

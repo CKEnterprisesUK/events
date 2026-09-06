@@ -88,6 +88,14 @@ class LoginController extends Controller
 
         $request->session()->regenerate();
 
+        // Reset the idle-timeout window at sign-in. Without this, a returning
+        // user whose stored `last_activity_at` is older than the idle threshold
+        // authenticates successfully but is then immediately bounced by
+        // SessionTimeout on the first post-login request ("session expired").
+        // Stamping "now" here starts the idle window fresh from the sign-in.
+        // (Requirement 3.11)
+        Auth::user()->forceFill(['last_activity_at' => now()])->save();
+
         // Record the successful sign-in. The actor/Company are resolved from the
         // now-authenticated user by the logger; a Super_Admin has a null Company
         // so it lands only on the platform trail.

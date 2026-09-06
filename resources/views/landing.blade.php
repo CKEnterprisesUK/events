@@ -328,7 +328,7 @@
             position: relative;
             z-index: 1;
             display: grid;
-            grid-template-columns: minmax(0, 1.05fr) minmax(320px, .8fr);
+            grid-template-columns: minmax(0, 1.2fr) minmax(300px, .62fr);
             gap: 2.4rem;
             align-items: center;
         }
@@ -372,8 +372,7 @@
         }
 
         .hero-side {
-            display: grid;
-            gap: 1rem;
+            display: block;
         }
 
         .hero-photo,
@@ -1123,21 +1122,6 @@
                 </div>
 
                 <div class="hero-side">
-                    <div class="hero-photo">
-                        <img
-                            src="https://bonfire.greenmount.org.uk/wp-content/uploads/2021/08/342FA8F9-CE51-464F-96F1-68E124011B81-1024x607-1.jpeg"
-                            alt="Community event crowd at Greenmount Bonfire"
-                            loading="lazy"
-                        >
-                        <div class="hero-photo-copy">
-                            <strong>Made for real community events</strong>
-                            <p>
-                                Built for fundraisers, fireworks nights, school events and community ticketing
-                                where every pound matters.
-                            </p>
-                        </div>
-                    </div>
-
                     <aside class="hero-price" aria-label="Example platform cost">
                         <div class="small">Simple platform pricing</div>
 
@@ -1153,11 +1137,11 @@
                         <dl>
                             <div>
                                 <dt>Example ticket sales</dt>
-                                <dd>£10,000</dd>
+                                <dd>£1,000</dd>
                             </div>
                             <div>
                                 <dt>Platform fee</dt>
-                                <dd>£{{ number_format(10000 * ($feePercent / 100), 2) }}</dd>
+                                <dd>£{{ number_format(1000 * ($feePercent / 100), 2) }}</dd>
                             </div>
                             <div>
                                 <dt>Funds</dt>
@@ -1319,7 +1303,7 @@
                                     id="calc-price"
                                     min="0"
                                     step="0.50"
-                                    value="25.00"
+                                    value="10.00"
                                     inputmode="decimal"
                                 >
                             </div>
@@ -1358,22 +1342,22 @@
                     <div class="calc-result" aria-live="polite">
                         <div class="calc-row">
                             <span id="result-mode-label">Ticket price</span>
-                            <span>£<span id="result-buyer-price">25.00</span></span>
+                            <span>£<span id="result-buyer-price">10.00</span></span>
                         </div>
 
                         <div class="calc-row">
                             <span>Platform fee per ticket</span>
-                            <span>£<span id="result-fee-each">0.00</span></span>
+                            <span>£<span id="result-fee-each">{{ number_format(10 * ($feePercent / 100), 2) }}</span></span>
                         </div>
 
                         <div class="calc-row">
                             <span>Total platform fee</span>
-                            <span>£<span id="result-fee-total">0.00</span></span>
+                            <span>£<span id="result-fee-total">{{ number_format((round(10 * ($feePercent / 100), 2)) * 100, 2) }}</span></span>
                         </div>
 
                         <div class="calc-row total">
                             <span id="result-payout-label">You receive before Stripe fees</span>
-                            <span>£<span id="result-payout">0.00</span></span>
+                            <span>£<span id="result-payout">{{ number_format(1000 - ((round(10 * ($feePercent / 100), 2)) * 100), 2) }}</span></span>
                         </div>
 
                         <p class="calc-hint">
