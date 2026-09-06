@@ -1,12 +1,11 @@
+# ── Local tooling / editors (never needed on prod) ───────────────────────────
 /.phpunit.cache
 /bootstrap/ssr
 /node_modules
-/public/build
 /public/hot
-/public/storage
+/public/build
 /storage/*.key
 /storage/pail
-/vendor
 .env
 .env.backup
 .env.production
@@ -22,3 +21,24 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+# ── Shared cPanel deploy (NO SSH) ────────────────────────────────────────────
+# Production is deployed by pulling this repo in cPanel with no terminal, so we
+# CANNOT run `composer install` there. The framework itself must be committed:
+#
+#   /vendor  committed  — build locally with:
+#                           composer install --no-dev --optimize-autoloader
+#                         on the SAME PHP major.minor cPanel runs (8.3+),
+#                         then commit it. The usual `/vendor` ignore is
+#                         intentionally REMOVED. Do not re-add it unless the
+#                         host gains a working Composer/terminal tool.
+#
+# Front-end note: this app renders server-side Blade with inline CSS and no
+# @vite directive, so there are NO compiled assets and no `npm run build` step.
+# /public/build stays ignored above (nothing is built into it).
+#
+# Still ignored:
+#   .env             secrets — created by hand in cPanel File Manager, never committed
+#   /public/storage  the storage symlink — recreated on the host (a committed
+#                    symlink breaks across machines); see DEPLOYMENT.md
+/public/storage

@@ -3,6 +3,10 @@
 namespace App\Services;
 
 use App\Models\Order;
+use Endroid\QrCode\Encoding\Encoding;
+use Endroid\QrCode\ErrorCorrectionLevel\ErrorCorrectionLevelMedium;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\PngWriter;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -73,6 +77,40 @@ class QrService
     public function payload(string $orderReference): string
     {
         return $orderReference.self::SEPARATOR.$this->token($orderReference);
+    }
+
+    /**
+     * Render the scannable payload for an Order as a PNG QR image and return the
+     * raw image bytes. This is the single QR_Code carried on the ticket email;
+     * it encodes the exact string {@see payloadFor()} produces, so scanning the
+     * image yields the same `reference.token` the scanner decodes and verifies.
+     * (Requirements 14.1, 14.2)
+     */
+    public function pngFor(Order $order, int $size = 300): string
+    {
+        return $this->png($this->payloadFor($order), $size);
+    }
+
+    /**
+     * Render an arbitrary scannable payload as a PNG QR image, returning the raw
+     * bytes. Uses medium error correction so the code stays readable if the
+     * printed/screen render is slightly degraded. Requires the GD extension.
+     */
+    public function png(string $payload, int $size = 300): string
+    {
+        if ($payload === '') {
+            throw new InvalidArgumentException('QR payload must not be empty.');
+        }
+
+        $qrCode = new QrCode(
+            data: $payload,
+            encoding: new Encoding('UTF-8'),
+            errorCorrectionLevel: new ErrorCorrectionLevelMedium(),
+            size: $size,
+            margin: 10,
+        );
+
+        return (new PngWriter())->write($qrCode)->getString();
     }
 
     /**

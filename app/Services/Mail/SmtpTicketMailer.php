@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\Ticket;
 use App\Models\TicketType;
 use App\Services\Branding\BrandingResolver;
+use App\Services\QrService;
 use Illuminate\Contracts\Mail\Mailer;
 
 /**
@@ -22,6 +23,7 @@ class SmtpTicketMailer implements TicketMailer
     public function __construct(
         private readonly Mailer $mailer,
         private readonly BrandingResolver $branding,
+        private readonly QrService $qr,
     ) {}
 
     /**
@@ -37,6 +39,7 @@ class SmtpTicketMailer implements TicketMailer
         $mailable = new TicketMail(
             order: $order,
             qrPayload: $qrPayload,
+            qrPng: $this->qr->png($qrPayload),
             branding: $this->branding->forEvent($event),
             eventName: $event->name,
             lineItems: $this->lineItems($order),

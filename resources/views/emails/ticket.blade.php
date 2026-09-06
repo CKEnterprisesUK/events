@@ -1,9 +1,9 @@
 {{--
     Branded ticket email for a confirmed Order. Shows the effective
     Company/Event branding (logo, primary colour), the customisable ticket
-    information fields, the Order breakdown, and the scannable QR payload
-    (HMAC(secret, Order_Reference)) the attendee presents at entry.
-    (Requirements 14.4, 14.6)
+    information fields, the Order breakdown, and the single scannable QR_Code —
+    a rendered PNG of the payload {Order_Reference}.HMAC(secret, Order_Reference)
+    — that the attendee presents at entry. (Requirements 14.1, 14.4, 14.6)
 --}}
 @php
     $primary = $branding->hasPrimaryColour() ? $branding->primaryColour : '#111827';
@@ -65,13 +65,21 @@
                 @endif
             </div>
 
-            {{-- The scannable QR payload: HMAC(secret, Order_Reference). The
-                 scanner decodes this value and recomputes the HMAC to validate.
-                 (Requirements 14.1, 14.2) --}}
+            {{-- The single scannable QR_Code for the Order, rendered as an inline
+                 PNG (embedded via CID) of the payload
+                 `{Order_Reference}.HMAC(secret, Order_Reference)`. The scanner
+                 decodes the image and recomputes the HMAC to validate. The raw
+                 payload is kept below as machine-readable text so clients that
+                 block images can still recover the code. (Requirements 14.1,
+                 14.2) --}}
             <div style="padding:16px 24px 24px;text-align:center;">
                 <div style="display:inline-block;padding:16px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;">
                     <div style="font-size:11px;color:#6b7280;margin-bottom:8px;">Order {{ $order->order_reference }}</div>
-                    <div data-qr-payload="{{ $qrPayload }}" style="font-family:monospace;font-size:12px;word-break:break-all;color:#111827;">
+                    <img src="{{ $message->embedData($qrPng, 'qr-'.$order->order_reference.'.png', 'image/png') }}"
+                         alt="QR code for order {{ $order->order_reference }}"
+                         width="220" height="220"
+                         style="display:block;margin:0 auto;width:220px;height:220px;">
+                    <div data-qr-payload="{{ $qrPayload }}" style="font-family:monospace;font-size:10px;word-break:break-all;color:#9ca3af;margin-top:8px;">
                         {{ $qrPayload }}
                     </div>
                 </div>

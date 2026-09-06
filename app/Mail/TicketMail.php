@@ -20,9 +20,11 @@ use Illuminate\Queue\SerializesModels;
  * The email shows the effective Company/Event branding (logo, primary colour)
  * and the customisable ticket information fields, resolved via
  * {@see BrandingResolver} so an Event-level override wins over the Company
- * default. The QR payload — the scannable `HMAC(secret, Order_Reference)` value
- * — is embedded so the attendee can present it at entry. (Requirements 14.2,
- * 14.6)
+ * default. The single QR_Code — a rendered PNG image of the scannable
+ * `{Order_Reference}.HMAC(secret, Order_Reference)` payload — is embedded inline
+ * (as a CID attachment) so the attendee can present it at entry; the raw
+ * payload is also carried as machine-readable text for clients that block
+ * images. (Requirements 14.1, 14.2, 14.6)
  */
 class TicketMail extends Mailable
 {
@@ -36,6 +38,7 @@ class TicketMail extends Mailable
     public function __construct(
         public readonly Order $order,
         public readonly string $qrPayload,
+        public readonly string $qrPng,
         public readonly EffectiveBranding $branding,
         public readonly string $eventName,
         public readonly array $lineItems,
@@ -56,6 +59,7 @@ class TicketMail extends Mailable
             with: [
                 'order' => $this->order,
                 'qrPayload' => $this->qrPayload,
+                'qrPng' => $this->qrPng,
                 'branding' => $this->branding,
                 'eventName' => $this->eventName,
                 'lineItems' => $this->lineItems,
