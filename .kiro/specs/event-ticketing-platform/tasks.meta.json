@@ -189,6 +189,16 @@
         "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
         "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
         "timestamp": 1788637130800
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788694020451
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788694025505
       }
     ],
     "8.1 Implement CapacityReservationService with FOR UPDATE and 900s window": [
@@ -274,6 +284,11 @@
         "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
         "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
         "timestamp": 1788637130949
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788694042262
       }
     ],
     "11.1 Implement BrandingController (logo, colour, T&Cs, custom fields, event overrides)": [
@@ -332,6 +347,11 @@
         "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
         "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
         "timestamp": 1788637131068
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788694045928
       }
     ],
     "14.1 Implement StripePaymentService interface + fake and StripeConnectController onboarding": [
@@ -390,6 +410,11 @@
         "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
         "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
         "timestamp": 1788637131185
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788694049594
       }
     ],
     "18.1 Implement QrService, MailService abstraction, OrderFulfilmentService, and SendTicketEmailJob": [
@@ -465,6 +490,11 @@
         "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
         "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
         "timestamp": 1788637131341
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788694053305
       }
     ],
     "23.1 Implement super-admin guard and SuperAdmin controllers": [
@@ -472,6 +502,16 @@
         "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
         "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
         "timestamp": 1788637131367
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788686696837
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788687701900
       }
     ],
     "24.1 Implement ReportController with Accountant read-only scope": [
@@ -484,6 +524,11 @@
         "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
         "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
         "timestamp": 1788685931484
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788686690785
       }
     ],
     "25.1 Implement GdprController + GdprService and privacy policy page": [
@@ -491,6 +536,16 @@
         "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
         "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
         "timestamp": 1788637131424
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788686702988
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788687845286
       }
     ],
     "26.1 Configure cron scheduler, queue draining, storage symlink, webhook exemptions, and HMAC secret stability": [
@@ -498,6 +553,16 @@
         "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
         "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
         "timestamp": 1788637131450
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788687855094
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788693632533
       }
     ],
     "27. Final checkpoint - Ensure all tests pass": [
@@ -505,6 +570,11 @@
         "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
         "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
         "timestamp": 1788637131485
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788694114437
       }
     ],
     "1.3 Feature test for landing page rendering": [
@@ -1101,6 +1171,11 @@
         "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
         "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
         "timestamp": 1788685927965
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788686685979
       }
     ],
     "19.3 Smoke test for scanner camera/permission behaviour": [
@@ -1113,6 +1188,11 @@
         "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
         "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
         "timestamp": 1788685930297
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788686687279
       }
     ],
     "20.2 Write property test for cancel/refund voids tickets and blocks scan": [
@@ -1125,6 +1205,11 @@
         "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
         "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
         "timestamp": 1788685929350
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788686688675
       }
     ],
     "20.3 Write feature tests for refund/dispute webhook transitions": [
@@ -1137,6 +1222,11 @@
         "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
         "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
         "timestamp": 1788685927006
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788686689616
       }
     ],
     "23.2 Write property test for total fees earned aggregation": [
@@ -1144,6 +1234,16 @@
         "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
         "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
         "timestamp": 1788637204457
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788687851388
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788693631211
       }
     ],
     "25.2 Write property test for GDPR anonymisation retains transactional records": [
@@ -1151,6 +1251,16 @@
         "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
         "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
         "timestamp": 1788637204487
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788687854162
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788693628889
       }
     ],
     "25.3 Write feature test for privacy policy page rendering": [
@@ -1158,6 +1268,16 @@
         "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
         "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
         "timestamp": 1788637204516
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788687852769
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788693630300
       }
     ],
     "26.2 Smoke test for cron command draining the DB queue": [
@@ -1165,6 +1285,16 @@
         "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
         "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
         "timestamp": 1788637204553
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788693642553
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788694009172
       }
     ],
     "26.3 Smoke test that generated SQL matches the migrations (drift guard)": [
@@ -1172,6 +1302,16 @@
         "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
         "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
         "timestamp": 1788637204582
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788693643452
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788694010126
       }
     ],
     "1. Laravel project foundation and app scaffold": [
@@ -1277,6 +1417,48 @@
         "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
         "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
         "timestamp": 1788685918790
+      }
+    ],
+    "19. Web scanner and check-in": [
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788686687329
+      }
+    ],
+    "20. Refunds, cancellations, and refund/dispute webhooks": [
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788686689652
+      }
+    ],
+    "24. Accountant reporting and payouts (read-only)": [
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788686690821
+      }
+    ],
+    "25. GDPR export/anonymise, privacy policy, and consent surfacing": [
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788693630338
+      }
+    ],
+    "23. Super-admin dashboard": [
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788693631244
+      }
+    ],
+    "26. Hosting / deployment wiring (shared cPanel)": [
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788694010168
       }
     ]
   }

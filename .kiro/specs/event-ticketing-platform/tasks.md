@@ -138,7 +138,7 @@ Feature tests (Laravel HTTP + database) and a couple of smoke tests complement t
     - **Validates: Requirements 5.5, 6.4, 6.5**
     - `// Feature: event-ticketing-platform, Property 8: ...` — Eris, min 100 iterations
 
-- [~] 7. Checkpoint - Ensure all tests pass
+- [x] 7. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 8. Capacity / reservation service
@@ -196,7 +196,7 @@ Feature tests (Laravel HTTP + database) and a couple of smoke tests complement t
     - **Validates: Requirements 13.8**
     - `// Feature: event-ticketing-platform, Property 19: ...` — Eris, min 100 iterations
 
-- [~] 10. Checkpoint - Ensure all tests pass
+- [x] 10. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 11. Branding and ticket customisation
@@ -246,7 +246,7 @@ Feature tests (Laravel HTTP + database) and a couple of smoke tests complement t
     - Assert route rendering for storefront listing (8.2) and event page (8.3), and unpublished events not served
     - _Requirements: 8.2, 8.3, 5.5_
 
-- [~] 13. Checkpoint - Ensure all tests pass
+- [x] 13. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 14. Stripe Connect onboarding (mocked in tests)
@@ -295,7 +295,7 @@ Feature tests (Laravel HTTP + database) and a couple of smoke tests complement t
     - Assert a valid webhook enqueues heavy processing on the DB queue
     - _Requirements: 19.4_
 
-- [~] 17. Checkpoint - Ensure all tests pass
+- [x] 17. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 18. QR service, order fulfilment, and queued ticket email
@@ -315,33 +315,33 @@ Feature tests (Laravel HTTP + database) and a couple of smoke tests complement t
     - Assert confirming an Order enqueues the ticket email job on the DB queue
     - _Requirements: 14.3_
 
-- [ ] 19. Web scanner and check-in
+- [x] 19. Web scanner and check-in
   - [x] 19.1 Implement ScanController and scanner page with camera + atomic single-scan
     - Phone-browser scanner page using the device camera (JS decoder), no app install; show "camera access required" when permission denied and perform no scan; decode token (unreadable-code message on failure); recompute HMAC (invalid-code message on mismatch); load Order scoped to scanning `company_id` (reject foreign/not-found); reject voided (failure) and already-scanned (warning + prior `scanned_at`); on valid unscanned, atomic `UPDATE ... SET scanned_at, scanned_by WHERE id=? AND scanned_at IS NULL` and display the full Order breakdown
     - _Requirements: 16.1, 16.2, 16.3, 16.4, 16.5, 16.6, 16.7, 16.8, 16.9, 16.10_
     - _Design: ScanController, QrService, Scan / Check-In Flow_
 
-  - [-] 19.2 Write property test for single atomic check-in
+  - [x] 19.2 Write property test for single atomic check-in
     - **Property 24: Single atomic check-in** — across any interleaving of concurrent scans of a valid unscanned Order, exactly one records the check-in; `scanned_at` never changes; subsequent scans report already-scanned with the original `scanned_at`
     - **Validates: Requirements 16.8, 16.9**
     - `// Feature: event-ticketing-platform, Property 24: ...` — Eris, min 100 iterations
 
-  - [-] 19.3 Smoke test for scanner camera/permission behaviour
+  - [x] 19.3 Smoke test for scanner camera/permission behaviour
     - Verify the scanner page loads and camera/permission handling (manual verification in a phone browser)
     - _Requirements: 16.1, 16.2_
 
-- [ ] 20. Refunds, cancellations, and refund/dispute webhooks
+- [x] 20. Refunds, cancellations, and refund/dispute webhooks
   - [x] 20.1 Implement OrderController cancel/refund and webhook void handling
     - Allow Admin/Owner to cancel and refund an Order; refund a paid Order via Stripe refund on the connected account (mocked in tests); void the Order's Tickets so the QR fails at scan; refund webhook updates Order+Ticket status; dispute webhook updates Order status
     - _Requirements: 17.1, 17.2, 17.3, 17.4, 17.5_
     - _Design: OrderController, StripePaymentService, WebhookProcessor_
 
-  - [-] 20.2 Write property test for cancel/refund voids tickets and blocks scan
+  - [x] 20.2 Write property test for cancel/refund voids tickets and blocks scan
     - **Property 25: Cancel/refund voids tickets and blocks scan** — after cancel/refund (incl. refund/dispute webhooks) all Tickets voided and any subsequent scan is rejected as failure
     - **Validates: Requirements 16.10, 17.3, 17.4, 17.5**
     - `// Feature: event-ticketing-platform, Property 25: ...` — Eris, min 100 iterations
 
-  - [-] 20.3 Write feature tests for refund/dispute webhook transitions
+  - [x] 20.3 Write feature tests for refund/dispute webhook transitions
     - Assert refund webhook (17.2, 17.4) and dispute webhook (17.5) transitions (Stripe mocked)
     - _Requirements: 17.2, 17.4, 17.5_
 
@@ -352,60 +352,60 @@ Feature tests (Laravel HTTP + database) and a couple of smoke tests complement t
     - _Design: OrderController, CapacityReservationService_
     - Note: comp capacity accounting is covered by Property 10 (task 8.3), ticket-row counts by Property 13 (task 12.4), and zero-money by Property 18 (task 9.5)
 
-- [~] 22. Checkpoint - Ensure all tests pass
+- [x] 22. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 23. Super-admin dashboard
-  - [~] 23.1 Implement super-admin guard and SuperAdmin controllers
+- [x] 23. Super-admin dashboard
+  - [x] 23.1 Implement super-admin guard and SuperAdmin controllers
     - Separate super-admin routing and guard; deny non-super-admins; `SuperAdmin\TransactionController` shows all Companies, all transactions, and total Application_Fees earned; `SuperAdmin\CompanyController` suspend/unsuspend; `SuperAdmin\FeeController` sets Global_Fee_Percent and per-Company Company_Fee_Percent
     - _Requirements: 20.1, 20.2, 20.3, 20.4, 20.5, 20.6, 20.7_
     - _Design: SuperAdmin controllers_
 
-  - [~] 23.2 Write property test for total fees earned aggregation
+  - [x] 23.2 Write property test for total fees earned aggregation
     - **Property 26: Total fees earned aggregation** — total Application_Fees reported equals the sum of recorded Application_Fee values of paid Orders across all Companies
     - **Validates: Requirements 20.2**
     - `// Feature: event-ticketing-platform, Property 26: ...` — Eris, min 100 iterations
     - Note: super-admin access control (20.7) covered by Property 6 (task 4.4); fee-percent application (20.5, 20.6) by Property 16 (task 9.3)
 
-- [ ] 24. Accountant reporting and payouts (read-only)
-  - [-] 24.1 Implement ReportController with Accountant read-only scope
+- [x] 24. Accountant reporting and payouts (read-only)
+  - [x] 24.1 Implement ReportController with Accountant read-only scope
     - Display reports and payout information scoped to the Accountant's own Company; deny Accountant modifications to Events/Ticket_Types/Orders with an authorisation error
     - _Requirements: 21.1, 21.2, 21.3_
     - _Design: ReportController_
     - Note: read-only enforcement (21.1, 21.2) covered by Property 6 (task 4.4); Company scoping by Property 1 (task 2.4)
 
-- [ ] 25. GDPR export/anonymise, privacy policy, and consent surfacing
-  - [~] 25.1 Implement GdprController + GdprService and privacy policy page
+- [x] 25. GDPR export/anonymise, privacy policy, and consent surfacing
+  - [x] 25.1 Implement GdprController + GdprService and privacy policy page
     - Export a Customer's stored personal data; delete/anonymise personal data (name, email, custom personal fields) while retaining transactional records (references, amounts, fees), scoped per requesting Company; provide a privacy policy page; surface consent capture at checkout (stored on the Order)
     - _Requirements: 22.1, 22.2, 22.3, 22.4, 22.5_
     - _Design: GdprController, GdprService_
 
-  - [~] 25.2 Write property test for GDPR anonymisation retains transactional records
+  - [x] 25.2 Write property test for GDPR anonymisation retains transactional records
     - **Property 27: GDPR anonymisation retains transactional records** — after scoped delete/anonymise no identifiable personal data remains while transactional records are retained; export contains every stored personal field
     - **Validates: Requirements 22.1, 22.2**
     - `// Feature: event-ticketing-platform, Property 27: ...` — Eris, min 100 iterations
     - Note: consent storage (22.4) covered by Property 12 (task 12.3); per-Company scoping (22.5) by Property 1 (task 2.4)
 
-  - [~] 25.3 Write feature test for privacy policy page rendering
+  - [x] 25.3 Write feature test for privacy policy page rendering
     - Assert the privacy policy page renders
     - _Requirements: 22.3_
 
-- [ ] 26. Hosting / deployment wiring (shared cPanel)
-  - [~] 26.1 Configure cron scheduler, queue draining, storage symlink, webhook exemptions, and HMAC secret stability
+- [x] 26. Hosting / deployment wiring (shared cPanel)
+  - [x] 26.1 Configure cron scheduler, queue draining, storage symlink, webhook exemptions, and HMAC secret stability
     - Configure the scheduler to run `queue:work --stop-when-empty` and `ReleaseExpiredReservationsJob` each minute (drained by the per-minute cron `schedule:run`); ensure `jobs`/`failed_jobs` exist and failures are retryable; add `storage:link` (or manual symlink) for logo exposure; register the `POST /stripe/webhook` route exempt from CSRF and tenant-slug resolution; place Stripe keys/Connect client id/webhook signing secret/HMAC secret/SMTP creds in `.env` outside the web root and keep the HMAC secret stable across deploys
     - Assemble/verify the ordered `database/sql/` files (schema + `platform_settings` seed, including the `migrations`, `jobs`, `failed_jobs`, and `processed_webhooks` tables) form a complete schema applyable via phpMyAdmin in filename order; add a comment header per file and maintain a short `CHANGELOG` for manual tracking; document the phpMyAdmin Import / SQL application steps (paste files in filename order, no SSH/web deploy route)
     - _Requirements: 15.2, 15.3, 7.1, 19.1_
     - _Design: Hosting and Deployment Notes, Hosting and Deployment Notes → Database schema (no SSH on prod)_
 
-  - [~] 26.2 Smoke test for cron command draining the DB queue
+  - [x] 26.2 Smoke test for cron command draining the DB queue
     - Verify `schedule:run` triggers `queue:work --stop-when-empty` and drains queued jobs
     - _Requirements: 15.2, 15.3_
 
-  - [~] 26.3 Smoke test that generated SQL matches the migrations (drift guard)
+  - [x] 26.3 Smoke test that generated SQL matches the migrations (drift guard)
     - Apply the concatenated ordered `database/sql/` files to a scratch MySQL database and diff the resulting schema against a database built from `php artisan migrate`; assert they match so the raw SQL never drifts from the migrations
     - _Design: Hosting and Deployment Notes → Database schema (no SSH on prod)_
 
-- [~] 27. Final checkpoint - Ensure all tests pass
+- [x] 27. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

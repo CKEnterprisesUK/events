@@ -5,13 +5,18 @@ use App\Http\Controllers\BrandingController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\EventPageController;
+use App\Http\Controllers\GdprController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ScanController;
 use App\Http\Controllers\StorefrontController;
 use App\Http\Controllers\StripeConnectController;
 use App\Http\Controllers\StripeReturnController;
+use App\Http\Controllers\SuperAdmin\CompanyController as SuperAdminCompanyController;
+use App\Http\Controllers\SuperAdmin\FeeController as SuperAdminFeeController;
+use App\Http\Controllers\SuperAdmin\TransactionController as SuperAdminTransactionController;
 use App\Http\Controllers\TicketTypeController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
@@ -24,6 +29,16 @@ use Illuminate\Support\Facades\Route;
 | resolution only runs on `/{company-slug}/...` paths). (Requirement 8.1)
 */
 Route::get('/', [LandingController::class, 'index'])->name('landing');
+
+/*
+|--------------------------------------------------------------------------
+| Public privacy policy page (reserved prefix, no tenant / auth)
+|--------------------------------------------------------------------------
+| `/privacy` is a reserved prefix declared before the `/{company-slug}/`
+| catch-all so it renders the Platform privacy policy rather than being treated
+| as a storefront slug. It establishes no active Company. (Requirement 22.3)
+*/
+Route::get('/privacy', [GdprController::class, 'privacy'])->name('privacy');
 
 /*
 |--------------------------------------------------------------------------
@@ -161,6 +176,28 @@ Route::middleware(['auth', 'company.active', 'session.timeout', 'dashboard.tenan
         Route::post('/stripe/connect', [StripeConnectController::class, 'start'])->name('stripe.start');
         Route::get('/stripe/return', [StripeConnectController::class, 'return'])->name('stripe.return');
 
+        // Accountant reports & payouts (Accountant-gated in the controller via
+        // ACTION_VIEW_REPORTS). READ-ONLY: only a GET endpoint is exposed and no
+        // mutation is possible here — the Accountant sees their own Company's
+        // realised sales/revenue and net-to-company payout figures (in integer
+        // minor units), scoped to their Company by the `dashboard.tenant` group.
+        // Any attempt by an Accountant to modify Events/Ticket_Types/Orders hits
+        // the Admin gates and is denied, leaving data unchanged. (Requirements
+        // 21.1, 21.2, 21.3, 3.5, 3.7)
+        Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+
+        // GDPR data-subject tools (Owner-gated in the controller via
+        // ACTION_MANAGE_SETTINGS — GDPR handling is a data-controller
+        // compliance responsibility). Export a Customer's stored personal data
+        // as JSON, or delete/anonymise it while retaining transactional records.
+        // Both are scoped to the authenticated user's own Company by the
+        // `dashboard.tenant` group, so a Company can only ever export or
+        // anonymise its own Customer data — never another Company's.
+        // (Requirements 22.1, 22.2, 22.5, 3.3, 3.7)
+        Route::get('/gdpr', [GdprController::class, 'index'])->name('gdpr.index');
+        Route::post('/gdpr/export', [GdprController::class, 'export'])->name('gdpr.export');
+        Route::post('/gdpr/anonymise', [GdprController::class, 'anonymise'])->name('gdpr.anonymise');
+
         // Web QR scanner (Scanner-gated in the controller via ACTION_CHECK_IN).
         // The scanner page opens the phone camera in the browser and POSTs the
         // decoded payload to the scan endpoint, which recomputes the HMAC over
@@ -171,6 +208,44 @@ Route::middleware(['auth', 'company.active', 'session.timeout', 'dashboard.tenan
         // (Requirements 16.1–16.10, 3.6, 3.7)
         Route::get('/scan', [ScanController::class, 'index'])->name('scan.index');
         Route::post('/scan', [ScanController::class, 'scan'])->name('scan.submit');
+    });
+
+/*
+|--------------------------------------------------------------------------
+| Super-admin dashboard (reserved `/admin` prefix, separate guard)
+|--------------------------------------------------------------------------
+| The super-admin surface is deliberately separate from the Company dashboards
+| in both routing and authorisation. `/admin` is a reserved prefix that
+| establishes NO active Company (ResolveTenant skips it), so this group sits
+| OUTSIDE the tenant group and is not tenant-scoped — a Super_Admin operates
+| across every Company. Access is guarded by `super.admin`, which authorises
+| purely on `is_super_admin` (NOT the Company role matrix): guests are sent to
+| login by `auth`, and any authenticated non-super-admin (any Company_User) is
+| denied with 403. `session.timeout` applies the same idle-timeout as the rest
+| of the authenticated surface. (Requirements 20.1, 20.2, 20.3, 20.4, 20.5,
+| 20.6, 20.7)
+*/
+Route::middleware(['auth', 'super.admin', 'session.timeout'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        // All Companies' transactions + total Application_Fees earned across the
+        // whole Platform (cross-Company, bypasses the tenant scope). (20.1, 20.2)
+        Route::get('/', [SuperAdminTransactionController::class, 'index'])->name('home');
+        Route::get('/transactions', [SuperAdminTransactionController::class, 'index'])->name('transactions.index');
+
+        // Oversee all Companies; suspend / unsuspend a Company. Suspension is
+        // enforced live elsewhere (ResolveTenant / EnsureCompanyActive) so it
+        // takes effect immediately. (20.1, 20.3, 20.4)
+        Route::get('/companies', [SuperAdminCompanyController::class, 'index'])->name('companies.index');
+        Route::post('/companies/{company}/suspend', [SuperAdminCompanyController::class, 'suspend'])->name('companies.suspend');
+        Route::post('/companies/{company}/unsuspend', [SuperAdminCompanyController::class, 'unsuspend'])->name('companies.unsuspend');
+
+        // Set the Global_Fee_Percent and per-Company Company_Fee_Percent
+        // override + Fee_Handling_Mode. (20.5, 20.6)
+        Route::get('/fees', [SuperAdminFeeController::class, 'index'])->name('fees.index');
+        Route::put('/fees/global', [SuperAdminFeeController::class, 'updateGlobal'])->name('fees.global.update');
+        Route::put('/fees/companies/{company}', [SuperAdminFeeController::class, 'updateCompany'])->name('fees.company.update');
     });
 
 /*

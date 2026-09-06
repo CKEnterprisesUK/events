@@ -1,0 +1,67 @@
+<?php
+
+namespace App\Http\Controllers\SuperAdmin;
+
+use App\Http\Controllers\Controller;
+use App\Models\Company;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
+
+/**
+ * Super-admin controller for overseeing all Companies and toggling their
+ * suspension state. (Requirements 20.1, 20.3, 20.4)
+ *
+ * This lives on the separate super-admin surface (reserved `/admin` prefix,
+ * guarded by `super.admin` on `is_super_admin`, resolving no Company). It is
+ * intentionally NOT tenant-scoped: a Super_Admin sees and administers every
+ * Company on the Platform. The `Company` model carries no tenant global scope
+ * (it is the tenant itself), so a plain query returns all Companies.
+ *
+ * Suspend/unsuspend simply persist `companies.status`. Enforcement lives
+ * elsewhere and reads the live status on each request: `ResolveTenant` 404s a
+ * suspended Company's storefront/event pages, and `EnsureCompanyActive` blocks
+ * a suspended Company's Company_User logins and existing sessions. So a
+ * suspension (or its reversal) takes effect on the very next request with no
+ * further action here. (Requirements 2.1–2.5, 20.3, 20.4)
+ */
+class CompanyController extends Controller
+{
+    /**
+     * List every Company on the Platform with its current status.
+     * (Requirements 20.1, 20.2)
+     */
+    public function index(): View
+    {
+        $companies = Company::query()
+            ->orderBy('name')
+            ->get();
+
+        return view('admin.companies.index', [
+            'companies' => $companies,
+        ]);
+    }
+
+    /**
+     * Mark a Company as a Suspended_Company. (Requirement 20.3)
+     */
+    public function suspend(Company $company): RedirectResponse
+    {
+        $company->update(['status' => Company::STATUS_SUSPENDED]);
+
+        return redirect()
+            ->route('admin.companies.index')
+            ->with('status', __(':name suspended.', ['name' => $company->name]));
+    }
+
+    /**
+     * Remove the suspended status from a Company. (Requirement 20.4)
+     */
+    public function unsuspend(Company $company): RedirectResponse
+    {
+        $company->update(['status' => Company::STATUS_ACTIVE]);
+
+        return redirect()
+            ->route('admin.companies.index')
+            ->with('status', __(':name unsuspended.', ['name' => $company->name]));
+    }
+}

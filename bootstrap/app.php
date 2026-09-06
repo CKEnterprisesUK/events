@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnforceTenantScope;
 use App\Http\Middleware\EnsureCompanyActive;
+use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\ResolveDashboardTenant;
 use App\Http\Middleware\ResolveTenant;
 use App\Http\Middleware\SessionTimeout;
@@ -54,6 +55,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'resolve.tenant' => ResolveTenant::class,
             'tenant.scope' => EnforceTenantScope::class,
             'company.active' => EnsureCompanyActive::class,
+            // Guards the separate super-admin surface on `is_super_admin`, not
+            // the Company role matrix. (Requirements 20.1, 20.7)
+            'super.admin' => EnsureSuperAdmin::class,
             'session.timeout' => SessionTimeout::class,
             'stripe.webhook' => VerifyStripeSignature::class,
         ]);
