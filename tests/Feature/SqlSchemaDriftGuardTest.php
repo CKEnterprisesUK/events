@@ -69,6 +69,7 @@ class SqlSchemaDriftGuardTest extends TestCase
             'tickets',
             'order_consents',
             'processed_webhooks',
+            'audit_logs',
         ];
     }
 
