@@ -12,6 +12,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\EventPageController;
 use App\Http\Controllers\EventReportController;
+use App\Http\Controllers\EventSponsorController;
 use App\Http\Controllers\GdprController;
 use App\Http\Controllers\HelpController;
 use App\Http\Controllers\InvitationController;
@@ -246,6 +247,16 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
         Route::get('/events/{event}/share', [EventController::class, 'share'])->name('events.share');
         Route::get('/events/{event}/orders', [EventController::class, 'orders'])->name('events.orders');
 
+        // Per-event activity trail + the "reset check-ins" control. `history`
+        // (Admin/Box_Office-gated via ACTION_MANAGE_EVENTS, like the other
+        // manage screens) shows this Event's own audit rows; `reset-scans` (a
+        // mutating POST, gated more tightly on ACTION_RESET_SCANS — Owner/Admin
+        // only) clears every check-in for the Event and audits the count. Both
+        // are scoped to the authenticated user's Company by the
+        // `dashboard.tenant` group (foreign Events 404).
+        Route::get('/events/{event}/history', [EventController::class, 'history'])->name('events.history');
+        Route::post('/events/{event}/reset-scans', [EventController::class, 'resetScans'])->name('events.reset-scans');
+
         // Event QR code + per-event report (Admin-gated / Accountant-gated in
         // their controllers). `qr` streams a PNG of the public Event page URL
         // for sharing; `report` renders the read-only per-event sales/revenue
@@ -266,6 +277,20 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
         Route::post('/events/{event}/ticket-types', [TicketTypeController::class, 'store'])->name('events.ticket-types.store');
         Route::put('/events/{event}/ticket-types/{ticketType}', [TicketTypeController::class, 'update'])->name('events.ticket-types.update');
         Route::patch('/events/{event}/ticket-types/{ticketType}', [TicketTypeController::class, 'update']);
+
+        // Event sponsors (Admin-gated in the controller), nested under an Event.
+        // A repeatable list of sponsor logos with optional store-page details
+        // and a per-sponsor "show on ticket" flag (capped in the controller).
+        // `sponsors` is a manage screen; store/update/destroy are the per-row
+        // CRUD; `reorder` persists a new display order; `copy` appends every
+        // sponsor from another of the Company's Events (duplicating logo files).
+        // All scoped to the authenticated user's Company by `dashboard.tenant`.
+        Route::get('/events/{event}/sponsors', [EventSponsorController::class, 'index'])->name('events.sponsors');
+        Route::post('/events/{event}/sponsors', [EventSponsorController::class, 'store'])->name('events.sponsors.store');
+        Route::post('/events/{event}/sponsors/reorder', [EventSponsorController::class, 'reorder'])->name('events.sponsors.reorder');
+        Route::post('/events/{event}/sponsors/copy', [EventSponsorController::class, 'copy'])->name('events.sponsors.copy');
+        Route::put('/events/{event}/sponsors/{sponsor}', [EventSponsorController::class, 'update'])->name('events.sponsors.update');
+        Route::delete('/events/{event}/sponsors/{sponsor}', [EventSponsorController::class, 'destroy'])->name('events.sponsors.destroy');
 
         // Order cancel/refund (Admin-gated in the controller: ACTION_CANCEL_ORDER
         // / ACTION_REFUND_ORDER). Cancelling voids the Order's Tickets and

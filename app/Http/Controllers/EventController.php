@@ -194,6 +194,76 @@ class EventController extends Controller
     }
 
     /**
+     * The History screen: this Event's own audit trail (created/updated/
+     * published/scan-reset), most recent first, plus the "reset check-ins"
+     * control. Gated on ACTION_MANAGE_EVENTS to view (the same gate as every
+     * other manage screen); the reset action itself is gated more tightly on
+     * ACTION_RESET_SCANS in resetScans().
+     *
+     * Only rows whose `auditable` IS this Event appear here — the audit_logs
+     * table has no global tenant scope, so we additionally pin `company_id` to
+     * this Event's Company as a defence-in-depth measure alongside the
+     * polymorphic subject filter. (Security — accountability / audit trail)
+     */
+    public function history(Event $event): View
+    {
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+
+        $logs = AuditLog::query()
+            ->with(['actor', 'impersonator'])
+            ->where('company_id', $event->company_id)
+            ->where('auditable_type', $event->getMorphClass())
+            ->where('auditable_id', $event->getKey())
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->paginate(25)
+            ->withQueryString();
+
+        return view('dashboard.events.history', $this->sharedViewData($event) + [
+            'logs' => $logs,
+            // Confirmed orders currently carrying a check-in — the count the
+            // reset control clears. Drives the button's copy and disabled state.
+            'scannedCount' => $event->orders()->whereNotNull('scanned_at')->count(),
+        ]);
+    }
+
+    /**
+     * Reset (clear) every check-in for this Event so the door can re-scan from
+     * a clean slate. Sets `scanned_at`/`scanned_by` back to NULL on all of the
+     * Event's Orders and records an audit entry with the number cleared.
+     *
+     * Gated on ACTION_RESET_SCANS, which the role matrix grants to the Owner
+     * and Admin only (NOT Box_Office): it wipes operational check-in state for
+     * a whole event. The Event is tenant-scoped by the `dashboard.tenant`
+     * group, so a foreign Event 404s and the update can only ever touch this
+     * Company's Orders. (Security — least privilege / accountability)
+     */
+    public function resetScans(Event $event): RedirectResponse
+    {
+        Gate::authorize(RoleAuthorization::ACTION_RESET_SCANS);
+
+        $cleared = $event->orders()
+            ->whereNotNull('scanned_at')
+            ->update([
+                'scanned_at' => null,
+                'scanned_by' => null,
+            ]);
+
+        $this->audit->record(
+            action: AuditLog::EVENT_SCANS_RESET,
+            auditable: $event,
+            summary: 'Reset check-ins for "'.$event->name.'"',
+            context: ['cleared' => $cleared],
+        );
+
+        return redirect()
+            ->route('dashboard.events.history', $event)
+            ->with('status', $cleared === 1
+                ? '1 check-in was reset.'
+                : $cleared.' check-ins were reset.');
+    }
+
+    /**
      * Data every manage screen needs to render the section nav + publish
      * checklist wrapper: the Event itself and its readiness report. Kept in one
      * place so the screens stay consistent and cheap. (Requirement 1.4)

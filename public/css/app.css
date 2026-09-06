@@ -430,6 +430,48 @@ main.dashboard-main { flex: 1; padding: 1.75rem; max-width: 1100px; width: 100%;
 }
 
 /* =============================================================================
+   Sponsors management screen (dashboard.events.sponsors)
+   ============================================================================= */
+.sponsor-preview {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 0.75rem; padding: 1rem 1.25rem;
+}
+.sponsor-preview__title { margin: 0 0 0.6rem; font-size: 1rem; }
+/* A light mock of the ticket's bottom sponsor band. */
+.sponsor-preview__ticket { background: #fff; border: 1px dashed var(--border); border-radius: 0.5rem; padding: 0.75rem; }
+.sponsor-preview__band {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 1rem;
+}
+.sponsor-preview__logo { max-height: 60px; max-width: 180px; width: auto; height: auto; object-fit: contain; }
+.sponsor-preview__caption { margin: 0.5rem 0 0; font-size: 0.8125rem; text-align: center; }
+
+.sponsor-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
+.sponsor-list__item {
+    display: grid; grid-template-columns: 120px 1fr auto; gap: 1rem; align-items: start;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1rem;
+}
+.sponsor-list__logo img {
+    display: block; width: 100%; max-height: 90px; object-fit: contain;
+    background: #fff; border: 1px solid var(--border); border-radius: 0.5rem; padding: 0.4rem;
+}
+.sponsor-list__form { display: grid; gap: 0.6rem; min-width: 0; }
+.sponsor-list__ops { display: flex; flex-direction: column; gap: 0.4rem; align-items: stretch; }
+.sponsor-list__ops form { margin: 0; }
+.sponsor-list__ops .btn { width: 100%; }
+.btn-danger { color: #b91c1c; border-color: #fecaca; }
+.btn-danger:hover { background: #fef2f2; }
+
+.sponsor-add, .sponsor-copy {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 0.75rem; padding: 1rem 1.25rem;
+}
+.sponsor-copy__form { display: flex; flex-wrap: wrap; gap: 1rem; align-items: end; }
+
+@media (max-width: 640px) {
+    .sponsor-list__item { grid-template-columns: 1fr; }
+}
+
+/* =============================================================================
    Public event page + checkout (layouts.app / main.event-main)
    A branded, non-bland ticket buying flow. Brand colour is injected per event
    via :root { --brand }.

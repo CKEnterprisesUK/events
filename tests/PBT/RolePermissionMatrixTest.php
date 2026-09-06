@@ -56,6 +56,7 @@ class RolePermissionMatrixTest extends PbtTestCase
                 RoleAuthorization::ACTION_ISSUE_COMP,
                 RoleAuthorization::ACTION_MANAGE_GDPR,
                 RoleAuthorization::ACTION_VIEW_AUDIT_LOG,
+                RoleAuthorization::ACTION_RESET_SCANS,
             ],
             // Box_Office is a cut-down Admin: the operational set with no
             // company-settings/GDPR access.

@@ -52,6 +52,7 @@
         ['key' => 'share',    'label' => 'Share',    'icon' => '🔗', 'url' => route('dashboard.events.share', $event)],
         ['key' => 'report',   'label' => 'Report',   'icon' => '📈', 'url' => route('dashboard.events.report', $event)],
         ['key' => 'orders',   'label' => 'Orders',   'icon' => '🧾', 'url' => route('dashboard.events.orders', $event)],
+        ['key' => 'history',  'label' => 'History',  'icon' => '🕓', 'url' => route('dashboard.events.history', $event)],
     ];
 @endphp
 

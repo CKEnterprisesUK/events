@@ -70,6 +70,12 @@ class RoleAuthorization
     // Scanner action (check-in only).
     public const ACTION_CHECK_IN = 'check_in';
 
+    // Reset (clear) all check-ins for an event so the door can re-scan from a
+    // clean slate. Deliberately narrower than ACTION_MANAGE_EVENTS: it wipes
+    // operational check-in state for a whole event, so it is held by the Owner
+    // and Admin only — NOT the Box_Office role that otherwise manages events.
+    public const ACTION_RESET_SCANS = 'reset_scans';
+
     /**
      * The base role → permitted-actions matrix. The values here are the closed
      * set of actions each role may perform. The Owner is a special case: rather
@@ -95,6 +101,7 @@ class RoleAuthorization
             self::ACTION_ISSUE_COMP,
             self::ACTION_MANAGE_GDPR,
             self::ACTION_VIEW_AUDIT_LOG,
+            self::ACTION_RESET_SCANS,
         ],
         // Box_Office is a cut-down Admin: it runs the box office (events,
         // ticket types, orders incl. cancel/refund/comp) but is NOT trusted
@@ -183,6 +190,7 @@ class RoleAuthorization
             'Issue comp tickets' => self::ACTION_ISSUE_COMP,
             'View reports & payouts' => self::ACTION_VIEW_REPORTS,
             'Check in attendees' => self::ACTION_CHECK_IN,
+            'Reset event check-ins' => self::ACTION_RESET_SCANS,
             'Handle GDPR requests' => self::ACTION_MANAGE_GDPR,
             'View the activity log' => self::ACTION_VIEW_AUDIT_LOG,
             'Manage company settings' => self::ACTION_MANAGE_SETTINGS,

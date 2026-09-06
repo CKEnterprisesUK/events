@@ -142,6 +142,20 @@ class Event extends Model
     }
 
     /**
+     * The sponsors shown for this Event, in display order. A sponsor carries a
+     * logo plus optional store-page details and an `on_ticket` flag. (Sponsors
+     * management)
+     *
+     * @return HasMany<EventSponsor, $this>
+     */
+    public function sponsors(): HasMany
+    {
+        return $this->hasMany(EventSponsor::class)
+            ->orderBy('sort_order')
+            ->orderBy('id');
+    }
+
+    /**
      * Whether this Event is published and therefore available to Customers at
      * its public page. (Requirements 5.4, 5.5)
      */

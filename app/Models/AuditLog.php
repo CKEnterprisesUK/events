@@ -134,6 +134,8 @@ class AuditLog extends Model
 
     public const ORDER_TICKET_RESENT = 'order.ticket_resent';
 
+    public const EVENT_SCANS_RESET = 'event.scans_reset';
+
     // Privacy / GDPR
     public const GDPR_CUSTOMER_EXPORTED = 'gdpr.customer_exported';
 
@@ -187,6 +189,7 @@ class AuditLog extends Model
         self::TICKET_TYPE_CREATED => ['category' => self::CATEGORY_EVENTS, 'label' => 'Created a ticket type'],
         self::TICKET_TYPE_UPDATED => ['category' => self::CATEGORY_EVENTS, 'label' => 'Updated a ticket type'],
         self::ORDER_TICKET_RESENT => ['category' => self::CATEGORY_EVENTS, 'label' => 'Re-sent a ticket email'],
+        self::EVENT_SCANS_RESET => ['category' => self::CATEGORY_EVENTS, 'label' => 'Reset event check-ins'],
 
         self::GDPR_CUSTOMER_EXPORTED => ['category' => self::CATEGORY_PRIVACY, 'label' => 'Exported customer data'],
         self::GDPR_CUSTOMERS_EXPORTED => ['category' => self::CATEGORY_PRIVACY, 'label' => 'Exported the customer list'],
