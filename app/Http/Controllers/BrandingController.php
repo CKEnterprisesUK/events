@@ -5,13 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Company;
 use App\Models\Event;
 use App\Services\Branding\BrandingResolver;
+use App\Services\BrandingImageStore;
 use App\Services\RoleAuthorization;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -51,7 +51,10 @@ class BrandingController extends Controller
      */
     private const POSTER_DIRECTORY = 'branding/posters';
 
-    public function __construct(private readonly BrandingResolver $resolver) {}
+    public function __construct(
+        private readonly BrandingResolver $resolver,
+        private readonly BrandingImageStore $imageStore,
+    ) {}
 
     // ---- Company-level branding (Owner, ACTION_MANAGE_SETTINGS) --------------
 
@@ -145,11 +148,11 @@ class BrandingController extends Controller
         ];
 
         if ($request->hasFile('logo')) {
-            $attributes['logo_path'] = $this->storeImage($request, 'logo', self::LOGO_DIRECTORY, $company->logo_path);
+            $attributes['logo_path'] = $this->imageStore->store($request->file('logo'), self::LOGO_DIRECTORY, $company->logo_path);
         }
 
         if ($request->hasFile('poster')) {
-            $attributes['poster_path'] = $this->storeImage($request, 'poster', self::POSTER_DIRECTORY, $company->poster_path);
+            $attributes['poster_path'] = $this->imageStore->store($request->file('poster'), self::POSTER_DIRECTORY, $company->poster_path);
         }
 
         $company->update($attributes);
@@ -199,11 +202,11 @@ class BrandingController extends Controller
         ];
 
         if ($request->hasFile('logo')) {
-            $attributes['logo_path'] = $this->storeImage($request, 'logo', self::LOGO_DIRECTORY, $event->logo_path);
+            $attributes['logo_path'] = $this->imageStore->store($request->file('logo'), self::LOGO_DIRECTORY, $event->logo_path);
         }
 
         if ($request->hasFile('poster')) {
-            $attributes['poster_path'] = $this->storeImage($request, 'poster', self::POSTER_DIRECTORY, $event->poster_path);
+            $attributes['poster_path'] = $this->imageStore->store($request->file('poster'), self::POSTER_DIRECTORY, $event->poster_path);
         }
 
         $event->update($attributes);
@@ -214,23 +217,6 @@ class BrandingController extends Controller
     }
 
     // ---- Helpers -------------------------------------------------------------
-
-    /**
-     * Store an uploaded image (logo or poster) on the `public` disk under the
-     * given directory and return its relative path for persistence. Any
-     * previously stored file at the same slot on the same disk is removed so old
-     * files do not accumulate. (Requirements 7.1, 7.5)
-     */
-    private function storeImage(Request $request, string $field, string $directory, ?string $previousPath): string
-    {
-        $path = $request->file($field)->store($directory, 'public');
-
-        if ($previousPath !== null && $previousPath !== '' && $previousPath !== $path) {
-            Storage::disk('public')->delete($previousPath);
-        }
-
-        return $path;
-    }
 
     /**
      * Normalise submitted custom ticket-info field definitions into the stored

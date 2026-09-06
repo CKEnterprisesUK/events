@@ -84,13 +84,21 @@ class CapacityReservationService
             foreach ($quantities as $ticketTypeId => $qty) {
                 $ticketType = $ticketTypes[$ticketTypeId];
 
-                // Per-Ticket_Type availability. (Requirements 6.6, 6.7, 10.6)
-                $available = $ticketType->capacity - $ticketType->sold_count - $ticketType->reserved_count;
+                // Capacity-mode-aware per-Ticket_Type availability:
+                //   - capped:      enforced by its own per-type ceiling here
+                //                  AND by the Event-overall check below.
+                //   - shared_pool: NO per-type ceiling — its units still
+                //                  accumulate into $eventRequested so the
+                //                  Event-overall check alone governs it.
+                // (Requirements 2.5, 2.6, 2.7, 2.8, 6.6, 6.7, 10.6)
+                if ($ticketType->isCapped()) {
+                    $available = $ticketType->capacity - $ticketType->sold_count - $ticketType->reserved_count;
 
-                if ($qty > $available) {
-                    throw new InsufficientCapacityException(
-                        "Insufficient availability for ticket type {$ticketTypeId}: requested {$qty}, {$available} available."
-                    );
+                    if ($qty > $available) {
+                        throw new InsufficientCapacityException(
+                            "Insufficient availability for ticket type {$ticketTypeId}: requested {$qty}, {$available} available."
+                        );
+                    }
                 }
 
                 $eventRequested += $qty;

@@ -67,7 +67,7 @@ class EventReadinessTest extends TestCase
         $keys = array_map(fn ($item) => $item->key, $report->items());
 
         $this->assertSame(
-            ['name', 'starts_at', 'venue', 'ticket_types', 'capacity'],
+            ['name', 'starts_at', 'venue', 'ticket_types', 'shared_pool_capacity', 'capacity'],
             $keys,
         );
     }
@@ -93,6 +93,7 @@ class EventReadinessTest extends TestCase
             'starts_at' => true,
             'venue' => false,
             'ticket_types' => true,
+            'shared_pool_capacity' => true,
             'capacity' => false,
         ], $blocking);
     }

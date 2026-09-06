@@ -24,6 +24,8 @@
                 Not yet on sale
             @elseif ($type['sale_state'] === 'ended')
                 Sale ended
+            @elseif ($type['sale_state'] === 'on_sale')
+                On sale &middot; {{ number_format($type['available']) }} remaining
             @else
                 {{ number_format($type['available']) }} remaining
             @endif

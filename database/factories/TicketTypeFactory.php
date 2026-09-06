@@ -34,6 +34,7 @@ class TicketTypeFactory extends Factory
             'name' => fake()->words(2, true),
             'price_minor' => fake()->numberBetween(500, 50_000),
             'capacity' => fake()->numberBetween(10, 1_000),
+            'capacity_mode' => TicketType::MODE_CAPPED,
             'sold_count' => 0,
             'reserved_count' => 0,
             'sale_starts_at' => now()->subDay(),
@@ -59,6 +60,18 @@ class TicketTypeFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'company_id' => $event->company_id,
             'event_id' => $event->id,
+        ]);
+    }
+
+    /**
+     * A shared-pool Ticket_Type with no per-type capacity. Availability is
+     * governed solely by the event's overall capacity. (Requirements 2.1, 2.3)
+     */
+    public function sharedPool(): static
+    {
+        return $this->state(fn () => [
+            'capacity_mode' => TicketType::MODE_SHARED_POOL,
+            'capacity' => null,
         ]);
     }
 

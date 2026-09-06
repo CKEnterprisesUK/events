@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Event;
 use App\Models\TicketType;
 use App\Services\RoleAuthorization;
-use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -47,18 +46,22 @@ class TicketTypeController extends Controller
     private const MAX_CAPACITY = 1_000_000;
 
     /**
-     * List the Event's Ticket_Types. Cross-Company Events never match the
-     * tenant scope and surface as 404. (Requirements 1.5, 6.1)
+     * The standalone nested ticket-types page has been folded into the manage
+     * event show page's "Ticket types" tab. This route is kept registered so
+     * existing bookmarks/links keep working, but now redirects to the tab.
+     *
+     * A 302 cannot carry a URL #fragment reliably, so the target tab is passed
+     * as a `tab` query param that the show page's tab JS (task 9.1) reads to
+     * activate the Ticket types tab. Cross-Company Events never match the
+     * tenant scope and surface as 404. (Requirements 1.5, 6.1, 6.3)
      */
-    public function index(Event $event): View
+    public function index(Event $event): RedirectResponse
     {
         Gate::authorize(RoleAuthorization::ACTION_MANAGE_TICKET_TYPES);
 
-        $ticketTypes = $event->ticketTypes()->latest()->get();
-
-        return view('dashboard.ticket-types.index', [
+        return redirect()->route('dashboard.events.show', [
             'event' => $event,
-            'ticketTypes' => $ticketTypes,
+            'tab' => 'ticket-types',
         ]);
     }
 
@@ -128,8 +131,15 @@ class TicketTypeController extends Controller
             // price 0.00–999,999.99 as a decimal; up to 2 decimal places.
             // (Requirements 6.1, 6.3)
             'price' => ['required', 'numeric', 'min:0', 'max:999999.99', 'decimal:0,2'],
-            // capacity 1–1,000,000. (Requirement 6.1)
-            'capacity' => ['required', 'integer', 'min:1', 'max:'.self::MAX_CAPACITY],
+            // capacity mode: capped (per-type ceiling) or shared_pool (draws
+            // only from the event overall capacity). (Requirements 2.2, 2.3)
+            'capacity_mode' => ['required', Rule::in(TicketType::MODES)],
+            // capacity required 1–1,000,000 for capped; nullable for
+            // shared_pool (ignored server-side). (Requirements 2.2, 2.3)
+            'capacity' => [
+                Rule::requiredIf(fn () => $request->input('capacity_mode') === TicketType::MODE_CAPPED),
+                'nullable', 'integer', 'min:1', 'max:'.self::MAX_CAPACITY,
+            ],
             'sale_starts_at' => ['required', 'date'],
             // end strictly after start (sale-window-invalid). (Requirement 6.9)
             'sale_ends_at' => ['required', 'date', 'after:sale_starts_at'],
@@ -142,7 +152,11 @@ class TicketTypeController extends Controller
             // Convert the decimal price to integer minor units, e.g. "12.50" =>
             // 1250. round() guards against binary float artefacts on multiply.
             'price_minor' => (int) round(((float) $validated['price']) * 100),
-            'capacity' => (int) $validated['capacity'],
+            'capacity_mode' => $validated['capacity_mode'],
+            // shared_pool types carry no per-type capacity. (Requirement 2.6)
+            'capacity' => $validated['capacity_mode'] === TicketType::MODE_SHARED_POOL
+                ? null
+                : (int) $validated['capacity'],
             'sale_starts_at' => $validated['sale_starts_at'],
             'sale_ends_at' => $validated['sale_ends_at'],
         ];

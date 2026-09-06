@@ -1,0 +1,598 @@
+{
+  "pbtResults": {
+    "2.2 Write property test: capped type never oversells": {
+      "status": "passed",
+      "lastRunTimestamp": 1788702632982
+    },
+    "2.3 Write property test: event-overall ceiling across all modes": {
+      "status": "passed",
+      "lastRunTimestamp": 1788702645103
+    },
+    "4.1 Write property test: availability computation matches capacity mode": {
+      "status": "passed",
+      "lastRunTimestamp": 1788702649488
+    },
+    "2.5 Write property test: release/commit/returns preserve identity under both modes": {
+      "status": "passed",
+      "lastRunTimestamp": 1788702671311
+    },
+    "2.4 Write property test: shared-pool governed solely by overall ceiling": {
+      "status": "passed",
+      "lastRunTimestamp": 1788702674899
+    },
+    "4.4 Write property test: shared-pool-without-overall-capacity publish blocker": {
+      "status": "passed",
+      "lastRunTimestamp": 1788702774336
+    },
+    "5.3 Write property test: geocode caching and identifying User-Agent": {
+      "status": "passed",
+      "lastRunTimestamp": 1788702791122
+    },
+    "4.2 Write property test: migration backfill classifies existing types correctly": {
+      "status": "passed",
+      "lastRunTimestamp": 1788702804187
+    }
+  },
+  "executionHistory": {
+    "1.1 Add capacity-mode migration + raw SQL for `ticket_types`": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702010967
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702025446
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702313914
+      }
+    ],
+    "1.2 Add location migration + raw SQL for `events`": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702010999
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702022022
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702314822
+      }
+    ],
+    "1.3 Extend `TicketType` model for capacity mode": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011034
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702322989
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702430383
+      }
+    ],
+    "1.4 Extend `Event` model for location + overall remaining + publish blocker": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011060
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702322043
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702429490
+      }
+    ],
+    "1.5 Update `TicketTypeFactory`": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011095
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702325196
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702431834
+      }
+    ],
+    "2.1 Make `CapacityReservationService::reserve()` per-type branch mode-aware": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011125
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702440835
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702528660
+      }
+    ],
+    "3. Checkpoint - foundation + engine": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011151
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702842118
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702938125
+      }
+    ],
+    "4.3 Add `shared_pool_capacity` blocking item to `EventReadiness::checklist()`": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011174
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702437218
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702526614
+      }
+    ],
+    "4.5 Make `EventReportService::perTicketType()` remaining mode-aware": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011199
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702438633
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702527525
+      }
+    ],
+    "5.1 Create `GeocodeResult` value object": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011224
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702022990
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702316267
+      }
+    ],
+    "5.2 Create `GeocodingService` (Nominatim wrapper) + config": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011247
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702324402
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702432678
+      }
+    ],
+    "6.1 Extract `BrandingImageStore` and reuse in `BrandingController`": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011272
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702024443
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702317232
+      }
+    ],
+    "7.1 Add `capacity_mode` to `TicketTypeController::validated()` and redirect index to tab": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011297
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702440026
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702525191
+      }
+    ],
+    "7.2 Add location + poster fields to `EventController::validated()`": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011319
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702939357
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703105194
+      }
+    ],
+    "7.3 Wire geocode + poster + location into `EventController@store`/`@update`": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011349
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702944942
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703106611
+      }
+    ],
+    "7.4 Add view data to `EventController@show`/`@index`": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011375
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702945674
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703107570
+      }
+    ],
+    "8. Checkpoint - controllers + geocoding + image": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011401
+      }
+    ],
+    "9.1 Create accessible `_tabs.blade.php` tab shell": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011426
+      }
+    ],
+    "9.2 Rewrite `dashboard/events/show.blade.php` into the tab shell": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011460
+      }
+    ],
+    "9.3 Create `_hero.blade.php` partial": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011488
+      }
+    ],
+    "9.4 Create `_location.blade.php` partial": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011510
+      }
+    ],
+    "9.5 Create `_ticket_types.blade.php` partial": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011535
+      }
+    ],
+    "9.6 Create `_comp.blade.php` partial": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011563
+      }
+    ],
+    "9.7 Create `_orders.blade.php` partial": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011588
+      }
+    ],
+    "9.8 Update `dashboard/events/_form.blade.php`": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011610
+      }
+    ],
+    "9.9 Update `dashboard/ticket-types/_form.blade.php`": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011639
+      }
+    ],
+    "9.10 Update `dashboard/events/index.blade.php`": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011660
+      }
+    ],
+    "9.11 Update public `events/show.blade.php`": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011685
+      }
+    ],
+    "9.12 Update `checkout/success.blade.php`": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011710
+      }
+    ],
+    "10. Checkpoint - views": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011734
+      }
+    ],
+    "11. Final checkpoint - full suite": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702011759
+      }
+    ],
+    "6. Shared branding image store": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702317272
+      }
+    ],
+    "1. Foundation: schema, models, factory": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702431875
+      }
+    ],
+    "5. Geocoding service": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702432725
+      }
+    ],
+    "4. Availability, readiness, and report wiring": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702527557
+      }
+    ],
+    "2. Reservation engine: mode-aware per-type branch": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702528705
+      }
+    ],
+    "2.2 Write property test: capped type never oversells": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702547769
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702692076
+      }
+    ],
+    "2.3 Write property test: event-overall ceiling across all modes": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702549142
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702693440
+      }
+    ],
+    "2.4 Write property test: shared-pool governed solely by overall ceiling": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702550575
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702694866
+      }
+    ],
+    "2.5 Write property test: release/commit/returns preserve identity under both modes": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702552016
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702695817
+      }
+    ],
+    "4.1 Write property test: availability computation matches capacity mode": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702552841
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702696949
+      }
+    ],
+    "4.2 Write property test: migration backfill classifies existing types correctly": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702701966
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702833523
+      }
+    ],
+    "4.4 Write property test: shared-pool-without-overall-capacity publish blocker": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702703365
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702835908
+      }
+    ],
+    "4.6 Update `EventReportPerTicketTypeTest` for shared-pool remaining": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702704297
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702832155
+      }
+    ],
+    "5.3 Write property test: geocode caching and identifying User-Agent": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702705717
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702836742
+      }
+    ],
+    "5.4 Write feature/unit test for `GeocodingService`": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702706775
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788702834492
+      }
+    ],
+    "7. Controllers: ticket-type, event, geocode + poster wiring": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703107602
+      }
+    ],
+    "7.7 Write property/feature test: comp issuance bound like a paid reservation": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703113353
+      }
+    ],
+    "7.5 Write feature test: event geocode/location save behaviour": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703114736
+      }
+    ],
+    "7.6 Write feature test: poster upload + hero precedence": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703115460
+      }
+    ]
+  }
+}

@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'nominatim' => [
+        'base_uri' => env('NOMINATIM_BASE_URI', 'https://nominatim.openstreetmap.org'),
+        'user_agent' => env('NOMINATIM_USER_AGENT'), // REQUIRED: 'EventTicketing/1.0 (ops@example.com)'
+        'cache_ttl' => (int) env('NOMINATIM_CACHE_TTL', 60 * 60 * 24 * 30), // 30 days
+        'timeout' => (int) env('NOMINATIM_TIMEOUT', 5),
+    ],
+
 ];

@@ -85,7 +85,11 @@ class EventReportPerTicketTypeTest extends PbtTestCase
      * capacity − sold_count − reserved_count, and revenue_minor as
      * sold * price_minor.
      *
-     * **Validates: Requirements 6.3**
+     * Now also covers shared-pool types: each row carries its type's
+     * `capacity_mode`, and a shared-pool type's `remaining` is null (it has no
+     * per-type ceiling). (Requirement 2.6)
+     *
+     * **Validates: Requirements 6.3, 2.6**
      */
     // Feature: event-management-and-reporting, Property 9: Per-ticket-type breakdown is consistent
     public function test_per_ticket_type_breakdown_is_consistent(): void
@@ -133,12 +137,14 @@ class EventReportPerTicketTypeTest extends PbtTestCase
                 // the expected remaining/revenue can be computed independently.
                 /** @var list<TicketType> $types */
                 $types = [];
-                /** @var array<int, array{price:int,capacity:int,sold_count:int,reserved:int}> $typeMeta */
+                /** @var array<int, array{price:int,capacity:int,sold_count:int,reserved:int,mode:string,remaining:?int}> $typeMeta */
                 $typeMeta = [];
 
                 foreach ($typeSeeds as $seed) {
                     [$price, $capacity, $soldCount, $reserved] = array_map('intval', $seed);
 
+                    // Factory default is capped, so generated types keep the
+                    // capped remaining semantics (capacity − sold − reserved).
                     $type = TicketType::factory()->forEvent($event)->create([
                         'price_minor' => $price,
                         'capacity' => $capacity,
@@ -152,8 +158,27 @@ class EventReportPerTicketTypeTest extends PbtTestCase
                         'capacity' => $capacity,
                         'sold_count' => $soldCount,
                         'reserved' => $reserved,
+                        'mode' => TicketType::MODE_CAPPED,
+                        'remaining' => $capacity - $soldCount - $reserved,
                     ];
                 }
+
+                // Always include one shared-pool type so the remaining===null
+                // branch is exercised. A shared-pool type has no per-type
+                // ceiling, so its expected remaining is null. (Requirement 2.6)
+                $sharedType = TicketType::factory()->forEvent($event)->sharedPool()->create([
+                    'price_minor' => 1_500,
+                ]);
+
+                $types[] = $sharedType;
+                $typeMeta[$sharedType->id] = [
+                    'price' => (int) $sharedType->price_minor,
+                    'capacity' => 0,
+                    'sold_count' => 0,
+                    'reserved' => 0,
+                    'mode' => TicketType::MODE_SHARED_POOL,
+                    'remaining' => null,
+                ];
 
                 // Expected count of valid tickets on confirmed orders, per type.
                 $expectedSold = array_fill_keys(array_keys($typeMeta), 0);
@@ -222,11 +247,33 @@ class EventReportPerTicketTypeTest extends PbtTestCase
                         "sold for type {$typeId} must count valid tickets on confirmed orders."
                     );
 
-                    $this->assertSame(
-                        $meta['capacity'] - $meta['sold_count'] - $meta['reserved'],
-                        $row['remaining'],
-                        "remaining for type {$typeId} must be capacity − sold_count − reserved_count."
+                    // Every row carries its type's capacity_mode. (Requirement 6.3)
+                    $this->assertArrayHasKey(
+                        'capacity_mode',
+                        $row,
+                        "perTicketType row for type {$typeId} must carry a capacity_mode."
                     );
+                    $this->assertSame(
+                        $meta['mode'],
+                        $row['capacity_mode'],
+                        "capacity_mode for type {$typeId} must match the type's mode."
+                    );
+
+                    // A shared-pool type has no per-type ceiling, so remaining
+                    // is null; a capped type reports capacity − sold − reserved.
+                    // (Requirements 2.6, 6.3)
+                    if ($meta['mode'] === TicketType::MODE_SHARED_POOL) {
+                        $this->assertNull(
+                            $row['remaining'],
+                            "remaining for shared-pool type {$typeId} must be null."
+                        );
+                    } else {
+                        $this->assertSame(
+                            $meta['capacity'] - $meta['sold_count'] - $meta['reserved'],
+                            $row['remaining'],
+                            "remaining for type {$typeId} must be capacity − sold_count − reserved_count."
+                        );
+                    }
 
                     $this->assertSame(
                         $sold * $meta['price'],

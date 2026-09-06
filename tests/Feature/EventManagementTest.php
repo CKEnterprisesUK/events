@@ -83,6 +83,7 @@ class EventManagementTest extends TestCase
             'name' => 'Autumn Fair',
             'venue' => 'Town Hall',
             'capacity' => 500,
+            'location_mode' => Event::LOCATION_IN_PERSON,
         ]);
 
         // Requirement 5.1 — persisted, scoped to the Admin's Company.
@@ -104,6 +105,7 @@ class EventManagementTest extends TestCase
         // Requirement 5.2 — capacity omitted => NULL (unlimited).
         $this->actingAs($admin)->post('/dashboard/events', [
             'name' => 'Open Day',
+            'location_mode' => Event::LOCATION_IN_PERSON,
         ])->assertRedirect();
 
         $this->assertDatabaseHas('events', [
@@ -125,6 +127,7 @@ class EventManagementTest extends TestCase
         $this->actingAs($admin)->put("/dashboard/events/{$event->id}", [
             'name' => 'New Name',
             'capacity' => 320,
+            'location_mode' => Event::LOCATION_IN_PERSON,
         ])->assertRedirect(route('dashboard.events.show', $event));
 
         $this->assertDatabaseHas('events', [

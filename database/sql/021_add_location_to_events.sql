@@ -1,0 +1,71 @@
+-- =============================================================================
+-- 021_add_location_to_events.sql
+-- Event Ticketing Platform — versioned raw schema SQL for phpMyAdmin (no SSH on prod)
+-- =============================================================================
+--
+-- Purpose:
+--   Adds location fields to the `events` table so an Event can declare whether
+--   it is held in person or online, and (for in-person events) carry a
+--   human-readable address plus geocoded map coordinates for the public
+--   Event-page map:
+--     * location_mode : 'in_person' (default) or 'online'.
+--     * address       : optional free-text street address for in-person events.
+--     * latitude       : optional geocoded latitude for the map pin.
+--     * longitude      : optional geocoded longitude for the map pin.
+--
+--   These sit after the existing `venue` column. `poster_path` already exists
+--   (added by 019_add_poster_to_events.sql) and is not touched here.
+--
+--   This is an incremental ALTER applied AFTER 006_create_events.sql: it
+--   assumes the `events` table already exists. Applied on shared cPanel hosting
+--   by pasting this file into phpMyAdmin (Import / SQL tab) in filename order.
+--
+-- Covers changes:
+--   * events.location_mode  (in_person/online mode, NOT NULL default in_person)
+--   * events.address        (nullable free-text street address)
+--   * events.latitude       (nullable geocoded latitude)
+--   * events.longitude      (nullable geocoded longitude)
+--
+-- Provenance (DO NOT hand-edit the DDL below):
+--   Generated from the Laravel migration by migrating the MySQL schema and
+--   diffing the `events` table via mysqldump. Regenerate this file whenever the
+--   corresponding migration changes so the SQL stays consistent with it:
+--
+--     php artisan migrate --database=mysql
+--     mysqldump -u root -h 127.0.0.1 --no-tablespaces --skip-add-locks \
+--       --skip-comments --skip-set-charset --no-data \
+--       events events
+--
+--   (migration: 2024_01_01_002000_add_location_to_events)
+--
+-- Applying on prod:
+--   Paste this file into phpMyAdmin after 006_create_events.sql. The final
+--   INSERT records the migration in the `migrations` ledger so the app's
+--   migration state stays consistent if migrations are ever run against this
+--   database later.
+-- =============================================================================
+
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+ALTER TABLE `events`
+  ADD COLUMN `location_mode` varchar(20) NOT NULL DEFAULT 'in_person' AFTER `venue`,
+  ADD COLUMN `address` text DEFAULT NULL AFTER `location_mode`,
+  ADD COLUMN `latitude` decimal(10,7) DEFAULT NULL AFTER `address`,
+  ADD COLUMN `longitude` decimal(10,7) DEFAULT NULL AFTER `latitude`;
+
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Keep Laravel's migration ledger consistent when applied via phpMyAdmin. This
+-- migration ships together with 020_add_capacity_mode_to_ticket_types.sql, so
+-- both are recorded in the same batch (6).
+INSERT INTO `migrations` (`migration`, `batch`) VALUES
+  ('2024_01_01_002000_add_location_to_events', 6);

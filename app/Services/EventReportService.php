@@ -95,8 +95,13 @@ class EventReportService
      * `valid` tickets on confirmed orders. This is exact because every ticket
      * of a type is priced at that type's `price_minor` at fulfilment.
      *
+     * A capped type's `remaining` is its per-type ceiling less sold+reserved;
+     * a shared-pool type has no per-type ceiling, so its `remaining` is null
+     * (the view renders it as '— (shared pool)'). `capacity_mode` carries the
+     * type's mode so the view can label it. (Requirements 2.5, 2.6, 6.3)
+     *
      * @param  list<int>  $confirmedIds  ids of the Event's confirmed orders.
-     * @return list<array{type_id:int,name:string,sold:int,remaining:int,revenue_minor:int}>
+     * @return list<array{type_id:int,name:string,sold:int,remaining:?int,revenue_minor:int,capacity_mode:string}>
      */
     private function perTicketType(Event $event, array $confirmedIds): array
     {
@@ -120,8 +125,14 @@ class EventReportService
                 'type_id' => (int) $type->id,
                 'name' => (string) $type->name,
                 'sold' => $sold,
-                'remaining' => $type->capacity - $type->sold_count - $type->reserved_count,
+                // Per-type remaining is only meaningful for capped types; a
+                // shared-pool type has no per-type ceiling, so remaining is
+                // null (the view renders it as '— (shared pool)').
+                'remaining' => $type->isSharedPool()
+                    ? null
+                    : (int) $type->capacity - $type->sold_count - $type->reserved_count,
                 'revenue_minor' => $sold * $type->price_minor,
+                'capacity_mode' => $type->capacity_mode,
             ];
         }
 

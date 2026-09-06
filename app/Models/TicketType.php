@@ -27,12 +27,19 @@ use Illuminate\Support\Carbon;
  * checkouts serialize and never oversell. (Requirements 6.6, 6.7, 6.8, 5.6,
  * 10.6, 10.7)
  *
+ * Each Ticket_Type has a `capacity_mode` of either `capped` (the default) or
+ * `shared_pool`. A capped type keeps its own per-type ceiling in `capacity`;
+ * a shared-pool type has no per-type ceiling and draws only from the Event's
+ * overall capacity, so `capacity` is nullable at the DB level and may be
+ * omitted for shared-pool types. (Requirements 2.5, 2.6, 7.2)
+ *
  * @property int $id
  * @property int $company_id
  * @property int $event_id
  * @property string $name
  * @property int $price_minor
- * @property int $capacity
+ * @property int|null $capacity nullable when capacity_mode is shared_pool
+ * @property string $capacity_mode one of self::MODES (capped|shared_pool)
  * @property int $sold_count
  * @property int $reserved_count
  * @property Carbon|null $sale_starts_at
@@ -43,6 +50,13 @@ class TicketType extends Model
     /** @use HasFactory<TicketTypeFactory> */
     use BelongsToCompany, HasFactory;
 
+    public const MODE_CAPPED = 'capped';
+
+    public const MODE_SHARED_POOL = 'shared_pool';
+
+    /** @var list<string> */
+    public const MODES = [self::MODE_CAPPED, self::MODE_SHARED_POOL];
+
     /**
      * @var list<string>
      */
@@ -52,6 +66,7 @@ class TicketType extends Model
         'name',
         'price_minor',
         'capacity',
+        'capacity_mode',
         'sold_count',
         'reserved_count',
         'sale_starts_at',
@@ -64,6 +79,7 @@ class TicketType extends Model
     protected $attributes = [
         'sold_count' => 0,
         'reserved_count' => 0,
+        'capacity_mode' => self::MODE_CAPPED,
     ];
 
     /**
@@ -74,6 +90,7 @@ class TicketType extends Model
         return [
             'price_minor' => 'integer',
             'capacity' => 'integer',
+            'capacity_mode' => 'string',
             'sold_count' => 'integer',
             'reserved_count' => 'integer',
             'sale_starts_at' => 'datetime',
@@ -100,12 +117,60 @@ class TicketType extends Model
     }
 
     /**
-     * Remaining available quantity = capacity - sold_count - reserved_count.
-     * (Requirements 6.6, 10.6)
+     * Whether this Ticket_Type keeps its own per-type capacity ceiling.
+     * (Requirement 2.5)
+     */
+    public function isCapped(): bool
+    {
+        return $this->capacity_mode === self::MODE_CAPPED;
+    }
+
+    /**
+     * Whether this Ticket_Type draws only from the Event's overall capacity.
+     * (Requirement 2.6)
+     */
+    public function isSharedPool(): bool
+    {
+        return $this->capacity_mode === self::MODE_SHARED_POOL;
+    }
+
+    /**
+     * Remaining available for this type in isolation.
+     *  - capped:      capacity - sold_count - reserved_count   (unchanged identity)
+     *  - shared_pool: not bounded per-type; callers should use availabilityFor()
+     *                 with the event's overall remaining. Returns the event
+     *                 remaining if resolvable, else PHP_INT_MAX as a non-binding
+     *                 sentinel.
+     * (Requirements 2.5, 2.6, 6.6, 7.2, 10.6)
      */
     public function availableQuantity(): int
     {
-        return $this->capacity - $this->sold_count - $this->reserved_count;
+        if ($this->isCapped()) {
+            return (int) $this->capacity - $this->sold_count - $this->reserved_count;
+        }
+
+        // shared_pool: governed by event overall remaining.
+        $remaining = $this->event?->overallRemaining();
+
+        return $remaining ?? PHP_INT_MAX;
+    }
+
+    /**
+     * Availability given a precomputed event overall remaining (null = unlimited).
+     * Views/report pass the event remaining once to avoid N+1.
+     *  - capped:      min(per-type remaining, eventRemaining ?? per-type remaining)
+     *  - shared_pool: eventRemaining  (null => unlimited => return null)
+     * (Requirements 2.5, 2.6)
+     */
+    public function availabilityFor(?int $eventRemaining): ?int
+    {
+        if ($this->isCapped()) {
+            $perType = (int) $this->capacity - $this->sold_count - $this->reserved_count;
+
+            return $eventRemaining === null ? $perType : min($perType, $eventRemaining);
+        }
+
+        return $eventRemaining; // null => unlimited
     }
 
     /**

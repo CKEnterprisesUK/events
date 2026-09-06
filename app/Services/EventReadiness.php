@@ -14,13 +14,13 @@ use App\Services\Events\EventReadinessReport;
  * Event, so the Manage_Event_Page can show — at a glance — what is done and what
  * still stands between the Event and being published.
  *
- * The checklist lists five items in a stable order: event name, start date,
- * venue, at-least-one ticket type, and capacity sanity. The two blocking items
- * (start date and ticket type) are derived from {@see Event::publishBlockers()},
- * which is the single source of truth the publish controller enforces against —
- * so the presentation and the enforcement can never drift apart. The name,
- * venue, and capacity-sanity items are advisory only and never block publishing.
- * (Requirements 2.1–2.4, 3.2, 3.3)
+ * The checklist lists items in a stable order: event name, start date, venue,
+ * at-least-one ticket type, shared-pool overall capacity, and capacity sanity.
+ * The blocking items (start date, ticket type, and shared-pool capacity) are
+ * derived from {@see Event::publishBlockers()}, which is the single source of
+ * truth the publish controller enforces against — so the presentation and the
+ * enforcement can never drift apart. The name, venue, and capacity-sanity items
+ * are advisory only and never block publishing. (Requirements 2.1–2.4, 3.2, 3.3)
  *
  * This is a stateless service returning immutable value objects the Blade view
  * renders, mirroring the {@see \App\Services\Onboarding\OnboardingChecklist}
@@ -62,6 +62,12 @@ class EventReadiness
                 key: 'ticket_types',
                 label: 'Ticket type',
                 satisfied: ! isset($blockers['ticket_types']),
+                blocking: true,
+            ),
+            new ChecklistItem(
+                key: 'shared_pool_capacity',
+                label: 'Overall capacity for shared pool',
+                satisfied: ! isset($blockers['shared_pool_capacity']),
                 blocking: true,
             ),
             new ChecklistItem(

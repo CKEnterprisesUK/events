@@ -22,7 +22,7 @@ final class EventReport
      * @param  int  $grossRevenueMinor  gross revenue in minor units (Req 5.1, 6.2).
      * @param  int  $netToCompanyMinor  net to company in minor units (Req 5.3, 6.6).
      * @param  ?int  $capacity  the Event capacity ceiling; null => unlimited (Req 5.4).
-     * @param  list<array{type_id:int,name:string,sold:int,remaining:int,revenue_minor:int}>  $perTicketType  per-ticket-type breakdown (Req 6.3).
+     * @param  list<array{type_id:int,name:string,sold:int,remaining:?int,revenue_minor:int,capacity_mode:string}>  $perTicketType  per-ticket-type breakdown; remaining is null for shared-pool types (Req 6.3).
      * @param  array<string,int>  $ordersByStatus  order counts keyed by status (Req 6.4).
      * @param  list<array{day:string,tickets:int,revenue_minor:int}>  $salesByDay  sales-over-time trend (Req 6.5).
      */
