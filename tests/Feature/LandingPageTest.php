@@ -21,7 +21,8 @@ class LandingPageTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertViewIs('landing');
-        $response->assertSee(config('app.name'), false);
+        // The landing page carries the product branding.
+        $response->assertSee('CK Enterprises', false);
     }
 
     public function test_landing_page_offers_a_login_link(): void

@@ -2,6 +2,17 @@
 
 @section('title', $company->name)
 
+@section('favicon')
+    @if ($branding->hasLogo())
+        <link rel="icon" href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($branding->logoPath) }}">
+        <link rel="apple-touch-icon" href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($branding->logoPath) }}">
+    @else
+        <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+        <link rel="icon" type="image/png" href="{{ asset('images/favicon.png') }}">
+        <link rel="apple-touch-icon" href="{{ asset('images/favicon.png') }}">
+    @endif
+@endsection
+
 @push('head')
     @if ($branding->hasPrimaryColour())
         <style>:root { --brand: {{ $branding->primaryColour }}; }</style>

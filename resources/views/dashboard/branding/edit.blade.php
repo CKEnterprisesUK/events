@@ -49,6 +49,28 @@
                 @error('terms_text')<p class="error">{{ $message }}</p>@enderror
             </div>
 
+            {{-- Contact addresses: public support contact for Customers, and the
+                 GDPR/data-protection contact for data-subject requests. --}}
+            <fieldset class="field">
+                <legend>Contact details</legend>
+
+                <div class="field">
+                    <label for="support_email">Support contact email</label>
+                    <input type="email" name="support_email" id="support_email"
+                           value="{{ old('support_email', $company->support_email) }}" placeholder="support@yourcompany.com">
+                    <span class="field-hint">Shown to customers who need help with their order.</span>
+                    @error('support_email')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="field">
+                    <label for="gdpr_contact_email">GDPR / data-protection contact email</label>
+                    <input type="email" name="gdpr_contact_email" id="gdpr_contact_email"
+                           value="{{ old('gdpr_contact_email', $company->gdpr_contact_email) }}" placeholder="privacy@yourcompany.com">
+                    <span class="field-hint">Where data-subject and privacy requests are handled.</span>
+                    @error('gdpr_contact_email')<p class="error">{{ $message }}</p>@enderror
+                </div>
+            </fieldset>
+
             {{-- Custom ticket information fields printed on tickets. (7.4) --}}
             <fieldset class="field">
                 <legend>Custom ticket fields</legend>

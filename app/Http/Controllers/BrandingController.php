@@ -80,6 +80,8 @@ class BrandingController extends Controller
             'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp,svg', 'max:5120'],
             'primary_colour' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'terms_text' => ['nullable', 'string', 'max:20000'],
+            'support_email' => ['nullable', 'string', 'email', 'max:254'],
+            'gdpr_contact_email' => ['nullable', 'string', 'email', 'max:254'],
             'ticket_field_defs' => ['nullable', 'array'],
             'ticket_field_defs.*' => ['nullable', 'string', 'max:100'],
         ]);
@@ -87,6 +89,8 @@ class BrandingController extends Controller
         $attributes = [
             'primary_colour' => $data['primary_colour'] ?? null,
             'terms_text' => $data['terms_text'] ?? null,
+            'support_email' => $data['support_email'] ?? null,
+            'gdpr_contact_email' => $data['gdpr_contact_email'] ?? null,
             'ticket_field_defs' => $this->normaliseFieldDefs($data['ticket_field_defs'] ?? null),
         ];
 

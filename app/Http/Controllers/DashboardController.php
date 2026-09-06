@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Event;
 use App\Models\Order;
+use App\Services\Onboarding\OnboardingChecklist;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
@@ -19,6 +20,8 @@ use Illuminate\Http\Request;
  */
 class DashboardController extends Controller
 {
+    public function __construct(private readonly OnboardingChecklist $onboarding) {}
+
     /**
      * Show an at-a-glance overview for the signed-in user's Company.
      */
@@ -33,10 +36,22 @@ class DashboardController extends Controller
                 'stats' => null,
                 'recentEvents' => collect(),
                 'currency' => 'GBP',
+                'onboarding' => null,
             ]);
         }
 
         $company = $user->company;
+
+        // New-customer onboarding checklist. Only the Owner can complete the
+        // Stripe/contacts/branding steps, so only the Owner sees it — and only
+        // until every step is done, after which it disappears.
+        $onboarding = $user->isOwner()
+            ? $this->onboarding->for($company)
+            : null;
+
+        if ($onboarding !== null && $onboarding->isComplete()) {
+            $onboarding = null;
+        }
 
         // Events scoped explicitly to the user's own Company (the tenant global
         // scope is not active on this route — see the class docblock).
@@ -86,6 +101,7 @@ class DashboardController extends Controller
             ],
             'recentEvents' => $recentEvents,
             'currency' => $company?->currency ?? 'GBP',
+            'onboarding' => $onboarding,
         ]);
     }
 }

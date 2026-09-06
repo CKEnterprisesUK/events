@@ -3,10 +3,13 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Log in &middot; {{ config('app.name', 'Event Ticketing') }}</title>
+    <title>Log in &middot; Events by CK Enterprises</title>
+    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+    <link rel="icon" type="image/png" href="{{ asset('images/favicon.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/favicon.png') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cabin+Sketch:wght@700&family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
             --navy: #0f1425;
@@ -47,8 +50,10 @@
             justify-content: space-between;
             border-right: 3px solid var(--purple);
         }
-        .brand-side .logo { display: flex; align-items: center; gap: .6rem; font-family: var(--heading-font); font-weight: 700; font-size: 1.15rem; color: #fff; }
-        .brand-side .logo .mark { width: 32px; height: 32px; border-radius: 7px; background: var(--purple); display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: .85rem; }
+        .brand-side .logo { display: inline-flex; align-items: baseline; gap: .4rem; font-family: 'Cabin Sketch', cursive; font-weight: 700; color: #fff; line-height: 1; }
+        .brand-side .logo .events { font-size: 1.5rem; color: var(--teal); }
+        .brand-side .logo .by { font-family: var(--body-font); font-weight: 500; font-size: .75rem; letter-spacing: .04em; color: #9aa0b5; text-transform: uppercase; }
+        .brand-side .logo .ck { font-size: 1.5rem; color: #fff; }
         .brand-side .pitch { text-align: center; }
         .brand-side .pitch .illustration { width: 100%; max-width: 380px; height: auto; margin: 0 auto 1.5rem; display: block; }
         .brand-side .pitch h2 { color: #fff; font-size: 1.7rem; margin: 0; }
@@ -58,8 +63,10 @@
         /* Form side */
         .auth .form-side { display: flex; align-items: center; justify-content: center; padding: 3rem 2rem; }
         .form-card { width: 100%; max-width: 400px; }
-        .form-card .mobile-logo { display: none; align-items: center; gap: .6rem; font-family: var(--heading-font); font-weight: 700; font-size: 1.15rem; color: var(--ink); margin-bottom: 2rem; }
-        .form-card .mobile-logo .mark { width: 32px; height: 32px; border-radius: 7px; background: var(--purple); display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: .85rem; }
+        .form-card .mobile-logo { display: none; align-items: baseline; gap: .4rem; font-family: 'Cabin Sketch', cursive; font-weight: 700; color: var(--ink); margin-bottom: 2rem; line-height: 1; }
+        .form-card .mobile-logo .events { font-size: 1.5rem; color: var(--purple); }
+        .form-card .mobile-logo .by { font-family: var(--body-font); font-weight: 500; font-size: .75rem; letter-spacing: .04em; color: var(--muted); text-transform: uppercase; }
+        .form-card .mobile-logo .ck { font-size: 1.5rem; color: var(--ink); }
         .form-card h1 { font-size: 1.7rem; margin-bottom: .4rem; }
         .form-card .sub { color: var(--muted); margin: 0 0 2rem; }
 
@@ -97,9 +104,10 @@
 <body>
     <div class="auth">
         <aside class="brand-side">
-            <a class="logo" href="{{ url('/') }}">
-                <span class="mark">CK</span>
-                <span>{{ config('app.name', 'Event Ticketing') }}</span>
+            <a class="logo" href="{{ url('/') }}" aria-label="Events by CK Enterprises">
+                <span class="events">Events</span>
+                <span class="by">by</span>
+                <span class="ck">CK Enterprises</span>
             </a>
             <div class="pitch">
                 <img src="{{ asset('images/login-illustration.svg') }}" alt="" class="illustration">
@@ -112,9 +120,10 @@
 
         <main class="form-side">
             <div class="form-card">
-                <a class="mobile-logo" href="{{ url('/') }}">
-                    <span class="mark">CK</span>
-                    <span>{{ config('app.name', 'Event Ticketing') }}</span>
+                <a class="mobile-logo" href="{{ url('/') }}" aria-label="Events by CK Enterprises">
+                    <span class="events">Events</span>
+                    <span class="by">by</span>
+                    <span class="ck">CK Enterprises</span>
                 </a>
 
                 <h1>Log in to your dashboard</h1>

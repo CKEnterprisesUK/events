@@ -3,11 +3,14 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('title', config('app.name', 'Event Ticketing Platform'))</title>
-    <meta name="description" content="Sell tickets from your own branded storefront. Direct Stripe payouts, phone-browser QR check-in and team roles — built for charities and event organisers.">
+    <title>Events by CK Enterprises &middot; Sell tickets from your own branded storefront</title>
+    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+    <link rel="icon" type="image/png" href="{{ asset('images/favicon.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/favicon.png') }}">
+    <meta name="description" content="Events by CK Enterprises — sell tickets from your own branded storefront. Direct Stripe payouts, phone-browser QR check-in and team roles, built for charities and event organisers.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cabin+Sketch:wght@700&family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
             --navy: #0f1425;
@@ -62,8 +65,10 @@
             border-bottom: 1px solid rgba(255,255,255,.07);
         }
         .site-header .container { display: flex; align-items: center; justify-content: space-between; height: 68px; }
-        .logo { display: flex; align-items: center; gap: .6rem; font-family: var(--heading-font); font-weight: 700; font-size: 1.15rem; color: #fff; }
-        .logo .mark { width: 32px; height: 32px; border-radius: 7px; background: var(--purple); display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: .85rem; }
+        .logo { display: inline-flex; align-items: baseline; gap: .4rem; font-family: 'Cabin Sketch', cursive; font-weight: 700; color: #fff; line-height: 1; }
+        .logo .events { font-size: 1.5rem; color: var(--teal); }
+        .logo .by { font-family: var(--body-font); font-weight: 500; font-size: .75rem; letter-spacing: .04em; color: #9aa0b5; text-transform: uppercase; }
+        .logo .ck { font-size: 1.5rem; color: #fff; }
         .nav { display: flex; align-items: center; gap: 1.75rem; }
         .nav a.link { color: #c8ccdb; font-weight: 500; font-size: .95rem; }
         .nav a.link:hover { color: #fff; }
@@ -171,9 +176,10 @@
 <body>
     <header class="site-header">
         <div class="container">
-            <a class="logo" href="{{ url('/') }}">
-                <span class="mark">CK</span>
-                <span>{{ config('app.name', 'Event Ticketing') }}</span>
+            <a class="logo" href="{{ url('/') }}" aria-label="Events by CK Enterprises">
+                <span class="events">Events</span>
+                <span class="by">by</span>
+                <span class="ck">CK Enterprises</span>
             </a>
             <nav class="nav">
                 <a class="link" href="#features">Features</a>
@@ -408,9 +414,10 @@
     <footer class="site-footer">
         <div class="container">
             <div class="grid">
-                <a class="logo" href="{{ url('/') }}">
-                    <span class="mark">CK</span>
-                    <span>{{ config('app.name', 'Event Ticketing') }}</span>
+                <a class="logo" href="{{ url('/') }}" aria-label="Events by CK Enterprises">
+                    <span class="events">Events</span>
+                    <span class="by">by</span>
+                    <span class="ck">CK Enterprises</span>
                 </a>
                 <div class="links">
                     <a href="#features">Features</a>

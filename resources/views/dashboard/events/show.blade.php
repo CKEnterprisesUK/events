@@ -60,7 +60,7 @@
                     <a class="btn btn-sm" href="{{ route('dashboard.events.ticket-types.index', $event) }}">Add ticket type</a>
                 </div>
             @else
-                <form method="POST" action="{{ route('dashboard.events.comp', $event) }}" class="stack">
+                <form method="POST" action="{{ route('dashboard.events.comp', $event) }}" class="stack" id="comp-form">
                     @csrf
                     <div class="field-row">
                         <div class="field">
@@ -176,3 +176,25 @@
         </div>
     @endcanany
 @endsection
+
+@push('scripts')
+<script>
+    // Comp issuance: disable zero-quantity rows so only chosen ticket types are
+    // submitted (the server requires every submitted item to have quantity >= 1).
+    (function () {
+        var form = document.getElementById('comp-form');
+        if (!form) return;
+        form.addEventListener('submit', function () {
+            form.querySelectorAll('input[name$="[quantity]"]').forEach(function (qty) {
+                if (parseInt(qty.value, 10) > 0) return;
+                var row = qty.closest('tr');
+                qty.disabled = true;
+                if (row) {
+                    var hidden = row.querySelector('input[name$="[ticket_type_id]"]');
+                    if (hidden) hidden.disabled = true;
+                }
+            });
+        });
+    })();
+</script>
+@endpush

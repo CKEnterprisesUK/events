@@ -23,6 +23,8 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $primary_colour
  * @property string|null $logo_path
  * @property string|null $terms_text
+ * @property string|null $support_email
+ * @property string|null $gdpr_contact_email
  * @property array|null $ticket_field_defs
  */
 class Company extends Model
@@ -69,6 +71,8 @@ class Company extends Model
         'primary_colour',
         'logo_path',
         'terms_text',
+        'support_email',
+        'gdpr_contact_email',
         'ticket_field_defs',
     ];
 

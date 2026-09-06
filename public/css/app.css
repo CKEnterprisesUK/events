@@ -236,3 +236,28 @@ main.dashboard-main { flex: 1; padding: 1.75rem; max-width: 1100px; width: 100%;
     .site-footer__nav { grid-template-columns: 1fr; }
     .hero h1 { font-size: 2rem; }
 }
+
+/* =============================================================================
+   Dashboard forms & action controls
+   ============================================================================= */
+.page-head__actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+.form-panel { padding: 0; }
+.form-panel > .stack { padding: 1.25rem; }
+.form-panel .panel__head + .stack { padding-top: 1.25rem; }
+
+.stack > * + * { margin-top: 0.25rem; }
+.stack .field + .field, .stack .field-row + .field, .stack .field + .field-row { margin-top: 1rem; }
+
+.field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+.field textarea { width: 100%; padding: 0.5rem 0.625rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font: inherit; }
+.field textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(15, 22, 196, 0.15); }
+.field-label { display: block; font-weight: 600; margin: 1rem 0 0.25rem; }
+
+.form-actions { display: flex; gap: 0.6rem; margin-top: 1.25rem; flex-wrap: wrap; }
+
+.inline-form { display: inline; margin: 0; }
+.row-actions { display: inline-flex; gap: 0.4rem; justify-content: flex-end; }
+.role-form select { padding: 0.35rem 0.5rem; border: 1px solid #d1d5db; border-radius: 0.4rem; font: inherit; background: #fff; }
+
+.edit-cell { background: #f9fafb; padding: 1.25rem !important; }

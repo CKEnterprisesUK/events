@@ -29,6 +29,37 @@
         @endcan
     </div>
 
+    {{-- New-customer onboarding checklist. Shown only to the Owner and only
+         until all four setup steps are complete, after which it disappears. --}}
+    @if (!empty($onboarding))
+        <div class="panel onboarding">
+            <div class="panel__head">
+                <div>
+                    <h2>Get set up</h2>
+                    <p class="muted">Finish these {{ $onboarding->totalCount() }} steps to start selling tickets.</p>
+                </div>
+                <span class="onboarding__count">{{ $onboarding->completedCount() }} of {{ $onboarding->totalCount() }} done</span>
+            </div>
+
+            <ol class="onboarding__list">
+                @foreach ($onboarding->steps() as $step)
+                    <li class="onboarding__step {{ $step->complete ? 'is-complete' : '' }}">
+                        <span class="onboarding__check" aria-hidden="true">{{ $step->complete ? '✓' : '' }}</span>
+                        <span class="onboarding__body">
+                            <span class="onboarding__title">{{ $step->title }}</span>
+                            <span class="onboarding__desc">{{ $step->description }}</span>
+                        </span>
+                        @if ($step->complete)
+                            <span class="onboarding__status">Done</span>
+                        @else
+                            <a class="btn btn-sm" href="{{ route($step->routeName) }}">{{ $step->actionLabel }}</a>
+                        @endif
+                    </li>
+                @endforeach
+            </ol>
+        </div>
+    @endif
+
     @if ($stats)
         <div class="stat-row">
             <div class="stat">
@@ -187,5 +218,28 @@
         padding: 0.5rem 0.85rem; text-decoration: none; color: var(--ink);
     }
     .storefront-url:hover { border-color: var(--brand); color: var(--brand); }
+
+    .onboarding { border-top: 3px solid var(--brand); }
+    .onboarding .panel__head { align-items: flex-start; }
+    .onboarding .panel__head .muted { margin: 0.15rem 0 0; font-size: 0.85rem; }
+    .onboarding__count { font-size: 0.8rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
+    .onboarding__list { list-style: none; margin: 0; padding: 0; }
+    .onboarding__step {
+        display: flex; align-items: center; gap: 0.9rem;
+        padding: 0.9rem 1.25rem; border-bottom: 1px solid var(--border);
+    }
+    .onboarding__step:last-child { border-bottom: none; }
+    .onboarding__check {
+        flex: none; width: 1.5rem; height: 1.5rem; border-radius: 999px;
+        border: 2px solid var(--border); display: inline-flex; align-items: center;
+        justify-content: center; font-size: 0.8rem; font-weight: 700; color: #fff;
+    }
+    .onboarding__step.is-complete .onboarding__check { background: #047857; border-color: #047857; }
+    .onboarding__body { flex: 1 1 auto; display: flex; flex-direction: column; gap: 0.1rem; }
+    .onboarding__title { font-weight: 600; color: var(--ink); }
+    .onboarding__step.is-complete .onboarding__title { color: var(--muted); text-decoration: line-through; }
+    .onboarding__desc { font-size: 0.82rem; color: var(--muted); }
+    .onboarding__status { font-size: 0.8rem; font-weight: 600; color: #047857; white-space: nowrap; }
+    .field-hint { display: block; font-size: 0.8rem; color: var(--muted); margin-top: 0.2rem; }
 </style>
 @endpush

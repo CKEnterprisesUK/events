@@ -3,10 +3,13 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('code') &middot; {{ config('app.name', 'Event Ticketing') }}</title>
+    <title>@yield('code') &middot; Events by CK Enterprises</title>
+    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+    <link rel="icon" type="image/png" href="{{ asset('images/favicon.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/favicon.png') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cabin+Sketch:wght@700&family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
             --navy: #0f1425;
@@ -31,8 +34,10 @@
         a { color: var(--purple); text-decoration: none; }
 
         .top { padding: 1.75rem 2rem; }
-        .logo { display: inline-flex; align-items: center; gap: .6rem; font-family: var(--heading-font); font-weight: 700; font-size: 1.15rem; color: #fff; }
-        .logo .mark { width: 32px; height: 32px; border-radius: 7px; background: var(--purple); display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: .85rem; }
+        .logo { display: inline-flex; align-items: baseline; gap: .4rem; font-family: 'Cabin Sketch', cursive; font-weight: 700; color: #fff; line-height: 1; }
+        .logo .events { font-size: 1.5rem; color: var(--teal); }
+        .logo .by { font-family: var(--body-font); font-weight: 500; font-size: .75rem; letter-spacing: .04em; color: var(--muted); text-transform: uppercase; }
+        .logo .ck { font-size: 1.5rem; color: #fff; }
 
         .wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem; text-align: center; }
         .inner { max-width: 520px; }
@@ -65,9 +70,10 @@
 </head>
 <body>
     <header class="top">
-        <a class="logo" href="{{ url('/') }}">
-            <span class="mark">CK</span>
-            <span>{{ config('app.name', 'Event Ticketing') }}</span>
+        <a class="logo" href="{{ url('/') }}" aria-label="Events by CK Enterprises">
+            <span class="events">Events</span>
+            <span class="by">by</span>
+            <span class="ck">CK Enterprises</span>
         </a>
     </header>
 
