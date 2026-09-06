@@ -7,9 +7,19 @@
     $symbols = ['GBP' => '£', 'USD' => '$', 'EUR' => '€'];
     $symbol = $symbols[$currency] ?? '';
     $money = fn (int $minor) => $symbol . number_format($minor / 100, 2);
+
+    // Who the customer just bought from, and the best contact for them if the
+    // tickets don't arrive. Prefer a dedicated support inbox, then the general
+    // company email, then the phone number.
+    $sellerName = $company->trading_name ?: ($company->name ?: $company->legal_name);
+    $supportEmail = $company->support_email ?: $company->email;
+    $supportPhone = $company->phone;
 @endphp
 
 @push('head')
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cabin+Sketch:wght@700&display=swap" rel="stylesheet">
     @if ($branding->hasPrimaryColour())
         <style>:root { --brand: {{ $branding->primaryColour }}; }</style>
     @endif
@@ -41,6 +51,14 @@
             </p>
         @endif
 
+        <div class="checkout-seller">
+            <span class="checkout-seller__label">You bought from</span>
+            <span class="checkout-seller__name">{{ $sellerName }}</span>
+            @if ($company->website)
+                <a class="checkout-seller__link" href="{{ $company->website }}" target="_blank" rel="noopener">{{ preg_replace('#^https?://#', '', rtrim($company->website, '/')) }}</a>
+            @endif
+        </div>
+
         <dl class="order-summary">
             <dt>Order reference</dt>
             <dd class="order-reference">{{ $order->order_reference }}</dd>
@@ -60,8 +78,42 @@
             <dd class="order-total">{{ $money($order->order_total_minor) }}</dd>
         </dl>
 
+        <div class="checkout-help">
+            <h2>Haven't got your tickets?</h2>
+            <p>
+                Your tickets should arrive by email within about 5 minutes. Please
+                check your spam or junk folder first. If they still haven't turned up,
+                get in touch with {{ $sellerName }} and quote your order reference
+                <strong>{{ $order->order_reference }}</strong>.
+            </p>
+            @if ($supportEmail || $supportPhone)
+                <ul class="checkout-help__contacts">
+                    @if ($supportEmail)
+                        <li>
+                            <span class="checkout-help__ico" aria-hidden="true">✉</span>
+                            <a href="mailto:{{ $supportEmail }}?subject={{ rawurlencode('Missing tickets — order '.$order->order_reference) }}">{{ $supportEmail }}</a>
+                        </li>
+                    @endif
+                    @if ($supportPhone)
+                        <li>
+                            <span class="checkout-help__ico" aria-hidden="true">☎</span>
+                            <a href="tel:{{ preg_replace('/[^0-9+]/', '', $supportPhone) }}">{{ $supportPhone }}</a>
+                        </li>
+                    @endif
+                </ul>
+            @endif
+        </div>
+
         <a class="btn btn-outline" href="{{ route('event.page', ['companySlug' => $company->slug, 'event' => $event->id]) }}">
             Back to event
         </a>
+
+        <div class="checkout-madeby">
+            <a class="checkout-madeby__logo" href="{{ url('/') }}" aria-label="Events by CK Enterprises">
+                <span class="events">Events</span>
+                <span class="by">by</span>
+                <span class="ck">CK Enterprises</span>
+            </a>
+        </div>
     </section>
 @endsection

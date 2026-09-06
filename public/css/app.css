@@ -555,6 +555,48 @@ main.public-main.event-main { max-width: 1040px; padding-top: 0; }
 .checkout-return .order-total { font-size: 1.1rem; color: var(--brand); }
 .checkout-return .btn { display: inline-block; }
 
+/* "You bought from" seller block */
+.checkout-seller {
+    display: flex; flex-direction: column; align-items: center; gap: 0.15rem;
+    margin: 0 auto 1.5rem; padding: 0.9rem 1.25rem; max-width: 42ch;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 0.75rem;
+}
+.checkout-seller__label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.checkout-seller__name { font-size: 1.1rem; font-weight: 700; color: var(--ink); }
+.checkout-seller__link { font-size: 0.88rem; color: var(--brand); text-decoration: none; }
+.checkout-seller__link:hover { text-decoration: underline; }
+
+/* "Haven't got your tickets?" help block */
+.checkout-help {
+    text-align: left; margin: 0 0 1.75rem; padding: 1.25rem 1.35rem;
+    background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 0.75rem;
+}
+.checkout-help h2 { margin: 0 0 0.5rem; font-size: 1.05rem; color: var(--ink); }
+.checkout-help p { margin: 0 0 0.85rem; color: var(--muted); font-size: 0.92rem; line-height: 1.5; }
+.checkout-help p:last-child { margin-bottom: 0; }
+.checkout-help__contacts { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.checkout-help__contacts li { display: flex; align-items: center; gap: 0.6rem; }
+.checkout-help__ico {
+    width: 28px; height: 28px; flex: none; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #e0f2fe; color: #0369a1; font-size: 0.9rem;
+}
+.checkout-help__contacts a { color: #0369a1; font-weight: 600; text-decoration: none; word-break: break-word; }
+.checkout-help__contacts a:hover { text-decoration: underline; }
+
+/* "Events by CK Enterprises" wordmark at the foot of the success card */
+.checkout-madeby { margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid var(--border); }
+.checkout-madeby__logo {
+    display: inline-flex; align-items: baseline; gap: 0.35rem;
+    font-family: 'Cabin Sketch', cursive; font-weight: 700; line-height: 1; text-decoration: none;
+}
+.checkout-madeby__logo .events { font-size: 1.35rem; color: #0d9488; }
+.checkout-madeby__logo .by {
+    font-family: inherit; font-weight: 500; font-size: 0.7rem; letter-spacing: 0.05em;
+    color: var(--muted); text-transform: uppercase; font-family: system-ui, -apple-system, sans-serif;
+}
+.checkout-madeby__logo .ck { font-size: 1.35rem; color: var(--ink); }
+
 @media (max-width: 560px) {
     .event-hero h1 { font-size: 1.7rem; }
     .checkout-return { padding: 1.5rem; }
