@@ -7,6 +7,7 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\EventPageController;
+use App\Http\Controllers\EventReportController;
 use App\Http\Controllers\GdprController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LandingController;
@@ -118,6 +119,15 @@ Route::middleware(['auth', 'company.active', 'session.timeout', 'dashboard.tenan
         Route::patch('/events/{event}', [EventController::class, 'update']);
         Route::post('/events/{event}/publish', [EventController::class, 'publish'])->name('events.publish');
         Route::post('/events/{event}/unpublish', [EventController::class, 'unpublish'])->name('events.unpublish');
+
+        // Event QR code + per-event report (Admin-gated / Accountant-gated in
+        // their controllers). `qr` streams a PNG of the public Event page URL
+        // for sharing; `report` renders the read-only per-event sales/revenue
+        // breakdown from the shared EventReportService. Both are scoped to the
+        // authenticated user's Company by the `dashboard.tenant` group (foreign
+        // Events 404). (Requirements 4.3, 6.1, 6.9)
+        Route::get('/events/{event}/qr', [EventController::class, 'qr'])->name('events.qr');
+        Route::get('/events/{event}/report', [EventReportController::class, 'show'])->name('events.report');
 
         // Ticket_Type management (Admin-gated in the controller), nested under
         // an Event. Create/update are scoped to the authenticated user's

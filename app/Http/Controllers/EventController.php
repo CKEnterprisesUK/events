@@ -3,12 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\Event;
+use App\Services\EventReadiness;
+use App\Services\EventReportService;
+use App\Services\QrService;
 use App\Services\RoleAuthorization;
 use App\Services\StorefrontListing;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Company-dashboard controller for managing Events.
@@ -28,7 +32,11 @@ use Illuminate\Support\Facades\Gate;
  */
 class EventController extends Controller
 {
-    public function __construct(private StorefrontListing $storefrontListing) {}
+    public function __construct(
+        private StorefrontListing $storefrontListing,
+        private EventReadiness $readiness,
+        private EventReportService $reports,
+    ) {}
 
     /**
      * List the authenticated Company's Events. (Requirement 5.1)
@@ -83,6 +91,19 @@ class EventController extends Controller
             'event' => $event,
             'ticketTypes' => $ticketTypes,
             'recentOrders' => $recentOrders,
+            // Publish-readiness checklist and the advisory capacity comparison
+            // (Requirements 1.4, 2.1, 3.1).
+            'readiness' => $this->readiness->checklist($event),
+            'capacity' => $this->readiness->capacity($event),
+            // The public event page URL for the share panel; live only once the
+            // Event is published (Requirements 4.1, 4.2, 4.4).
+            'publicUrl' => route('event.page', [
+                'companySlug' => $event->company->slug,
+                'event' => $event->id,
+            ]),
+            // At-a-glance accounting summary from the single reporting source of
+            // truth (Requirement 5.1).
+            'report' => $this->reports->for($event),
         ]);
     }
 
@@ -111,6 +132,18 @@ class EventController extends Controller
     {
         Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
 
+        // The Event model is the single source of truth for publishability. If
+        // any prerequisite is unmet, refuse the publish and surface the blocker
+        // messages on the show page — leaving the Event unpublished and the
+        // storefront cache untouched. (Requirements 1.1, 1.2)
+        $blockers = $event->publishBlockers();
+
+        if ($blockers !== []) {
+            return redirect()
+                ->route('dashboard.events.show', $event)
+                ->with('publish_errors', array_values($blockers));
+        }
+
         $event->publish();
 
         // Publishing adds the Event to the public storefront listing; refresh
@@ -138,6 +171,37 @@ class EventController extends Controller
         return redirect()
             ->route('dashboard.events.show', $event)
             ->with('status', 'Event unpublished.');
+    }
+
+    /**
+     * Download a PNG QR code that points at the Event's public page. Available
+     * for both draft and published Events so an Admin can prepare printed
+     * material ahead of go-live — the encoded URL only becomes reachable once
+     * the Event is published. (Requirements 4.3, 4.5)
+     *
+     * QR rendering needs the GD extension; if it is unavailable the writer
+     * throws, and we surface a 500 rather than ever returning a broken image or
+     * partial bytes. (Requirement 4.7)
+     */
+    public function qr(Event $event, QrService $qr): Response
+    {
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+
+        $url = route('event.page', [
+            'companySlug' => $event->company->slug,
+            'event' => $event->id,
+        ]);
+
+        try {
+            $png = $qr->png($url, 512);
+        } catch (\Throwable $e) {
+            abort(500, 'QR code generation is unavailable on this server.');
+        }
+
+        return response($png, 200, [
+            'Content-Type' => 'image/png',
+            'Content-Disposition' => 'attachment; filename="event-'.$event->id.'-qr.png"',
+        ]);
     }
 
     /**

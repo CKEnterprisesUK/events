@@ -183,4 +183,19 @@ class CompanyLegalDetailsTest extends TestCase
         $response->assertSee('Displayed Legal Name Ltd', false);
         $response->assertSee('7 Render Street', false);
     }
+
+    public function test_branding_edit_page_renders_tabbed_sections(): void
+    {
+        $owner = User::factory()->owner()->create();
+
+        $response = $this->actingAs($owner)->get(route('dashboard.branding.edit'));
+
+        $response->assertOk();
+        // The tabbed layout with a tab per section is present.
+        $response->assertSee('role="tablist"', false);
+        $response->assertSee('data-tab="organisation"', false);
+        $response->assertSee('data-tab="address"', false);
+        $response->assertSee('data-tab="contact"', false);
+        $response->assertSee('data-tab="tickets"', false);
+    }
 }

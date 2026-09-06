@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Company;
 use App\Models\Event;
+use App\Models\TicketType;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -136,7 +137,13 @@ class EventManagementTest extends TestCase
     public function test_admin_publishes_and_unpublishes_an_event(): void
     {
         $admin = User::factory()->admin()->create();
-        $event = Event::factory()->for(Company::find($admin->company_id))->unpublished()->create();
+        $event = Event::factory()->for(Company::find($admin->company_id))
+            ->unpublished()
+            ->create();
+
+        // Publish gating requires a start date (set by the factory default) and
+        // at least one ticket type, so give the event one before publishing.
+        TicketType::factory()->forEvent($event)->create();
 
         // Requirement 5.4 — publishing makes the event available.
         $this->actingAs($admin)->post("/dashboard/events/{$event->id}/publish")

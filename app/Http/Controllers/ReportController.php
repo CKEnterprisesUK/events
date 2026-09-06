@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Event;
 use App\Models\Order;
 use App\Models\Ticket;
+use App\Services\EventReportService;
 use App\Services\RoleAuthorization;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Gate;
@@ -47,12 +48,16 @@ class ReportController extends Controller
      * holds, expired/cancelled/voided Orders, and refunded/disputed Orders are
      * excluded — they represent no settled revenue to the Company. (13.7, 17.x)
      *
+     * This mirrors {@see EventReportService::CONFIRMED_STATUSES} exactly. The
+     * per-Event breakdown delegates to {@see EventReportService} (the single
+     * accounting source of truth) so the company-wide totals here and the
+     * per-Event figures can never diverge. (Requirement 6.6)
+     *
      * @var list<string>
      */
-    private const CONFIRMED_STATUSES = [
-        Order::STATUS_PAID,
-        Order::STATUS_FREE_CONFIRMED,
-    ];
+    private const CONFIRMED_STATUSES = EventReportService::CONFIRMED_STATUSES;
+
+    public function __construct(private readonly EventReportService $reports) {}
 
     /**
      * The Company's sales/revenue report plus payout information, scoped to the
@@ -107,7 +112,20 @@ class ReportController extends Controller
     /**
      * A per-Event breakdown of the same figures, computed from the confirmed
      * Orders grouped by their Event. Events with no confirmed Orders are
-     * omitted. (Requirement 21.1)
+     * omitted. (Requirements 21.1, 6.6)
+     *
+     * The shared accounting figures — confirmed order count, tickets sold,
+     * order total, net to company, and (by derivation) the application fee —
+     * are taken from {@see EventReportService}, the single source of truth,
+     * rather than recomputed here, so the per-Event breakdown can never diverge
+     * from the dedicated per-Event report page. The two money columns the
+     * company report needs but the service does not own — `gross_sales_minor`
+     * (sum of `ticket_subtotal_minor`) and `booking_fees_minor` (sum of
+     * `booking_fee_minor`) — are still summed locally from the confirmed Orders
+     * this method already holds. The service's `grossRevenueMinor` is the
+     * collected `order_total_minor` (NOT the ticket subtotal), so it maps onto
+     * this row's `order_total_minor`, and `application_fees_minor` is recovered
+     * as `order_total − net`, which is the service's own definition of net.
      *
      * @param  \Illuminate\Support\Collection<int, Order>  $confirmedOrders
      * @return list<array<string, int|string>>
@@ -118,39 +136,37 @@ class ReportController extends Controller
             return [];
         }
 
-        $eventNames = Event::query()
+        $events = Event::query()
             ->whereIn('id', $confirmedOrders->pluck('event_id')->unique()->all())
-            ->pluck('name', 'id');
-
-        // Valid ticket counts per Order, so we can aggregate per Event.
-        $validTicketsByOrder = Ticket::query()
-            ->whereIn('order_id', $confirmedOrders->pluck('id')->all())
-            ->where('status', Ticket::STATUS_VALID)
             ->get()
-            ->groupBy('order_id')
-            ->map(fn ($group) => $group->count());
+            ->keyBy('id');
 
         $rows = [];
 
         foreach ($confirmedOrders->groupBy('event_id') as $eventId => $orders) {
             $eventId = (int) $eventId;
-            $ticketsSold = (int) $orders->sum(
-                fn (Order $order) => $validTicketsByOrder->get($order->id, 0)
-            );
+            $event = $events->get($eventId);
 
-            $applicationFees = (int) $orders->sum('application_fee_minor');
-            $orderTotal = (int) $orders->sum('order_total_minor');
+            // Delegate to the single accounting source of truth for the shared
+            // figures. The service re-queries the same confirmed Orders under
+            // the active tenant scope, so its numbers match the ones this
+            // report groups by Event. (Requirement 6.6)
+            $report = $this->reports->for($event);
 
             $rows[] = [
                 'event_id' => $eventId,
-                'event_name' => (string) $eventNames->get($eventId, 'Unknown event'),
-                'orders' => $orders->count(),
+                'event_name' => (string) ($event->name ?? 'Unknown event'),
+                'orders' => $report->confirmedOrders,
+                // Service does not own these two columns — sum locally.
                 'gross_sales_minor' => (int) $orders->sum('ticket_subtotal_minor'),
                 'booking_fees_minor' => (int) $orders->sum('booking_fee_minor'),
-                'application_fees_minor' => $applicationFees,
-                'order_total_minor' => $orderTotal,
-                'net_to_company_minor' => $orderTotal - $applicationFees,
-                'tickets_sold' => $ticketsSold,
+                // Recover the platform fee from the service's own net definition
+                // (net = order_total − application_fee) to keep it derived from
+                // the shared source rather than recomputed.
+                'application_fees_minor' => $report->grossRevenueMinor - $report->netToCompanyMinor,
+                'order_total_minor' => $report->grossRevenueMinor,
+                'net_to_company_minor' => $report->netToCompanyMinor,
+                'tickets_sold' => $report->ticketsSold,
             ];
         }
 

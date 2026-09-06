@@ -2,6 +2,8 @@
 
 @section('title', 'Sign up')
 
+@section('main_class', 'public-main-wide')
+
 @php
     // Fields owned by each wizard step, so a server-side validation error can
     // reveal the step that contains the first invalid field on reload.
