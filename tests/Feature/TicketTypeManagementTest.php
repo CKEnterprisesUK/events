@@ -46,6 +46,7 @@ class TicketTypeManagementTest extends TestCase
         return array_merge([
             'name' => 'General Admission',
             'price' => '12.50',
+            'capacity_mode' => TicketType::MODE_CAPPED,
             'capacity' => 100,
             'sale_starts_at' => now()->addDay()->toDateTimeString(),
             'sale_ends_at' => now()->addWeek()->toDateTimeString(),
@@ -137,6 +138,13 @@ class TicketTypeManagementTest extends TestCase
     {
         [$admin, $event] = $this->adminWithEvent();
 
+        // The show page derives availability via TicketType::availabilityFor(),
+        // which for a capped type is min(per-type remaining, event overall
+        // remaining). Give the Event an unlimited overall capacity so the
+        // rendered figure is the per-type remaining under test (not capped by a
+        // random factory event capacity). (Requirements 2.5, 6.10)
+        $event->update(['capacity' => null]);
+
         // Remaining available = capacity - sold_count - reserved_count.
         // (Requirement 6.10) => 100 - 30 - 20 = 50.
         $ticketType = TicketType::factory()->forEvent($event)->create([
@@ -148,8 +156,12 @@ class TicketTypeManagementTest extends TestCase
 
         $this->assertSame(50, $ticketType->availableQuantity());
 
+        // The standalone ticket-types index is now folded into the manage-event
+        // show page's Ticket types tab (the index route redirects there). The
+        // tabbed show page renders all panels server-side, including the capped
+        // type's "{n} remaining" availability. (task 9.5)
         $this->actingAs($admin)
-            ->get(route('dashboard.events.ticket-types.index', $event))
+            ->get(route('dashboard.events.show', $event))
             ->assertStatus(200)
             ->assertSee('50 remaining');
     }

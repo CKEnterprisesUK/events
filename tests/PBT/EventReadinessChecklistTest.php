@@ -18,10 +18,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
  * test database.
  *
  * The rule under test: for any Event, EventReadiness::checklist() returns
- * exactly the items keyed {name, starts_at, venue, ticket_types, capacity} in
- * that fixed order, and each item's `satisfied` flag equals the predicate
- * evaluated independently against the Event's current persisted state.
- * (Requirements 2.1, 2.2)
+ * exactly the items keyed {name, starts_at, venue, ticket_types,
+ * shared_pool_capacity, capacity} in that fixed order, and each item's
+ * `satisfied` flag equals the predicate evaluated independently against the
+ * Event's current persisted state. (Requirements 2.1, 2.2)
  */
 class EventReadinessChecklistTest extends PbtTestCase
 {
@@ -37,8 +37,8 @@ class EventReadinessChecklistTest extends PbtTestCase
     /**
      * Property 3: Checklist reflects event state — for any generated Event, the
      * checklist contains exactly {name, starts_at, venue, ticket_types,
-     * capacity} in order and each `satisfied` flag matches the predicate on the
-     * Event.
+     * shared_pool_capacity, capacity} in order and each `satisfied` flag matches
+     * the predicate on the Event.
      *
      * **Validates: Requirements 2.1, 2.2**
      */
@@ -97,11 +97,11 @@ class EventReadinessChecklistTest extends PbtTestCase
 
                 $items = app(EventReadiness::class)->checklist($event)->items();
 
-                // The item keys must be exactly these five, in this order.
+                // The item keys must be exactly these six, in this order.
                 $this->assertSame(
-                    ['name', 'starts_at', 'venue', 'ticket_types', 'capacity'],
+                    ['name', 'starts_at', 'venue', 'ticket_types', 'shared_pool_capacity', 'capacity'],
                     array_map(fn ($item) => $item->key, $items),
-                    'checklist items must be exactly {name, starts_at, venue, ticket_types, capacity} in order',
+                    'checklist items must be exactly {name, starts_at, venue, ticket_types, shared_pool_capacity, capacity} in order',
                 );
 
                 // Independently computed expected `satisfied` per key.
@@ -110,11 +110,24 @@ class EventReadinessChecklistTest extends PbtTestCase
                     typesSum: $typesSum,
                 ))->isSane();
 
+                // The shared-pool capacity item is satisfied unless the Event
+                // has no overall capacity AND it has a shared-pool ticket type
+                // (which would then have no ceiling to draw from). This test
+                // only ever creates capped ticket types, so no shared-pool type
+                // exists and the item is always satisfied — but compute it from
+                // the controlled inputs rather than hardcoding, to stay an
+                // independent oracle. (Requirements 3.1, 3.4)
+                $hasSharedPoolType = $event->ticketTypes()
+                    ->where('capacity_mode', TicketType::MODE_SHARED_POOL)
+                    ->exists();
+                $expectedSharedPoolSatisfied = ! ($eventCapacity === null && $hasSharedPoolType);
+
                 $expected = [
                     'name' => $event->name !== null && trim($event->name) !== '',
                     'starts_at' => $event->starts_at !== null,
                     'venue' => $event->venue !== null && trim($event->venue) !== '',
                     'ticket_types' => $event->ticketTypes()->exists(),
+                    'shared_pool_capacity' => $expectedSharedPoolSatisfied,
                     'capacity' => $expectedCapacitySane,
                 ];
 

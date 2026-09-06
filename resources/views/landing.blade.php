@@ -186,10 +186,7 @@
                 <a class="link" href="#how">How it works</a>
                 <a class="link" href="#pricing">Pricing</a>
                 @auth
-                    <form method="POST" action="{{ url('/logout') }}" style="margin:0">
-                        @csrf
-                        <button type="submit" class="btn btn-outline-light">Log out</button>
-                    </form>
+                    <a class="btn btn-primary" href="{{ route('dashboard.home') }}">Dashboard</a>
                 @else
                     <a class="link" href="{{ url('/login') }}">Log in</a>
                     <a class="btn btn-primary" href="{{ url('/register') }}">Get started</a>
@@ -403,8 +400,12 @@
                 <h2>Ready to sell your first ticket?</h2>
                 <p>Set up your branded storefront today, with clear advice, transparent pricing and support you can depend on.</p>
                 <div class="cta">
-                    <a class="btn btn-light" href="{{ url('/register') }}">Get started free</a>
-                    <a class="btn btn-outline-light" href="{{ url('/login') }}">Log in</a>
+                    @auth
+                        <a class="btn btn-light" href="{{ route('dashboard.home') }}">Go to dashboard</a>
+                    @else
+                        <a class="btn btn-light" href="{{ url('/register') }}">Get started free</a>
+                        <a class="btn btn-outline-light" href="{{ url('/login') }}">Log in</a>
+                    @endauth
                 </div>
             </div>
         </div>
@@ -423,8 +424,12 @@
                     <a href="#features">Features</a>
                     <a href="#how">How it works</a>
                     <a href="#pricing">Pricing</a>
-                    <a href="{{ url('/login') }}">Log in</a>
-                    <a href="{{ url('/register') }}">Get started</a>
+                    @auth
+                        <a href="{{ route('dashboard.home') }}">Dashboard</a>
+                    @else
+                        <a href="{{ url('/login') }}">Log in</a>
+                        <a href="{{ url('/register') }}">Get started</a>
+                    @endauth
                 </div>
             </div>
             <div class="copy">

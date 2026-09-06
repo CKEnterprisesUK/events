@@ -192,6 +192,7 @@ class TicketTypeFieldValidationTest extends PbtTestCase
                     'name' => $name,
                     'price' => $price,
                     'capacity' => $capacity,
+                    'capacity_mode' => TicketType::MODE_CAPPED,
                     'sale_starts_at' => $saleStart->toDateTimeString(),
                     'sale_ends_at' => $saleEnds->toDateTimeString(),
                 ];
