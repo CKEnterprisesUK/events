@@ -49,6 +49,116 @@
                 @error('terms_text')<p class="error">{{ $message }}</p>@enderror
             </div>
 
+            {{-- Legal/registration details captured at signup and maintained
+                 here by the Owner. --}}
+            <fieldset class="field">
+                <legend>Organisation details</legend>
+
+                <div class="field">
+                    <label for="legal_name">Registered / legal name</label>
+                    <input type="text" name="legal_name" id="legal_name"
+                           value="{{ old('legal_name', $company->legal_name) }}" required>
+                    @error('legal_name')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="field">
+                    <label for="trading_name">Trading name</label>
+                    <input type="text" name="trading_name" id="trading_name"
+                           value="{{ old('trading_name', $company->trading_name) }}">
+                    <span class="field-hint">Your public-facing name, if different from the legal name.</span>
+                    @error('trading_name')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="field">
+                    <label for="organisation_type">Organisation type</label>
+                    <select name="organisation_type" id="organisation_type" required>
+                        @foreach (\App\Models\Company::ORGANISATION_TYPES as $value => $label)
+                            <option value="{{ $value }}" @selected(old('organisation_type', $company->organisation_type) === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    @error('organisation_type')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="field">
+                    <label for="company_number">Companies House number</label>
+                    <input type="text" name="company_number" id="company_number"
+                           value="{{ old('company_number', $company->company_number) }}">
+                    <span class="field-hint">Required for companies and CICs.</span>
+                    @error('company_number')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="field">
+                    <label for="charity_number">Charity Commission number</label>
+                    <input type="text" name="charity_number" id="charity_number"
+                           value="{{ old('charity_number', $company->charity_number) }}">
+                    <span class="field-hint">Required for charities.</span>
+                    @error('charity_number')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="field">
+                    <label for="website">Website</label>
+                    <input type="url" name="website" id="website"
+                           value="{{ old('website', $company->website) }}" placeholder="https://example.org">
+                    @error('website')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="field">
+                    <label for="email">Organisation email</label>
+                    <input type="email" name="email" id="email"
+                           value="{{ old('email', $company->email) }}" required>
+                    <span class="field-hint">Main contact email for the organisation.</span>
+                    @error('email')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="field">
+                    <label for="phone">Phone</label>
+                    <input type="tel" name="phone" id="phone"
+                           value="{{ old('phone', $company->phone) }}">
+                    @error('phone')<p class="error">{{ $message }}</p>@enderror
+                </div>
+            </fieldset>
+
+            {{-- Registered / business address. --}}
+            <fieldset class="field">
+                <legend>Registered address</legend>
+
+                <div class="field">
+                    <label for="address_line_1">Address line 1</label>
+                    <input type="text" name="address_line_1" id="address_line_1"
+                           value="{{ old('address_line_1', $company->address_line_1) }}" required>
+                    @error('address_line_1')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="field">
+                    <label for="address_line_2">Address line 2</label>
+                    <input type="text" name="address_line_2" id="address_line_2"
+                           value="{{ old('address_line_2', $company->address_line_2) }}">
+                    @error('address_line_2')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="field">
+                    <label for="city">City</label>
+                    <input type="text" name="city" id="city"
+                           value="{{ old('city', $company->city) }}" required>
+                    @error('city')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="field">
+                    <label for="postcode">Postcode</label>
+                    <input type="text" name="postcode" id="postcode"
+                           value="{{ old('postcode', $company->postcode) }}" required>
+                    @error('postcode')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="field">
+                    <label for="country">Country</label>
+                    <input type="text" name="country" id="country" maxlength="2"
+                           value="{{ old('country', $company->country) }}" required pattern="[A-Za-z]{2}">
+                    <span class="field-hint">Two-letter country code (ISO 3166-1).</span>
+                    @error('country')<p class="error">{{ $message }}</p>@enderror
+                </div>
+            </fieldset>
+
             {{-- Contact addresses: public support contact for Customers, and the
                  GDPR/data-protection contact for data-subject requests. --}}
             <fieldset class="field">

@@ -203,6 +203,18 @@ class SqlSchemaDriftGuardTest extends TestCase
                     // CREATE TABLE body.
                     $col = preg_replace('/\s+(AFTER\s+`?\w+`?|FIRST)\s*$/is', '', $m[1]);
                     $tables[$table][] = trim($col);
+                } elseif (preg_match('/^MODIFY\s+COLUMN\s+`?(?<col>\w+)`?\s+(?<def>.*)$/is', $clause, $m)) {
+                    // MODIFY COLUMN redefines an existing column in place (e.g.
+                    // widening an enum). Replace the column's prior definition
+                    // so the reconstructed schema reflects the new type rather
+                    // than carrying both the old and new definitions.
+                    $name = $m['col'];
+                    $def = preg_replace('/\s+(AFTER\s+`?\w+`?|FIRST)\s*$/is', '', $m['def']);
+                    $tables[$table] = array_values(array_filter(
+                        $tables[$table],
+                        fn (string $existing): bool => preg_match('/^`?'.preg_quote($name, '/').'`?\s/i', trim($existing)) !== 1,
+                    ));
+                    $tables[$table][] = trim('`'.$name.'` '.$def);
                 } elseif (preg_match('/^ADD\s+(CONSTRAINT\s+.*)$/is', $clause, $m)) {
                     $tables[$table][] = trim($m[1]);
                 } elseif (preg_match('/^ADD\s+(KEY|UNIQUE\s+KEY|INDEX|PRIMARY\s+KEY|FOREIGN\s+KEY)\s+(.*)$/is', $clause, $m)) {

@@ -158,6 +158,7 @@ class Company extends Model
      */
     protected $attributes = [
         'status' => self::STATUS_ACTIVE,
+        'country' => 'GB',
         'fee_handling_mode' => self::FEE_MODE_ABSORB,
         'stripe_charges_enabled' => false,
     ];

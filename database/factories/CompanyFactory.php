@@ -24,6 +24,21 @@ class CompanyFactory extends Factory
 
         return [
             'name' => $name,
+            // Registered legal name captured at signup; defaults to the working
+            // name here. Trading name left null (defaults to the legal name).
+            'legal_name' => $name,
+            'trading_name' => null,
+            'organisation_type' => Company::TYPE_COMPANY,
+            'company_number' => null,
+            'charity_number' => null,
+            'website' => null,
+            'email' => fake()->unique()->companyEmail(),
+            'phone' => null,
+            'address_line_1' => fake()->streetAddress(),
+            'address_line_2' => null,
+            'city' => fake()->city(),
+            'postcode' => fake()->postcode(),
+            'country' => 'GB',
             // Slug is lowercase alphanumeric + hyphens (Requirement 1.6),
             // kept unique per generated row.
             'slug' => Str::slug($name).'-'.Str::lower(Str::random(6)),
@@ -47,6 +62,39 @@ class CompanyFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => Company::STATUS_SUSPENDED,
+        ]);
+    }
+
+    /**
+     * Indicate that the Company is pending verification.
+     */
+    public function pending(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => Company::STATUS_PENDING,
+        ]);
+    }
+
+    /**
+     * Indicate that the Company is closed.
+     */
+    public function closed(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => Company::STATUS_CLOSED,
+        ]);
+    }
+
+    /**
+     * Indicate that the Company is a registered charity, with a Charity
+     * Commission number instead of a Companies House number.
+     */
+    public function charity(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'organisation_type' => Company::TYPE_CHARITY,
+            'charity_number' => (string) fake()->numberBetween(1000000, 9999999),
+            'company_number' => null,
         ]);
     }
 }

@@ -27,6 +27,29 @@ class BrandingManagementTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * The legal/registration + address fields the branding form always submits
+     * and the controller requires (captured at signup, maintained here). Tests
+     * that exercise a branding facet merge these so the required subset is
+     * present, mirroring the real form which carries every field on each save.
+     *
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function orgFields(array $overrides = []): array
+    {
+        return array_merge([
+            'legal_name' => 'Acme Events Ltd',
+            'organisation_type' => Company::TYPE_COMPANY,
+            'company_number' => '01234567',
+            'email' => 'hello@acme.test',
+            'address_line_1' => '1 High Street',
+            'city' => 'London',
+            'postcode' => 'EC1A 1BB',
+            'country' => 'GB',
+        ], $overrides);
+    }
+
     // ---- Company-level branding (Owner) --------------------------------------
 
     public function test_owner_uploads_logo_which_is_stored_and_path_persisted(): void
@@ -35,9 +58,9 @@ class BrandingManagementTest extends TestCase
         Storage::fake('public');
         $owner = User::factory()->owner()->create();
 
-        $response = $this->actingAs($owner)->put(route('dashboard.branding.update'), [
+        $response = $this->actingAs($owner)->put(route('dashboard.branding.update'), $this->orgFields([
             'logo' => UploadedFile::fake()->image('logo.png', 200, 200),
-        ]);
+        ]));
 
         $response->assertRedirect(route('dashboard.branding.edit'));
 
@@ -51,11 +74,11 @@ class BrandingManagementTest extends TestCase
         // Requirements 7.2, 7.3, 7.4.
         $owner = User::factory()->owner()->create();
 
-        $this->actingAs($owner)->put(route('dashboard.branding.update'), [
+        $this->actingAs($owner)->put(route('dashboard.branding.update'), $this->orgFields([
             'primary_colour' => '#ABCDEF',
             'terms_text' => 'You agree to the terms.',
             'ticket_field_defs' => ['Seat', 'Table', ''],
-        ])->assertRedirect();
+        ]))->assertRedirect();
 
         $company = $owner->company->fresh();
         $this->assertSame('#ABCDEF', $company->primary_colour);
@@ -72,14 +95,14 @@ class BrandingManagementTest extends TestCase
         Storage::fake('public');
         $owner = User::factory()->owner()->create();
 
-        $this->actingAs($owner)->put(route('dashboard.branding.update'), [
+        $this->actingAs($owner)->put(route('dashboard.branding.update'), $this->orgFields([
             'logo' => UploadedFile::fake()->image('first.png'),
-        ]);
+        ]));
         $first = $owner->company->fresh()->logo_path;
 
-        $this->actingAs($owner)->put(route('dashboard.branding.update'), [
+        $this->actingAs($owner)->put(route('dashboard.branding.update'), $this->orgFields([
             'logo' => UploadedFile::fake()->image('second.png'),
-        ]);
+        ]));
         $second = $owner->company->fresh()->logo_path;
 
         $this->assertNotSame($first, $second);
@@ -92,9 +115,9 @@ class BrandingManagementTest extends TestCase
         // Requirement 7.2 — colour must be a valid hex value.
         $owner = User::factory()->owner()->create();
 
-        $this->actingAs($owner)->put(route('dashboard.branding.update'), [
+        $this->actingAs($owner)->put(route('dashboard.branding.update'), $this->orgFields([
             'primary_colour' => 'not-a-colour',
-        ])->assertSessionHasErrors('primary_colour');
+        ]))->assertSessionHasErrors('primary_colour');
 
         $this->assertNull($owner->company->fresh()->primary_colour);
     }

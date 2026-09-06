@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -82,6 +83,38 @@ class BrandingController extends Controller
             'terms_text' => ['nullable', 'string', 'max:20000'],
             'support_email' => ['nullable', 'string', 'email', 'max:254'],
             'gdpr_contact_email' => ['nullable', 'string', 'email', 'max:254'],
+
+            // Legal/registration details maintained by the Owner after signup.
+            // The registered name, organisation type, main organisation email
+            // and registered address stay required; the rest are optional.
+            'legal_name' => ['required', 'string', 'max:255'],
+            'trading_name' => ['nullable', 'string', 'max:255'],
+            'organisation_type' => ['required', Rule::in(array_keys(Company::ORGANISATION_TYPES))],
+            'company_number' => [
+                'nullable',
+                'string',
+                'max:50',
+                Rule::requiredIf(fn (): bool => in_array(
+                    $request->input('organisation_type'),
+                    [Company::TYPE_COMPANY, Company::TYPE_CIC],
+                    true,
+                )),
+            ],
+            'charity_number' => [
+                'nullable',
+                'string',
+                'max:50',
+                Rule::requiredIf(fn (): bool => $request->input('organisation_type') === Company::TYPE_CHARITY),
+            ],
+            'website' => ['nullable', 'string', 'url', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:254'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'address_line_1' => ['required', 'string', 'max:255'],
+            'address_line_2' => ['nullable', 'string', 'max:255'],
+            'city' => ['required', 'string', 'max:255'],
+            'postcode' => ['required', 'string', 'max:20'],
+            'country' => ['required', 'string', 'size:2'],
+
             'ticket_field_defs' => ['nullable', 'array'],
             'ticket_field_defs.*' => ['nullable', 'string', 'max:100'],
         ]);
@@ -91,6 +124,19 @@ class BrandingController extends Controller
             'terms_text' => $data['terms_text'] ?? null,
             'support_email' => $data['support_email'] ?? null,
             'gdpr_contact_email' => $data['gdpr_contact_email'] ?? null,
+            'legal_name' => $data['legal_name'],
+            'trading_name' => $data['trading_name'] ?? null,
+            'organisation_type' => $data['organisation_type'],
+            'company_number' => $data['company_number'] ?? null,
+            'charity_number' => $data['charity_number'] ?? null,
+            'website' => $data['website'] ?? null,
+            'email' => $data['email'],
+            'phone' => $data['phone'] ?? null,
+            'address_line_1' => $data['address_line_1'],
+            'address_line_2' => $data['address_line_2'] ?? null,
+            'city' => $data['city'],
+            'postcode' => $data['postcode'],
+            'country' => strtoupper($data['country']),
             'ticket_field_defs' => $this->normaliseFieldDefs($data['ticket_field_defs'] ?? null),
         ];
 
