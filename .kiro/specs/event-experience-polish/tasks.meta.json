@@ -354,6 +354,11 @@
         "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788703625694
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703785997
       }
     ],
     "9.3 Create `_hero.blade.php` partial": [
@@ -485,6 +490,11 @@
         "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788703624970
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703784597
       }
     ],
     "9.11 Update public `events/show.blade.php`": [
@@ -526,6 +536,16 @@
         "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788702011734
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703901467
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703967468
       }
     ],
     "11. Final checkpoint - full suite": [
@@ -533,6 +553,11 @@
         "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788702011759
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703968407
       }
     ],
     "6. Shared branding image store": [
@@ -731,6 +756,25 @@
         "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788703300977
+      }
+    ],
+    "9. Views: dashboard tab shell + partials": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703786030
+      }
+    ],
+    "9.13 Write feature test: tabbed manage-event page + inline mgmt": [
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703786810
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703900502
       }
     ]
   }

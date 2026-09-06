@@ -139,12 +139,12 @@ The stack is PHP/Laravel with Blade views, PHPUnit + Eris for property-based tes
 - [x] 8. Checkpoint - controllers + geocoding + image
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 9. Views: dashboard tab shell + partials
+- [x] 9. Views: dashboard tab shell + partials
   - [x] 9.1 Create accessible `_tabs.blade.php` tab shell
     - ARIA `tablist`/`tab`/`tabpanel` markup + vanilla JS in `@push('scripts')` for click + keyboard nav (Left/Right/Home/End, Enter/Space) + `location.hash` deep-linking; no-JS renders all panels visible with the tab strip hidden until JS enables it
     - _Requirements: 1.1, 1.2, 1.3, 1.8_
 
-  - [-] 9.2 Rewrite `dashboard/events/show.blade.php` into the tab shell
+  - [x] 9.2 Rewrite `dashboard/events/show.blade.php` into the tab shell
     - Page head (title, publish/unpublish, status/errors) + optional hero + `_tabs`; map partials to tabs (Overview, Ticket types, Location, Share & QR, Report, Orders) per design, each panel carrying a visible heading
     - _Requirements: 1.1, 1.4, 1.5_
 
@@ -176,7 +176,7 @@ The stack is PHP/Laravel with Blade views, PHPUnit + Eris for property-based tes
     - Add `capacity_mode` toggle that shows/hides the capacity input (capacity always visible with no JS)
     - _Requirements: 2.1, 2.2, 2.3_
 
-  - [-] 9.10 Update `dashboard/events/index.blade.php`
+  - [x] 9.10 Update `dashboard/events/index.blade.php`
     - Render the resolved hero as a small banner/thumbnail per row
     - _Requirements: 5.4_
 
@@ -188,14 +188,14 @@ The stack is PHP/Laravel with Blade views, PHPUnit + Eris for property-based tes
     - Online events: add the email joining-info notice
     - _Requirements: 4.8_
 
-  - [ ]* 9.13 Write feature test: tabbed manage-event page + inline mgmt
+  - [x]* 9.13 Write feature test: tabbed manage-event page + inline mgmt
     - Renders 6 tabs with `role="tab"`/`aria-controls`; panels visible without JS; inline ticket-type create/edit and comp issuance post to existing routes; 403 for non-managers, 404 cross-company
     - _Requirements: 1.1, 1.2, 1.3, 1.6, 1.7, 1.8, 6.1, 6.2, 6.3, 6.6, 6.7, 7.3, 7.4_
 
-- [~] 10. Checkpoint - views
+- [x] 10. Checkpoint - views
   - Ensure all tests pass, ask the user if questions arise.
 
-- [~] 11. Final checkpoint - full suite
+- [-] 11. Final checkpoint - full suite
   - Ensure all tests pass (reservation PBTs, publish gating, readiness, report, `EventManagementTest`, and the new suites), ask the user if questions arise.
   - Note: PBTs run against the real MySQL test DB and may need `php artisan migrate:fresh --env=testing` before a full run.
 

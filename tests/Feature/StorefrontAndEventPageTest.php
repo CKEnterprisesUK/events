@@ -131,6 +131,7 @@ class StorefrontAndEventPageTest extends TestCase
 
         $this->actingAs($admin)->put("/dashboard/events/{$event->id}", [
             'name' => 'New Title',
+            'location_mode' => Event::LOCATION_IN_PERSON,
         ])->assertRedirect();
 
         $this->get("/{$company->slug}")->assertOk()->assertSee('New Title')->assertDontSee('Old Title');

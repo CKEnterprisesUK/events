@@ -162,7 +162,7 @@
                 </a>
                 <p class="store-footer__tagline">Branded ticketing and direct payouts for event organisers.</p>
             </div>
-            <a class="cta" href="{{ url('/register') }}">Start selling your own tickets</a>
+            <a class="cta" href="{{ url('/') }}">Start selling your own tickets</a>
         </div>
         <div class="store-footer__bar">
             &copy; {{ date('Y') }} Events by CK Enterprises UK. All rights reserved.

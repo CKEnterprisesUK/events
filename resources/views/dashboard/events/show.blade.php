@@ -3,6 +3,9 @@
 @section('title', $event->name)
 
 @section('content')
+    {{-- Page head: title + status pill, publish/unpublish controls, branding
+         link. The ticket-types quick link is intentionally removed — it now
+         lives in the "Ticket types" tab. (Requirement 1.4) --}}
     <div class="page-head">
         <div>
             <h1>{{ $event->name }}</h1>
@@ -13,7 +16,6 @@
             </p>
         </div>
         <div class="page-head__actions">
-            <a class="btn btn-outline btn-sm" href="{{ route('dashboard.events.ticket-types.index', $event) }}">Ticket types</a>
             @can('settings')
                 <a class="btn btn-outline btn-sm" href="{{ route('dashboard.branding.event.edit', $event) }}">Branding</a>
             @endcan
@@ -54,174 +56,110 @@
         </div>
     @endif
 
-    {{-- At-a-glance summary (Requirement 5.1) ----------------------------- --}}
-    @include('dashboard.events._summary', ['event' => $event, 'report' => $report])
+    {{-- Hero banner (per-event poster, falling back to company poster) ---- --}}
+    @include('dashboard.events._hero', ['event' => $event])
 
-    {{-- Setup & sharing: readiness checklist, capacity, share ------------- --}}
-    @include('dashboard.events._readiness', ['readiness' => $readiness, 'event' => $event])
-    @include('dashboard.events._capacity', ['capacity' => $capacity, 'event' => $event])
-    @include('dashboard.events._share', ['publicUrl' => $publicUrl, 'event' => $event])
+    {{-- Tab strip. Panels below are rendered visible server-side; the tabs JS
+         hides inactive ones on init and honours ?tab= / #tab- deep-links.
+         (Requirements 1.1, 1.2, 1.3, 1.8) --}}
+    @php
+        $tabs = [
+            'overview' => 'Overview',
+            'ticket-types' => 'Ticket types',
+            'location' => 'Location',
+            'share' => 'Share & QR',
+            'report' => 'Report',
+            'orders' => 'Orders',
+        ];
+    @endphp
+    @include('dashboard.events._tabs', ['tabs' => $tabs])
 
-    {{-- Event details / edit --------------------------------------------- --}}
-    <div class="panel form-panel">
-        <div class="panel__head">
-            <h2>Event details</h2>
+    {{-- Overview: stats + readiness checklist + capacity + event-details edit
+         form. (Requirement 1.4) --}}
+    <section role="tabpanel" id="panel-overview" aria-labelledby="tab-overview" data-tabpanel="overview" tabindex="0">
+        <h2 class="sr-only">Overview</h2>
+
+        @include('dashboard.events._summary', ['event' => $event, 'report' => $report])
+        @include('dashboard.events._readiness', ['readiness' => $readiness, 'event' => $event])
+        @include('dashboard.events._capacity', ['capacity' => $capacity, 'event' => $event])
+
+        <div class="panel form-panel">
+            <div class="panel__head">
+                <h2>Event details</h2>
+            </div>
+            <form id="event-details-form" method="POST"
+                  action="{{ route('dashboard.events.update', $event) }}"
+                  enctype="multipart/form-data" class="stack">
+                @csrf
+                @method('PUT')
+                @include('dashboard.events._form', ['event' => $event])
+                <div class="form-actions">
+                    <button type="submit" class="btn">Save changes</button>
+                </div>
+            </form>
         </div>
-        <form method="POST" action="{{ route('dashboard.events.update', $event) }}" class="stack">
+    </section>
+
+    {{-- Ticket types: inline ticket-type management + comp issuance.
+         (Requirement 1.4, 6.1, 6.2) --}}
+    <section role="tabpanel" id="panel-ticket-types" aria-labelledby="tab-ticket-types" data-tabpanel="ticket-types" tabindex="0">
+        <h2 class="sr-only">Ticket types</h2>
+
+        @include('dashboard.events._ticket_types', [
+            'event' => $event,
+            'ticketTypes' => $ticketTypes,
+            'eventRemaining' => $eventRemaining,
+        ])
+        @include('dashboard.events._comp', [
+            'event' => $event,
+            'ticketTypes' => $ticketTypes,
+            'eventRemaining' => $eventRemaining,
+        ])
+    </section>
+
+    {{-- Location: its own event-update form so it can be saved independently of
+         the Overview details form (a single form cannot span two tab panels).
+         update()'s validation requires `name`, so we carry it as a hidden input;
+         all other event fields are absent from the request and therefore left
+         unchanged by update(). location_mode/address/latitude/longitude come
+         from the _location partial. (Requirement 1.4, 4.1, 4.3) --}}
+    <section role="tabpanel" id="panel-location" aria-labelledby="tab-location" data-tabpanel="location" tabindex="0">
+        <h2 class="sr-only">Location</h2>
+
+        <form method="POST" action="{{ route('dashboard.events.update', $event) }}"
+              enctype="multipart/form-data" class="stack">
             @csrf
             @method('PUT')
-            @include('dashboard.events._form', ['event' => $event])
+            <input type="hidden" name="name" value="{{ old('name', $event->name) }}">
+            @include('dashboard.events._location', ['event' => $event])
             <div class="form-actions">
-                <button type="submit" class="btn">Save changes</button>
+                <button type="submit" class="btn">Save location</button>
             </div>
         </form>
-    </div>
+    </section>
 
-    {{-- Complimentary tickets --------------------------------------------- --}}
-    @can('issue_comp')
-        <div class="panel form-panel">
-            <div class="panel__head"><h2>Issue complimentary tickets</h2></div>
-            @if ($ticketTypes->isEmpty())
-                <div class="empty">
-                    <p>Add a ticket type before issuing complimentary tickets.</p>
-                    <a class="btn btn-sm" href="{{ route('dashboard.events.ticket-types.index', $event) }}">Add ticket type</a>
-                </div>
-            @else
-                <form method="POST" action="{{ route('dashboard.events.comp', $event) }}" class="stack" id="comp-form">
-                    @csrf
-                    <div class="field-row">
-                        <div class="field">
-                            <label for="recipient_name">Recipient name</label>
-                            <input id="recipient_name" type="text" name="recipient_name" required
-                                   value="{{ old('recipient_name') }}">
-                            @error('recipient_name') <p class="error">{{ $message }}</p> @enderror
-                        </div>
-                        <div class="field">
-                            <label for="recipient_email">Recipient email</label>
-                            <input id="recipient_email" type="email" name="recipient_email" required
-                                   value="{{ old('recipient_email') }}">
-                            @error('recipient_email') <p class="error">{{ $message }}</p> @enderror
-                        </div>
-                    </div>
+    {{-- Share & QR (Requirement 1.4) --}}
+    <section role="tabpanel" id="panel-share" aria-labelledby="tab-share" data-tabpanel="share" tabindex="0">
+        <h2 class="sr-only">Share & QR</h2>
 
-                    <label class="field-label">Quantities</label>
-                    <table class="data-table">
-                        <thead>
-                            <tr><th>Ticket type</th><th class="num">Available</th><th style="width:120px;">Quantity</th></tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($ticketTypes as $i => $type)
-                                <tr>
-                                    <td>
-                                        <span class="cell-strong">{{ $type->name }}</span>
-                                        <input type="hidden" name="items[{{ $i }}][ticket_type_id]" value="{{ $type->id }}">
-                                    </td>
-                                    <td class="num">{{ $type->availableQuantity() }}</td>
-                                    <td>
-                                        <input type="number" name="items[{{ $i }}][quantity]" min="0" value="0"
-                                               max="{{ max(0, $type->availableQuantity()) }}">
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                    <p class="hint">Set a quantity of 0 for ticket types you don't want to include.</p>
-                    @error('items') <p class="error">{{ $message }}</p> @enderror
+        @include('dashboard.events._share', ['publicUrl' => $publicUrl, 'event' => $event])
+    </section>
 
-                    <div class="form-actions">
-                        <button type="submit" class="btn">Issue tickets</button>
-                    </div>
-                </form>
-            @endif
+    {{-- Report: at-a-glance figures + link to the dedicated report page.
+         (Requirement 1.4) --}}
+    <section role="tabpanel" id="panel-report" aria-labelledby="tab-report" data-tabpanel="report" tabindex="0">
+        <h2 class="sr-only">Report</h2>
+
+        @include('dashboard.events._summary', ['event' => $event, 'report' => $report])
+        <div class="form-actions">
+            <a class="btn btn-outline btn-sm" href="{{ route('dashboard.events.report', $event) }}">View full report</a>
         </div>
-    @endcan
+    </section>
 
-    {{-- Recent orders (cancel / refund) ---------------------------------- --}}
-    @canany(['cancel_order', 'refund_order'])
-        <div class="panel">
-            <div class="panel__head"><h2>Recent orders</h2></div>
-            @if ($recentOrders->isEmpty())
-                <div class="empty"><p>No orders yet.</p></div>
-            @else
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Reference</th>
-                            <th>Customer</th>
-                            <th>Status</th>
-                            <th class="num">Total</th>
-                            <th class="num">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($recentOrders as $order)
-                            @php
-                                $terminal = in_array($order->status, [
-                                    \App\Models\Order::STATUS_CANCELLED,
-                                    \App\Models\Order::STATUS_REFUNDED,
-                                    \App\Models\Order::STATUS_VOIDED,
-                                    \App\Models\Order::STATUS_EXPIRED,
-                                ], true);
-                            @endphp
-                            <tr>
-                                <td><span class="cell-strong">{{ $order->order_reference }}</span></td>
-                                <td>
-                                    {{ $order->customer_name }}
-                                    <span class="cell-dim">{{ $order->customer_email }}</span>
-                                </td>
-                                <td><span class="pill pill--draft">{{ ucfirst(str_replace('_', ' ', $order->status)) }}</span></td>
-                                <td class="num">{{ number_format($order->order_total_minor / 100, 2) }}</td>
-                                <td class="num">
-                                    @if ($terminal)
-                                        <span class="cell-dim">—</span>
-                                    @else
-                                        <div class="row-actions">
-                                            @can('refund_order')
-                                                @if ($order->status === \App\Models\Order::STATUS_PAID)
-                                                    <form method="POST" action="{{ route('dashboard.orders.refund', $order) }}" class="inline-form"
-                                                          onsubmit="return confirm('Refund this order? This issues a Stripe refund and voids the tickets.');">
-                                                        @csrf
-                                                        <button type="submit" class="btn btn-danger btn-sm">Refund</button>
-                                                    </form>
-                                                @endif
-                                            @endcan
-                                            @can('cancel_order')
-                                                <form method="POST" action="{{ route('dashboard.orders.cancel', $order) }}" class="inline-form"
-                                                      onsubmit="return confirm('Cancel this order? This voids the tickets and releases capacity.');">
-                                                    @csrf
-                                                    <button type="submit" class="btn btn-outline btn-sm">Cancel</button>
-                                                </form>
-                                            @endcan
-                                        </div>
-                                    @endif
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            @endif
-        </div>
-    @endcanany
+    {{-- Orders: recent orders with cancel/refund (Requirement 1.4) --}}
+    <section role="tabpanel" id="panel-orders" aria-labelledby="tab-orders" data-tabpanel="orders" tabindex="0">
+        <h2 class="sr-only">Orders</h2>
+
+        @include('dashboard.events._orders', ['recentOrders' => $recentOrders])
+    </section>
 @endsection
-
-@push('scripts')
-<script>
-    // Comp issuance: disable zero-quantity rows so only chosen ticket types are
-    // submitted (the server requires every submitted item to have quantity >= 1).
-    (function () {
-        var form = document.getElementById('comp-form');
-        if (!form) return;
-        form.addEventListener('submit', function () {
-            form.querySelectorAll('input[name$="[quantity]"]').forEach(function (qty) {
-                if (parseInt(qty.value, 10) > 0) return;
-                var row = qty.closest('tr');
-                qty.disabled = true;
-                if (row) {
-                    var hidden = row.querySelector('input[name$="[ticket_type_id]"]');
-                    if (hidden) hidden.disabled = true;
-                }
-            });
-        });
-    })();
-</script>
-@endpush
