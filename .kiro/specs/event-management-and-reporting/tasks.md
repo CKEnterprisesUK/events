@@ -165,32 +165,32 @@ Implementation language is PHP (Laravel), matching the existing codebase. The te
 - [x] 12. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 13. Add the additive Blade partials and report page, and wire the show page
-  - [-] 13.1 Create `resources/views/dashboard/events/_readiness.blade.php`
+- [x] 13. Add the additive Blade partials and report page, and wire the show page
+  - [x] 13.1 Create `resources/views/dashboard/events/_readiness.blade.php`
     - Render each `ChecklistItem` with a satisfied/unsatisfied indicator and a "required to publish" badge on blocking items.
     - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
-  - [-] 13.2 Create `resources/views/dashboard/events/_capacity.blade.php`
+  - [x] 13.2 Create `resources/views/dashboard/events/_capacity.blade.php`
     - Render the static explainer copy (optional overall ceiling, null = unlimited, interaction with per-type sum) plus a non-blocking warning keyed on `CapacityComparison::state()` for `EVENT_BINDS` and `TYPES_BIND`.
     - _Requirements: 3.1, 3.2, 3.3_
 
-  - [-] 13.3 Create `resources/views/dashboard/events/_share.blade.php`
+  - [x] 13.3 Create `resources/views/dashboard/events/_share.blade.php`
     - Show the public URL, a copy-link button (inline Clipboard API script via `@push('scripts')`), a link to the `events.qr` endpoint, and the note that the URL/QR go live only after publishing.
     - _Requirements: 4.1, 4.2, 4.4_
 
-  - [-] 13.4 Create `resources/views/dashboard/events/_summary.blade.php`
+  - [x] 13.4 Create `resources/views/dashboard/events/_summary.blade.php`
     - Render Tickets_Sold, Gross_Revenue, Net_To_Company, Capacity_Utilisation, and confirmed order count from the `EventReport`.
     - _Requirements: 5.1_
 
-  - [-] 13.5 Create `resources/views/dashboard/events/report.blade.php`
+  - [x] 13.5 Create `resources/views/dashboard/events/report.blade.php`
     - Render core metrics (6.2), the per-ticket-type breakdown table (6.3), the orders-by-status breakdown (6.4), and the sales-over-time-by-day trend (6.5). No CSV export control.
     - _Requirements: 6.2, 6.3, 6.4, 6.5, 6.9_
 
-  - [~] 13.6 Modify `resources/views/dashboard/events/show.blade.php`
+  - [x] 13.6 Modify `resources/views/dashboard/events/show.blade.php`
     - Include the four partials additively (leaving existing content/controls intact), disable/annotate the publish button when `!$event->isPublishable()`, render `session('publish_errors')` if present, and add a link to the report page.
     - _Requirements: 1.4, 2.5, 5.1_
 
-- [~] 14. Final checkpoint - Ensure all tests pass
+- [-] 14. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise. Confirm `CapacityReservationServiceTest` and `AccountantReportingTest` remain green (engine and company report untouched).
 
 ## Notes

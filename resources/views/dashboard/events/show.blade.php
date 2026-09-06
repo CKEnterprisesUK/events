@@ -18,10 +18,18 @@
                 <a class="btn btn-outline btn-sm" href="{{ route('dashboard.branding.event.edit', $event) }}">Branding</a>
             @endcan
             @unless ($event->isPublished())
-                <form method="POST" action="{{ route('dashboard.events.publish', $event) }}" class="inline-form">
-                    @csrf
-                    <button type="submit" class="btn btn-sm">Publish</button>
-                </form>
+                @php $publishBlockers = $event->publishBlockers(); @endphp
+                <div class="publish-control">
+                    <form method="POST" action="{{ route('dashboard.events.publish', $event) }}" class="inline-form">
+                        @csrf
+                        <button type="submit" class="btn btn-sm" @disabled(! empty($publishBlockers))>Publish</button>
+                    </form>
+                    @if (! empty($publishBlockers))
+                        <p class="hint muted" style="margin:.35rem 0 0;">
+                            Before publishing: {{ implode(' ', $publishBlockers) }}
+                        </p>
+                    @endif
+                </div>
             @else
                 <form method="POST" action="{{ route('dashboard.events.unpublish', $event) }}" class="inline-form">
                     @csrf
@@ -34,6 +42,25 @@
     @if (session('status'))
         <p class="status">{{ session('status') }}</p>
     @endif
+
+    @if (session('publish_errors'))
+        <div class="panel">
+            <div class="panel__head"><h2>Can’t publish yet</h2></div>
+            <ul class="error-list">
+                @foreach ((array) session('publish_errors') as $publishError)
+                    <li class="error">{{ $publishError }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    {{-- At-a-glance summary (Requirement 5.1) ----------------------------- --}}
+    @include('dashboard.events._summary', ['event' => $event, 'report' => $report])
+
+    {{-- Setup & sharing: readiness checklist, capacity, share ------------- --}}
+    @include('dashboard.events._readiness', ['readiness' => $readiness, 'event' => $event])
+    @include('dashboard.events._capacity', ['capacity' => $capacity, 'event' => $event])
+    @include('dashboard.events._share', ['publicUrl' => $publicUrl, 'event' => $event])
 
     {{-- Event details / edit --------------------------------------------- --}}
     <div class="panel form-panel">

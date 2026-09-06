@@ -517,6 +517,11 @@
         "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788700021511
+      },
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788700251231
       }
     ],
     "13.2 Create `resources/views/dashboard/events/_capacity.blade.php`": [
@@ -529,6 +534,11 @@
         "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788700022926
+      },
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788700250163
       }
     ],
     "13.3 Create `resources/views/dashboard/events/_share.blade.php`": [
@@ -541,6 +551,11 @@
         "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788700024331
+      },
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788700246441
       }
     ],
     "13.4 Create `resources/views/dashboard/events/_summary.blade.php`": [
@@ -553,6 +568,11 @@
         "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788700025080
+      },
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788700248761
       }
     ],
     "13.5 Create `resources/views/dashboard/events/report.blade.php`": [
@@ -565,6 +585,11 @@
         "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788700020064
+      },
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788700247792
       }
     ],
     "13.6 Modify `resources/views/dashboard/events/show.blade.php`": [
@@ -572,6 +597,16 @@
         "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788698895469
+      },
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788700255889
+      },
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788700339113
       }
     ],
     "14. Final checkpoint - Ensure all tests pass": [
@@ -579,6 +614,11 @@
         "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788698895501
+      },
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788700343172
       }
     ],
     "1. Add publish source-of-truth methods to the Event model": [
@@ -653,6 +693,13 @@
         "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788700013817
+      }
+    ],
+    "13. Add the additive Blade partials and report page, and wire the show page": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788700339146
       }
     ]
   }

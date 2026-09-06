@@ -12,7 +12,7 @@
         <link rel="icon" type="image/png" href="{{ asset('images/favicon.png') }}">
         <link rel="apple-touch-icon" href="{{ asset('images/favicon.png') }}">
     @endif
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v={{ @filemtime(public_path('css/app.css')) ?: config('app.asset_version', '1') }}">
     @stack('head')
 </head>
 <body>
