@@ -76,6 +76,9 @@ class StorefrontListing
             // tenant is resolved for the current request (e.g. dashboard writes
             // invalidate then callers may rebuild outside a storefront request).
             ->withoutGlobalScopes()
+            // Sponsors are rendered per-event; eager-load them (also without the
+            // tenant scope) so the payload can carry each event's sponsor rows.
+            ->with(['sponsors' => fn ($q) => $q->withoutGlobalScopes()])
             ->where('company_id', $company->getKey())
             ->where('is_published', true)
             ->orderByDesc('starts_at')
@@ -97,36 +100,22 @@ class StorefrontListing
     }
 
     /**
-     * The Event's sponsors as plain arrays for the storefront: the top then
-     * bottom slot, each included only when it has an image. The on_ticket flag
-     * is a print-time choice and does not affect public store visibility, so
-     * every uploaded sponsor logo appears on the storefront.
+     * The Event's sponsors as plain arrays for the storefront, in display
+     * order. The on_ticket flag is a print-time choice and does not affect
+     * public store visibility, so every sponsor logo appears on the storefront.
      *
      * @return list<array{path:string, name:?string, website:?string, bio:?string}>
      */
     private function sponsorsFor(Event $event): array
     {
-        $slots = [
-            [$event->sponsor_top_path, $event->sponsor_top_name, $event->sponsor_top_website, $event->sponsor_top_bio],
-            [$event->sponsor_bottom_path, $event->sponsor_bottom_name, $event->sponsor_bottom_website, $event->sponsor_bottom_bio],
-        ];
-
-        $sponsors = [];
-
-        foreach ($slots as [$path, $name, $website, $bio]) {
-            if ($path === null || $path === '') {
-                continue;
-            }
-
-            $sponsors[] = [
-                'path' => $path,
-                'name' => $name,
-                'website' => $website,
-                'bio' => $bio,
-            ];
-        }
-
-        return $sponsors;
+        return $event->sponsors
+            ->map(fn ($sponsor): array => [
+                'path' => $sponsor->image_path,
+                'name' => $sponsor->name,
+                'website' => $sponsor->website_url,
+                'bio' => $sponsor->bio,
+            ])
+            ->all();
     }
 
     private function cacheKey(int|string|null $companyId): string

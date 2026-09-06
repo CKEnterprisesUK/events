@@ -4,9 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\Company;
 use App\Models\Event;
+use App\Models\EventSponsor;
 use App\Models\Order;
 use App\Services\TicketPdfService;
-use Barryvdh\DomPDF\PDF;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -14,15 +14,15 @@ use Tests\TestCase;
 /**
  * Feature: event-ticketing-platform — ticket PDF sponsor/logo selection.
  *
- * The downloadable ticket shows a sponsor's logo only when that sponsor opted
- * in via its per-sponsor "show on ticket" toggle. When no sponsor logo is
- * shown, the ticket falls back to the organiser's own logo so it is never left
- * unbranded. These rules live in {@see TicketPdfService::make()}.
+ * A sponsor's logo prints on the ticket only when that sponsor is flagged
+ * `on_ticket`. When no sponsor logo is shown, the ticket falls back to the
+ * organiser's own logo so it is never left unbranded. These rules live in
+ * {@see TicketPdfService::make()}.
  *
  * dompdf re-encodes embedded images into its own compressed streams, so the
  * source bytes never appear verbatim in the output. Instead we intercept the
- * data handed to the `tickets.pdf` view (a base64 data URI per image slot) via
- * a fake dompdf wrapper and assert which artwork the service selected.
+ * data handed to the `tickets.pdf` view (the on-ticket sponsor logo data URIs
+ * and the fallback logo) via a fake dompdf wrapper and assert the selection.
  */
 class TicketPdfSponsorFallbackTest extends TestCase
 {
@@ -38,16 +38,13 @@ class TicketPdfSponsorFallbackTest extends TestCase
     {
         $captured = [];
 
-        // Replace the dompdf wrapper with a subclass that records the view data
-        // and skips the (heavy, lossy) PDF render. It extends the real wrapper
-        // so it still satisfies TicketPdfService::make()'s return type.
         $this->app->bind('dompdf.wrapper', function ($app) use (&$captured) {
-            $real = $app->make(PDF::class);
+            $real = $app->make(\Barryvdh\DomPDF\PDF::class);
 
-            return new class($real, $captured) extends PDF
+            return new class($real, $captured) extends \Barryvdh\DomPDF\PDF
             {
                 /** @param array<string, mixed> $captured */
-                public function __construct(PDF $real, private array &$captured)
+                public function __construct(\Barryvdh\DomPDF\PDF $real, private array &$captured)
                 {
                     parent::__construct(
                         $real->getDomPDF(),
@@ -98,46 +95,48 @@ class TicketPdfSponsorFallbackTest extends TestCase
         Storage::fake('public');
 
         $logoPath = $this->storePng('branding/logos/logo.png');
-        $sponsorPath = $this->storePng('branding/sponsors/top.png');
+        $sponsorPath = $this->storePng('branding/sponsors/a.png');
 
         $company = Company::factory()->create(['logo_path' => $logoPath]);
-        $event = Event::factory()->for($company)->create([
-            // A sponsor banner exists but is NOT flagged for the ticket.
-            'sponsor_top_path' => $sponsorPath,
-            'sponsor_top_on_ticket' => false,
-            'sponsor_bottom_path' => null,
-            'logo_path' => null,
+        $event = Event::factory()->for($company)->create(['logo_path' => null]);
+
+        // A sponsor exists but is NOT flagged for the ticket.
+        EventSponsor::factory()->forEvent($event)->create([
+            'image_path' => $sponsorPath,
+            'on_ticket' => false,
         ]);
+
         $order = Order::factory()->forEvent($event)->create(['status' => Order::STATUS_PAID]);
 
         $data = $this->capturedViewData($order);
 
-        // No sponsor banner on the ticket; the organiser logo is the fallback.
-        $this->assertNull($data['sponsorTop']);
-        $this->assertNull($data['sponsorBottom']);
+        // No sponsor logo on the ticket; the organiser logo is the fallback.
+        $this->assertSame([], $data['sponsorLogos']);
         $this->assertNotNull($data['logoDataUri']);
     }
 
-    public function test_sponsor_logo_prints_and_suppresses_client_logo_when_opted_in(): void
+    public function test_on_ticket_sponsors_print_and_suppress_client_logo(): void
     {
         Storage::fake('public');
 
         $logoPath = $this->storePng('branding/logos/logo.png');
-        $sponsorPath = $this->storePng('branding/sponsors/top.png');
+        $a = $this->storePng('branding/sponsors/a.png');
+        $b = $this->storePng('branding/sponsors/b.png');
 
         $company = Company::factory()->create(['logo_path' => $logoPath]);
-        $event = Event::factory()->for($company)->create([
-            'sponsor_top_path' => $sponsorPath,
-            'sponsor_top_on_ticket' => true,
-            'sponsor_bottom_path' => null,
-            'logo_path' => null,
-        ]);
+        $event = Event::factory()->for($company)->create(['logo_path' => null]);
+
+        EventSponsor::factory()->forEvent($event)->onTicket()->create(['image_path' => $a, 'sort_order' => 0]);
+        EventSponsor::factory()->forEvent($event)->onTicket()->create(['image_path' => $b, 'sort_order' => 1]);
+        // A third, store-page-only sponsor must not appear on the ticket.
+        EventSponsor::factory()->forEvent($event)->create(['image_path' => $this->storePng('branding/sponsors/c.png'), 'sort_order' => 2]);
+
         $order = Order::factory()->forEvent($event)->create(['status' => Order::STATUS_PAID]);
 
         $data = $this->capturedViewData($order);
 
-        // The opted-in sponsor banner prints; the client logo is suppressed.
-        $this->assertNotNull($data['sponsorTop']);
+        // Both opted-in sponsor logos are present; the client logo is suppressed.
+        $this->assertCount(2, $data['sponsorLogos']);
         $this->assertNull($data['logoDataUri']);
     }
 
@@ -145,23 +144,23 @@ class TicketPdfSponsorFallbackTest extends TestCase
     {
         Storage::fake('public');
 
-        $sponsorPath = $this->storePng('branding/sponsors/bottom.png');
+        $sponsorPath = $this->storePng('branding/sponsors/a.png');
 
-        // No organiser logo at all, and the only sponsor is toggled off: the
-        // ticket simply carries neither, rather than forcing the opted-out logo.
+        // No organiser logo, and the only sponsor is off the ticket: the ticket
+        // carries neither, rather than forcing the opted-out logo.
         $company = Company::factory()->create(['logo_path' => null]);
-        $event = Event::factory()->for($company)->create([
-            'sponsor_bottom_path' => $sponsorPath,
-            'sponsor_bottom_on_ticket' => false,
-            'sponsor_top_path' => null,
-            'logo_path' => null,
+        $event = Event::factory()->for($company)->create(['logo_path' => null]);
+
+        EventSponsor::factory()->forEvent($event)->create([
+            'image_path' => $sponsorPath,
+            'on_ticket' => false,
         ]);
+
         $order = Order::factory()->forEvent($event)->create(['status' => Order::STATUS_PAID]);
 
         $data = $this->capturedViewData($order);
 
-        $this->assertNull($data['sponsorTop']);
-        $this->assertNull($data['sponsorBottom']);
+        $this->assertSame([], $data['sponsorLogos']);
         $this->assertNull($data['logoDataUri']);
     }
 }

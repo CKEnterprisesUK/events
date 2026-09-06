@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Event;
 use App\Models\Order;
+use App\Models\SupportRequest;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
@@ -122,10 +123,22 @@ class ClientController extends Controller
             $event->confirmed_orders_count = (int) ($confirmedByEvent[$event->id] ?? 0);
         });
 
+        // This Company's recent support tickets. Read across the tenant scope
+        // (no Company is resolved on the admin surface) and filtered explicitly
+        // by company_id, newest first.
+        $recentSupportRequests = SupportRequest::query()
+            ->withoutGlobalScopes()
+            ->with('user')
+            ->where('company_id', $companyId)
+            ->orderByDesc('id')
+            ->limit(10)
+            ->get();
+
         return view('admin.clients.show', [
             'company' => $company,
             'stats' => $stats,
             'recentEvents' => $recentEvents,
+            'recentSupportRequests' => $recentSupportRequests,
         ]);
     }
 }

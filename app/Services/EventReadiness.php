@@ -15,12 +15,12 @@ use App\Services\Events\EventReadinessReport;
  * still stands between the Event and being published.
  *
  * The checklist lists items in a stable order: event name, start date, venue,
- * at-least-one ticket type, shared-pool overall capacity, and capacity sanity.
- * The blocking items (start date, ticket type, and shared-pool capacity) are
- * derived from {@see Event::publishBlockers()}, which is the single source of
- * truth the publish controller enforces against — so the presentation and the
- * enforcement can never drift apart. The name, venue, and capacity-sanity items
- * are advisory only and never block publishing. (Requirements 2.1–2.4, 3.2, 3.3)
+ * at-least-one ticket type, shared-pool overall capacity, and payments.
+ * The blocking items (start date, ticket type, shared-pool capacity, and
+ * payments) are derived from {@see Event::publishBlockers()}, which is the
+ * single source of truth the publish controller enforces against — so the
+ * presentation and the enforcement can never drift apart. The name and venue
+ * items are advisory only and never block publishing. (Requirements 2.1–2.4)
  *
  * This is a stateless service returning immutable value objects the Blade view
  * renders, mirroring the {@see \App\Services\Onboarding\OnboardingChecklist}
@@ -75,12 +75,6 @@ class EventReadiness
                 label: 'Stripe ready for paid tickets',
                 satisfied: ! isset($blockers['payments']),
                 blocking: true,
-            ),
-            new ChecklistItem(
-                key: 'capacity',
-                label: 'Capacity sanity',
-                satisfied: $this->capacity($event)->isSane(),
-                blocking: false,
             ),
         ]);
     }

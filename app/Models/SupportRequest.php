@@ -81,6 +81,20 @@ class SupportRequest extends Model
     public const STATUS_CLOSED = 'closed';
 
     /**
+     * Status machine key → human label. Note the product only exposes two
+     * operator actions — reopen (open) and close (closed) — but the schema also
+     * carries `in_progress`/`resolved` for future use, so all four are labelled.
+     *
+     * @var array<string, string>
+     */
+    public const STATUS_LABELS = [
+        self::STATUS_OPEN => 'Open',
+        self::STATUS_IN_PROGRESS => 'In progress',
+        self::STATUS_RESOLVED => 'Resolved',
+        self::STATUS_CLOSED => 'Closed',
+    ];
+
+    /**
      * @var list<string>
      */
     protected $fillable = [
@@ -122,5 +136,22 @@ class SupportRequest extends Model
     public function categoryLabel(): string
     {
         return self::CATEGORY_LABELS[$this->category] ?? ucfirst($this->category);
+    }
+
+    /**
+     * The human label for this ticket's status.
+     */
+    public function statusLabel(): string
+    {
+        return self::STATUS_LABELS[$this->status] ?? ucfirst(str_replace('_', ' ', $this->status));
+    }
+
+    /**
+     * Whether this ticket is in a closed/terminal state (closed or resolved).
+     * Anything else is treated as still needing attention ("open").
+     */
+    public function isClosed(): bool
+    {
+        return in_array($this->status, [self::STATUS_CLOSED, self::STATUS_RESOLVED], true);
     }
 }

@@ -55,7 +55,7 @@ class EventReadinessTest extends TestCase
     // ---- Checklist item set ---------------------------------------------------
 
     /**
-     * Requirement 2.1 — the checklist exposes exactly the seven items, in order.
+     * Requirement 2.1 — the checklist exposes exactly the six items, in order.
      */
     public function test_checklist_item_keys_are_the_fixed_ordered_set(): void
     {
@@ -67,14 +67,14 @@ class EventReadinessTest extends TestCase
         $keys = array_map(fn ($item) => $item->key, $report->items());
 
         $this->assertSame(
-            ['name', 'starts_at', 'venue', 'ticket_types', 'shared_pool_capacity', 'payments', 'capacity'],
+            ['name', 'starts_at', 'venue', 'ticket_types', 'shared_pool_capacity', 'payments'],
             $keys,
         );
     }
 
     /**
      * Requirements 2.2, 2.3, 2.4 — start date and ticket type are blocking;
-     * name, venue, and capacity sanity are advisory only.
+     * name and venue are advisory only.
      */
     public function test_blocking_flags_match_publish_prerequisites(): void
     {
@@ -95,7 +95,6 @@ class EventReadinessTest extends TestCase
             'ticket_types' => true,
             'shared_pool_capacity' => true,
             'payments' => true,
-            'capacity' => false,
         ], $blocking);
     }
 
@@ -163,9 +162,8 @@ class EventReadinessTest extends TestCase
         // Blank (whitespace-only) venue counts as unset.
         $this->assertFalse($satisfied['venue'], 'blank venue is not satisfied');
 
-        // Name is present, capacity is null (unlimited => sane) => satisfied.
+        // Name is present => satisfied.
         $this->assertTrue($satisfied['name'], 'present name is satisfied');
-        $this->assertTrue($satisfied['capacity'], 'unlimited capacity is sane');
     }
 
     // ---- Capacity comparison across <, >, =, null -----------------------------

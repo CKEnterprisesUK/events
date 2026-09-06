@@ -3,13 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\SuperAdmin\ImpersonationController;
+use App\Mail\SupportRequestReceivedMail;
 use App\Models\Company;
 use App\Models\SupportRequest;
+use App\Models\User;
 use App\Support\HelpCentre;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
+use Throwable;
 
 /**
  * The in-dashboard "Contact support" form: a Company_User raises a ticket with
@@ -71,7 +76,7 @@ class SupportController extends Controller
 
         $consented = $request->boolean('access_consent');
 
-        SupportRequest::withoutGlobalScopes()->create([
+        $ticket = SupportRequest::withoutGlobalScopes()->create([
             'company_id' => $company->getKey(),
             'user_id' => $user?->getKey(),
             'category' => $data['category'],
@@ -82,6 +87,12 @@ class SupportController extends Controller
             'access_consent_at' => $consented ? now() : null,
         ]);
 
+        // Notify the CK Enterprises support inbox. The ticket is already
+        // persisted, so a mail-transport failure must not fail the request —
+        // it is logged and the user still gets their confirmation. Operators
+        // can always see the ticket in the admin queue regardless of email.
+        $this->notifySupportInbox($ticket, $company->name, $user);
+
         return redirect()
             ->route('dashboard.support.create')
             ->with('status', "Thanks — your request has been sent to the CK Enterprises support team. We'll be in touch by email.");
@@ -90,7 +101,7 @@ class SupportController extends Controller
     /**
      * The authenticated actor raising the ticket.
      */
-    private function actingUser(Request $request): ?\App\Models\User
+    private function actingUser(Request $request): ?User
     {
         return $request->user();
     }
@@ -111,5 +122,34 @@ class SupportController extends Controller
         }
 
         return $user?->company;
+    }
+
+    /**
+     * Email the CK Enterprises support inbox about a newly raised ticket. Sent
+     * synchronously so it goes out promptly, but any transport error is caught
+     * and logged rather than surfaced — the ticket is already saved and visible
+     * in the admin queue, so email is a best-effort notification.
+     */
+    private function notifySupportInbox(SupportRequest $ticket, string $companyName, ?User $user): void
+    {
+        $inbox = (string) config('mail.support.address');
+
+        if ($inbox === '') {
+            return;
+        }
+
+        try {
+            Mail::to($inbox)->send(new SupportRequestReceivedMail(
+                supportRequest: $ticket,
+                companyName: $companyName,
+                raiserName: $user?->name,
+                raiserEmail: $user?->email,
+            ));
+        } catch (Throwable $e) {
+            Log::warning('Failed to send support-request notification email.', [
+                'support_request_id' => $ticket->getKey(),
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

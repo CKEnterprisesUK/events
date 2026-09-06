@@ -49,18 +49,20 @@ class TicketPdfService
 
         $qrDataUri = $this->dataUri($this->qr->pngFor($order), 'image/png');
 
-        // A sponsor banner prints on the ticket only when it has an image AND
-        // the organiser opted to show that sponsor's logo on the ticket.
-        $sponsorTop = $event->sponsor_top_on_ticket
-            ? $this->imageDataUri($event->sponsor_top_path)
-            : null;
-        $sponsorBottom = $event->sponsor_bottom_on_ticket
-            ? $this->imageDataUri($event->sponsor_bottom_path)
-            : null;
+        // The sponsors the organiser opted to print, in display order, inlined
+        // as data URIs. Only those flagged on_ticket appear on the ticket.
+        $sponsorLogos = $event->sponsors()
+            ->withoutGlobalScopes()
+            ->where('on_ticket', true)
+            ->get()
+            ->map(fn ($sponsor) => $this->imageDataUri($sponsor->image_path))
+            ->filter()
+            ->values()
+            ->all();
 
         // Fall back to the organiser's own logo only when no sponsor logo is
         // shown on the ticket, so the ticket is never left unbranded.
-        $showOwnLogo = $sponsorTop === null && $sponsorBottom === null && $branding->hasLogo();
+        $showOwnLogo = $sponsorLogos === [] && $branding->hasLogo();
 
         return Pdf::loadView('tickets.pdf', [
             'order' => $order,
@@ -69,8 +71,7 @@ class TicketPdfService
             'lineItems' => $this->lineItems($order),
             'qrDataUri' => $qrDataUri,
             'qrPayload' => $this->qr->payloadFor($order),
-            'sponsorTop' => $sponsorTop,
-            'sponsorBottom' => $sponsorBottom,
+            'sponsorLogos' => $sponsorLogos,
             'logoDataUri' => $showOwnLogo ? $this->imageDataUri($branding->logoPath) : null,
             'currencySymbol' => $this->currencySymbol($order),
         ])->setPaper('a4');

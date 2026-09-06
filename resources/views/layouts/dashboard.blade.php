@@ -321,12 +321,22 @@
                         <p class="nav-section">Public</p>
                         <a class="nav-link" href="{{ url('/' . $company->slug) }}" target="_blank" rel="noopener"><span class="nav-ico">&#128279;</span> View storefront</a>
                     @endif
+                @endif
 
-                    {{-- Help & support, pinned to the bottom of the sidebar.
-                         Open to every role (no @can gate) — generic product
-                         guidance and self-service support. --}}
-                    <p class="nav-section nav-section-help">Support</p>
-                    <a class="nav-link {{ $navActive('dashboard.help.*') ? 'active' : '' }}" href="{{ route('dashboard.help.index') }}"><span class="nav-ico">&#10067;</span> Help</a>
+                {{-- Help & support. Rendered for BOTH the Super Admin platform
+                     surface and every Company dashboard, so it is always
+                     available. Pinned to the bottom of the sidebar via
+                     `nav-section-help` (margin-top:auto): it sits at the bottom
+                     on short pages and simply follows the last item when the nav
+                     is long enough to scroll. No @can gate — Help is generic
+                     product guidance for everyone. --}}
+                <p class="nav-section nav-section-help">Support</p>
+                <a class="nav-link {{ $navActive('dashboard.help.*') ? 'active' : '' }}" href="{{ route('dashboard.help.index') }}"><span class="nav-ico">&#10067;</span> Help</a>
+                @if ($isSuperAdmin && ! $impersonating)
+                    {{-- A non-impersonating Super_Admin IS support, so they get
+                         the incoming ticket queue rather than a contact form. --}}
+                    <a class="nav-link {{ $navActive('admin.support.*') ? 'active' : '' }}" href="{{ route('admin.support.index') }}"><span class="nav-ico">&#128172;</span> Support tickets</a>
+                @else
                     <a class="nav-link {{ $navActive('dashboard.support.*') ? 'active' : '' }}" href="{{ route('dashboard.support.create') }}"><span class="nav-ico">&#128172;</span> Contact support</a>
                 @endif
             </nav>

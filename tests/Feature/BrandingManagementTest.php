@@ -165,8 +165,9 @@ class BrandingManagementTest extends TestCase
 
     public function test_admin_sets_event_ticket_design_instructions_and_sponsors(): void
     {
-        // Per-event ticket design: custom instructions plus top/bottom sponsor
-        // banner uploads are stored on the public disk and their paths persisted.
+        // Per-event ticket design: the branding form owns the custom ticket
+        // instructions. (Sponsors are managed on their own screen — see
+        // EventSponsorManagementTest.)
         Storage::fake('public');
 
         $company = Company::factory()->create();
@@ -175,101 +176,12 @@ class BrandingManagementTest extends TestCase
 
         $this->actingAs($admin)->put(route('dashboard.branding.event.update', $event), [
             'ticket_instructions' => 'Bring photo ID. Doors open 30 minutes early.',
-            'sponsor_top' => UploadedFile::fake()->image('sponsor-top.png', 1200, 300),
-            'sponsor_bottom' => UploadedFile::fake()->image('sponsor-bottom.png', 1200, 300),
-            // Per-sponsor metadata: name/website/bio are store-page only; the
-            // on_ticket checkbox controls whether the logo prints on the ticket.
-            'sponsor_top_name' => 'Acme Corp',
-            'sponsor_top_website' => 'https://acme.example.com',
-            'sponsor_top_bio' => 'Proud sponsor of local events.',
-            'sponsor_top_on_ticket' => '1',
-            'sponsor_bottom_name' => 'Globex',
-            // Bottom sponsor intentionally left off the ticket.
         ])->assertRedirect(route('dashboard.branding.event.edit', $event));
 
-        $fresh = $event->fresh();
-        $this->assertSame('Bring photo ID. Doors open 30 minutes early.', $fresh->ticket_instructions);
-        $this->assertNotNull($fresh->sponsor_top_path);
-        $this->assertNotNull($fresh->sponsor_bottom_path);
-        Storage::disk('public')->assertExists($fresh->sponsor_top_path);
-        Storage::disk('public')->assertExists($fresh->sponsor_bottom_path);
-
-        // Metadata persisted for the top sponsor, including its ticket toggle.
-        $this->assertSame('Acme Corp', $fresh->sponsor_top_name);
-        $this->assertSame('https://acme.example.com', $fresh->sponsor_top_website);
-        $this->assertSame('Proud sponsor of local events.', $fresh->sponsor_top_bio);
-        $this->assertTrue($fresh->sponsor_top_on_ticket);
-
-        // The bottom sponsor's checkbox was absent (unchecked), so it is not
-        // printed on the ticket even though its banner is stored.
-        $this->assertSame('Globex', $fresh->sponsor_bottom_name);
-        $this->assertFalse($fresh->sponsor_bottom_on_ticket);
-    }
-
-    public function test_removing_a_sponsor_banner_clears_and_deletes_it(): void
-    {
-        // The explicit "remove" checkbox clears the stored banner and deletes
-        // the file, without needing a replacement upload.
-        Storage::fake('public');
-
-        $company = Company::factory()->create();
-        $admin = User::factory()->admin()->create(['company_id' => $company->id]);
-        $event = Event::factory()->for($company)->create();
-
-        // Seed an existing top banner.
-        $this->actingAs($admin)->put(route('dashboard.branding.event.update', $event), [
-            'sponsor_top' => UploadedFile::fake()->image('sponsor-top.png', 1200, 300),
-        ]);
-        $seeded = $event->fresh()->sponsor_top_path;
-        $this->assertNotNull($seeded);
-        Storage::disk('public')->assertExists($seeded);
-
-        // Now remove it.
-        $this->actingAs($admin)->put(route('dashboard.branding.event.update', $event), [
-            'remove_sponsor_top' => '1',
-        ])->assertRedirect(route('dashboard.branding.event.edit', $event));
-
-        $this->assertNull($event->fresh()->sponsor_top_path);
-        Storage::disk('public')->assertMissing($seeded);
-    }
-
-    public function test_removing_a_sponsor_clears_its_metadata_and_ticket_toggle(): void
-    {
-        // Removing a sponsor must not leave orphaned name/website/bio behind,
-        // and the removed sponsor must not remain flagged for the ticket.
-        Storage::fake('public');
-
-        $company = Company::factory()->create();
-        $admin = User::factory()->admin()->create(['company_id' => $company->id]);
-        $event = Event::factory()->for($company)->create();
-
-        // Seed a top sponsor with full metadata, shown on the ticket.
-        $this->actingAs($admin)->put(route('dashboard.branding.event.update', $event), [
-            'sponsor_top' => UploadedFile::fake()->image('sponsor-top.png', 1200, 300),
-            'sponsor_top_name' => 'Acme Corp',
-            'sponsor_top_website' => 'https://acme.example.com',
-            'sponsor_top_bio' => 'Proud sponsor.',
-            'sponsor_top_on_ticket' => '1',
-        ]);
-
-        $seeded = $event->fresh();
-        $this->assertSame('Acme Corp', $seeded->sponsor_top_name);
-        $this->assertTrue($seeded->sponsor_top_on_ticket);
-
-        // Remove it: path, name, website, bio all cleared and toggle off.
-        $this->actingAs($admin)->put(route('dashboard.branding.event.update', $event), [
-            'remove_sponsor_top' => '1',
-            // Even if stale metadata is posted, removal wins.
-            'sponsor_top_name' => 'Acme Corp',
-            'sponsor_top_on_ticket' => '1',
-        ])->assertRedirect(route('dashboard.branding.event.edit', $event));
-
-        $fresh = $event->fresh();
-        $this->assertNull($fresh->sponsor_top_path);
-        $this->assertNull($fresh->sponsor_top_name);
-        $this->assertNull($fresh->sponsor_top_website);
-        $this->assertNull($fresh->sponsor_top_bio);
-        $this->assertFalse($fresh->sponsor_top_on_ticket);
+        $this->assertSame(
+            'Bring photo ID. Doors open 30 minutes early.',
+            $event->fresh()->ticket_instructions,
+        );
     }
 
     public function test_admin_cannot_override_branding_for_another_companys_event(): void

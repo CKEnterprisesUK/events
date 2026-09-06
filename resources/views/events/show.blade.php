@@ -107,10 +107,10 @@
                      e-ticket, surfaced publicly on the event page with each
                      sponsor's name, bio and website link revealed on click. --}}
                 @php
-                    $eventSponsors = collect([
-                        ['path' => $event->sponsor_top_path, 'name' => $event->sponsor_top_name, 'website' => $event->sponsor_top_website, 'bio' => $event->sponsor_top_bio],
-                        ['path' => $event->sponsor_bottom_path, 'name' => $event->sponsor_bottom_name, 'website' => $event->sponsor_bottom_website, 'bio' => $event->sponsor_bottom_bio],
-                    ])->filter(fn ($sponsor) => filled($sponsor['path']))->values();
+                    $eventSponsors = $event->sponsors
+                        ->map(fn ($s) => ['path' => $s->image_path, 'name' => $s->name, 'website' => $s->website_url, 'bio' => $s->bio])
+                        ->filter(fn ($sponsor) => filled($sponsor['path']))
+                        ->values();
                 @endphp
                 @if ($eventSponsors->isNotEmpty())
                     <section class="event-sponsors store-sponsors">

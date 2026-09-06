@@ -19,7 +19,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
  *
  * The rule under test: the checklist's blocking items are always exactly the
  * publish prerequisites ({starts_at, ticket_types, shared_pool_capacity,
- * payments}); the venue and capacity items are never blocking; and each
+ * payments}); the venue item is never blocking; and each
  * blocking item's satisfied state agrees with Event::publishBlockers() — the
  * single source of truth the publish controller enforces — so presentation and
  * enforcement never drift. (Requirements 2.3, 2.4)
@@ -39,7 +39,7 @@ class EventReadinessBlockingTest extends PbtTestCase
      * Property 4: Blocking checklist items match the publish source of truth —
      * for any combination of (has start date, has ticket type), the set of
      * blocking items is exactly {starts_at, ticket_types, shared_pool_capacity,
-     * payments}, the venue and capacity items are never blocking, and every
+     * payments}, the venue item is never blocking, and every
      * blocking item agrees with publishBlockers().
      *
      * **Validates: Requirements 2.3, 2.4**
@@ -105,14 +105,10 @@ class EventReadinessBlockingTest extends PbtTestCase
                     'blocking checklist items must be exactly {starts_at, ticket_types, shared_pool_capacity, payments}',
                 );
 
-                // Venue and capacity items are advisory only — never blocking.
+                // The venue item is advisory only — never blocking.
                 $this->assertFalse(
                     $byKey['venue']->blocking,
                     "the 'venue' item must never be blocking",
-                );
-                $this->assertFalse(
-                    $byKey['capacity']->blocking,
-                    "the 'capacity' item must never be blocking",
                 );
 
                 // Each blocking item must agree with publishBlockers(): unmet

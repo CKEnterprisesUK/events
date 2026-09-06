@@ -21,7 +21,6 @@
         'venue' => 'dashboard.events.location',
         'ticket_types' => 'dashboard.events.tickets',
         'shared_pool_capacity' => 'dashboard.events.tickets',
-        'capacity' => 'dashboard.events.tickets',
     ];
 
     $items = $readiness->items();

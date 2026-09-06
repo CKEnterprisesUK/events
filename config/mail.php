@@ -115,4 +115,21 @@ return [
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Platform Support Inbox
+    |--------------------------------------------------------------------------
+    |
+    | Where in-dashboard "Contact support" tickets are notified to. This is the
+    | CK Enterprises (platform operator) support mailbox — distinct from a
+    | Company's own customer-facing `support_email`. Overridable via env for
+    | staging/testing.
+    |
+    */
+
+    'support' => [
+        'address' => env('MAIL_SUPPORT_ADDRESS', 'support@ckenterprises.co.uk'),
+        'name' => env('MAIL_SUPPORT_NAME', 'CK Enterprises Support'),
+    ],
+
 ];

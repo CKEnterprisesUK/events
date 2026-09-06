@@ -120,4 +120,34 @@
             </table>
         @endif
     </div>
+
+    <div class="admin-panel">
+        <div class="admin-panel__head"><h2>Recent support requests</h2></div>
+        @if ($recentSupportRequests->isEmpty())
+            <div class="admin-empty">No support requests from this client.</div>
+        @else
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Status</th>
+                        <th scope="col">Subject</th>
+                        <th scope="col">Raised by</th>
+                        <th scope="col">Raised</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($recentSupportRequests as $ticket)
+                        <tr data-ticket-id="{{ $ticket->id }}">
+                            <td>
+                                <span class="pill {{ $ticket->isClosed() ? 'pill--live' : 'pill--draft' }}">{{ $ticket->statusLabel() }}</span>
+                            </td>
+                            <td><a href="{{ route('admin.support.show', $ticket->id) }}" class="cell-strong">{{ $ticket->subject }}</a></td>
+                            <td>{{ $ticket->user?->name ?? 'Unknown' }}</td>
+                            <td>{{ optional($ticket->created_at)->format('j M Y, H:i') }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
+    </div>
 @endsection

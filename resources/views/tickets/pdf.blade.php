@@ -29,9 +29,8 @@
         }
         .sheet { padding: 32px 40px; }
 
-        .sponsor-band { width: 100%; text-align: center; margin: 0 0 12px; }
-        .sponsor-band--bottom { margin: 24px 0 0; }
-        .sponsor-band img { max-width: 100%; max-height: 120px; }
+        .sponsor-band { width: 100%; text-align: center; margin: 24px 0 0; }
+        .sponsor-band img { max-height: 90px; max-width: 30%; margin: 0 12px; vertical-align: middle; }
 
         .ticket {
             border: 1px solid #e5e7eb;
@@ -85,13 +84,6 @@
 </head>
 <body>
     <div class="sheet">
-        {{-- Optional top sponsor banner (landscape). --}}
-        @if ($sponsorTop)
-            <div class="sponsor-band">
-                <img src="{{ $sponsorTop }}" alt="Sponsor">
-            </div>
-        @endif
-
         <div class="ticket">
             <table class="head">
                 <tr>
@@ -172,10 +164,12 @@
             @endif
         </div>
 
-        {{-- Optional bottom sponsor banner (landscape). --}}
-        @if ($sponsorBottom)
-            <div class="sponsor-band sponsor-band--bottom">
-                <img src="{{ $sponsorBottom }}" alt="Sponsor">
+        {{-- Sponsor logos the organiser opted to print, across the bottom. --}}
+        @if (! empty($sponsorLogos))
+            <div class="sponsor-band">
+                @foreach ($sponsorLogos as $sponsorLogo)
+                    <img src="{{ $sponsorLogo }}" alt="Sponsor">
+                @endforeach
             </div>
         @endif
     </div>

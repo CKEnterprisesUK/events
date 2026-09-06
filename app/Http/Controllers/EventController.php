@@ -293,12 +293,12 @@ class EventController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'starts_at' => ['nullable', 'date'],
+            'starts_at' => $this->startsAtRules($request, $event),
             'capacity' => ['nullable', 'integer', 'min:1'],
             'primary_colour' => ['nullable', 'string', 'max:7'],
             'logo_path' => ['nullable', 'string', 'max:255'],
             'poster' => ['nullable', 'image', 'mimes:jpeg,png,webp', 'max:4096', new SafeUpload],
-        ]);
+        ], $this->dateMessages());
 
         unset($data['poster']);
         $data = $this->applyPoster($request, $data, $event);
@@ -486,7 +486,7 @@ class EventController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'venue' => ['nullable', 'string', 'max:255'],
-            'starts_at' => ['nullable', 'date'],
+            'starts_at' => $this->startsAtRules($request, null),
             'capacity' => ['nullable', 'integer', 'min:1'],
             // The manage-page Overview/Location forms always submit location_mode
             // and require it; the slim create form omits it, so store() relaxes
@@ -502,13 +502,58 @@ class EventController extends Controller
             // The hero image is a file, not a persisted scalar; it is stored by
             // applyLocationAndPoster() and excluded from the returned attributes.
             'poster' => ['nullable', 'image', 'mimes:jpeg,png,webp', 'max:4096', new SafeUpload],
-        ]);
+        ], $this->dateMessages());
 
         // Return only the persistable scalar attributes; the poster file is
         // handled separately in store()/update().
         unset($validated['poster']);
 
         return $validated;
+    }
+
+    /**
+     * Validation rules for the Event start date/time. Always `nullable|date`;
+     * additionally requires the value to be now-or-later, but ONLY when it is a
+     * NEW value — creating an Event, or changing an existing Event's start to a
+     * different value. This lets an organiser keep (and re-save) an Event whose
+     * start has already passed without being forced to move it, while still
+     * blocking anyone from newly scheduling an Event in the past.
+     *
+     * @return list<string>
+     */
+    private function startsAtRules(Request $request, ?Event $event): array
+    {
+        $rules = ['nullable', 'date'];
+
+        $submitted = $request->input('starts_at');
+
+        if ($submitted === null || $submitted === '') {
+            return $rules;
+        }
+
+        // Compare against the stored value (to the minute) so merely re-saving
+        // an unchanged past date does not trip the "not in the past" rule.
+        $current = $event?->starts_at?->format('Y-m-d\TH:i');
+        $unchanged = $current !== null
+            && $current === \Illuminate\Support\Carbon::parse($submitted)->format('Y-m-d\TH:i');
+
+        if (! $unchanged) {
+            $rules[] = 'after_or_equal:now';
+        }
+
+        return $rules;
+    }
+
+    /**
+     * Friendly messages for the date rules shared across the Event forms.
+     *
+     * @return array<string, string>
+     */
+    private function dateMessages(): array
+    {
+        return [
+            'starts_at.after_or_equal' => __('The event start date can’t be in the past.'),
+        ];
     }
 
     /**

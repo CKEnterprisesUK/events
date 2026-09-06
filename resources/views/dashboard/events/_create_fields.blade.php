@@ -18,8 +18,9 @@
 <div class="field-row">
     <div class="field">
         <label for="starts_at">Starts at <span class="muted">(optional)</span></label>
-        <input id="starts_at" type="datetime-local" name="starts_at"
+        <input id="starts_at" type="datetime-local" name="starts_at" min="{{ now()->format('Y-m-d\TH:i') }}"
                value="{{ old('starts_at') }}">
+        <span class="field-hint">The event can’t start in the past.</span>
         @error('starts_at') <p class="error">{{ $message }}</p> @enderror
     </div>
     <div class="field">

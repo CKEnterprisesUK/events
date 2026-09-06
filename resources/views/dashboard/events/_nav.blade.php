@@ -16,33 +16,47 @@
 @php
     $active = $active ?? 'overview';
 
-    // Which manage screen fixes each checklist item. Venue now lives on the
-    // Location screen (moved off Overview), so it flags there.
+    // Which manage screen owns each checklist item — including the advisory
+    // (non-blocking) name/venue items, so a section can earn a green tick once
+    // everything it owns is done, not only its publish-blocking prerequisites.
+    // Venue lives on the Location ("Where") screen.
     $itemSection = [
         'name' => 'overview',
         'starts_at' => 'overview',
         'venue' => 'location',
         'ticket_types' => 'tickets',
         'shared_pool_capacity' => 'tickets',
-        'capacity' => 'tickets',
     ];
 
-    // Reduce the readiness items to a per-section status: 'todo' if the section
-    // owns any unmet blocking item, else 'done' if it owns any blocking item at
-    // all. Sections with no blocking items stay unflagged.
-    $sectionStatus = [];
+    // Reduce the readiness items to a per-section status:
+    //   'todo' — the section owns an unmet BLOCKING item (still needs work);
+    //   'done' — the section owns at least one item and ALL of them (blocking
+    //            and advisory) are satisfied.
+    // A section with a satisfied advisory item but an unmet blocking one stays
+    // 'todo'; a section whose only items are advisory ticks 'done' once they're
+    // filled in. This surfaces more ticks as the organiser completes each area.
+    $sectionUnmetBlocking = [];
+    $sectionHasItem = [];
+    $sectionAllSatisfied = [];
     foreach (($readiness?->items() ?? []) as $item) {
-        if (! $item->blocking) {
-            continue;
-        }
         $section = $itemSection[$item->key] ?? null;
         if ($section === null) {
             continue;
         }
-        if (($sectionStatus[$section] ?? null) === 'todo') {
-            continue; // once todo, stays todo
+        $sectionHasItem[$section] = true;
+        $sectionAllSatisfied[$section] = ($sectionAllSatisfied[$section] ?? true) && $item->satisfied;
+        if ($item->blocking && ! $item->satisfied) {
+            $sectionUnmetBlocking[$section] = true;
         }
-        $sectionStatus[$section] = $item->satisfied ? 'done' : 'todo';
+    }
+
+    $sectionStatus = [];
+    foreach (array_keys($sectionHasItem) as $section) {
+        if (! empty($sectionUnmetBlocking[$section])) {
+            $sectionStatus[$section] = 'todo';
+        } elseif (! empty($sectionAllSatisfied[$section])) {
+            $sectionStatus[$section] = 'done';
+        }
     }
 
     $links = [

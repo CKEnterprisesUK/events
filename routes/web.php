@@ -34,6 +34,7 @@ use App\Http\Controllers\SuperAdmin\ImpersonationController as SuperAdminImperso
 use App\Http\Controllers\SuperAdmin\LegalDocumentController as SuperAdminLegalDocumentController;
 use App\Http\Controllers\SuperAdmin\ReservedSlugController as SuperAdminReservedSlugController;
 use App\Http\Controllers\SuperAdmin\SettingsController as SuperAdminSettingsController;
+use App\Http\Controllers\SuperAdmin\SupportRequestController as SuperAdminSupportRequestController;
 use App\Http\Controllers\SuperAdmin\TransactionController as SuperAdminTransactionController;
 use App\Http\Controllers\TicketTypeController;
 use App\Http\Controllers\TrustController;
@@ -453,6 +454,21 @@ Route::middleware(['auth', 'super.admin', 'session.timeout'])
         // diagnostic test email through the configured mailer. (20.7)
         Route::get('/settings', [SuperAdminSettingsController::class, 'index'])->name('settings.index');
         Route::post('/settings/test-mail', [SuperAdminSettingsController::class, 'sendTest'])->name('settings.test-mail');
+
+        // Support ticket queue: the operator view of every in-dashboard
+        // "Contact support" request across the whole Platform. Deliberately
+        // minimal — read a ticket and open/close it (no in-app reply thread;
+        // conversations happen over email seeded by the new-ticket
+        // notification). Cross-tenant: the controller reads with
+        // `withoutGlobalScopes()`. The `{supportRequest}` segment is a plain id
+        // (the model's tenant scope makes implicit route-model binding hide
+        // rows on the Company-less admin surface, so the controller resolves it
+        // explicitly). (Platform support oversight)
+        Route::get('/support', [SuperAdminSupportRequestController::class, 'index'])->name('support.index');
+        Route::get('/support/{supportRequest}', [SuperAdminSupportRequestController::class, 'show'])
+            ->where('supportRequest', '[0-9]+')->name('support.show');
+        Route::put('/support/{supportRequest}/status', [SuperAdminSupportRequestController::class, 'updateStatus'])
+            ->where('supportRequest', '[0-9]+')->name('support.status');
 
         // Trust & Legal Centre management: author the Platform-level policies
         // (Terms & Conditions, Privacy Notice, PCI DSS statement, cookie policy,

@@ -154,9 +154,16 @@ class TicketTypeController extends Controller
             ],
             'sale_starts_at' => ['required', 'date'],
             // end strictly after start (sale-window-invalid). (Requirement 6.9)
-            'sale_ends_at' => ['required', 'date', 'after:sale_starts_at'],
+            // When the Event has a start time, sales must also close by then —
+            // selling a ticket for a session that has already begun makes no
+            // sense, so the window end is capped at the Event start.
+            'sale_ends_at' => array_filter([
+                'required', 'date', 'after:sale_starts_at',
+                $event->starts_at ? 'before_or_equal:'.$event->starts_at->format('Y-m-d\TH:i:s') : null,
+            ]),
         ], [
             'sale_ends_at.after' => __('The sale window end must be strictly after the sale window start.'),
+            'sale_ends_at.before_or_equal' => __('Ticket sales must end by the time the event starts.'),
         ]);
 
         return [
