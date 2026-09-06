@@ -2,11 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SendTicketEmailJob;
 use App\Models\Event;
+use App\Models\Order;
 use App\Models\TicketType;
 use App\Services\Branding\BrandingResolver;
+use App\Services\QrService;
 use App\Services\TenantContext;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
 /**
