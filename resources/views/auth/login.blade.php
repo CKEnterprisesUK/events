@@ -49,12 +49,9 @@
         }
         .brand-side .logo { display: flex; align-items: center; gap: .6rem; font-family: var(--heading-font); font-weight: 700; font-size: 1.15rem; color: #fff; }
         .brand-side .logo .mark { width: 32px; height: 32px; border-radius: 7px; background: var(--purple); display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: .85rem; }
-        .brand-side .pitch { max-width: 380px; }
-        .brand-side .pitch h2 { color: #fff; font-size: 1.9rem; margin-bottom: 1rem; }
-        .brand-side .pitch p { font-size: 1.05rem; color: #c1c5d4; margin: 0 0 1.75rem; }
-        .brand-side .points { list-style: none; padding: 0; margin: 0; }
-        .brand-side .points li { display: flex; align-items: flex-start; gap: .65rem; margin-bottom: .85rem; font-size: .98rem; color: #c1c5d4; }
-        .brand-side .points li svg { flex: none; margin-top: 3px; color: var(--teal); }
+        .brand-side .pitch { text-align: center; }
+        .brand-side .pitch .illustration { width: 100%; max-width: 380px; height: auto; margin: 0 auto 1.5rem; display: block; }
+        .brand-side .pitch h2 { color: #fff; font-size: 1.7rem; margin: 0; }
         .brand-side .foot { font-size: .82rem; color: #8b90a5; }
         .brand-side .foot a { color: #c1c5d4; }
 
@@ -105,22 +102,8 @@
                 <span>{{ config('app.name', 'Event Ticketing') }}</span>
             </a>
             <div class="pitch">
+                <img src="{{ asset('images/login-illustration.svg') }}" alt="" class="illustration">
                 <h2>Welcome back</h2>
-                <p>Manage your events, storefront and payouts from one dashboard.</p>
-                <ul class="points">
-                    <li>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                        Sell tickets from your branded storefront
-                    </li>
-                    <li>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                        Take payments straight into your Stripe account
-                    </li>
-                    <li>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                        Check attendees in with a phone-browser QR scanner
-                    </li>
-                </ul>
             </div>
             <div class="foot">
                 A <a href="https://ckenterprises.co.uk/" target="_blank" rel="noopener">CK Enterprises UK</a> product

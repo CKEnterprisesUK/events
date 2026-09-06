@@ -123,9 +123,7 @@
         .calc input[type="number"] { width: 100%; padding: .8rem 1rem .8rem 1.9rem; border: 1px solid #d5d7e0; border-radius: 6px; font-size: 1.05rem; font-family: var(--body-font); }
         .calc input.no-prefix { padding-left: 1rem; }
         .calc input:focus { outline: none; border-color: var(--purple); box-shadow: 0 0 0 3px rgba(103,77,243,.12); }
-        .calc input[type="range"] { width: 100%; accent-color: var(--purple); }
-        .calc .range-head { display: flex; justify-content: space-between; align-items: baseline; }
-        .calc .range-head .val { font-family: var(--heading-font); font-weight: 700; color: var(--purple); }
+        .calc .fee-badge { display: inline-block; background: var(--surface-2); border: 1px solid var(--line); color: var(--purple); font-family: var(--heading-font); font-weight: 700; font-size: 1.05rem; padding: .65rem 1rem; border-radius: 6px; }
         .toggle { display: inline-flex; border: 1px solid #d5d7e0; border-radius: 6px; overflow: hidden; }
         .toggle button { border: none; background: #fff; padding: .55rem 1rem; font-family: var(--body-font); font-size: .9rem; font-weight: 600; color: var(--muted); cursor: pointer; }
         .toggle button.active { background: var(--purple); color: #fff; }
@@ -331,11 +329,10 @@
             <div class="section-head">
                 <span class="kicker">Simple pricing</span>
                 <h2>Work out your platform fee</h2>
-                <p>A flat {{ number_format((float) \App\Models\PlatformSetting::DEFAULT_GLOBAL_FEE_PERCENT, 1) }}% platform fee per ticket. No monthly cost, no setup fee. Try the numbers below.</p>
+                <p>A flat {{ number_format($feePercent, $feePercent == (int) $feePercent ? 0 : 2) }}% platform fee per ticket. No monthly cost, no setup fee. Try the numbers below.</p>
             </div>
 
-            <div class="calc"
-                 data-default-fee="{{ (float) \App\Models\PlatformSetting::DEFAULT_GLOBAL_FEE_PERCENT }}">
+            <div class="calc" data-fee="{{ $feePercent }}">
                 <div class="calc-inputs">
                     <div class="field">
                         <label for="calc-price">Ticket price</label>
@@ -351,11 +348,8 @@
                         </div>
                     </div>
                     <div class="field">
-                        <div class="range-head">
-                            <label for="calc-fee">Platform fee</label>
-                            <span class="val"><span id="calc-fee-val">5.0</span>%</span>
-                        </div>
-                        <input type="range" id="calc-fee" min="0" max="5" step="0.1" value="5">
+                        <label>Platform fee</label>
+                        <div class="fee-badge">{{ number_format($feePercent, $feePercent == (int) $feePercent ? 0 : 2) }}% per ticket</div>
                     </div>
                     <div class="field">
                         <label>Who pays the fee?</label>
@@ -437,10 +431,10 @@
             var root = document.querySelector('.calc');
             if (!root) return;
 
+            var feePct = Math.max(0, parseFloat(root.getAttribute('data-fee')) || 0);
+
             var priceEl = document.getElementById('calc-price');
             var qtyEl = document.getElementById('calc-qty');
-            var feeEl = document.getElementById('calc-fee');
-            var feeValEl = document.getElementById('calc-fee-val');
             var absorbBtn = document.getElementById('mode-absorb');
             var passOnBtn = document.getElementById('mode-passon');
 
@@ -460,8 +454,6 @@
             function recalc() {
                 var price = Math.max(0, parseFloat(priceEl.value) || 0);
                 var qty = Math.max(0, parseInt(qtyEl.value, 10) || 0);
-                var feePct = Math.max(0, parseFloat(feeEl.value) || 0);
-                feeValEl.textContent = feePct.toFixed(1);
 
                 // Fee per ticket, rounded to the penny (matches server half-up rounding closely).
                 var feeEach = Math.round(price * (feePct / 100) * 100) / 100;
@@ -495,7 +487,7 @@
                 recalc();
             }
 
-            [priceEl, qtyEl, feeEl].forEach(function (el) {
+            [priceEl, qtyEl].forEach(function (el) {
                 el.addEventListener('input', recalc);
             });
             absorbBtn.addEventListener('click', function () { setMode(false); });

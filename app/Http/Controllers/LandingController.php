@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PlatformSetting;
 use Illuminate\Contracts\View\View;
 
 /**
@@ -20,6 +21,13 @@ class LandingController extends Controller
      */
     public function index(): View
     {
-        return view('landing');
+        // The live Platform fee percent (Company overrides aside) drives the
+        // pricing calculator on the Landing_Page, so the figure shown always
+        // matches the current Global_Fee_Percent in platform_settings.
+        $feePercent = (float) PlatformSetting::current()->global_fee_percent;
+
+        return view('landing', [
+            'feePercent' => $feePercent,
+        ]);
     }
 }

@@ -63,12 +63,27 @@ class EventController extends Controller
     /**
      * Show one of the Company's Events. Cross-Company rows never match the
      * tenant scope and surface as 404. (Requirements 1.5, 5.1)
+     *
+     * Loads the Event's Ticket_Types (for the comp-issuance picker) and its
+     * most recent Orders (so an Admin can cancel/refund from here). Both are
+     * tenant-scoped by the same `dashboard.tenant` binding as the Event.
      */
     public function show(Event $event): View
     {
         Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
 
-        return view('dashboard.events.show', ['event' => $event]);
+        $ticketTypes = $event->ticketTypes()->latest()->get();
+
+        $recentOrders = $event->orders()
+            ->latest()
+            ->limit(20)
+            ->get();
+
+        return view('dashboard.events.show', [
+            'event' => $event,
+            'ticketTypes' => $ticketTypes,
+            'recentOrders' => $recentOrders,
+        ]);
     }
 
     /**
