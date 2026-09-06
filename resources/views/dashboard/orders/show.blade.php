@@ -16,11 +16,20 @@
     .pill--refunded, .pill--disputed { background: #fef2f2; color: #b91c1c; }
     .pill--cancelled, .pill--expired, .pill--voided { background: #f3f4f6; color: #6b7280; }
     .back-link { display: inline-block; margin-bottom: 0.75rem; font-size: 0.9rem; }
-    .manage-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; padding: 1.25rem; }
     .manage-action { display: flex; flex-direction: column; }
+    .manage-action + .manage-action { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--border); }
     .manage-action__title { margin: 0 0 0.35rem; font-size: 1rem; }
     .manage-action .input { width: 100%; }
     .manage-action .cell-dim { margin: 0 0 0.75rem; }
+    /* Manage-order pop-up (mirrors the customers export modal). */
+    .manage-modal { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+    .manage-modal[hidden] { display: none; }
+    .manage-modal__backdrop { position: absolute; inset: 0; background: rgba(16, 24, 40, 0.55); }
+    .manage-modal__panel { position: relative; background: var(--surface, #fff); border-radius: 0.75rem; max-width: 520px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 45px rgba(16, 24, 40, 0.2); }
+    .manage-modal__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); }
+    .manage-modal__head h2 { margin: 0; font-size: 1.1rem; }
+    .manage-modal__close { background: none; border: 0; font-size: 1.5rem; line-height: 1; cursor: pointer; color: var(--muted); }
+    .manage-modal__body { padding: 1.5rem; }
     .history { list-style: none; margin: 0; padding: 0.5rem 0; }
     .history__item { padding: 0.85rem 1.25rem; border-top: 1px solid var(--border); }
     .history__item:first-child { border-top: none; }
@@ -129,49 +138,57 @@
 
     </div>
 
-    @unless ($terminal)
-        @canany(['refund_order', 'cancel_order'])
-            <div class="panel">
-                <div class="panel__head"><h2>Manage order</h2></div>
-                <div class="manage-grid">
-                    @can('refund_order')
-                        @if ($order->status === \App\Models\Order::STATUS_PAID && $order->refundableRemainingMinor() > 0)
-                            <div class="manage-action">
-                                <h3 class="manage-action__title">Partial refund</h3>
-                                <p class="cell-dim">Refund part of the order. Up to {{ $money($order->refundableRemainingMinor()) }} remaining. Tickets stay valid until the full total is refunded.</p>
-                                <form method="POST" action="{{ route('dashboard.orders.partial-refund', $order) }}"
-                                      onsubmit="return confirm('Issue a partial Stripe refund for this amount?');">
-                                    @csrf
-                                    <label for="partial-refund-amount" class="detail__label">Amount ({{ $currency }})</label>
-                                    <input type="number" id="partial-refund-amount" name="amount" class="input"
-                                           step="0.01" min="0.01" max="{{ number_format($order->refundableRemainingMinor() / 100, 2, '.', '') }}"
-                                           placeholder="0.00" required>
-                                    <label for="partial-refund-reason" class="detail__label" style="margin-top: 0.5rem;">Reason (optional)</label>
-                                    <input type="text" id="partial-refund-reason" name="reason" class="input"
-                                           maxlength="500" placeholder="e.g. Customer requested one ticket refunded">
-                                    <button type="submit" class="btn btn-outline" style="margin-top: 0.6rem;">Issue partial refund</button>
-                                </form>
-                                @error('amount')
-                                    <p class="status status--error" style="margin-top: 0.5rem;">{{ $message }}</p>
-                                @enderror
-                            </div>
+    @if ($canManage)
+        {{-- Manage-order actions live in a pop-up so the order screen stays
+             clean; the button in the page head opens it. Each form still posts
+             to its own route with its optional reason, exactly as before. The
+             modal re-opens automatically when a submission bounced back with a
+             validation error so the operator sees the message in context. --}}
+        <div class="manage-modal" data-manage-modal @unless ($errors->any()) hidden @endunless>
+            <div class="manage-modal__backdrop" data-close-manage></div>
+            <div class="manage-modal__panel" role="dialog" aria-modal="true" aria-labelledby="manage-modal-title">
+                <div class="manage-modal__head">
+                    <h2 id="manage-modal-title">Manage order {{ $order->order_reference }}</h2>
+                    <button type="button" class="manage-modal__close" data-close-manage aria-label="Close">&times;</button>
+                </div>
 
-                            <div class="manage-action">
-                                <h3 class="manage-action__title">Full refund</h3>
-                                <p class="cell-dim">Refund the outstanding {{ $money($order->refundableRemainingMinor()) }}, void the tickets and release capacity.</p>
-                                <form method="POST" action="{{ route('dashboard.orders.refund', $order) }}"
-                                      onsubmit="return confirm('Refund this order in full? This issues a Stripe refund and voids the tickets.');">
-                                    @csrf
-                                    <label for="refund-reason" class="detail__label">Reason (optional)</label>
-                                    <input type="text" id="refund-reason" name="reason" class="input"
-                                           maxlength="500" placeholder="e.g. Event cancelled">
-                                    <button type="submit" class="btn btn-danger" style="margin-top: 0.6rem;">Refund in full</button>
-                                </form>
-                            </div>
-                        @endif
-                    @endcan
+                <div class="manage-modal__body">
+                    @if ($canRefund)
+                        <div class="manage-action">
+                            <h3 class="manage-action__title">Partial refund</h3>
+                            <p class="cell-dim">Refund part of the order. Up to {{ $money($order->refundableRemainingMinor()) }} remaining. Tickets stay valid until the full total is refunded.</p>
+                            <form method="POST" action="{{ route('dashboard.orders.partial-refund', $order) }}"
+                                  onsubmit="return confirm('Issue a partial Stripe refund for this amount?');">
+                                @csrf
+                                <label for="partial-refund-amount" class="detail__label">Amount ({{ $currency }})</label>
+                                <input type="number" id="partial-refund-amount" name="amount" class="input"
+                                       step="0.01" min="0.01" max="{{ number_format($order->refundableRemainingMinor() / 100, 2, '.', '') }}"
+                                       placeholder="0.00" required>
+                                <label for="partial-refund-reason" class="detail__label" style="margin-top: 0.5rem;">Reason (optional)</label>
+                                <input type="text" id="partial-refund-reason" name="reason" class="input"
+                                       maxlength="500" placeholder="e.g. Customer requested one ticket refunded">
+                                <button type="submit" class="btn btn-outline" style="margin-top: 0.6rem;">Issue partial refund</button>
+                            </form>
+                            @error('amount')
+                                <p class="status status--error" style="margin-top: 0.5rem;">{{ $message }}</p>
+                            @enderror
+                        </div>
 
-                    @can('cancel_order')
+                        <div class="manage-action">
+                            <h3 class="manage-action__title">Full refund</h3>
+                            <p class="cell-dim">Refund the outstanding {{ $money($order->refundableRemainingMinor()) }}, void the tickets and release capacity.</p>
+                            <form method="POST" action="{{ route('dashboard.orders.refund', $order) }}"
+                                  onsubmit="return confirm('Refund this order in full? This issues a Stripe refund and voids the tickets.');">
+                                @csrf
+                                <label for="refund-reason" class="detail__label">Reason (optional)</label>
+                                <input type="text" id="refund-reason" name="reason" class="input"
+                                       maxlength="500" placeholder="e.g. Event cancelled">
+                                <button type="submit" class="btn btn-danger" style="margin-top: 0.6rem;">Refund in full</button>
+                            </form>
+                        </div>
+                    @endif
+
+                    @if ($canCancel)
                         <div class="manage-action">
                             <h3 class="manage-action__title">Cancel order</h3>
                             <p class="cell-dim">Void the tickets and release capacity. No money moves — refund a paid order instead if the customer paid.</p>
@@ -184,11 +201,11 @@
                                 <button type="submit" class="btn btn-outline" style="margin-top: 0.6rem;">Cancel order</button>
                             </form>
                         </div>
-                    @endcan
+                    @endif
                 </div>
             </div>
-        @endcanany
-    @endunless
+        </div>
+    @endif
 
     <div class="panel">
         <div class="panel__head"><h2>Tickets ({{ $order->tickets->count() }})</h2></div>
@@ -275,3 +292,25 @@
         @endif
     </div>
 @endsection
+
+@push('scripts')
+<script>
+    (function () {
+        var modal = document.querySelector('[data-manage-modal]');
+        if (!modal) return;
+
+        function open() { modal.hidden = false; }
+        function close() { modal.hidden = true; }
+
+        document.querySelectorAll('[data-open-manage]').forEach(function (el) {
+            el.addEventListener('click', open);
+        });
+        modal.querySelectorAll('[data-close-manage]').forEach(function (el) {
+            el.addEventListener('click', close);
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && !modal.hidden) { close(); }
+        });
+    })();
+</script>
+@endpush

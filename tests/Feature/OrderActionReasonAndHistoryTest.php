@@ -178,6 +178,25 @@ class OrderActionReasonAndHistoryTest extends TestCase
         $response->assertSee('Goodwill gesture');
     }
 
+    public function test_show_page_exposes_the_manage_order_popup_for_a_paid_order(): void
+    {
+        // The refund/cancel controls live in a pop-up so the screen stays clean:
+        // the "Manage order" trigger and the modal scaffold are present, and the
+        // three actions (partial refund, full refund, cancel) live inside it.
+        $admin = User::factory()->admin()->create();
+        $company = Company::find($admin->company_id);
+        [$order] = $this->paidOrder($company);
+
+        $response = $this->actingAs($admin)->get("/dashboard/orders/{$order->id}");
+
+        $response->assertOk();
+        $response->assertSee('data-open-manage', false);
+        $response->assertSee('data-manage-modal', false);
+        $response->assertSee('Partial refund');
+        $response->assertSee('Refund in full');
+        $response->assertSee('Cancel order');
+    }
+
     public function test_history_includes_a_webhook_refund_recorded_by_the_system(): void
     {
         // A system/webhook refund is recorded against the Order too, so it must
