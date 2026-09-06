@@ -171,6 +171,55 @@ class Event extends Model
     }
 
     /**
+     * A sell-through summary for this Event: how many tickets are committed
+     * (sold) against the Event's total capacity, plus the percentage full.
+     *
+     * Capacity resolution:
+     *   - if the Event has an overall `capacity`, that is the ceiling;
+     *   - otherwise the ceiling is the sum of the per-type capacities of the
+     *     Event's capped ticket types;
+     *   - if neither resolves to a positive ceiling (unlimited, or only
+     *     shared-pool types with no overall cap), capacity is null (unlimited)
+     *     and no meaningful percentage exists.
+     *
+     * "Sold" is the sum of `sold_count` across the Event's ticket types — the
+     * confirmed committed quantity the CapacityReservationService maintains,
+     * which is the authoritative sold figure (reserved holds are excluded).
+     *
+     * Pass a precomputed `[event_id => sold, event_id => capped_capacity]` pair
+     * to avoid per-row queries when rendering a list; otherwise the figures are
+     * queried from the Event's ticket types.
+     *
+     * @return array{sold: int, capacity: int|null, percent: float|null}
+     */
+    public function sellThrough(?int $sold = null, ?int $cappedCapacity = null): array
+    {
+        if ($sold === null || $cappedCapacity === null) {
+            $sold = (int) $this->ticketTypes()->sum('sold_count');
+            $cappedCapacity = (int) $this->ticketTypes()
+                ->where('capacity_mode', TicketType::MODE_CAPPED)
+                ->sum('capacity');
+        }
+
+        // Overall Event capacity wins as the ceiling; else the summed capped
+        // per-type capacities. A non-positive result means "unlimited".
+        $capacity = $this->capacity ?? ($cappedCapacity > 0 ? $cappedCapacity : null);
+        if ($capacity !== null && $capacity <= 0) {
+            $capacity = null;
+        }
+
+        $percent = $capacity !== null && $capacity > 0
+            ? round(min(100, ($sold / $capacity) * 100), 1)
+            : null;
+
+        return [
+            'sold' => $sold,
+            'capacity' => $capacity,
+            'percent' => $percent,
+        ];
+    }
+
+    /**
      * The unmet publish prerequisites for this Event, as an ordered map of
      * blocker key => human message. An empty array means the Event is
      * publishable. This is the single source of truth reused by the controller

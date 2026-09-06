@@ -18,6 +18,9 @@ class DatabaseSeeder extends Seeder
         // The single Platform-wide config row (default global fee percent).
         $this->call(PlatformSettingSeeder::class);
 
+        // The system Company_Slug blocklist (reserved routes / infra / brand).
+        $this->call(ReservedSlugSeeder::class);
+
         // User::factory(10)->create();
 
         User::factory()->create([

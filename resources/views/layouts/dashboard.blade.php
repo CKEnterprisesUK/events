@@ -252,6 +252,7 @@
                     <a class="nav-link {{ $navActive('admin.audit.*') ? 'active' : '' }}" href="{{ route('admin.audit.index') }}"><span class="nav-ico">&#128220;</span> Audit trail</a>
                     <a class="nav-link {{ $navActive('admin.fees.*') ? 'active' : '' }}" href="{{ route('admin.fees.index') }}"><span class="nav-ico">&#128176;</span> Fees</a>
                     <a class="nav-link {{ $navActive('admin.legal.*') ? 'active' : '' }}" href="{{ route('admin.legal.index') }}"><span class="nav-ico">&#128220;</span> Trust &amp; Legal</a>
+                    <a class="nav-link {{ $navActive('admin.reserved-slugs.*') ? 'active' : '' }}" href="{{ route('admin.reserved-slugs.index') }}"><span class="nav-ico">&#128683;</span> Reserved slugs</a>
                     <a class="nav-link {{ $navActive('admin.settings.*') ? 'active' : '' }}" href="{{ route('admin.settings.index') }}"><span class="nav-ico">&#9881;</span> Settings</a>
                 @else
                     {{-- Company dashboard, adapts to the user's role --}}

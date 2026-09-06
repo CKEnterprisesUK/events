@@ -36,6 +36,7 @@ use Illuminate\Support\Carbon;
  * @property int $booking_fee_minor
  * @property int $application_fee_minor
  * @property int $order_total_minor
+ * @property int $refunded_total_minor
  * @property string $fee_handling_mode
  * @property Carbon|null $reserved_until
  * @property string|null $stripe_session_id
@@ -80,6 +81,7 @@ class Order extends Model
         'booking_fee_minor',
         'application_fee_minor',
         'order_total_minor',
+        'refunded_total_minor',
         'fee_handling_mode',
         'reserved_until',
         'stripe_session_id',
@@ -99,6 +101,7 @@ class Order extends Model
         'booking_fee_minor' => 0,
         'application_fee_minor' => 0,
         'order_total_minor' => 0,
+        'refunded_total_minor' => 0,
     ];
 
     /**
@@ -111,6 +114,7 @@ class Order extends Model
             'booking_fee_minor' => 'integer',
             'application_fee_minor' => 'integer',
             'order_total_minor' => 'integer',
+            'refunded_total_minor' => 'integer',
             'reserved_until' => 'datetime',
             'scanned_at' => 'datetime',
             'fulfilled_at' => 'datetime',
@@ -176,5 +180,26 @@ class Order extends Model
     public function isFulfilled(): bool
     {
         return $this->fulfilled_at !== null;
+    }
+
+    /**
+     * The amount still refundable on this Order, in integer minor units: the
+     * order total less everything already refunded. Never negative. A partial
+     * refund may not exceed this, and reaching zero means the Order has been
+     * refunded in full. (Requirement 17.2)
+     */
+    public function refundableRemainingMinor(): int
+    {
+        return max(0, $this->order_total_minor - $this->refunded_total_minor);
+    }
+
+    /**
+     * Whether the cumulative refunds on this paid Order have reached its full
+     * total, so no further amount can be refunded. (Requirement 17.2)
+     */
+    public function isFullyRefunded(): bool
+    {
+        return $this->order_total_minor > 0
+            && $this->refunded_total_minor >= $this->order_total_minor;
     }
 }

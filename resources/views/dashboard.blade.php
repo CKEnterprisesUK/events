@@ -5,7 +5,9 @@
 @section('content')
     @php
         $user = auth()->user();
-        $company = $user->company;
+        // $company is resolved in the controller (handles Super_Admin
+        // impersonation) — do NOT re-derive it from $user here, or an
+        // impersonating Super_Admin would see the wrong company.
         $firstName = explode(' ', trim($user->name))[0] ?? $user->name;
         $money = function (int $minor) use ($currency) {
             $symbols = ['GBP' => '£', 'USD' => '$', 'EUR' => '€'];
@@ -60,12 +62,26 @@
         </div>
     @endif
 
+    @if (!$company && !$stats)
+        <div class="panel">
+            <div class="empty">
+                <p>No company selected. Jump into a company from the admin area to view its dashboard.</p>
+                <a class="btn btn-sm" href="{{ route('admin.home') }}">Go to admin</a>
+            </div>
+        </div>
+    @endif
+
     @if ($stats)
         <div class="stat-row">
             <div class="stat">
                 <span class="stat__label">Events</span>
-                <span class="stat__value">{{ $stats['total_events'] }}</span>
-                <span class="stat__sub">{{ $stats['published_events'] }} published</span>
+                <span class="stat__value">{{ number_format($stats['total_events']) }}</span>
+                <span class="stat__sub">{{ number_format($stats['published_events']) }} published</span>
+            </div>
+            <div class="stat">
+                <span class="stat__label">Tickets sold</span>
+                <span class="stat__value">{{ number_format($stats['tickets_sold']) }}</span>
+                <span class="stat__sub">Valid, confirmed orders</span>
             </div>
             <div class="stat">
                 <span class="stat__label">Confirmed orders</span>
@@ -78,17 +94,123 @@
                 <span class="stat__sub">Ticket subtotal</span>
             </div>
             <div class="stat">
-                <span class="stat__label">Currency</span>
-                <span class="stat__value">{{ $currency }}</span>
-                <span class="stat__sub">Company default</span>
+                <span class="stat__label">Net payout</span>
+                <span class="stat__value">{{ $money($stats['net_to_company_minor']) }}</span>
+                <span class="stat__sub">After platform fees</span>
             </div>
         </div>
     @endif
 
+    {{-- Sales-over-time trend: last 30 days of gross sales, with an up/down
+         comparison against the preceding 30 days. Rendered as a dependency-free
+         inline SVG sparkline. Shown to users who can manage events. --}}
+    @if (!empty($salesChart) && $salesChart['max_minor'] > 0)
+        @can('events')
+            @php
+                $chart = $salesChart;
+                $points = $chart['points'];
+                $count = count($points);
+                // Build an SVG polyline across a 100 x 32 viewBox. Guard the
+                // single-point and flat-line cases against divide-by-zero.
+                $w = 100; $h = 32; $pad = 2;
+                $max = max(1, $chart['max_minor']);
+                $stepX = $count > 1 ? ($w - $pad * 2) / ($count - 1) : 0;
+                $coords = [];
+                foreach ($points as $i => $p) {
+                    $x = $pad + $stepX * $i;
+                    $y = $h - $pad - (($p['total_minor'] / $max) * ($h - $pad * 2));
+                    $coords[] = round($x, 2) . ',' . round($y, 2);
+                }
+                $polyline = implode(' ', $coords);
+                $delta = $chart['delta_pct'];
+            @endphp
+            <div class="panel">
+                <div class="panel__head">
+                    <div>
+                        <h2>Sales over the last 30 days</h2>
+                        <p class="muted">{{ $money($chart['current_total_minor']) }} in gross sales</p>
+                    </div>
+                    @if ($delta !== null)
+                        @php $up = $delta >= 0; @endphp
+                        <span class="trend {{ $up ? 'trend--up' : 'trend--down' }}"
+                              title="Compared with the previous 30 days ({{ $money($chart['previous_total_minor']) }})">
+                            {{ $up ? '▲' : '▼' }} {{ number_format(abs($delta), 1) }}%
+                            <span class="trend__note">vs prior 30 days</span>
+                        </span>
+                    @else
+                        <span class="trend trend--flat" title="No sales in the previous 30 days to compare against">
+                            New activity
+                        </span>
+                    @endif
+                </div>
+                <div class="sales-chart">
+                    <svg viewBox="0 0 {{ $w }} {{ $h }}" preserveAspectRatio="none" role="img"
+                         aria-label="Gross sales for each of the last 30 days.">
+                        <polyline fill="none" stroke="var(--brand)" stroke-width="1.2"
+                                  stroke-linejoin="round" stroke-linecap="round"
+                                  points="{{ $polyline }}" />
+                    </svg>
+                    <div class="sales-chart__axis">
+                        <span>{{ $points[0]['label'] }}</span>
+                        <span>{{ $points[$count - 1]['label'] }}</span>
+                    </div>
+                </div>
+            </div>
+        @endcan
+    @endif
+
+    {{-- Upcoming events: soonest-first, the operationally urgent view. --}}
+    @can('events')
+        @if ($upcomingEvents->isNotEmpty())
+            <div class="panel">
+                <div class="panel__head">
+                    <h2>Upcoming events</h2>
+                    <a class="panel__link" href="{{ route('dashboard.events.index') }}">View all</a>
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Event</th>
+                            <th scope="col">When</th>
+                            <th scope="col">Status</th>
+                            <th scope="col" class="num">Orders</th>
+                            <th scope="col"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($upcomingEvents as $event)
+                            <tr>
+                                <td>
+                                    <a class="cell-strong" href="{{ route('dashboard.events.show', $event) }}">{{ $event->name }}</a>
+                                    @if ($event->venue)
+                                        <span class="cell-dim">{{ $event->venue }}</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    {{ $event->starts_at->format('j M Y, H:i') }}
+                                    <span class="cell-dim">{{ $event->starts_at->diffForHumans() }}</span>
+                                </td>
+                                <td>
+                                    <span class="pill {{ $event->isPublished() ? 'pill--live' : 'pill--draft' }}">
+                                        {{ $event->isPublished() ? 'Published' : 'Draft' }}
+                                    </span>
+                                </td>
+                                <td class="num">{{ number_format($event->confirmed_orders_count) }}</td>
+                                <td class="num">
+                                    <a class="panel__link" href="{{ route('dashboard.events.show', $event) }}">Open</a>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    @endcan
+
     @can('events')
         <div class="panel">
             <div class="panel__head">
-                <h2>Recent events</h2>
+                <h2>Recently created</h2>
                 <a class="panel__link" href="{{ route('dashboard.events.index') }}">View all</a>
             </div>
 
@@ -135,8 +257,10 @@
         </div>
     @endcan
 
-    {{-- Role-specific entry points for users who don't manage events. --}}
-    @cannot('events')
+    {{-- Quick tool entry points, shown to anyone holding the relevant
+         permission — Owners and Admins see everything they're allowed, not
+         just users who can't manage events. Each row is individually gated. --}}
+    @if (auth()->user()->can('view_reports') || auth()->user()->can('check_in'))
         <div class="panel">
             <div class="panel__head"><h2>Your tools</h2></div>
             <table class="data-table">
@@ -156,7 +280,7 @@
                 </tbody>
             </table>
         </div>
-    @endcannot
+    @endif
 
     @if ($company)
         <div class="panel panel--storefront">
@@ -185,7 +309,7 @@
         border-top: 3px solid var(--brand);
     }
     .stat__label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
-    .stat__value { font-size: 1.75rem; font-weight: 700; color: var(--ink); line-height: 1.1; }
+    .stat__value { font-size: 1.75rem; font-weight: 700; color: var(--ink); line-height: 1.1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
     .stat__sub { font-size: 0.8rem; color: var(--muted); }
 
     .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem; overflow: hidden; margin-bottom: 1.5rem; }
@@ -241,5 +365,22 @@
     .onboarding__desc { font-size: 0.82rem; color: var(--muted); }
     .onboarding__status { font-size: 0.8rem; font-weight: 600; color: #047857; white-space: nowrap; }
     .field-hint { display: block; font-size: 0.8rem; color: var(--muted); margin-top: 0.2rem; }
+
+    .trend {
+        display: inline-flex; align-items: baseline; gap: 0.35rem;
+        font-size: 0.9rem; font-weight: 700; white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+    }
+    .trend--up { color: #047857; }
+    .trend--down { color: #b91c1c; }
+    .trend--flat { color: var(--muted); font-weight: 600; }
+    .trend__note { font-size: 0.72rem; font-weight: 500; color: var(--muted); }
+
+    .sales-chart { padding: 1.1rem 1.25rem 0.9rem; }
+    .sales-chart svg { display: block; width: 100%; height: 72px; }
+    .sales-chart__axis {
+        display: flex; justify-content: space-between;
+        font-size: 0.72rem; color: var(--muted); margin-top: 0.35rem;
+    }
 </style>
 @endpush

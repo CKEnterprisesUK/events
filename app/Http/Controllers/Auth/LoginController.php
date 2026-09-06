@@ -86,6 +86,24 @@ class LoginController extends Controller
             ]);
         }
 
+        // A self-signed-up Owner must verify their email before they can sign
+        // in. Super_Admins are provisioned out-of-band and invited users are
+        // auto-verified on accept, so in practice only an unverified Owner is
+        // rejected here. Tear the session down (so no usable session is granted)
+        // and send them to the verification notice with a resend option, rather
+        // than leaving them authenticated-but-bounced. The notice route
+        // re-establishes a lightweight session on its own auth check.
+        $user = Auth::user();
+
+        if ($user instanceof User && ! $user->isSuperAdmin() && ! $user->hasVerifiedEmail()) {
+            // Keep the session just long enough to show the notice + resend:
+            // the user stays authenticated but `verified` gates the dashboard,
+            // so they can go no further until they verify.
+            $request->session()->regenerate();
+
+            return redirect()->route('verification.notice');
+        }
+
         $request->session()->regenerate();
 
         // Reset the idle-timeout window at sign-in. Without this, a returning

@@ -79,6 +79,8 @@ class AuditLog extends Model
 
     public const AUTH_LOGIN_FAILED = 'auth.login_failed';
 
+    public const AUTH_EMAIL_VERIFIED = 'auth.email_verified';
+
     public const IMPERSONATION_STARTED = 'impersonation.started';
 
     public const IMPERSONATION_STOPPED = 'impersonation.stopped';
@@ -94,10 +96,16 @@ class AuditLog extends Model
 
     public const COMPANY_UNSUSPENDED = 'company.unsuspended';
 
+    public const RESERVED_SLUG_ADDED = 'reserved_slug.added';
+
+    public const RESERVED_SLUG_REMOVED = 'reserved_slug.removed';
+
     // Money
     public const ORDER_CANCELLED = 'order.cancelled';
 
     public const ORDER_REFUNDED = 'order.refunded';
+
+    public const ORDER_PARTIALLY_REFUNDED = 'order.partially_refunded';
 
     public const COMP_ISSUED = 'comp.issued';
 
@@ -150,6 +158,7 @@ class AuditLog extends Model
     public const ACTIONS = [
         self::AUTH_LOGIN_SUCCEEDED => ['category' => self::CATEGORY_AUTH, 'label' => 'Signed in'],
         self::AUTH_LOGIN_FAILED => ['category' => self::CATEGORY_AUTH, 'label' => 'Failed sign-in'],
+        self::AUTH_EMAIL_VERIFIED => ['category' => self::CATEGORY_AUTH, 'label' => 'Verified email address'],
         self::IMPERSONATION_STARTED => ['category' => self::CATEGORY_AUTH, 'label' => 'Started impersonation'],
         self::IMPERSONATION_STOPPED => ['category' => self::CATEGORY_AUTH, 'label' => 'Stopped impersonation'],
 
@@ -158,9 +167,12 @@ class AuditLog extends Model
         self::USER_REMOVED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Removed a user'],
         self::COMPANY_SUSPENDED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Suspended a company'],
         self::COMPANY_UNSUSPENDED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Unsuspended a company'],
+        self::RESERVED_SLUG_ADDED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Added a reserved slug'],
+        self::RESERVED_SLUG_REMOVED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Removed a reserved slug'],
 
         self::ORDER_CANCELLED => ['category' => self::CATEGORY_MONEY, 'label' => 'Cancelled an order'],
         self::ORDER_REFUNDED => ['category' => self::CATEGORY_MONEY, 'label' => 'Refunded an order'],
+        self::ORDER_PARTIALLY_REFUNDED => ['category' => self::CATEGORY_MONEY, 'label' => 'Partially refunded an order'],
         self::COMP_ISSUED => ['category' => self::CATEGORY_MONEY, 'label' => 'Issued complimentary tickets'],
         self::FEE_MODE_CHANGED => ['category' => self::CATEGORY_MONEY, 'label' => 'Changed fee handling'],
         self::FEE_GLOBAL_CHANGED => ['category' => self::CATEGORY_MONEY, 'label' => 'Changed the global fee'],

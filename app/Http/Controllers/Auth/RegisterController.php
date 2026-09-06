@@ -7,11 +7,11 @@ use App\Models\Company;
 use App\Models\User;
 use App\Rules\CompanySlug;
 use Illuminate\Contracts\View\View;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
@@ -119,10 +119,19 @@ class RegisterController extends Controller
             ]);
         });
 
+        // Fire the framework's Registered event, which sends the email
+        // verification link to the new Owner (User implements MustVerifyEmail).
+        // The Company + Owner exist immediately, but the Owner cannot reach the
+        // dashboard until they verify (enforced by the `verified` middleware on
+        // the dashboard and by the login gate). We log them in so they land on
+        // the "verify your email" notice; every authenticated dashboard route is
+        // behind `verified`, so an unverified session can go no further.
+        event(new Registered($user));
+
         Auth::login($user);
 
         $request->session()->regenerate();
 
-        return redirect()->intended('/dashboard');
+        return redirect()->route('verification.notice');
     }
 }

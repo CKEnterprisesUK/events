@@ -219,6 +219,70 @@ class OrderController extends Controller
     }
 
     /**
+     * Partially refund an Order: issue a Stripe refund for a chosen amount (in
+     * minor units) on the Company's connected account and record it against the
+     * Order's cumulative refunded total. The Order stays paid and its Tickets
+     * stay valid unless this refund brings the cumulative total up to the full
+     * order total, in which case it converges on the terminal refund — voiding
+     * the Tickets and returning capacity. Repeatable up to the order total.
+     * Gated on `ACTION_REFUND_ORDER`. (Requirement 17.2)
+     */
+    public function partialRefund(Request $request, Order $order): RedirectResponse
+    {
+        Gate::authorize(RoleAuthorization::ACTION_REFUND_ORDER);
+
+        // Amount is entered in major currency units (e.g. pounds) and converted
+        // to integer minor units. It must be positive and cannot exceed the
+        // amount still refundable on the Order.
+        $remainingMinor = $order->refundableRemainingMinor();
+
+        $validated = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0.01'],
+        ]);
+
+        $amountMinor = (int) round(((float) $validated['amount']) * 100);
+
+        if ($amountMinor < 1 || $amountMinor > $remainingMinor) {
+            throw ValidationException::withMessages([
+                'amount' => 'Enter an amount between 0.01 and the remaining refundable balance.',
+            ]);
+        }
+
+        try {
+            $applied = $this->cancellation->partialRefund($order, $amountMinor);
+        } catch (\InvalidArgumentException $e) {
+            // Balance changed under us (e.g. a concurrent refund/webhook) — the
+            // amount no longer fits. Reject cleanly; no money moved.
+            throw ValidationException::withMessages([
+                'amount' => 'That amount can no longer be refunded on this order.',
+            ]);
+        }
+
+        if ($applied) {
+            // The Order may now be fully refunded (terminal) or still paid with
+            // a larger cumulative refunded total — either way, log the amount.
+            $fullyRefunded = $order->isFullyRefunded();
+
+            $this->audit->record(
+                action: $fullyRefunded ? AuditLog::ORDER_REFUNDED : AuditLog::ORDER_PARTIALLY_REFUNDED,
+                auditable: $order,
+                summary: ($fullyRefunded ? 'Refunded order ' : 'Partially refunded order ').$order->order_reference,
+                context: [
+                    'order_reference' => $order->order_reference,
+                    'amount_minor' => $amountMinor,
+                    'refunded_total_minor' => $order->refunded_total_minor,
+                ],
+            );
+
+            return back()->with('status', $fullyRefunded
+                ? 'Order fully refunded.'
+                : 'Partial refund issued.');
+        }
+
+        return back()->with('status', 'Nothing left to refund on this order.');
+    }
+
+    /**
      * Issue complimentary tickets for an Event: create a confirmed
      * (`free_confirmed`) Order at zero money with one Ticket per comp ticket,
      * generate the QR, and enqueue the ticket email — no payment is taken. The

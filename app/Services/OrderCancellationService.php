@@ -22,6 +22,13 @@ use Illuminate\Support\Facades\DB;
  *   1. Move the Order to its terminal status (cancelled/refunded/disputed).
  *   2. Void every one of the Order's Tickets so the shared QR fails at scan.
  *      (Requirements 17.3, 16.10)
+ *
+ * A PARTIAL refund ({@see partialRefund()}) is the exception that does NOT run
+ * the terminal transition: it issues a Stripe refund for part of the total and
+ * records it against the Order's cumulative `refunded_total_minor` while the
+ * Order stays `paid` with valid Tickets. Only once cumulative refunds reach the
+ * full order total does it converge on the same terminal transition as a full
+ * refund. (Requirement 17.2)
  *   3. Return the capacity the Order held — sold capacity (a confirmed Order)
  *      is returned via {@see CapacityReservationService::releaseSold()};
  *      still-reserved capacity (a reserved Order being cancelled before payment)
@@ -99,6 +106,98 @@ class OrderCancellationService
         }
 
         return $this->applyTerminal($order, Order::STATUS_REFUNDED);
+    }
+
+    /**
+     * Partially refund a paid Order from the dashboard: issue a Stripe refund
+     * for $amountMinor on the Company's connected account, then record the
+     * amount against the Order's cumulative `refunded_total_minor`. The Order
+     * stays `paid` and its Tickets stay valid (a partial refund does not void
+     * tickets or return capacity) UNLESS this refund brings the cumulative total
+     * up to the full order total, in which case it converges on the same
+     * terminal transition as a full {@see refund()} — flipping the Order to
+     * `refunded`, voiding its Tickets, and returning its sold capacity.
+     * (Requirement 17.2)
+     *
+     * The refund amount must be positive and must not exceed the amount still
+     * refundable on the Order ({@see Order::refundableRemainingMinor()}); an
+     * out-of-range amount throws {@see \InvalidArgumentException} before any
+     * Stripe call so no money moves. The remaining balance is re-checked under a
+     * `FOR UPDATE` row lock, so two concurrent partial refunds can never
+     * over-refund past the order total. As with a full refund, the Stripe call
+     * is issued BEFORE the DB write so a Stripe failure aborts the operation and
+     * leaves the Order unchanged.
+     *
+     * Returns true when the refund was applied. An already-terminal Order (or
+     * one with nothing left to refund) is a no-op and returns false without
+     * calling Stripe.
+     *
+     * @throws \InvalidArgumentException when $amountMinor is not in 1..remaining
+     */
+    public function partialRefund(Order $order, int $amountMinor): bool
+    {
+        if ($amountMinor < 1) {
+            throw new \InvalidArgumentException('Refund amount must be a positive number of minor units.');
+        }
+
+        // A partial refund only applies to a paid Order that still carries a
+        // charge; anything else (free, reserved, already terminal) has no charge
+        // to refund against.
+        if ($order->status !== Order::STATUS_PAID || $order->stripe_charge_id === null) {
+            return false;
+        }
+
+        if ($amountMinor > $order->refundableRemainingMinor()) {
+            throw new \InvalidArgumentException('Refund amount exceeds the remaining refundable balance.');
+        }
+
+        $company = $order->company;
+
+        // Issue the Stripe refund BEFORE touching the DB so a failure leaves the
+        // Order (and its recorded refunded total) unchanged. (Requirement 17.2)
+        $this->stripe->refundCharge(
+            connectedAccountId: (string) $company->stripe_account_id,
+            chargeId: (string) $order->stripe_charge_id,
+            amountMinor: $amountMinor,
+        );
+
+        // Record the amount and, if it completes the total, flip to terminal —
+        // all under a row lock so a concurrent refund/webhook cannot race past
+        // the total or double-apply the terminal effects.
+        return (bool) DB::transaction(function () use ($order, $amountMinor): bool {
+            $locked = Order::withoutGlobalScopes()
+                ->whereKey($order->getKey())
+                ->lockForUpdate()
+                ->first();
+
+            if ($locked === null || in_array($locked->status, self::TERMINAL_STATUSES, true)) {
+                return false;
+            }
+
+            $locked->refunded_total_minor += $amountMinor;
+            $locked->save();
+
+            // Keep the caller's instance in step so audit/UI read fresh values.
+            $order->refunded_total_minor = $locked->refunded_total_minor;
+
+            // Cumulative refunds have reached the full total → the Order is now
+            // fully refunded. Void its Tickets and return its capacity via the
+            // shared terminal path (idempotent, converges with the webhook).
+            if ($locked->refunded_total_minor >= $locked->order_total_minor) {
+                $previousStatus = $locked->status;
+                $locked->status = Order::STATUS_REFUNDED;
+                $locked->save();
+                $order->status = Order::STATUS_REFUNDED;
+
+                Ticket::withoutGlobalScopes()
+                    ->where('order_id', $locked->getKey())
+                    ->update(['status' => Ticket::STATUS_VOIDED]);
+
+                $this->returnCapacity($locked, $previousStatus);
+            }
+
+            return true;
+        });
     }
 
     /**

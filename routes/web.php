@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -28,6 +29,7 @@ use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboardCo
 use App\Http\Controllers\SuperAdmin\FeeController as SuperAdminFeeController;
 use App\Http\Controllers\SuperAdmin\ImpersonationController as SuperAdminImpersonationController;
 use App\Http\Controllers\SuperAdmin\LegalDocumentController as SuperAdminLegalDocumentController;
+use App\Http\Controllers\SuperAdmin\ReservedSlugController as SuperAdminReservedSlugController;
 use App\Http\Controllers\SuperAdmin\SettingsController as SuperAdminSettingsController;
 use App\Http\Controllers\SuperAdmin\TransactionController as SuperAdminTransactionController;
 use App\Http\Controllers\TicketTypeController;
@@ -127,6 +129,32 @@ Route::post('/logout', [LoginController::class, 'logout'])
 
 /*
 |--------------------------------------------------------------------------
+| Email verification (reserved prefix, authenticated)
+|--------------------------------------------------------------------------
+| A self-signed-up Owner is created at registration but must verify their email
+| before reaching the dashboard (the dashboard group is behind `verified`). The
+| route names match Laravel's framework defaults so the VerifyEmail
+| notification URL and the `verified` middleware resolve. Invited users are
+| auto-verified on accept and never pass through here.
+*/
+Route::middleware('auth')->group(function () {
+    Route::get('/email/verify', [EmailVerificationController::class, 'notice'])
+        ->name('verification.notice');
+
+    // The signed link from the email. `signed` validates the URL signature;
+    // throttled to blunt verification-link guessing/abuse.
+    Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+        ->middleware(['signed', 'throttle:6,1'])
+        ->name('verification.verify');
+
+    // Resend the verification email. Throttled to prevent email bombing.
+    Route::post('/email/verification-notification', [EmailVerificationController::class, 'resend'])
+        ->middleware('throttle:auth')
+        ->name('verification.send');
+});
+
+/*
+|--------------------------------------------------------------------------
 | Invitation acceptance (public, reserved prefix)
 |--------------------------------------------------------------------------
 | An invited user is not yet a Company_User, so accept is public and keyed on
@@ -147,7 +175,7 @@ Route::post('/invitations/{token}', [InvitationController::class, 'accept'])
 | Minimal authenticated landing target for a successful login. The full
 | dashboard surfaces are built in later tasks.
 */
-Route::middleware(['auth', 'company.active', 'session.timeout', 'dashboard.tenant'])
+Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'dashboard.tenant'])
     ->prefix('dashboard')
     ->name('dashboard.')
     ->group(function () {
@@ -239,6 +267,7 @@ Route::middleware(['auth', 'company.active', 'session.timeout', 'dashboard.tenan
         Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
         Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
         Route::post('/orders/{order}/refund', [OrderController::class, 'refund'])->name('orders.refund');
+        Route::post('/orders/{order}/partial-refund', [OrderController::class, 'partialRefund'])->name('orders.partial-refund');
         // Manual ticket handling on a confirmed Order (Admin/Box_Office via
         // ACTION_MANAGE_ORDERS): download the A4 e-ticket PDF, or re-send the
         // branded ticket email to the customer. Both reuse the same QR the
@@ -393,6 +422,15 @@ Route::middleware(['auth', 'super.admin', 'session.timeout'])
         Route::post('/legal', [SuperAdminLegalDocumentController::class, 'store'])->name('legal.store');
         Route::get('/legal/{legalDocument}/edit', [SuperAdminLegalDocumentController::class, 'edit'])->name('legal.edit');
         Route::put('/legal/{legalDocument}', [SuperAdminLegalDocumentController::class, 'update'])->name('legal.update');
+
+        // Company_Slug blocklist: the reserved slugs a Company may never claim
+        // at self-signup or on a slug change (reserved platform routes / infra
+        // paths that path-based tenancy would otherwise shadow, plus brand/abuse
+        // words). Enforced by App\Rules\CompanySlug. Seeded system rows are
+        // undeletable; operator additions are removable.
+        Route::get('/reserved-slugs', [SuperAdminReservedSlugController::class, 'index'])->name('reserved-slugs.index');
+        Route::post('/reserved-slugs', [SuperAdminReservedSlugController::class, 'store'])->name('reserved-slugs.store');
+        Route::delete('/reserved-slugs/{reservedSlug}', [SuperAdminReservedSlugController::class, 'destroy'])->name('reserved-slugs.destroy');
 
         // Suspend / unsuspend a Company. The company list + detail live on the
         // Clients surface; these actions redirect back to that client page.

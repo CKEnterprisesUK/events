@@ -154,8 +154,10 @@ class TrustLegalCentreTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'olivia@acme.test']);
 
         // With agreement, the account is created and acceptance is stamped.
+        // The new Owner must verify their email before reaching the dashboard,
+        // so signup now lands on the verification notice (see EmailVerificationTest).
         $this->post('/register', array_merge($payload, ['agree_terms' => '1']))
-            ->assertRedirect('/dashboard');
+            ->assertRedirect(route('verification.notice'));
 
         $user = User::where('email', 'olivia@acme.test')->firstOrFail();
         $this->assertNotNull($user->agreed_to_terms_at);

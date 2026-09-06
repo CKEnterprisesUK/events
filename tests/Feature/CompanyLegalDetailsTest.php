@@ -71,7 +71,9 @@ class CompanyLegalDetailsTest extends TestCase
     {
         $response = $this->post('/register', $this->signupPayload());
 
-        $response->assertRedirect('/dashboard');
+        // The new Owner must verify their email before the dashboard, so signup
+        // lands on the verification notice (see EmailVerificationTest).
+        $response->assertRedirect(route('verification.notice'));
 
         $company = Company::query()->where('slug', 'acme-events')->firstOrFail();
 
@@ -129,7 +131,7 @@ class CompanyLegalDetailsTest extends TestCase
             'organisation_email' => 'trustee@small-charity.test',
         ]));
 
-        $response->assertRedirect('/dashboard');
+        $response->assertRedirect(route('verification.notice'));
 
         $company = Company::query()->where('slug', 'small-charity')->firstOrFail();
         $this->assertSame(Company::TYPE_CHARITY, $company->organisation_type);

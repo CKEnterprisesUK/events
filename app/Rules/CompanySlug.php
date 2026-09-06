@@ -3,6 +3,7 @@
 namespace App\Rules;
 
 use App\Models\Company;
+use App\Models\ReservedSlug;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 
@@ -10,7 +11,13 @@ use Illuminate\Contracts\Validation\ValidationRule;
  * Validates a Company_Slug per Requirement 1.6:
  *   - 1 to 255 characters,
  *   - lowercase alphanumeric characters and hyphens only,
+ *   - not on the reserved-slug blocklist (see {@see ReservedSlug}),
  *   - unique across all Companies.
+ *
+ * The reserved-slug check rejects values that collide with reserved platform
+ * routes/infrastructure paths (which path-based tenancy would otherwise shadow)
+ * or brand/abuse words the Platform declines to hand out; the list is managed by
+ * a Super_Admin on the `/admin` surface.
  *
  * The uniqueness check may exclude a Company by id so an existing Company can
  * revalidate its own slug on update.
@@ -70,6 +77,17 @@ class CompanySlug implements ValidationRule
 
         if (preg_match(self::PATTERN, $value) !== 1) {
             $fail('The :attribute may only contain lowercase letters, numbers, and hyphens.');
+
+            return;
+        }
+
+        // Reject slugs on the blocklist: reserved platform routes / infra paths
+        // (which the storefront catch-all would otherwise shadow) and
+        // brand/abuse words the Platform declines to hand out. Checked before
+        // the (more expensive) uniqueness query and reported as "not available"
+        // so we do not disclose the blocklist's exact contents.
+        if (ReservedSlug::isReserved($value)) {
+            $fail('The :attribute is not available.');
 
             return;
         }

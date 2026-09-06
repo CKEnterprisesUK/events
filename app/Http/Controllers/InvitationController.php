@@ -141,6 +141,13 @@ class InvitationController extends Controller
             'last_activity_at' => now(),
         ]);
 
+        // Accepting an invitation proves ownership of the invited email address
+        // (the opaque token was emailed to it), so the account is verified
+        // immediately — invited users never pass through the email-verification
+        // flow that self-signed-up Owners do. `email_verified_at` is not
+        // fillable, so it is stamped here via the framework helper.
+        $user->markEmailAsVerified();
+
         $invitation->forceFill(['accepted_at' => now()])->save();
 
         Auth::login($user);
