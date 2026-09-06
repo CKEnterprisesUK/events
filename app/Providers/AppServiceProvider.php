@@ -7,6 +7,7 @@ use App\Services\Branding\BrandingResolver;
 use App\Services\Mail\FakeTicketMailer;
 use App\Services\Mail\SmtpTicketMailer;
 use App\Services\Mail\TicketMailer;
+use App\Services\QrService;
 use App\Services\RoleAuthorization;
 use App\Services\Stripe\FakeStripePaymentService;
 use App\Services\Stripe\StripePaymentService;
@@ -60,6 +61,7 @@ class AppServiceProvider extends ServiceProvider
             return new SmtpTicketMailer(
                 $app->make(Mailer::class),
                 $app->make(BrandingResolver::class),
+                $app->make(QrService::class),
             );
         });
     }
