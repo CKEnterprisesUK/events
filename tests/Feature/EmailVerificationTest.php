@@ -5,8 +5,8 @@ namespace Tests\Feature;
 use App\Models\Company;
 use App\Models\Invitation;
 use App\Models\User;
+use App\Notifications\VerifyEmailNow;
 use Illuminate\Auth\Events\Registered;
-use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
@@ -65,7 +65,10 @@ class EmailVerificationTest extends TestCase
         $this->assertFalse($user->hasVerifiedEmail());
         $this->assertDatabaseHas('companies', ['slug' => 'acme-events']);
 
-        Notification::assertSentTo($user, VerifyEmail::class);
+        // The Platform sends the non-queued VerifyEmailNow (a VerifyEmail
+        // subclass) so the link goes out immediately rather than on the cron
+        // queue burst.
+        Notification::assertSentTo($user, VerifyEmailNow::class);
     }
 
     public function test_registration_dispatches_the_registered_event(): void
@@ -155,7 +158,7 @@ class EmailVerificationTest extends TestCase
         $this->actingAs($user)->post(route('verification.send'))
             ->assertRedirect();
 
-        Notification::assertSentTo($user, VerifyEmail::class);
+        Notification::assertSentTo($user, VerifyEmailNow::class);
     }
 
     // ---- Invited users are auto-verified -------------------------------------

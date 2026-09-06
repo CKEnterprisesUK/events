@@ -561,17 +561,21 @@ main.public-main.event-main { max-width: 1040px; padding-top: 0; }
 .checkout-note--secure::before { content: '🔒 '; }
 
 /* Terms modal */
-.terms-modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 1.25rem; }
+/* z-index sits above Leaflet map panes/controls (which reach ~1000) so the
+   modal and its backdrop cover the map instead of being drawn under it. */
+.terms-modal { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1.25rem; }
 .terms-modal[hidden] { display: none; }
 .terms-modal__backdrop { position: absolute; inset: 0; background: rgba(8,11,26,0.55); }
 .terms-modal__panel {
     position: relative; background: var(--surface); border-radius: 0.9rem; max-width: 620px; width: 100%;
-    max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 30px 60px rgba(0,0,0,0.3);
+    max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 30px 60px rgba(0,0,0,0.3);
 }
-.terms-modal__head { display: flex; align-items: center; justify-content: space-between; padding: 1.1rem 1.35rem; border-bottom: 1px solid var(--border); }
+.terms-modal__head { display: flex; align-items: center; justify-content: space-between; padding: 1.1rem 1.35rem; border-bottom: 1px solid var(--border); flex: 0 0 auto; }
 .terms-modal__head h3 { margin: 0; }
 .terms-modal__close { background: none; border: none; font-size: 1.5rem; line-height: 1; cursor: pointer; color: var(--muted); }
-.terms-modal__body { padding: 1.35rem; overflow-y: auto; white-space: pre-line; line-height: 1.7; color: var(--body, #454a5a); }
+/* min-height:0 lets the body actually scroll inside the flex column when the
+   content is taller than the panel (long terms / privacy notices). */
+.terms-modal__body { padding: 1.35rem; overflow-y: auto; min-height: 0; flex: 1 1 auto; white-space: pre-line; line-height: 1.7; color: var(--body, #454a5a); }
 
 /* =============================================================================
    Checkout return pages (success / cancel)
