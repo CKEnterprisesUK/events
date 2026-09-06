@@ -251,9 +251,28 @@
                                 @endforeach
                             </ul>
 
-                            <div class="checkout-summary" data-checkout-summary hidden>
-                                <span class="checkout-summary__label">Subtotal</span>
-                                <span class="checkout-summary__value" data-summary-total>{{ $symbol }}0.00</span>
+                            <div class="checkout-summary" data-checkout-summary hidden
+                                 data-fee-mode="{{ $feeHandlingMode }}"
+                                 data-fee-percent-hundredths="{{ $feePercentHundredths }}">
+                                @if ($feeHandlingMode === \App\Models\Company::FEE_MODE_PASS_ON)
+                                    <div class="checkout-summary__row">
+                                        <span class="checkout-summary__label">Subtotal</span>
+                                        <span class="checkout-summary__value" data-summary-subtotal>{{ $symbol }}0.00</span>
+                                    </div>
+                                    <div class="checkout-summary__row" data-summary-fee-row>
+                                        <span class="checkout-summary__label">Booking fee</span>
+                                        <span class="checkout-summary__value" data-summary-fee>{{ $symbol }}0.00</span>
+                                    </div>
+                                    <div class="checkout-summary__row checkout-summary__row--total">
+                                        <span class="checkout-summary__label">Total</span>
+                                        <span class="checkout-summary__value" data-summary-total>{{ $symbol }}0.00</span>
+                                    </div>
+                                @else
+                                    <div class="checkout-summary__row checkout-summary__row--total">
+                                        <span class="checkout-summary__label">Total</span>
+                                        <span class="checkout-summary__value" data-summary-total>{{ $symbol }}0.00</span>
+                                    </div>
+                                @endif
                             </div>
 
                             <div class="checkout-fields">
@@ -357,25 +376,53 @@
         if (!form) return;
 
         var summary = form.querySelector('[data-checkout-summary]');
+        var summarySubtotal = form.querySelector('[data-summary-subtotal]');
+        var summaryFee = form.querySelector('[data-summary-fee]');
         var summaryTotal = form.querySelector('[data-summary-total]');
         var submit = form.querySelector('[data-checkout-submit]');
         var symbol = @json($symbol);
+
+        // Fee context mirrors the server's FeeCalculationService so the total
+        // shown here matches the amount charged at Stripe. In Pass_On mode the
+        // customer pays the booking fee on top of the subtotal.
+        var feeMode = summary ? summary.getAttribute('data-fee-mode') : 'absorb';
+        var feePercentHundredths = summary
+            ? (parseInt(summary.getAttribute('data-fee-percent-hundredths'), 10) || 0)
+            : 0;
 
         function money(minor) {
             return symbol + (minor / 100).toFixed(2);
         }
 
+        // Application_Fee = round-half-up(subtotal × percentHundredths / 10000),
+        // clamped to [0, subtotal] — the same integer arithmetic the server uses
+        // so the displayed total never disagrees with Stripe by a penny.
+        function bookingFee(subtotal) {
+            if (feeMode !== 'pass_on' || subtotal <= 0 || feePercentHundredths <= 0) {
+                return 0;
+            }
+            var numerator = subtotal * feePercentHundredths;
+            var fee = Math.floor(numerator / 10000);
+            if ((numerator % 10000) * 2 >= 10000) { fee += 1; }
+            if (fee > subtotal) { fee = subtotal; }
+            return fee;
+        }
+
         function recalc() {
-            var total = 0;
+            var subtotal = 0;
             var count = 0;
             form.querySelectorAll('[data-qty-input]').forEach(function (input) {
                 var qty = parseInt(input.value, 10) || 0;
                 var price = parseInt(input.getAttribute('data-price'), 10) || 0;
-                total += qty * price;
+                subtotal += qty * price;
                 count += qty;
                 var row = input.closest('.ticket-type');
                 if (row) { row.classList.toggle('is-selected', qty > 0); }
             });
+            var fee = bookingFee(subtotal);
+            var total = subtotal + fee;
+            if (summarySubtotal) { summarySubtotal.textContent = money(subtotal); }
+            if (summaryFee) { summaryFee.textContent = money(fee); }
             if (summaryTotal) { summaryTotal.textContent = money(total); }
             if (summary) { summary.hidden = count === 0; }
             if (submit) { submit.disabled = count === 0; }

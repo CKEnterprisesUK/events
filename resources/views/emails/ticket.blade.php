@@ -1,9 +1,10 @@
 {{--
     Branded ticket email for a confirmed Order. Shows the effective
-    Company/Event branding (logo, primary colour), the Order breakdown, and the
-    single scannable QR_Code —
-    a rendered PNG of the payload {Order_Reference}.HMAC(secret, Order_Reference)
-    — that the attendee presents at entry. (Requirements 14.1, 14.4, 14.6)
+    Company/Event branding (logo, primary colour) and the Order breakdown. The
+    scannable QR_Code is now carried on the attached print-ready A4 ticket PDF
+    (which also carries the sponsor banners and the organiser's custom entry
+    instructions) rather than embedded inline, so the body simply points the
+    attendee to that attachment. (Requirements 14.1, 14.4, 14.6)
 --}}
 @php
     $primary = $branding->hasPrimaryColour() ? $branding->primaryColour : '#111827';
@@ -30,7 +31,9 @@
             <div style="padding:0 24px 8px;">
                 <p style="margin:0 0 4px;">Hi {{ $order->customer_name }},</p>
                 <p style="margin:0 0 16px;color:#374151;">
-                    Thanks for your order. Present the QR code below at the door for entry.
+                    Thanks for your order. Your ticket is attached to this email as a PDF
+                    (<strong>{{ $ticketPdfFilename }}</strong>). Print it or show it on your
+                    phone at the door &mdash; it carries the QR code you'll scan for entry.
                 </p>
 
                 {{-- Order breakdown of Ticket_Types and quantities. (Requirement 14.6) --}}
@@ -53,22 +56,17 @@
 
             </div>
 
-            {{-- The single scannable QR_Code for the Order, rendered as an inline
-                 PNG (embedded via CID) of the payload
-                 `{Order_Reference}.HMAC(secret, Order_Reference)`. The scanner
-                 decodes the image and recomputes the HMAC to validate. The raw
-                 payload is kept below as machine-readable text so clients that
-                 block images can still recover the code. (Requirements 14.1,
-                 14.2) --}}
-            <div style="padding:16px 24px 24px;text-align:center;">
-                <div style="display:inline-block;padding:16px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;">
-                    <div style="font-size:11px;color:#6b7280;margin-bottom:8px;">Order {{ $order->order_reference }}</div>
-                    <img src="{{ $message->embedData($qrPng, 'qr-'.$order->order_reference.'.png', 'image/png') }}"
-                         alt="QR code for order {{ $order->order_reference }}"
-                         width="220" height="220"
-                         style="display:block;margin:0 auto;width:220px;height:220px;">
-                    <div data-qr-payload="{{ $qrPayload }}" style="font-family:monospace;font-size:10px;word-break:break-all;color:#9ca3af;margin-top:8px;">
-                        {{ $qrPayload }}
+            {{-- The scannable QR_Code now lives on the attached A4 ticket PDF,
+                 so the body carries a clear pointer to the attachment rather
+                 than an inline image. (Requirements 14.1, 14.2) --}}
+            <div style="padding:8px 24px 24px;text-align:center;">
+                <div style="display:inline-block;padding:16px 20px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;">
+                    <div style="font-size:13px;color:#374151;">
+                        &#128206; Your ticket for order <strong>{{ $order->order_reference }}</strong>
+                        is attached as <strong>{{ $ticketPdfFilename }}</strong>.
+                    </div>
+                    <div style="font-size:12px;color:#6b7280;margin-top:6px;">
+                        Open the PDF to see your QR code for entry.
                     </div>
                 </div>
             </div>

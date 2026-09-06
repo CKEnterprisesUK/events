@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\Order;
 use App\Models\TicketType;
 use App\Services\Branding\BrandingResolver;
+use App\Services\FeeCalculationService;
 use App\Services\QrService;
 use App\Services\TenantContext;
 use Illuminate\Contracts\View\View;
@@ -47,6 +48,7 @@ class EventPageController extends Controller
         Event $event,
         TenantContext $tenantContext,
         BrandingResolver $branding,
+        FeeCalculationService $fees,
     ): View {
         // Unpublished Events block Customer view/purchase. (Requirement 5.5)
         abort_unless($event->isPublished(), 404);
@@ -74,11 +76,20 @@ class EventPageController extends Controller
                 ];
             });
 
+        $company = $tenantContext->company();
+
         return view('events.show', [
-            'company' => $tenantContext->company(),
+            'company' => $company,
             'event' => $event,
             'ticketTypes' => $ticketTypes,
             'branding' => $branding->forEvent($event),
+            // Fee context so the checkout summary can mirror the server's
+            // Pass_On total (subtotal + booking fee) before the customer is
+            // sent to Stripe. `feePercentHundredths` is the effective percent
+            // expressed as an integer count of hundredths-of-a-percent so the
+            // front end can reproduce the server's half-up integer rounding.
+            'feeHandlingMode' => $company->fee_handling_mode,
+            'feePercentHundredths' => $fees->percentToHundredths($fees->effectivePercent($company)),
         ]);
     }
 

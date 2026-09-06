@@ -156,7 +156,7 @@ class FeeCalculationService
      * Rounds half-up at the second decimal place to guard against float inputs
      * such as 12.345.
      */
-    private function percentToHundredths(string|float|int $percent): int
+    public function percentToHundredths(string|float|int $percent): int
     {
         // Multiply by the scale then round to the nearest integer, half-up.
         $scaled = (float) $percent * self::PERCENT_SCALE;

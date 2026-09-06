@@ -9,7 +9,7 @@ use App\Models\Ticket;
 use App\Models\TicketType;
 use App\Services\Branding\BrandingResolver;
 use App\Services\Branding\EffectiveBranding;
-use App\Services\QrService;
+use App\Services\TicketPdfService;
 use Illuminate\Contracts\Mail\Mailer;
 use Illuminate\Support\Facades\Storage;
 
@@ -25,7 +25,7 @@ class SmtpTicketMailer implements TicketMailer
     public function __construct(
         private readonly Mailer $mailer,
         private readonly BrandingResolver $branding,
-        private readonly QrService $qr,
+        private readonly TicketPdfService $ticketPdf,
     ) {}
 
     /**
@@ -44,10 +44,17 @@ class SmtpTicketMailer implements TicketMailer
 
         $branding = $this->branding->forEvent($event);
 
+        // Build the print-ready A4 ticket PDF to attach. It carries the
+        // scannable QR (the same `{Order_Reference}.HMAC` payload), the sponsor
+        // banners and the organiser's custom entry instructions. The $qrPayload
+        // passed by the job is re-derived inside the PDF service from the stable
+        // Order_Reference, so the attached ticket scans identically.
+        $pdf = $this->ticketPdf->make($order);
+
         $mailable = new TicketMail(
             order: $order,
-            qrPayload: $qrPayload,
-            qrPng: $this->qr->png($qrPayload),
+            ticketPdf: $pdf->output(),
+            ticketPdfFilename: $this->ticketPdf->filename($order),
             branding: $branding,
             eventName: $event->name,
             lineItems: $this->lineItems($order),
