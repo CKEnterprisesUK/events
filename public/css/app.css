@@ -5,8 +5,9 @@
    ============================================================================= */
 
 :root {
-    --brand: #2563eb;
-    --brand-dark: #1d4ed8;
+    /* Brand blue sampled from the CK Enterprises logo mark. */
+    --brand: #0f16c4;
+    --brand-dark: #0a0f99;
     --ink: #111827;
     --muted: #6b7280;
     --border: #e5e7eb;

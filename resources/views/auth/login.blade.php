@@ -1,37 +1,179 @@
-@extends('layouts.app')
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Log in &middot; {{ config('app.name', 'Event Ticketing') }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --navy: #0f1425;
+            --navy-2: #1b1f2e;
+            --purple: #674df3;
+            --purple-dark: #5238d6;
+            --teal: #30f0b6;
+            --ink: #1b1f2e;
+            --body: #454a5a;
+            --muted: #838694;
+            --line: #e6e7ec;
+            --surface: #ffffff;
+            --heading-font: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --body-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: var(--body-font);
+            color: var(--body);
+            background: #eef0f5;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+        h1, h2, h3 { font-family: var(--heading-font); color: var(--ink); line-height: 1.25; margin: 0; }
+        a { color: var(--purple); text-decoration: none; }
+        a:hover { text-decoration: underline; }
 
-@section('title', 'Log in')
+        .auth { min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr; }
 
-@section('content')
-    <section style="max-width: 420px; margin: 0 auto;">
-        <h1>Log in</h1>
+        /* Brand side */
+        .auth .brand-side {
+            background: var(--navy);
+            color: #c1c5d4;
+            padding: 3rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border-right: 3px solid var(--purple);
+        }
+        .brand-side .logo { display: flex; align-items: center; gap: .6rem; font-family: var(--heading-font); font-weight: 700; font-size: 1.15rem; color: #fff; }
+        .brand-side .logo .mark { width: 32px; height: 32px; border-radius: 7px; background: var(--purple); display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: .85rem; }
+        .brand-side .pitch { max-width: 380px; }
+        .brand-side .pitch h2 { color: #fff; font-size: 1.9rem; margin-bottom: 1rem; }
+        .brand-side .pitch p { font-size: 1.05rem; color: #c1c5d4; margin: 0 0 1.75rem; }
+        .brand-side .points { list-style: none; padding: 0; margin: 0; }
+        .brand-side .points li { display: flex; align-items: flex-start; gap: .65rem; margin-bottom: .85rem; font-size: .98rem; color: #c1c5d4; }
+        .brand-side .points li svg { flex: none; margin-top: 3px; color: var(--teal); }
+        .brand-side .foot { font-size: .82rem; color: #8b90a5; }
+        .brand-side .foot a { color: #c1c5d4; }
 
-        <form method="POST" action="{{ url('/login') }}">
-            @csrf
+        /* Form side */
+        .auth .form-side { display: flex; align-items: center; justify-content: center; padding: 3rem 2rem; }
+        .form-card { width: 100%; max-width: 400px; }
+        .form-card .mobile-logo { display: none; align-items: center; gap: .6rem; font-family: var(--heading-font); font-weight: 700; font-size: 1.15rem; color: var(--ink); margin-bottom: 2rem; }
+        .form-card .mobile-logo .mark { width: 32px; height: 32px; border-radius: 7px; background: var(--purple); display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: .85rem; }
+        .form-card h1 { font-size: 1.7rem; margin-bottom: .4rem; }
+        .form-card .sub { color: var(--muted); margin: 0 0 2rem; }
 
-            <div class="field">
-                <label for="email">Email</label>
-                <input id="email" type="email" name="email" value="{{ old('email') }}" required autofocus autocomplete="username">
-                @error('email')
-                    <p class="error">{{ $message }}</p>
-                @enderror
+        .alert { background: #fdecec; border: 1px solid #f5c2c2; color: #a12626; border-radius: 6px; padding: .8rem 1rem; font-size: .92rem; margin-bottom: 1.5rem; }
+
+        .field { margin-bottom: 1.25rem; }
+        .field label { display: block; font-weight: 600; color: var(--ink); margin-bottom: .45rem; font-size: .93rem; }
+        .field input[type="email"],
+        .field input[type="password"] {
+            width: 100%; padding: .75rem .9rem; border: 1px solid #d5d7e0; border-radius: 6px;
+            font-size: 1rem; font-family: var(--body-font); color: var(--ink); background: #fff;
+        }
+        .field input:focus { outline: none; border-color: var(--purple); box-shadow: 0 0 0 3px rgba(103,77,243,.12); }
+        .field .error { color: #b91c1c; font-size: .85rem; margin: .4rem 0 0; }
+        .remember { display: flex; align-items: center; gap: .5rem; font-size: .92rem; color: var(--body); font-weight: 400; margin-bottom: 1.5rem; }
+        .remember input { width: 16px; height: 16px; accent-color: var(--purple); }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; width: 100%;
+            padding: .8rem 1.5rem; border-radius: 6px; font-weight: 600; font-size: 1rem;
+            font-family: var(--body-font); cursor: pointer; border: none;
+            background: var(--purple); color: #fff; transition: background .15s ease;
+        }
+        .btn:hover { background: var(--purple-dark); }
+
+        .alt { text-align: center; margin-top: 1.75rem; font-size: .95rem; color: var(--muted); }
+
+        @media (max-width: 860px) {
+            .auth { grid-template-columns: 1fr; }
+            .auth .brand-side { display: none; }
+            .form-card .mobile-logo { display: flex; }
+        }
+    </style>
+</head>
+<body>
+    <div class="auth">
+        <aside class="brand-side">
+            <a class="logo" href="{{ url('/') }}">
+                <span class="mark">CK</span>
+                <span>{{ config('app.name', 'Event Ticketing') }}</span>
+            </a>
+            <div class="pitch">
+                <h2>Welcome back</h2>
+                <p>Manage your events, storefront and payouts from one dashboard.</p>
+                <ul class="points">
+                    <li>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        Sell tickets from your branded storefront
+                    </li>
+                    <li>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        Take payments straight into your Stripe account
+                    </li>
+                    <li>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        Check attendees in with a phone-browser QR scanner
+                    </li>
+                </ul>
             </div>
-
-            <div class="field">
-                <label for="password">Password</label>
-                <input id="password" type="password" name="password" required autocomplete="current-password">
-                @error('password')
-                    <p class="error">{{ $message }}</p>
-                @enderror
+            <div class="foot">
+                A <a href="https://ckenterprises.co.uk/" target="_blank" rel="noopener">CK Enterprises UK</a> product
             </div>
+        </aside>
 
-            <div class="field">
-                <label style="font-weight: 400;">
-                    <input type="checkbox" name="remember" value="1"> Remember me
-                </label>
+        <main class="form-side">
+            <div class="form-card">
+                <a class="mobile-logo" href="{{ url('/') }}">
+                    <span class="mark">CK</span>
+                    <span>{{ config('app.name', 'Event Ticketing') }}</span>
+                </a>
+
+                <h1>Log in to your dashboard</h1>
+                <p class="sub">Enter your details to continue.</p>
+
+                @if ($errors->any())
+                    <div class="alert" role="alert">
+                        {{ $errors->first() }}
+                    </div>
+                @endif
+
+                <form method="POST" action="{{ url('/login') }}">
+                    @csrf
+
+                    <div class="field">
+                        <label for="email">Email</label>
+                        <input id="email" type="email" name="email" value="{{ old('email') }}" required autofocus autocomplete="username">
+                        @error('email')
+                            <p class="error">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="field">
+                        <label for="password">Password</label>
+                        <input id="password" type="password" name="password" required autocomplete="current-password">
+                        @error('password')
+                            <p class="error">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <label class="remember">
+                        <input type="checkbox" name="remember" value="1"> Remember me on this device
+                    </label>
+
+                    <button type="submit" class="btn">Log in</button>
+                </form>
+
+                <p class="alt">
+                    New here? <a href="{{ url('/register') }}">Create an account</a>
+                </p>
             </div>
-
-            <button type="submit" class="btn">Log in</button>
-        </form>
-    </section>
-@endsection
+        </main>
+    </div>
+</body>
+</html>
