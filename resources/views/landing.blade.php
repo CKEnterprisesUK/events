@@ -424,6 +424,7 @@
                     <a href="#features">Features</a>
                     <a href="#how">How it works</a>
                     <a href="#pricing">Pricing</a>
+                    <a href="{{ route('trust.index') }}">Trust &amp; Legal</a>
                     @auth
                         <a href="{{ route('dashboard.home') }}">Dashboard</a>
                     @else

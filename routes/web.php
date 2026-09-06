@@ -20,11 +20,13 @@ use App\Http\Controllers\ScanController;
 use App\Http\Controllers\StorefrontController;
 use App\Http\Controllers\StripeConnectController;
 use App\Http\Controllers\StripeReturnController;
+use App\Http\Controllers\TrustController;
 use App\Http\Controllers\SuperAdmin\ClientController as SuperAdminClientController;
 use App\Http\Controllers\SuperAdmin\CompanyController as SuperAdminCompanyController;
 use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboardController;
 use App\Http\Controllers\SuperAdmin\FeeController as SuperAdminFeeController;
 use App\Http\Controllers\SuperAdmin\ImpersonationController as SuperAdminImpersonationController;
+use App\Http\Controllers\SuperAdmin\LegalDocumentController as SuperAdminLegalDocumentController;
 use App\Http\Controllers\SuperAdmin\SettingsController as SuperAdminSettingsController;
 use App\Http\Controllers\SuperAdmin\TransactionController as SuperAdminTransactionController;
 use App\Http\Controllers\TicketTypeController;
@@ -49,6 +51,22 @@ Route::get('/', [LandingController::class, 'index'])->name('landing');
 | as a storefront slug. It establishes no active Company. (Requirement 22.3)
 */
 Route::get('/privacy', [GdprController::class, 'privacy'])->name('privacy');
+
+/*
+|--------------------------------------------------------------------------
+| Public Trust & Legal Centre (reserved prefix, no tenant / auth)
+|--------------------------------------------------------------------------
+| `/trust` is the Platform-level legal hub of Events by CK Enterprises UK: the
+| Terms & Conditions, Privacy Notice, PCI DSS statement, cookie policy and any
+| other policies a Super_Admin publishes. Declared before the `/{company-slug}/`
+| catch-all so `/trust` and `/trust/{slug}` render the Platform centre rather
+| than being treated as storefront slugs. Establishes no active Company; only
+| published documents are exposed (unknown/draft slugs 404).
+*/
+Route::get('/trust', [TrustController::class, 'index'])->name('trust.index');
+Route::get('/trust/{slug}', [TrustController::class, 'show'])
+    ->where('slug', '[A-Za-z0-9-]+')
+    ->name('trust.show');
 
 /*
 |--------------------------------------------------------------------------
@@ -334,6 +352,17 @@ Route::middleware(['auth', 'super.admin', 'session.timeout'])
         // diagnostic test email through the configured mailer. (20.7)
         Route::get('/settings', [SuperAdminSettingsController::class, 'index'])->name('settings.index');
         Route::post('/settings/test-mail', [SuperAdminSettingsController::class, 'sendTest'])->name('settings.test-mail');
+
+        // Trust & Legal Centre management: author the Platform-level policies
+        // (Terms & Conditions, Privacy Notice, PCI DSS statement, cookie policy,
+        // and any others) that are published at the public `/trust` surface.
+        // Defaults are ensured on the index; the slug is stable (not editable)
+        // so public URLs never silently break.
+        Route::get('/legal', [SuperAdminLegalDocumentController::class, 'index'])->name('legal.index');
+        Route::get('/legal/create', [SuperAdminLegalDocumentController::class, 'create'])->name('legal.create');
+        Route::post('/legal', [SuperAdminLegalDocumentController::class, 'store'])->name('legal.store');
+        Route::get('/legal/{legalDocument}/edit', [SuperAdminLegalDocumentController::class, 'edit'])->name('legal.edit');
+        Route::put('/legal/{legalDocument}', [SuperAdminLegalDocumentController::class, 'update'])->name('legal.update');
 
         // Suspend / unsuspend a Company. The company list + detail live on the
         // Clients surface; these actions redirect back to that client page.

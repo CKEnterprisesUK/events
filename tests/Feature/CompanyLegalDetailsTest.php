@@ -47,6 +47,7 @@ class CompanyLegalDetailsTest extends TestCase
             'email' => 'olivia@acme.test',
             'password' => 'correct-horse-battery',
             'password_confirmation' => 'correct-horse-battery',
+            'agree_terms' => '1',
         ], $overrides);
     }
 

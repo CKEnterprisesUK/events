@@ -243,6 +243,7 @@
                     <a class="nav-link {{ $navActive('admin.clients.*') ? 'active' : '' }}" href="{{ route('admin.clients.index') }}"><span class="nav-ico">&#127970;</span> Clients</a>
                     <a class="nav-link {{ $navActive('admin.transactions.*') ? 'active' : '' }}" href="{{ route('admin.transactions.index') }}"><span class="nav-ico">&#128202;</span> Transactions</a>
                     <a class="nav-link {{ $navActive('admin.fees.*') ? 'active' : '' }}" href="{{ route('admin.fees.index') }}"><span class="nav-ico">&#128176;</span> Fees</a>
+                    <a class="nav-link {{ $navActive('admin.legal.*') ? 'active' : '' }}" href="{{ route('admin.legal.index') }}"><span class="nav-ico">&#128220;</span> Trust &amp; Legal</a>
                     <a class="nav-link {{ $navActive('admin.settings.*') ? 'active' : '' }}" href="{{ route('admin.settings.index') }}"><span class="nav-ico">&#9881;</span> Settings</a>
                 @else
                     {{-- Company dashboard, adapts to the user's role --}}

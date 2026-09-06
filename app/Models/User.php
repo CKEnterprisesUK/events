@@ -30,6 +30,7 @@ use Illuminate\Support\Carbon;
  * @property string $name
  * @property string $email
  * @property string $password
+ * @property Carbon|null $agreed_to_terms_at
  * @property Carbon|null $last_activity_at
  */
 class User extends Authenticatable
@@ -123,6 +124,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'agreed_to_terms_at',
         'last_activity_at',
     ];
 
@@ -150,6 +152,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'agreed_to_terms_at' => 'datetime',
             'last_activity_at' => 'datetime',
             'is_super_admin' => 'boolean',
             'password' => 'hashed',

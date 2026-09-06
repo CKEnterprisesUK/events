@@ -10,7 +10,7 @@
     $stepFields = [
         1 => ['company_name', 'slug', 'legal_name', 'trading_name', 'organisation_type', 'company_number', 'charity_number', 'website', 'organisation_email', 'phone'],
         2 => ['address_line_1', 'address_line_2', 'city', 'postcode', 'country'],
-        3 => ['name', 'email', 'password'],
+        3 => ['name', 'email', 'password', 'agree_terms'],
     ];
 
     $errorStep = 1;
@@ -214,6 +214,17 @@
                         <label for="password_confirmation">Confirm password</label>
                         <input id="password_confirmation" type="password" name="password_confirmation" required autocomplete="new-password">
                     </div>
+                </div>
+
+                <div class="field field--checkbox">
+                    <label for="agree_terms">
+                        <input type="hidden" name="agree_terms" value="0">
+                        <input id="agree_terms" type="checkbox" name="agree_terms" value="1" {{ old('agree_terms') ? 'checked' : '' }} required>
+                        I agree to the
+                        <a href="{{ route('trust.show', \App\Models\LegalDocument::SLUG_TERMS) }}" target="_blank" rel="noopener">Terms &amp; Conditions</a>
+                        of Events by CK Enterprises UK.
+                    </label>
+                    @error('agree_terms')<p class="error">{{ $message }}</p>@enderror
                 </div>
 
                 <div class="form-actions wizard-nav">

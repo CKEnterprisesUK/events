@@ -81,6 +81,13 @@ class RegisterController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'confirmed', Password::defaults()],
+
+            // The Owner must accept the Platform Terms & Conditions of Events by
+            // CK Enterprises UK before the account is created. Acceptance is
+            // stamped on the Owner user below.
+            'agree_terms' => ['accepted'],
+        ], [
+            'agree_terms.accepted' => 'You must agree to the Terms & Conditions to create an account.',
         ]);
 
         $user = DB::transaction(function () use ($validated): User {
@@ -108,6 +115,7 @@ class RegisterController extends Controller
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'password' => $validated['password'],
+                'agreed_to_terms_at' => now(),
             ]);
         });
 

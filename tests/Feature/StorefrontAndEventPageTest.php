@@ -2,10 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\SendTicketEmailJob;
 use App\Models\Company;
 use App\Models\Event;
+use App\Models\Order;
 use App\Models\TicketType;
 use App\Models\User;
+use Illuminate\Support\Facades\Queue;
 use App\Services\StorefrontListing;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -300,5 +303,155 @@ class StorefrontAndEventPageTest extends TestCase
         $event = Event::factory()->for($company)->unpublished()->create();
 
         $this->get("/{$company->slug}/{$event->id}")->assertNotFound();
+    }
+
+    // ---- Page chrome ---------------------------------------------------------
+
+    public function test_event_page_hides_the_marketing_header_and_full_footer(): void
+    {
+        // The public event page should match the storefront/checkout chrome:
+        // no marketing header (Log in / Sign up) and only the slim promo footer,
+        // not the full site footer with its platform/legal/contact columns.
+        $company = Company::factory()->create();
+        $event = Event::factory()->for($company)->published()->create();
+
+        $response = $this->get("/{$company->slug}/{$event->id}");
+
+        $response->assertOk();
+        $response->assertDontSee('public-header', false);
+        $response->assertDontSee('site-footer', false);
+        // The slim promo footer is present instead.
+        $response->assertSee('promo-footer', false);
+    }
+
+    // ---- Support & lost tickets resend ---------------------------------------
+
+    public function test_event_page_shows_support_and_lost_tickets_section(): void
+    {
+        $company = Company::factory()->create([
+            'support_email' => 'help@organiser.test',
+            'phone' => '+44 20 7946 0000',
+        ]);
+        $event = Event::factory()->for($company)->published()->create();
+
+        $response = $this->get("/{$company->slug}/{$event->id}");
+
+        $response->assertOk();
+        $response->assertSee('Lost your tickets?');
+        $response->assertSee('help@organiser.test');
+    }
+
+    public function test_resend_queues_ticket_emails_for_matching_confirmed_orders(): void
+    {
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $company = Company::factory()->create();
+        $event = Event::factory()->for($company)->published()->create();
+
+        // Two confirmed orders (paid + free) for the same email should both be
+        // re-queued; the match is case-insensitive on the stored email.
+        Order::factory()->forEvent($event)->create([
+            'customer_email' => 'buyer@example.test',
+            'status' => Order::STATUS_PAID,
+        ]);
+        Order::factory()->forEvent($event)->free()->create([
+            'customer_email' => 'BUYER@example.test',
+            'status' => Order::STATUS_FREE_CONFIRMED,
+        ]);
+
+        $response = $this->post("/{$company->slug}/{$event->id}/resend", [
+            'email' => 'buyer@example.test',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('resend_status');
+        \Illuminate\Support\Facades\Queue::assertPushed(\App\Jobs\SendTicketEmailJob::class, 2);
+    }
+
+    public function test_resend_does_not_queue_for_unmatched_email_but_still_confirms(): void
+    {
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $company = Company::factory()->create();
+        $event = Event::factory()->for($company)->published()->create();
+        Order::factory()->forEvent($event)->create([
+            'customer_email' => 'someone@example.test',
+            'status' => Order::STATUS_PAID,
+        ]);
+
+        $response = $this->post("/{$company->slug}/{$event->id}/resend", [
+            'email' => 'nobody@example.test',
+        ]);
+
+        // Same neutral outcome as a match — the endpoint never reveals whether
+        // the email has a booking.
+        $response->assertRedirect();
+        $response->assertSessionHas('resend_status');
+        \Illuminate\Support\Facades\Queue::assertNothingPushed();
+    }
+
+    public function test_resend_ignores_unconfirmed_orders(): void
+    {
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $company = Company::factory()->create();
+        $event = Event::factory()->for($company)->published()->create();
+        // Reserved (unconfirmed) and cancelled orders must not be resent.
+        Order::factory()->forEvent($event)->create([
+            'customer_email' => 'pending@example.test',
+            'status' => Order::STATUS_RESERVED,
+        ]);
+        Order::factory()->forEvent($event)->create([
+            'customer_email' => 'pending@example.test',
+            'status' => Order::STATUS_CANCELLED,
+        ]);
+
+        $this->post("/{$company->slug}/{$event->id}/resend", [
+            'email' => 'pending@example.test',
+        ])->assertRedirect();
+
+        \Illuminate\Support\Facades\Queue::assertNothingPushed();
+    }
+
+    public function test_resend_does_not_cross_event_or_company_boundaries(): void
+    {
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $company = Company::factory()->create();
+        $event = Event::factory()->for($company)->published()->create();
+        $otherEvent = Event::factory()->for($company)->published()->create();
+
+        // Confirmed order for the SAME email but a DIFFERENT event must not be
+        // resent when requesting from $event's page.
+        Order::factory()->forEvent($otherEvent)->create([
+            'customer_email' => 'buyer@example.test',
+            'status' => Order::STATUS_PAID,
+        ]);
+
+        $this->post("/{$company->slug}/{$event->id}/resend", [
+            'email' => 'buyer@example.test',
+        ])->assertRedirect();
+
+        \Illuminate\Support\Facades\Queue::assertNothingPushed();
+    }
+
+    public function test_resend_validates_the_email(): void
+    {
+        $company = Company::factory()->create();
+        $event = Event::factory()->for($company)->published()->create();
+
+        $this->post("/{$company->slug}/{$event->id}/resend", [
+            'email' => 'not-an-email',
+        ])->assertSessionHasErrors('email');
+    }
+
+    public function test_resend_on_unpublished_event_returns_404(): void
+    {
+        $company = Company::factory()->create();
+        $event = Event::factory()->for($company)->unpublished()->create();
+
+        $this->post("/{$company->slug}/{$event->id}/resend", [
+            'email' => 'buyer@example.test',
+        ])->assertNotFound();
     }
 }

@@ -14,9 +14,9 @@
             </div>
             <div class="site-footer__col">
                 <h4>Legal</h4>
-                <a href="{{ url('/privacy') }}">Privacy policy</a>
-                <a href="{{ url('/privacy') }}">Terms &amp; conditions</a>
-                <a href="{{ url('/privacy') }}">Cookies</a>
+                <a href="{{ route('trust.index') }}">Trust &amp; Legal Centre</a>
+                <a href="{{ route('trust.show', \App\Models\LegalDocument::SLUG_TERMS) }}">Terms &amp; conditions</a>
+                <a href="{{ route('trust.show', \App\Models\LegalDocument::SLUG_PRIVACY) }}">Privacy notice</a>
             </div>
             <div class="site-footer__col">
                 <h4>Contact</h4>
