@@ -100,12 +100,31 @@ class ResolveTenant
     {
         $normalised = strtolower($slug);
 
-        return cache()->remember(
+        // Cache only the resolved Company id (a scalar), never the Eloquent
+        // model itself. Serialising full models to the cache store leaves a
+        // "__PHP_Incomplete_Class" on read whenever the class can't be resolved
+        // at unserialize time, which breaks the ?Company return contract.
+        $companyId = cache()->remember(
             "tenant:slug:{$normalised}",
             self::CACHE_TTL_SECONDS,
             fn () => Company::query()
                 ->whereRaw('LOWER(slug) = ?', [$normalised])
-                ->first()
+                ->value('id')
         );
+
+        if ($companyId === null) {
+            return null;
+        }
+
+        $company = Company::query()->whereKey($companyId)->first();
+
+        // The cached id may point at a Company that has since been deleted;
+        // treat that as an unresolved slug rather than returning null-typed
+        // garbage from the cache.
+        if ($company === null) {
+            cache()->forget("tenant:slug:{$normalised}");
+        }
+
+        return $company;
     }
 }
