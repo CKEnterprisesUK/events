@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\BrandingController;
 use App\Http\Controllers\CheckoutController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\GdprController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ScanController;
 use App\Http\Controllers\StorefrontController;
@@ -75,6 +77,16 @@ Route::middleware('guest')->group(function () {
     // user, then logs the Owner in. All other Company_Users join by invitation.
     Route::get('/register', [RegisterController::class, 'show'])->name('register');
     Route::post('/register', [RegisterController::class, 'register']);
+
+    // Self-service password reset ("forgot password"), built on Laravel's
+    // password broker. Request a link, receive a signed token by email, then
+    // set a new password. The route names match the framework defaults
+    // (password.request/email/reset/update) so the reset notification's URL and
+    // any framework helpers resolve correctly.
+    Route::get('/forgot-password', [PasswordResetController::class, 'requestForm'])->name('password.request');
+    Route::post('/forgot-password', [PasswordResetController::class, 'sendLink'])->name('password.email');
+    Route::get('/reset-password/{token}', [PasswordResetController::class, 'resetForm'])->name('password.reset');
+    Route::post('/reset-password', [PasswordResetController::class, 'reset'])->name('password.update');
 });
 
 Route::post('/logout', [LoginController::class, 'logout'])
@@ -109,6 +121,18 @@ Route::middleware(['auth', 'company.active', 'session.timeout', 'dashboard.tenan
     ->group(function () {
         Route::get('/', [DashboardController::class, 'index'])
             ->withoutMiddleware('dashboard.tenant')->name('home');
+
+        // Self-service account profile. Open to every authenticated
+        // Company_User (any role) since it only ever acts on the acting user's
+        // own record; no tenant binding is needed. Update changes name/email;
+        // the password endpoint requires the current password and confirms the
+        // new one. (Self-service account management)
+        Route::get('/profile', [ProfileController::class, 'edit'])
+            ->withoutMiddleware('dashboard.tenant')->name('profile.edit');
+        Route::put('/profile', [ProfileController::class, 'update'])
+            ->withoutMiddleware('dashboard.tenant')->name('profile.update');
+        Route::put('/profile/password', [ProfileController::class, 'updatePassword'])
+            ->withoutMiddleware('dashboard.tenant')->name('profile.password');
 
         // Event management (Admin-gated in the controller). Create/update/
         // publish are scoped to the authenticated user's Company by the

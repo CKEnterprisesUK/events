@@ -5,7 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Dashboard') &middot; {{ config('app.name', 'Event Ticketing Platform') }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cabin+Sketch:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/app.css') }}?v={{ @filemtime(public_path('css/app.css')) ?: config('app.asset_version', '1') }}">
+    <style>
+        /* "Events by CK Enterprises" wordmark in the dashboard header, matching
+           the public/auth brand lockup on the dark header background. */
+        .app-header .brand { text-decoration: none; }
+        .app-header .brand .logo { display: inline-flex; align-items: baseline; gap: .35rem; font-family: 'Cabin Sketch', cursive; font-weight: 700; line-height: 1; }
+        .app-header .brand .logo .events { font-size: 1.35rem; color: #2dd4bf; }
+        .app-header .brand .logo .by { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight: 500; font-size: .7rem; letter-spacing: .05em; color: var(--dark-text-dim); text-transform: uppercase; }
+        .app-header .brand .logo .ck { font-size: 1.35rem; color: #fff; }
+        .app-header .header-user .profile-link { color: inherit; text-decoration: none; }
+        .app-header .header-user .profile-link:hover strong { color: #fff; text-decoration: underline; }
+    </style>
     @stack('head')
 </head>
 <body>
@@ -20,15 +34,23 @@
     <header class="app-header">
         <button type="button" class="nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-controls="appSidebar" aria-expanded="false">&#9776;</button>
 
-        <a href="{{ url('/dashboard') }}" class="brand">
-            <img src="{{ asset('images/logo.png') }}" alt="{{ config('app.name', 'Event Ticketing Platform') }}">
+        <a href="{{ url('/dashboard') }}" class="brand" aria-label="Events by CK Enterprises">
+            <span class="logo">
+                <span class="events">Events</span>
+                <span class="by">by</span>
+                <span class="ck">CK Enterprises</span>
+            </span>
         </a>
 
         <div class="header-spacer"></div>
 
         <div class="header-user">
             <span class="user-name">
-                <strong>{{ $user?->name }}</strong>
+                @if ($user && ! $user->isSuperAdmin())
+                    <a href="{{ route('dashboard.profile.edit') }}" class="profile-link"><strong>{{ $user->name }}</strong></a>
+                @else
+                    <strong>{{ $user?->name }}</strong>
+                @endif
                 @if ($company)
                     <span class="muted" style="color: var(--dark-text-dim);">&middot; {{ $company->name }}</span>
                 @endif

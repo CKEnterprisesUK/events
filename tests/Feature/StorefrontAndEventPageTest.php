@@ -95,8 +95,9 @@ class StorefrontAndEventPageTest extends TestCase
         ]);
 
         // The event must satisfy publish prerequisites (>=1 ticket type and a
-        // non-null starts_at) so publish is not a no-op.
-        TicketType::factory()->forEvent($event)->create();
+        // non-null starts_at) so publish is not a no-op. A FREE ticket type
+        // also keeps the payments gate satisfied without connecting Stripe.
+        TicketType::factory()->forEvent($event)->free()->create();
 
         // Publishing through the dashboard must invalidate the cached listing.
         $this->actingAs($admin)->post("/dashboard/events/{$event->id}/publish")->assertRedirect();

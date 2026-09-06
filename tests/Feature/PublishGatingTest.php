@@ -34,12 +34,13 @@ class PublishGatingTest extends TestCase
         $company = Company::factory()->create();
         $admin = User::factory()->admin()->for($company)->create();
 
-        // starts_at is set by the factory default; add a ticket type so both
-        // prerequisites are met.
+        // starts_at is set by the factory default; add a FREE ticket type so
+        // both prerequisites are met without needing a connected Stripe account
+        // (a paid ticket type would require payments to be set up first).
         $event = Event::factory()->for($company)->unpublished()->create([
             'name' => 'Ready Gala',
         ]);
-        TicketType::factory()->forEvent($event)->create();
+        TicketType::factory()->forEvent($event)->free()->create();
 
         $this->actingAs($admin)
             ->post("/dashboard/events/{$event->id}/publish")

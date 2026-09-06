@@ -1,6 +1,6 @@
 @extends('layouts.dashboard')
 
-@section('title', 'Branding')
+@section('title', 'Settings')
 
 @php
     // Map each tab to the fields it owns so a server-side validation error can
@@ -27,7 +27,8 @@
 @section('content')
     <section>
         <div class="page-head">
-            <h1>Branding &amp; settings</h1>
+            <h1>Settings</h1>
+            <p class="muted" style="margin:.25rem 0 0;">Your branding, organisation details, contact info and ticket fields.</p>
         </div>
 
         @if (session('status'))

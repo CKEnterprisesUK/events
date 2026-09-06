@@ -129,6 +129,12 @@
                 <h1>Log in to your dashboard</h1>
                 <p class="sub">Enter your details to continue.</p>
 
+                @if (session('status'))
+                    <div class="alert" role="status" style="background:#eafaf1;border-color:#a7e0c3;color:#1b7a4b;">
+                        {{ session('status') }}
+                    </div>
+                @endif
+
                 @if ($errors->any())
                     <div class="alert" role="alert">
                         {{ $errors->first() }}
@@ -154,9 +160,12 @@
                         @enderror
                     </div>
 
-                    <label class="remember">
-                        <input type="checkbox" name="remember" value="1"> Remember me on this device
-                    </label>
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1.5rem;">
+                        <label class="remember" style="margin:0;">
+                            <input type="checkbox" name="remember" value="1"> Remember me on this device
+                        </label>
+                        <a href="{{ route('password.request') }}">Forgot password?</a>
+                    </div>
 
                     <button type="submit" class="btn">Log in</button>
                 </form>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Company;
+use App\Services\FeeCalculationService;
 use App\Services\RoleAuthorization;
 use App\Services\Stripe\StripePaymentService;
 use Illuminate\Contracts\View\View;
@@ -24,7 +25,10 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 class StripeConnectController extends Controller
 {
-    public function __construct(private readonly StripePaymentService $stripe) {}
+    public function __construct(
+        private readonly StripePaymentService $stripe,
+        private readonly FeeCalculationService $fees,
+    ) {}
 
     /**
      * Show the Stripe connection status for the Owner's Company. When no
@@ -41,6 +45,13 @@ class StripeConnectController extends Controller
             'company' => $company,
             'connected' => $company->stripe_account_id !== null,
             'chargesEnabled' => (bool) $company->stripe_charges_enabled,
+            // How CK's platform fee is applied to this Company's paid sales, so
+            // the Owner can see exactly what's deducted before payout. The
+            // effective percent is the Company override or the global default;
+            // the mode decides whether the Company absorbs it or passes it on
+            // to the customer as a booking fee. (Requirements 12.1–12.4, 13.4, 13.5)
+            'feePercent' => $this->fees->effectivePercent($company),
+            'feeMode' => $company->fee_handling_mode,
         ]);
     }
 
