@@ -16,6 +16,13 @@
     .how-list { margin: 0; padding: 0 1.25rem 1.25rem 2.4rem; }
     .how-list li { margin: 0.4rem 0; color: var(--ink); }
     .how-list li span { color: var(--muted); }
+    .fee-mode-form { padding: 1.25rem; }
+    .fee-mode-help { margin: 0 0 1rem; color: var(--muted); font-size: 0.9rem; }
+    .fee-option { display: flex; gap: 0.7rem; align-items: flex-start; padding: 0.75rem; border: 1px solid var(--border); border-radius: 0.6rem; margin-bottom: 0.75rem; cursor: pointer; }
+    .fee-option input { margin-top: 0.2rem; }
+    .fee-option strong { display: block; color: var(--ink); }
+    .fee-option__desc { display: block; font-size: 0.85rem; color: var(--muted); margin-top: 0.15rem; }
+    .fee-mode-form .error { color: #b91c1c; font-size: 0.85rem; margin: 0 0 0.75rem; }
 </style>
 @endpush
 
@@ -29,6 +36,10 @@
     <div class="page-head">
         <h1>Payments</h1>
     </div>
+
+    @if (session('fee_status'))
+        <p class="status" data-status="saved">{{ session('fee_status') }}</p>
+    @endif
 
     @if (! $connected)
         <div class="status-banner status-banner--off" data-status="not_connected">
@@ -65,7 +76,7 @@
                 <div class="kv__value">{{ rtrim(rtrim($feePercent, '0'), '.') }}% per paid ticket</div>
             </div>
             <div>
-                <div class="kv__label">Who pays the fee</div>
+                <div class="kv__label">Currently</div>
                 <div class="kv__value">{{ $feeModeLabel }}</div>
             </div>
             <div>
@@ -73,6 +84,36 @@
                 <div class="kv__value">Direct to your Stripe account</div>
             </div>
         </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel__head"><h2>Who pays the fee</h2></div>
+        <form method="POST" action="{{ route('dashboard.stripe.fee-mode') }}" class="fee-mode-form">
+            @csrf
+            @method('PUT')
+            <p class="fee-mode-help">
+                Choose whether the platform fee is added onto the customer's total
+                or taken out of your ticket price. Changes apply to new orders only.
+            </p>
+            <label class="fee-option">
+                <input type="radio" name="fee_handling_mode" value="{{ \App\Models\Company::FEE_MODE_PASS_ON }}"
+                       @checked($feeMode === \App\Models\Company::FEE_MODE_PASS_ON)>
+                <span>
+                    <strong>Add the fee onto the ticket</strong>
+                    <span class="fee-option__desc">The customer pays the fee on top as a booking fee. You keep the full ticket price.</span>
+                </span>
+            </label>
+            <label class="fee-option">
+                <input type="radio" name="fee_handling_mode" value="{{ \App\Models\Company::FEE_MODE_ABSORB }}"
+                       @checked($feeMode === \App\Models\Company::FEE_MODE_ABSORB)>
+                <span>
+                    <strong>Absorb the fee myself</strong>
+                    <span class="fee-option__desc">The customer pays only the ticket price and the fee comes out of it.</span>
+                </span>
+            </label>
+            @error('fee_handling_mode')<p class="error">{{ $message }}</p>@enderror
+            <button type="submit" class="btn">Save fee handling</button>
+        </form>
     </div>
 
     <form method="POST" action="{{ route('dashboard.stripe.start') }}">

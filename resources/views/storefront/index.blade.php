@@ -38,7 +38,7 @@
             @else
                 <ul class="event-list">
                     @foreach ($events as $event)
-                        @php($poster = $event['poster_path'] ?? null)
+                        @php $poster = $event['poster_path'] ?? null; @endphp
                         <li class="event-list-item {{ $poster ? 'event-list-item--poster' : '' }}">
                             <a class="event-card" href="{{ url($company->slug . '/' . $event['id']) }}">
                                 @if ($poster)

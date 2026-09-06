@@ -85,8 +85,10 @@ class PlatformSettingsAndFeeHandlingTest extends TestCase
 
     public function test_setting_an_unsupported_fee_handling_mode_is_rejected(): void
     {
-        // Requirement 13.1 — only absorb|pass_on are supported.
+        // Requirement 13.1 — only absorb|pass_on are supported. Pin the mode to
+        // absorb first so the "unchanged" assertion is meaningful.
         $company = Company::create(['name' => 'Bad Co', 'slug' => 'bad-co']);
+        $company->setFeeHandlingMode(Company::FEE_MODE_ABSORB);
 
         $this->expectException(InvalidArgumentException::class);
 

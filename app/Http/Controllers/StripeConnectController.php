@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -102,6 +103,27 @@ class StripeConnectController extends Controller
         }
 
         return redirect()->route('dashboard.stripe.status');
+    }
+
+    /**
+     * Update who bears the platform fee for this Company: Absorb (taken from
+     * the ticket price) or Pass_On (added onto the customer's total as a
+     * booking fee). Owner-gated. This only affects FUTURE orders — existing
+     * orders snapshot the mode at creation. (Requirements 13.1, 13.3, 13.8)
+     */
+    public function updateFeeMode(Request $request): RedirectResponse
+    {
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_STRIPE);
+
+        $data = $request->validate([
+            'fee_handling_mode' => ['required', Rule::in(Company::FEE_MODES)],
+        ]);
+
+        $this->ownerCompany()->setFeeHandlingMode($data['fee_handling_mode']);
+
+        return redirect()
+            ->route('dashboard.stripe.status')
+            ->with('fee_status', 'Fee handling updated. This applies to new orders from now on.');
     }
 
     /**

@@ -242,6 +242,11 @@ Route::middleware(['auth', 'company.active', 'session.timeout', 'dashboard.tenan
         Route::post('/stripe/connect', [StripeConnectController::class, 'start'])->name('stripe.start');
         Route::get('/stripe/return', [StripeConnectController::class, 'return'])->name('stripe.return');
 
+        // Owner-gated fee-handling mode toggle (Absorb vs Pass_On). Changing it
+        // affects only FUTURE orders — existing orders snapshot the mode at
+        // creation. (Requirements 13.1, 13.3, 13.8)
+        Route::put('/stripe/fee-mode', [StripeConnectController::class, 'updateFeeMode'])->name('stripe.fee-mode');
+
         // Accountant reports & payouts (Accountant-gated in the controller via
         // ACTION_VIEW_REPORTS). READ-ONLY: only a GET endpoint is exposed and no
         // mutation is possible here — the Accountant sees their own Company's
