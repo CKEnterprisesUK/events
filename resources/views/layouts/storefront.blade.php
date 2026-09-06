@@ -14,11 +14,15 @@
     @endif
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cabin+Sketch:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             /* --brand is overridden per-company via @@yield('brand-style') */
             --brand: #674df3;
+            --navy: #0f1425;
+            --purple: #674df3;
+            --purple-dark: #5238d6;
+            --teal: #30f0b6;
             --ink: #1b1f2e;
             --body: #454a5a;
             --muted: #838694;
@@ -33,7 +37,12 @@
             display: flex; flex-direction: column;
             font-family: var(--font);
             color: var(--body);
-            background: var(--surface-2);
+            /* Soft branded wash at the top so the default isn't flat white; a
+               branded store tints this with its own primary colour. */
+            background:
+                radial-gradient(1000px 380px at 50% -120px, color-mix(in srgb, var(--brand) 16%, transparent), transparent 70%),
+                var(--surface-2);
+            background-repeat: no-repeat;
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
         }
@@ -69,16 +78,28 @@
         .event-list-item .event-venue,
         .event-list-item .event-date { display: block; font-size: .92rem; color: var(--muted); margin-top: .25rem; }
 
-        /* Subtle powered-by credit — advertises us without taking over */
-        .store-powered {
-            border-top: 1px solid var(--line);
-            padding: 1.5rem 1.25rem 2rem;
-            text-align: center;
-            font-size: .85rem;
-            color: var(--muted);
+        /* Storefront footer — advertises us without taking over the store */
+        .store-footer { margin-top: auto; background: var(--navy); color: #c1c5d4; }
+        .store-footer__inner {
+            max-width: 860px; margin: 0 auto; padding: 2.5rem 1.25rem;
+            display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap;
         }
-        .store-powered a { color: var(--muted); font-weight: 600; }
-        .store-powered a:hover { color: var(--ink); }
+        .store-footer__brand { display: flex; flex-direction: column; gap: .4rem; }
+        .store-footer .logo { display: inline-flex; align-items: baseline; gap: .4rem; font-family: 'Cabin Sketch', cursive; font-weight: 700; color: #fff; line-height: 1; }
+        .store-footer .logo .events { font-size: 1.5rem; color: var(--teal); }
+        .store-footer .logo .by { font-family: var(--font); font-weight: 500; font-size: .75rem; letter-spacing: .04em; color: #9aa0b5; text-transform: uppercase; }
+        .store-footer .logo .ck { font-size: 1.5rem; color: #fff; }
+        .store-footer__tagline { font-size: .88rem; color: #9aa0b5; margin: 0; }
+        .store-footer .cta {
+            display: inline-flex; align-items: center; gap: .5rem; white-space: nowrap;
+            padding: .7rem 1.35rem; border-radius: 6px; font-weight: 600; font-size: .95rem;
+            background: var(--purple); color: #fff; transition: background .15s ease;
+        }
+        .store-footer .cta:hover { background: var(--purple-dark); color: #fff; }
+        .store-footer__bar {
+            border-top: 1px solid rgba(255,255,255,.08);
+            text-align: center; padding: 1rem 1.25rem; font-size: .8rem; color: #71768c;
+        }
 
         @media (max-width: 520px) {
             .store-header { padding: 2rem 1rem 1.5rem; }
@@ -93,9 +114,22 @@
         @yield('content')
     </div>
 
-    <div class="store-powered">
-        Powered by <a href="{{ url('/') }}">Events by CK Enterprises UK</a>
-    </div>
+    <footer class="store-footer">
+        <div class="store-footer__inner">
+            <div class="store-footer__brand">
+                <a class="logo" href="{{ url('/') }}" aria-label="Events by CK Enterprises">
+                    <span class="events">Events</span>
+                    <span class="by">by</span>
+                    <span class="ck">CK Enterprises</span>
+                </a>
+                <p class="store-footer__tagline">Branded ticketing and direct payouts for event organisers.</p>
+            </div>
+            <a class="cta" href="{{ url('/register') }}">Start selling your own tickets</a>
+        </div>
+        <div class="store-footer__bar">
+            &copy; {{ date('Y') }} Events by CK Enterprises UK. All rights reserved.
+        </div>
+    </footer>
 
     @stack('scripts')
 </body>

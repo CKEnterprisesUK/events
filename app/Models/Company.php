@@ -13,6 +13,19 @@ use Illuminate\Database\Eloquent\Model;
  *
  * @property int $id
  * @property string $name
+ * @property string|null $legal_name
+ * @property string|null $trading_name
+ * @property string|null $organisation_type
+ * @property string|null $company_number
+ * @property string|null $charity_number
+ * @property string|null $website
+ * @property string|null $email
+ * @property string|null $phone
+ * @property string|null $address_line_1
+ * @property string|null $address_line_2
+ * @property string|null $city
+ * @property string|null $postcode
+ * @property string $country
  * @property string $slug
  * @property string $status
  * @property string $fee_handling_mode
@@ -50,17 +63,81 @@ class Company extends Model
     ];
 
     /**
-     * Company statuses.
+     * Company statuses covering the legal/verification lifecycle. Only
+     * `suspended` gates the storefront/login (see EnsureCompanyActive and
+     * ResolveTenant); `pending` (awaiting verification) and `closed`
+     * (deactivated) are available for the verification workflow.
      */
+    public const STATUS_PENDING = 'pending';
+
     public const STATUS_ACTIVE = 'active';
 
     public const STATUS_SUSPENDED = 'suspended';
+
+    public const STATUS_CLOSED = 'closed';
+
+    /**
+     * The Company statuses the Platform supports.
+     *
+     * @var list<string>
+     */
+    public const STATUSES = [
+        self::STATUS_PENDING,
+        self::STATUS_ACTIVE,
+        self::STATUS_SUSPENDED,
+        self::STATUS_CLOSED,
+    ];
+
+    /**
+     * Organisation types a Company can register as. The legal name/registration
+     * number requirements differ by type (Companies House vs Charity
+     * Commission), enforced at the signup/settings layer.
+     */
+    public const TYPE_COMPANY = 'company';
+
+    public const TYPE_CHARITY = 'charity';
+
+    public const TYPE_CIC = 'cic';
+
+    public const TYPE_SOLE_TRADER = 'sole_trader';
+
+    public const TYPE_CLUB = 'club';
+
+    public const TYPE_OTHER = 'other';
+
+    /**
+     * The organisation types the Platform supports, mapped to their
+     * human-readable labels for form rendering.
+     *
+     * @var array<string, string>
+     */
+    public const ORGANISATION_TYPES = [
+        self::TYPE_COMPANY => 'Company',
+        self::TYPE_CHARITY => 'Charity',
+        self::TYPE_CIC => 'CIC',
+        self::TYPE_SOLE_TRADER => 'Sole trader',
+        self::TYPE_CLUB => 'Club',
+        self::TYPE_OTHER => 'Other',
+    ];
 
     /**
      * @var list<string>
      */
     protected $fillable = [
         'name',
+        'legal_name',
+        'trading_name',
+        'organisation_type',
+        'company_number',
+        'charity_number',
+        'website',
+        'email',
+        'phone',
+        'address_line_1',
+        'address_line_2',
+        'city',
+        'postcode',
+        'country',
         'slug',
         'status',
         'fee_handling_mode',
