@@ -996,3 +996,75 @@ fieldset.field > legend {
 .legal-card__blurb { color: var(--muted); font-size: 0.9375rem; line-height: 1.45; }
 .legal-card__go { font-weight: 600; font-size: 0.9rem; color: var(--brand); margin-top: 0.15rem; }
 .legal-card:hover .legal-card__go { color: var(--brand-dark); }
+
+/* =============================================================================
+   Shared public chrome (matches the landing page header/footer)
+   Navy bar + "Events by CK Enterprises" wordmark, used by layouts.app so the
+   Trust & Legal Centre, privacy and auth pages share the main page's chrome.
+   Palette is defined locally here so it does not depend on the landing page's
+   inline styles.
+   ============================================================================= */
+:root {
+    --pub-navy: #141a2e;
+    --pub-teal: #35c9b5;
+    --pub-purple: #6d5efc;
+    --pub-purple-dark: #5a4be0;
+}
+
+/* The shared wordmark, in both header and footer. */
+.pub-logo {
+    display: inline-flex; align-items: baseline; gap: 0.4rem;
+    font-family: 'Cabin Sketch', cursive; font-weight: 700; line-height: 1;
+    text-decoration: none; color: #fff;
+}
+.pub-logo .events { font-size: 1.5rem; color: var(--pub-teal); }
+.pub-logo .by {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-weight: 500; font-size: 0.75rem; letter-spacing: 0.04em;
+    color: #9aa0b5; text-transform: uppercase;
+}
+.pub-logo .ck { font-size: 1.5rem; color: #fff; }
+
+/* Header */
+.pub-header {
+    position: sticky; top: 0; z-index: 50;
+    background: var(--pub-navy);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+.pub-header__inner {
+    width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 1.5rem;
+    height: 68px; display: flex; align-items: center; justify-content: space-between;
+}
+.pub-nav { display: flex; align-items: center; gap: 1.5rem; }
+.pub-nav form { margin: 0; }
+.pub-nav__link { color: #c8ccdb; font-weight: 500; font-size: 0.95rem; text-decoration: none; }
+.pub-nav__link:hover { color: #fff; }
+.pub-nav__btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 0.6rem 1.2rem; border-radius: 6px; border: 1px solid transparent;
+    background: var(--pub-purple); color: #fff; font-weight: 600; font-size: 0.95rem;
+    font-family: inherit; cursor: pointer; text-decoration: none;
+    transition: background 0.15s ease;
+}
+.pub-nav__btn:hover { background: var(--pub-purple-dark); color: #fff; }
+
+/* Footer */
+.pub-footer { background: var(--pub-navy); color: #8b90a5; margin-top: 3rem; }
+.pub-footer__inner {
+    width: 100%; max-width: 1080px; margin: 0 auto; padding: 2.75rem 1.5rem 2rem;
+}
+.pub-footer__top {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 1.25rem;
+    padding-bottom: 1.75rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.pub-footer__links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+.pub-footer__links a { color: #c1c5d4; font-size: 0.94rem; text-decoration: none; }
+.pub-footer__links a:hover { color: #fff; }
+.pub-footer__copy { padding-top: 1.5rem; font-size: 0.85rem; }
+.pub-footer__copy a { color: #c1c5d4; }
+.pub-footer__copy a:hover { color: #fff; }
+
+@media (max-width: 640px) {
+    .pub-footer__top { flex-direction: column; align-items: flex-start; }
+}

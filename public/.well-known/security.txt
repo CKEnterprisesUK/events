@@ -1,0 +1,17 @@
+# Security Policy for the Event Ticketing Platform
+# This file follows RFC 9116 (https://www.rfc-editor.org/rfc/rfc9116).
+# Canonical location: https://events.ckent.uk/trust/vulnerability-disclosure
+#
+# NOTE: Replace the placeholder domain, email, and dates below with your
+# real values before deploying to production.
+
+# How to report a security vulnerability to us.
+Contact: mailto:support@ckenterprises.co.uk
+
+# The date this policy expires. Update it (max ~1 year out) so the file
+# stays valid. RFC 9116 requires this field.
+Expires: 2027-09-06T00:00:00.000Z
+
+# Preferred language(s) for security reports.
+Preferred-Languages: en
+

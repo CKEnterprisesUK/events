@@ -14,32 +14,17 @@
     @endif
     <link rel="stylesheet" href="{{ asset('css/app.css') }}?v={{ @filemtime(public_path('css/app.css')) ?: config('app.asset_version', '1') }}">
     @php $chrome = trim($__env->yieldContent('chrome', 'full')); @endphp
-    @if ($chrome === 'minimal')
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Cabin+Sketch:wght@700&display=swap" rel="stylesheet">
-    @endif
+    {{-- The public chrome (header/footer wordmark) uses the Cabin Sketch
+         wordmark font and the Poppins/Inter type used on the landing page, so
+         load them for both the full public chrome and the minimal variant. --}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cabin+Sketch:wght@700&family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     @stack('head')
 </head>
 <body>
     @if ($chrome !== 'minimal')
-        <header class="public-header">
-            <a class="brand" href="{{ url('/') }}">
-                <img src="{{ asset('images/logo.png') }}" alt="{{ config('app.name', 'Event Ticketing Platform') }}">
-            </a>
-            <nav>
-                @auth
-                    <a href="{{ url('/dashboard') }}">Dashboard</a>
-                    <form method="POST" action="{{ url('/logout') }}">
-                        @csrf
-                        <button type="submit" class="btn btn-sm">Log out</button>
-                    </form>
-                @else
-                    <a href="{{ url('/login') }}">Log in</a>
-                    <a class="btn btn-sm" href="{{ url('/register') }}">Sign up</a>
-                @endauth
-            </nav>
-        </header>
+        @include('layouts.partials.public-header')
     @endif
 
     <main class="public-main @yield('main_class')">
@@ -58,7 +43,7 @@
             </div>
         </footer>
     @else
-        @include('layouts.partials.footer')
+        @include('layouts.partials.public-footer')
     @endif
 
     @stack('scripts')
