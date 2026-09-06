@@ -18,7 +18,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Cabin+Sketch:wght@700&family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap"
         rel="stylesheet"
     >
 
@@ -41,6 +41,7 @@
             --success: #117a55;
 
             --heading-font: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --logo-font: 'Cabin Sketch', cursive;
             --body-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
 
@@ -228,15 +229,16 @@
             min-width: 0;
 
             color: #fff;
-            font-family: var(--heading-font);
-            font-weight: 800;
-            letter-spacing: -.03em;
+            font-family: var(--logo-font);
+            font-weight: 700;
+            letter-spacing: 0;
             white-space: nowrap;
         }
 
         .brand-events,
         .brand-ck {
-            font-size: 1.05rem;
+            font-size: 1.22rem;
+            line-height: 1;
         }
 
         .brand-by {
@@ -333,7 +335,7 @@
             position: relative;
             overflow: hidden;
 
-            padding: 5.2rem 0 4.5rem;
+            padding: 4.25rem 0 3.6rem;
 
             background: var(--navy);
             color: #fff;
@@ -359,7 +361,7 @@
 
             display: grid;
             grid-template-columns: minmax(0, 1.1fr) minmax(320px, .7fr);
-            gap: 5rem;
+            gap: 3.5rem;
             align-items: end;
         }
 
@@ -484,7 +486,7 @@
         }
 
         .proof-strip-inner {
-            min-height: 74px;
+            min-height: 64px;
 
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -496,7 +498,7 @@
             flex-direction: column;
             justify-content: center;
 
-            padding: .9rem 1.2rem;
+            padding: .72rem 1rem;
 
             border-right: 1px solid var(--line);
 
@@ -523,7 +525,7 @@
 
         /* General sections */
         .section {
-            padding: 5.25rem 0;
+            padding: 4rem 0;
         }
 
         .section.alt {
@@ -531,12 +533,12 @@
         }
 
         .section-heading {
-            max-width: 730px;
-            margin-bottom: 2.5rem;
+            max-width: 820px;
+            margin-bottom: 2rem;
         }
 
         .section-heading p {
-            margin-top: .8rem;
+            margin-top: .65rem;
 
             color: var(--muted);
             font-size: 1.03rem;
@@ -552,9 +554,9 @@
         }
 
         .benefit {
-            min-height: 210px;
+            min-height: 178px;
 
-            padding: 2rem;
+            padding: 1.6rem;
 
             background: #fff;
 
@@ -563,7 +565,7 @@
         }
 
         .benefit-number {
-            margin-bottom: 1.2rem;
+            margin-bottom: .9rem;
 
             color: var(--blue);
 
@@ -581,7 +583,7 @@
         .audience-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 3rem;
+            gap: 2.25rem;
             align-items: start;
         }
 
@@ -805,7 +807,7 @@
         }
 
         .calc-hint {
-            margin-top: .8rem;
+            margin-top: .65rem;
 
             color: var(--muted);
             font-size: .78rem;
@@ -821,7 +823,7 @@
         }
 
         .step {
-            min-height: 210px;
+            min-height: 178px;
 
             padding: 1.6rem;
 
@@ -850,7 +852,7 @@
 
         /* Closing CTA */
         .closing {
-            padding: 4.4rem 0;
+            padding: 3.5rem 0;
 
             background: var(--navy);
             color: #fff;
@@ -883,7 +885,7 @@
 
         /* Footer */
         .site-footer {
-            padding: 2.2rem 0;
+            padding: 1.8rem 0;
 
             background: #08122c;
             color: #8e9aba;
@@ -930,14 +932,14 @@
             }
 
             .hero {
-                padding: 3.8rem 0 3.4rem;
+                padding: 3.15rem 0 2.8rem;
             }
 
             .hero-grid,
             .pricing-shell,
             .audience-grid {
                 grid-template-columns: 1fr;
-                gap: 2.2rem;
+                gap: 1.8rem;
             }
 
             .hero-price {
@@ -982,7 +984,7 @@
 
             .brand-events,
             .brand-ck {
-                font-size: .94rem;
+                font-size: 1.02rem;
             }
 
             .brand-by {
@@ -991,7 +993,7 @@
             }
 
             .hero {
-                padding: 3rem 0 2.7rem;
+                padding: 2.55rem 0 2.3rem;
             }
 
             .hero h1 {
@@ -1034,11 +1036,11 @@
             }
 
             .section {
-                padding: 3.8rem 0;
+                padding: 3rem 0;
             }
 
             .section-heading {
-                margin-bottom: 1.8rem;
+                margin-bottom: 1.45rem;
             }
 
             .benefit-grid,
@@ -1049,7 +1051,7 @@
             .benefit,
             .step {
                 min-height: 0;
-                padding: 1.5rem;
+                padding: 1.35rem;
             }
 
             .calc {
@@ -1069,7 +1071,7 @@
             }
 
             .closing {
-                padding: 3.2rem 0;
+                padding: 2.7rem 0;
             }
 
             .closing-actions {
@@ -1093,7 +1095,7 @@
 
         @media (max-width: 420px) {
             .brand-ck {
-                max-width: 145px;
+                max-width: 170px;
                 overflow: hidden;
                 text-overflow: ellipsis;
             }

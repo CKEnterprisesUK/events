@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Database\Factories\AuditLogFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -36,6 +38,9 @@ use Illuminate\Support\Carbon;
  */
 class AuditLog extends Model
 {
+    /** @use HasFactory<AuditLogFactory> */
+    use HasFactory;
+
     /**
      * Rows are immutable and carry only a creation instant, so Eloquent's
      * `updated_at` handling is disabled and only `created_at` is maintained.

@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Company;
+use App\Services\AuditLogger;
 use App\Services\FeeCalculationService;
 use App\Services\RoleAuthorization;
 use App\Services\Stripe\StripePaymentService;
@@ -29,6 +31,7 @@ class StripeConnectController extends Controller
     public function __construct(
         private readonly StripePaymentService $stripe,
         private readonly FeeCalculationService $fees,
+        private readonly AuditLogger $audit,
     ) {}
 
     /**
@@ -76,9 +79,21 @@ class StripeConnectController extends Controller
 
         // Persist the (possibly newly created) account id now so a refresh or
         // an interrupted onboarding resumes the same connected account.
-        if ($company->stripe_account_id !== $link->accountId) {
+        $isNewAccount = $company->stripe_account_id !== $link->accountId;
+
+        if ($isNewAccount) {
             $company->stripe_account_id = $link->accountId;
             $company->save();
+        }
+
+        // Record only the first time an account is created/linked, not every
+        // refresh of the onboarding link, to keep the trail meaningful.
+        if ($isNewAccount) {
+            $this->audit->record(
+                action: AuditLog::STRIPE_ONBOARDING_STARTED,
+                auditable: $company,
+                summary: 'Started Stripe Connect onboarding',
+            );
         }
 
         return redirect()->away($link->url);
@@ -98,8 +113,23 @@ class StripeConnectController extends Controller
         if ($company->stripe_account_id !== null) {
             $capabilities = $this->stripe->retrieveAccountCapabilities($company->stripe_account_id);
 
+            $wasEnabled = (bool) $company->stripe_charges_enabled;
+
             $company->stripe_charges_enabled = $capabilities->chargesEnabled;
             $company->save();
+
+            // Record only a genuine change in the charges-enabled capability —
+            // this is the gate on whether the Company can take paid orders.
+            if ($wasEnabled !== $capabilities->chargesEnabled) {
+                $this->audit->record(
+                    action: AuditLog::STRIPE_CHARGES_ENABLED_CHANGED,
+                    auditable: $company,
+                    summary: $capabilities->chargesEnabled
+                        ? 'Stripe charges became enabled'
+                        : 'Stripe charges became disabled',
+                    context: ['charges_enabled' => $capabilities->chargesEnabled],
+                );
+            }
         }
 
         return redirect()->route('dashboard.stripe.status');
@@ -119,7 +149,19 @@ class StripeConnectController extends Controller
             'fee_handling_mode' => ['required', Rule::in(Company::FEE_MODES)],
         ]);
 
-        $this->ownerCompany()->setFeeHandlingMode($data['fee_handling_mode']);
+        $company = $this->ownerCompany();
+        $previousMode = $company->fee_handling_mode;
+        $company->setFeeHandlingMode($data['fee_handling_mode']);
+
+        $this->audit->record(
+            action: AuditLog::FEE_MODE_CHANGED,
+            auditable: $company,
+            summary: 'Changed fee handling from '.$previousMode.' to '.$data['fee_handling_mode'],
+            context: [
+                'from' => $previousMode,
+                'to' => $data['fee_handling_mode'],
+            ],
+        );
 
         return redirect()
             ->route('dashboard.stripe.status')

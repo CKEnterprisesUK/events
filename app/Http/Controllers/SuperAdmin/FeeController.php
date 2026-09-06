@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Company;
 use App\Models\PlatformSetting;
+use App\Services\AuditLogger;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,6 +30,8 @@ use Illuminate\Validation\Rule;
  */
 class FeeController extends Controller
 {
+    public function __construct(private readonly AuditLogger $audit) {}
+
     /**
      * Show the Global_Fee_Percent and every Company's override + fee mode.
      * (Requirements 20.5, 20.6)
@@ -51,8 +55,20 @@ class FeeController extends Controller
         ]);
 
         $setting = PlatformSetting::current();
+        $previous = $setting->global_fee_percent;
         $setting->global_fee_percent = $validated['global_fee_percent'];
         $setting->save();
+
+        // Platform-level change (no tenant): recorded with a null company_id so
+        // it appears only on the super-admin trail.
+        $this->audit->record(
+            action: AuditLog::FEE_GLOBAL_CHANGED,
+            summary: 'Changed the global fee to '.$validated['global_fee_percent'].'%',
+            context: [
+                'from' => $previous,
+                'to' => $validated['global_fee_percent'],
+            ],
+        );
 
         return redirect()
             ->route('admin.fees.index')
@@ -72,9 +88,26 @@ class FeeController extends Controller
             'fee_handling_mode' => ['required', Rule::in(Company::FEE_MODES)],
         ]);
 
+        $previousPercent = $company->company_fee_percent;
+        $previousMode = $company->fee_handling_mode;
+
         $company->company_fee_percent = $validated['company_fee_percent'] ?? null;
         $company->fee_handling_mode = $validated['fee_handling_mode'];
         $company->save();
+
+        // Attributed to the target Company so it shows on that Company's trail
+        // as well as the platform trail.
+        $this->audit->record(
+            action: AuditLog::FEE_COMPANY_CHANGED,
+            auditable: $company,
+            summary: 'Changed fees for '.$company->name,
+            context: [
+                'fee_percent_from' => $previousPercent,
+                'fee_percent_to' => $validated['company_fee_percent'] ?? null,
+                'fee_mode_from' => $previousMode,
+                'fee_mode_to' => $validated['fee_handling_mode'],
+            ],
+        );
 
         return redirect()
             ->route('admin.fees.index')

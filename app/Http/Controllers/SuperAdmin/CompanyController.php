@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Company;
+use App\Services\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 
 /**
@@ -28,12 +30,20 @@ use Illuminate\Http\RedirectResponse;
  */
 class CompanyController extends Controller
 {
+    public function __construct(private readonly AuditLogger $audit) {}
+
     /**
      * Mark a Company as a Suspended_Company. (Requirement 20.3)
      */
     public function suspend(Company $company): RedirectResponse
     {
         $company->update(['status' => Company::STATUS_SUSPENDED]);
+
+        $this->audit->record(
+            action: AuditLog::COMPANY_SUSPENDED,
+            auditable: $company,
+            summary: 'Suspended '.$company->name,
+        );
 
         return redirect()
             ->route('admin.clients.show', $company)
@@ -46,6 +56,12 @@ class CompanyController extends Controller
     public function unsuspend(Company $company): RedirectResponse
     {
         $company->update(['status' => Company::STATUS_ACTIVE]);
+
+        $this->audit->record(
+            action: AuditLog::COMPANY_UNSUSPENDED,
+            auditable: $company,
+            summary: 'Unsuspended '.$company->name,
+        );
 
         return redirect()
             ->route('admin.clients.show', $company)

@@ -58,6 +58,12 @@ class RoleAuthorization
     // Box_Office/Accountant/Scanner operational roles.
     public const ACTION_MANAGE_GDPR = 'gdpr';
 
+    // View the Company's audit log / activity trail. Held by the Owner and
+    // Admin: it can reveal sensitive operational patterns (money, access,
+    // privacy actions), so it stays with the roles trusted with oversight and
+    // not the Box_Office/Accountant/Scanner operational roles.
+    public const ACTION_VIEW_AUDIT_LOG = 'view_audit_log';
+
     // Accountant action (read-only reporting/payouts).
     public const ACTION_VIEW_REPORTS = 'view_reports';
 
@@ -88,6 +94,7 @@ class RoleAuthorization
             self::ACTION_REFUND_ORDER,
             self::ACTION_ISSUE_COMP,
             self::ACTION_MANAGE_GDPR,
+            self::ACTION_VIEW_AUDIT_LOG,
         ],
         // Box_Office is a cut-down Admin: it runs the box office (events,
         // ticket types, orders incl. cancel/refund/comp) but is NOT trusted
@@ -177,6 +184,7 @@ class RoleAuthorization
             'View reports & payouts' => self::ACTION_VIEW_REPORTS,
             'Check in attendees' => self::ACTION_CHECK_IN,
             'Handle GDPR requests' => self::ACTION_MANAGE_GDPR,
+            'View the activity log' => self::ACTION_VIEW_AUDIT_LOG,
             'Manage company settings' => self::ACTION_MANAGE_SETTINGS,
             'Manage Stripe & payouts setup' => self::ACTION_MANAGE_STRIPE,
             'Manage billing' => self::ACTION_MANAGE_BILLING,

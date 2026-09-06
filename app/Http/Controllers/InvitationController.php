@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\RoleAssignmentException;
+use App\Models\AuditLog;
 use App\Models\Invitation;
 use App\Models\User;
+use App\Services\AuditLogger;
 use App\Services\RoleAuthorization;
 use App\Services\RoleService;
 use Illuminate\Contracts\View\View;
@@ -41,7 +43,10 @@ use Illuminate\Validation\ValidationException;
  */
 class InvitationController extends Controller
 {
-    public function __construct(private RoleService $roleService) {}
+    public function __construct(
+        private RoleService $roleService,
+        private readonly AuditLogger $audit,
+    ) {}
 
     /**
      * List the Company's users and pending invitations. (Owner-gated.)
@@ -78,12 +83,19 @@ class InvitationController extends Controller
 
         // company_id is auto-filled from the resolved tenant (the Owner's
         // Company) by the BelongsToCompany trait. (Requirement 4.1)
-        Invitation::create([
+        $invitation = Invitation::create([
             'email' => $data['email'],
             'role' => $data['role'],
             'token' => Str::random(40),
             'expires_at' => now()->addDays(7),
         ]);
+
+        $this->audit->record(
+            action: AuditLog::USER_INVITED,
+            auditable: $invitation,
+            summary: 'Invited '.$data['email'].' as '.User::roleLabel($data['role']),
+            context: ['email' => $data['email'], 'role' => $data['role']],
+        );
 
         return redirect()
             ->route('dashboard.users.index')
@@ -156,11 +168,25 @@ class InvitationController extends Controller
             'role' => ['required', 'string', Rule::in(User::ROLES)],
         ]);
 
+        $previousRole = $user->role;
+
         try {
             $this->roleService->assignRole($user, $data['role']);
         } catch (RoleAssignmentException $e) {
             throw ValidationException::withMessages(['role' => $e->getMessage()]);
         }
+
+        $this->audit->record(
+            action: AuditLog::USER_ROLE_CHANGED,
+            auditable: $user,
+            summary: 'Changed '.$user->email.' from '
+                .User::roleLabel($previousRole).' to '.User::roleLabel($data['role']),
+            context: [
+                'user_id' => (int) $user->getKey(),
+                'from' => $previousRole,
+                'to' => $data['role'],
+            ],
+        );
 
         return redirect()
             ->route('dashboard.users.index')
@@ -181,11 +207,24 @@ class InvitationController extends Controller
 
         $this->assertSameCompany($user);
 
+        // Snapshot identity before removal so the trail names the removed user
+        // even though the row is gone (and the auditable id would dangle).
+        $removedEmail = $user->email;
+        $removedRole = $user->role;
+        $removedCompanyId = (int) $user->company_id;
+
         try {
             $this->roleService->removeUser($user);
         } catch (RoleAssignmentException $e) {
             throw ValidationException::withMessages(['user' => $e->getMessage()]);
         }
+
+        $this->audit->record(
+            action: AuditLog::USER_REMOVED,
+            summary: 'Removed '.$removedEmail.' ('.User::roleLabel($removedRole).')',
+            context: ['email' => $removedEmail, 'role' => $removedRole],
+            companyId: $removedCompanyId,
+        );
 
         return redirect()
             ->route('dashboard.users.index')

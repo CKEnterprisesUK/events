@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Company;
+use App\Services\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -26,6 +28,8 @@ class ImpersonationController extends Controller
 {
     public const SESSION_KEY = 'impersonate_company_id';
 
+    public function __construct(private readonly AuditLogger $audit) {}
+
     /**
      * Enter a Company's dashboard as the acting Super_Admin.
      */
@@ -41,6 +45,17 @@ class ImpersonationController extends Controller
 
         $request->session()->put(self::SESSION_KEY, $company->getKey());
 
+        // Record the jump-in against the target Company so its activity trail
+        // (and the platform trail) shows exactly when staff entered the tenant.
+        // The flag is now set, so the logger stamps this as an impersonated
+        // Super_Admin action. (Accountability — audit trail)
+        $this->audit->record(
+            action: AuditLog::IMPERSONATION_STARTED,
+            auditable: $company,
+            summary: 'Super admin started impersonating '.$company->name,
+            companyId: (int) $company->getKey(),
+        );
+
         return redirect()->route('dashboard.home');
     }
 
@@ -49,6 +64,24 @@ class ImpersonationController extends Controller
      */
     public function stop(Request $request): RedirectResponse
     {
+        // Capture which Company was being impersonated BEFORE clearing the flag,
+        // both to name it in the trail and so the logger still detects this as
+        // an impersonated action while recording the stop.
+        $companyId = $request->session()->get(self::SESSION_KEY);
+
+        if ($companyId !== null) {
+            $company = Company::find((int) $companyId);
+
+            $this->audit->record(
+                action: AuditLog::IMPERSONATION_STOPPED,
+                auditable: $company,
+                summary: $company !== null
+                    ? 'Super admin stopped impersonating '.$company->name
+                    : 'Super admin stopped impersonating',
+                companyId: (int) $companyId,
+            );
+        }
+
         $request->session()->forget(self::SESSION_KEY);
 
         return redirect()->route('admin.home');

@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\InsufficientCapacityException;
+use App\Models\AuditLog;
 use App\Models\Event;
 use App\Models\Order;
 use App\Jobs\SendTicketEmailJob;
+use App\Services\AuditLogger;
 use App\Services\CompTicketService;
 use App\Services\OrderCancellationService;
 use App\Services\QrService;
@@ -49,6 +51,7 @@ class OrderController extends Controller
     public function __construct(
         private readonly OrderCancellationService $cancellation,
         private readonly CompTicketService $comps,
+        private readonly AuditLogger $audit,
     ) {}
 
     /**
@@ -140,6 +143,16 @@ class OrderController extends Controller
 
         SendTicketEmailJob::dispatch($order->getKey(), $qr->payloadFor($order));
 
+        // Record the manual re-send for "I never received my ticket" disputes.
+        // The recipient email is on the Order itself, so it is not duplicated
+        // into the PII-minimised context.
+        $this->audit->record(
+            action: AuditLog::ORDER_TICKET_RESENT,
+            auditable: $order,
+            summary: 'Re-sent the ticket email for order '.$order->order_reference,
+            context: ['order_reference' => $order->order_reference],
+        );
+
         return back()->with('status', 'Ticket email queued to '.$order->customer_email.'.');
     }
 
@@ -161,7 +174,16 @@ class OrderController extends Controller
     {
         Gate::authorize(RoleAuthorization::ACTION_CANCEL_ORDER);
 
-        $this->cancellation->cancel($order);
+        // Log only when this call actually performed the transition; an
+        // already-terminal Order is an idempotent no-op and records nothing.
+        if ($this->cancellation->cancel($order)) {
+            $this->audit->record(
+                action: AuditLog::ORDER_CANCELLED,
+                auditable: $order,
+                summary: 'Cancelled order '.$order->order_reference,
+                context: ['order_reference' => $order->order_reference],
+            );
+        }
 
         return back()->with('status', 'Order cancelled.');
     }
@@ -177,7 +199,21 @@ class OrderController extends Controller
     {
         Gate::authorize(RoleAuthorization::ACTION_REFUND_ORDER);
 
-        $this->cancellation->refund($order);
+        // Capture the refunded amount before the transition for the trail. Log
+        // only when this call actually refunded (idempotent no-op logs nothing).
+        $amountMinor = $order->order_total_minor;
+
+        if ($this->cancellation->refund($order)) {
+            $this->audit->record(
+                action: AuditLog::ORDER_REFUNDED,
+                auditable: $order,
+                summary: 'Refunded order '.$order->order_reference,
+                context: [
+                    'order_reference' => $order->order_reference,
+                    'amount_minor' => $amountMinor,
+                ],
+            );
+        }
 
         return back()->with('status', 'Order refunded.');
     }
@@ -205,12 +241,13 @@ class OrderController extends Controller
         abort_unless($company !== null, 404);
 
         $data = $this->validatedComp($request);
+        $quantities = $this->quantitiesFrom($data['items']);
 
         try {
-            $this->comps->issue(
+            $order = $this->comps->issue(
                 company: $company,
                 event: $event,
-                quantities: $this->quantitiesFrom($data['items']),
+                quantities: $quantities,
                 recipientName: $data['recipient_name'],
                 recipientEmail: $data['recipient_email'],
             );
@@ -226,6 +263,20 @@ class OrderController extends Controller
                 'items' => 'One or more selected ticket types are not available for this event.',
             ]);
         }
+
+        // Record the comp issuance against the new (free-confirmed) Order. The
+        // recipient's identity lives on the Order; context keeps only the
+        // reference, the Event and the total ticket count.
+        $this->audit->record(
+            action: AuditLog::COMP_ISSUED,
+            auditable: $order,
+            summary: 'Issued '.array_sum($quantities).' complimentary ticket(s) for '.$event->name,
+            context: [
+                'order_reference' => $order->order_reference,
+                'event_id' => (int) $event->getKey(),
+                'ticket_count' => array_sum($quantities),
+            ],
+        );
 
         return back()->with('status', 'Complimentary tickets issued.');
     }

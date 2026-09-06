@@ -7,6 +7,7 @@ use App\Services\Branding\BrandingResolver;
 use App\Services\Mail\FakeTicketMailer;
 use App\Services\Mail\SmtpTicketMailer;
 use App\Services\Mail\TicketMailer;
+use App\Services\AuditLogger;
 use App\Services\RoleAuthorization;
 use App\Services\TicketPdfService;
 use App\Services\Stripe\FakeStripePaymentService;
@@ -37,6 +38,10 @@ class AppServiceProvider extends ServiceProvider
         // The role permission matrix is stateless; a shared instance keeps the
         // matrix definition in one place for the gates and any callers.
         $this->app->singleton(RoleAuthorization::class);
+
+        // The audit logger resolves per-request actor/tenant/impersonation
+        // context, so it shares the request-scoped TenantContext singleton.
+        $this->app->singleton(AuditLogger::class);
 
         $this->bindStripePaymentService();
         $this->bindTicketMailer();

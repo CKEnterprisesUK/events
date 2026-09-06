@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Order;
+use App\Services\AuditLogger;
 use App\Services\GdprService;
 use App\Services\RoleAuthorization;
 use Illuminate\Contracts\View\View;
@@ -29,7 +31,10 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 class CustomerController extends Controller
 {
-    public function __construct(private readonly GdprService $gdpr) {}
+    public function __construct(
+        private readonly GdprService $gdpr,
+        private readonly AuditLogger $audit,
+    ) {}
 
     /**
      * The Customer roster: one row per distinct `customer_email` the Company
