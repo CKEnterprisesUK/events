@@ -70,5 +70,38 @@
                 <button type="submit" class="btn">Update password</button>
             </form>
         </div>
+
+        {{-- Security & data --}}
+        <div class="panel">
+            <div class="panel__head"><h2>Security &amp; data</h2></div>
+            @if (session('sessions_status'))
+                <p class="status" data-status="saved" style="margin: 1rem 1.25rem 0;">{{ session('sessions_status') }}</p>
+            @endif
+
+            <form method="POST" action="{{ route('dashboard.profile.logout-other-sessions') }}" class="profile-form">
+                @csrf
+                <p class="muted" style="margin-top: 0;">
+                    Signed in on another device you no longer use? Sign out of every
+                    other session while keeping this one active. Enter your current
+                    password to confirm.
+                </p>
+                <div class="field">
+                    <label for="sessions_current_password">Current password</label>
+                    <input type="password" name="current_password" id="sessions_current_password" required autocomplete="current-password">
+                    @error('current_password')<p class="error">{{ $message }}</p>@enderror
+                </div>
+                <button type="submit" class="btn btn-outline">Sign out other sessions</button>
+            </form>
+
+            <div class="profile-form" style="border-top: 1px solid var(--border);">
+                <p class="muted" style="margin-top: 0;">
+                    Download a copy of the personal data held on your account as a
+                    JSON file.
+                </p>
+                <a class="btn btn-outline" href="{{ route('dashboard.profile.data') }}" download>
+                    Download my account data
+                </a>
+            </div>
+        </div>
     </div>
 @endsection

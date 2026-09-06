@@ -2,45 +2,63 @@
 
 @section('title', 'Reports & Payouts')
 
-@section('content')
-    <section>
-        <h1>Reports &amp; Payouts</h1>
+@push('head')
+<style>
+    .report-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+</style>
+@endpush
 
-        <p class="muted">
-            Read-only view of your Company's realised sales from paid and
-            confirmed orders. Amounts are shown in minor currency units.
-        </p>
+@section('content')
+    @php
+        $symbols = ['GBP' => '£', 'USD' => '$', 'EUR' => '€'];
+        $symbol = $symbols[$currency] ?? '';
+        $money = fn (int $minor) => $symbol . number_format($minor / 100, 2);
+    @endphp
+
+    <section>
+        <div class="report-head">
+            <div>
+                <h1>Reports &amp; Payouts</h1>
+                <p class="muted">
+                    Read-only view of your Company's realised sales from paid and
+                    confirmed orders.
+                </p>
+            </div>
+            <a class="btn btn-outline" href="{{ route('dashboard.reports.export') }}" download>
+                Export CSV
+            </a>
+        </div>
 
         <h2>Company totals</h2>
         <table>
             <tbody>
                 <tr>
                     <th scope="row">Confirmed orders</th>
-                    <td data-metric="orders">{{ $totals['orders'] }}</td>
+                    <td data-metric="orders">{{ number_format($totals['orders']) }}</td>
                 </tr>
                 <tr>
                     <th scope="row">Tickets sold</th>
-                    <td data-metric="tickets_sold">{{ $totals['tickets_sold'] }}</td>
+                    <td data-metric="tickets_sold">{{ number_format($totals['tickets_sold']) }}</td>
                 </tr>
                 <tr>
                     <th scope="row">Gross sales</th>
-                    <td data-metric="gross_sales_minor">{{ $totals['gross_sales_minor'] }}</td>
+                    <td data-metric="gross_sales_minor">{{ $money($totals['gross_sales_minor']) }}</td>
                 </tr>
                 <tr>
                     <th scope="row">Booking fees collected</th>
-                    <td data-metric="booking_fees_minor">{{ $totals['booking_fees_minor'] }}</td>
+                    <td data-metric="booking_fees_minor">{{ $money($totals['booking_fees_minor']) }}</td>
                 </tr>
                 <tr>
                     <th scope="row">Platform fees</th>
-                    <td data-metric="application_fees_minor">{{ $totals['application_fees_minor'] }}</td>
+                    <td data-metric="application_fees_minor">{{ $money($totals['application_fees_minor']) }}</td>
                 </tr>
                 <tr>
                     <th scope="row">Total collected</th>
-                    <td data-metric="order_total_minor">{{ $totals['order_total_minor'] }}</td>
+                    <td data-metric="order_total_minor">{{ $money($totals['order_total_minor']) }}</td>
                 </tr>
                 <tr>
                     <th scope="row">Net to company (payout)</th>
-                    <td data-metric="net_to_company_minor">{{ $totals['net_to_company_minor'] }}</td>
+                    <td data-metric="net_to_company_minor">{{ $money($totals['net_to_company_minor']) }}</td>
                 </tr>
             </tbody>
         </table>
@@ -72,13 +90,13 @@
                     @foreach ($perEvent as $row)
                         <tr data-event-id="{{ $row['event_id'] }}">
                             <td>{{ $row['event_name'] }}</td>
-                            <td data-metric="orders">{{ $row['orders'] }}</td>
-                            <td data-metric="tickets_sold">{{ $row['tickets_sold'] }}</td>
-                            <td data-metric="gross_sales_minor">{{ $row['gross_sales_minor'] }}</td>
-                            <td data-metric="booking_fees_minor">{{ $row['booking_fees_minor'] }}</td>
-                            <td data-metric="application_fees_minor">{{ $row['application_fees_minor'] }}</td>
-                            <td data-metric="order_total_minor">{{ $row['order_total_minor'] }}</td>
-                            <td data-metric="net_to_company_minor">{{ $row['net_to_company_minor'] }}</td>
+                            <td data-metric="orders">{{ number_format($row['orders']) }}</td>
+                            <td data-metric="tickets_sold">{{ number_format($row['tickets_sold']) }}</td>
+                            <td data-metric="gross_sales_minor">{{ $money($row['gross_sales_minor']) }}</td>
+                            <td data-metric="booking_fees_minor">{{ $money($row['booking_fees_minor']) }}</td>
+                            <td data-metric="application_fees_minor">{{ $money($row['application_fees_minor']) }}</td>
+                            <td data-metric="order_total_minor">{{ $money($row['order_total_minor']) }}</td>
+                            <td data-metric="net_to_company_minor">{{ $money($row['net_to_company_minor']) }}</td>
                         </tr>
                     @endforeach
                 </tbody>

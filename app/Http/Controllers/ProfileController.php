@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -78,5 +79,55 @@ class ProfileController extends Controller
         return redirect()
             ->route('dashboard.profile.edit')
             ->with('password_status', 'Password changed.');
+    }
+
+    /**
+     * Sign the user out of every OTHER session, keeping the current one alive.
+     * Requires the current password (Laravel's `logoutOtherDevices` re-hashes
+     * it into the remaining session) so a hijacked, password-less session
+     * cannot evict the legitimate user. Useful after losing a device or
+     * suspecting a session was left open elsewhere.
+     */
+    public function logoutOtherSessions(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'current_password' => ['required', 'string', 'current_password'],
+        ]);
+
+        Auth::logoutOtherDevices($data['current_password']);
+
+        return redirect()
+            ->route('dashboard.profile.edit')
+            ->with('sessions_status', 'Signed out of all other sessions.');
+    }
+
+    /**
+     * Download the personal data held on the acting user's OWN account record
+     * as a JSON file. This is the user-facing counterpart to the per-Customer
+     * GDPR export: it only ever exposes the requester's own account fields
+     * (never another user's, never customer data), so no role gate applies —
+     * the same reasoning that keeps the rest of this controller open to any
+     * authenticated Company_User. Secret/credential fields (password hash,
+     * remember token) are deliberately excluded.
+     */
+    public function downloadData(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $data = [
+            'account' => [
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'company' => $user->company?->name,
+                'agreed_to_terms_at' => optional($user->agreed_to_terms_at)->toIso8601String(),
+                'last_activity_at' => optional($user->last_activity_at)->toIso8601String(),
+                'created_at' => optional($user->created_at)->toIso8601String(),
+            ],
+        ];
+
+        return response()
+            ->json($data, 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+            ->header('Content-Disposition', 'attachment; filename="my-account-data.json"');
     }
 }

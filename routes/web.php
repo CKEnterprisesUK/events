@@ -21,7 +21,6 @@ use App\Http\Controllers\ScanController;
 use App\Http\Controllers\StorefrontController;
 use App\Http\Controllers\StripeConnectController;
 use App\Http\Controllers\StripeReturnController;
-use App\Http\Controllers\TrustController;
 use App\Http\Controllers\SuperAdmin\AuditController as SuperAdminAuditController;
 use App\Http\Controllers\SuperAdmin\ClientController as SuperAdminClientController;
 use App\Http\Controllers\SuperAdmin\CompanyController as SuperAdminCompanyController;
@@ -32,6 +31,7 @@ use App\Http\Controllers\SuperAdmin\LegalDocumentController as SuperAdminLegalDo
 use App\Http\Controllers\SuperAdmin\SettingsController as SuperAdminSettingsController;
 use App\Http\Controllers\SuperAdmin\TransactionController as SuperAdminTransactionController;
 use App\Http\Controllers\TicketTypeController;
+use App\Http\Controllers\TrustController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -165,6 +165,10 @@ Route::middleware(['auth', 'company.active', 'session.timeout', 'dashboard.tenan
             ->withoutMiddleware('dashboard.tenant')->name('profile.update');
         Route::put('/profile/password', [ProfileController::class, 'updatePassword'])
             ->withoutMiddleware('dashboard.tenant')->name('profile.password');
+        Route::post('/profile/logout-other-sessions', [ProfileController::class, 'logoutOtherSessions'])
+            ->withoutMiddleware('dashboard.tenant')->name('profile.logout-other-sessions');
+        Route::get('/profile/data', [ProfileController::class, 'downloadData'])
+            ->withoutMiddleware('dashboard.tenant')->name('profile.data');
 
         // Event management (Admin-gated in the controller). Create/update/
         // publish are scoped to the authenticated user's Company by the
@@ -297,6 +301,7 @@ Route::middleware(['auth', 'company.active', 'session.timeout', 'dashboard.tenan
         // the Admin gates and is denied, leaving data unchanged. (Requirements
         // 21.1, 21.2, 21.3, 3.5, 3.7)
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
 
         // Company activity trail (Owner/Admin-gated in the controller via
         // ACTION_VIEW_AUDIT_LOG). READ-ONLY: a single GET renders the Company's
@@ -317,6 +322,7 @@ Route::middleware(['auth', 'company.active', 'session.timeout', 'dashboard.tenan
         // the acting Company by `dashboard.tenant`. The `{customer}` segment is
         // a URL-safe base64 token of the email. (Requirements 10.1, 22.1, 22.2, 22.5)
         Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
+        Route::get('/customers/export', [CustomerController::class, 'exportAll'])->name('customers.export-all');
         Route::get('/customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
         Route::post('/customers/{customer}/export', [CustomerController::class, 'export'])->name('customers.export');
         Route::post('/customers/{customer}/anonymise', [CustomerController::class, 'anonymise'])->name('customers.anonymise');

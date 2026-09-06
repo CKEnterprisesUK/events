@@ -11,6 +11,10 @@
     .filter-bar input { padding: 0.5rem 0.7rem; border: 1px solid var(--border); border-radius: 0.5rem; min-width: 260px; }
     .filter-bar label { display: block; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 0.25rem; }
     .pager { display: flex; justify-content: center; padding: 1rem; }
+    .notice { border-radius: 0.6rem; padding: 0.9rem 1.1rem; margin-bottom: 1.25rem; font-size: 0.9rem; line-height: 1.5; }
+    .notice--warning { background: #fef6e7; border: 1px solid #f5d58a; color: #7a5200; }
+    .notice--warning strong { display: block; margin-bottom: 0.25rem; }
+    .page-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
 </style>
 @endpush
 
@@ -21,8 +25,15 @@
         $symbol = $symbols[$currency] ?? '';
     @endphp
 
+    @php $canExportAll = \Illuminate\Support\Facades\Gate::allows(\App\Services\RoleAuthorization::ACTION_MANAGE_GDPR); @endphp
+
     <div class="page-head">
         <h1>Customers</h1>
+        @if ($canExportAll && ! $customers->isEmpty())
+            <a class="btn btn-outline" href="{{ route('dashboard.customers.export-all') }}" download data-action="export-customers">
+                Export all (CSV)
+            </a>
+        @endif
     </div>
 
     @if (session('status'))
@@ -34,6 +45,18 @@
         customer to see their orders and, if you're the account owner, to export
         or erase their personal data for GDPR requests.
     </p>
+
+    @if ($canExportAll)
+        <div class="notice notice--warning" role="note" data-gdpr-warning>
+            <strong>Your responsibilities under GDPR.</strong>
+            The exported file contains your customers' personal data (names and
+            email addresses). As the data controller you must keep it secure,
+            use it only for the purpose your customers were told about, share it
+            with no one who has no lawful reason to see it, and delete it once
+            it is no longer needed. Exporting does not transfer these obligations
+            to anyone else.
+        </div>
+    @endif
 
     <form method="GET" action="{{ route('dashboard.customers.index') }}" class="filter-bar">
         <div class="field">

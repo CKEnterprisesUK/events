@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 use Database\Factories\AuditLogFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,7 +14,7 @@ use Illuminate\Support\Carbon;
  * An append-only audit record of a security-, money-, access-, or privacy-
  * sensitive action: who did it, to what, when, and from where.
  *
- * Deliberately NOT tenant-scoped (no {@see \App\Models\Concerns\BelongsToCompany}
+ * Deliberately NOT tenant-scoped (no {@see BelongsToCompany}
  * trait): system/webhook events may have no acting user or Company, and
  * Super_Admin actions must be visible cross-tenant. Callers scope by
  * `company_id` explicitly (the organiser view) or read everything (the
@@ -128,6 +129,8 @@ class AuditLog extends Model
     // Privacy / GDPR
     public const GDPR_CUSTOMER_EXPORTED = 'gdpr.customer_exported';
 
+    public const GDPR_CUSTOMERS_EXPORTED = 'gdpr.customers_exported';
+
     public const GDPR_CUSTOMER_ANONYMISED = 'gdpr.customer_anonymised';
 
     // System (no actor)
@@ -174,6 +177,7 @@ class AuditLog extends Model
         self::ORDER_TICKET_RESENT => ['category' => self::CATEGORY_EVENTS, 'label' => 'Re-sent a ticket email'],
 
         self::GDPR_CUSTOMER_EXPORTED => ['category' => self::CATEGORY_PRIVACY, 'label' => 'Exported customer data'],
+        self::GDPR_CUSTOMERS_EXPORTED => ['category' => self::CATEGORY_PRIVACY, 'label' => 'Exported the customer list'],
         self::GDPR_CUSTOMER_ANONYMISED => ['category' => self::CATEGORY_PRIVACY, 'label' => 'Anonymised customer data'],
 
         self::WEBHOOK_PAYMENT_CONFIRMED => ['category' => self::CATEGORY_SYSTEM, 'label' => 'Payment confirmed'],

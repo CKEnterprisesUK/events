@@ -8,7 +8,10 @@ use App\Models\Ticket;
 use App\Services\EventReportService;
 use App\Services\RoleAuthorization;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Company-dashboard controller for the Accountant's read-only reports and
@@ -67,18 +70,100 @@ class ReportController extends Controller
     {
         Gate::authorize(RoleAuthorization::ACTION_VIEW_REPORTS);
 
-        $confirmedOrders = Order::query()
+        $confirmedOrders = $this->confirmedOrders();
+
+        return view('dashboard.reports.index', [
+            'totals' => $this->companyTotals($confirmedOrders),
+            'perEvent' => $this->perEventBreakdown($confirmedOrders),
+            'currency' => (string) (Auth::user()?->company?->currency ?? 'GBP'),
+        ]);
+    }
+
+    /**
+     * Stream the same company report as a CSV download: a company-totals block
+     * followed by the per-Event breakdown, money rendered in major units to two
+     * decimal places (e.g. 125.00) so the file opens cleanly in a spreadsheet.
+     *
+     * Same gate and tenant scope as {@see index()} — the Accountant/Owner only
+     * ever exports their own Company's realised figures. Read-only: it performs
+     * no mutation. (Requirements 21.1, 21.3)
+     */
+    public function export(): StreamedResponse
+    {
+        Gate::authorize(RoleAuthorization::ACTION_VIEW_REPORTS);
+
+        $confirmedOrders = $this->confirmedOrders();
+        $totals = $this->companyTotals($confirmedOrders);
+        $perEvent = $this->perEventBreakdown($confirmedOrders);
+        $currency = (string) (Auth::user()?->company?->currency ?? 'GBP');
+
+        $filename = 'sales-report-'.now()->format('Y-m-d').'.csv';
+
+        return response()->streamDownload(function () use ($totals, $perEvent, $currency): void {
+            $out = fopen('php://output', 'wb');
+
+            // Company totals block. Money columns are written in major units.
+            fputcsv($out, ['Company totals', 'Value ('.$currency.')']);
+            fputcsv($out, ['Confirmed orders', $totals['orders']]);
+            fputcsv($out, ['Tickets sold', $totals['tickets_sold']]);
+            fputcsv($out, ['Gross sales', $this->major($totals['gross_sales_minor'])]);
+            fputcsv($out, ['Booking fees collected', $this->major($totals['booking_fees_minor'])]);
+            fputcsv($out, ['Platform fees', $this->major($totals['application_fees_minor'])]);
+            fputcsv($out, ['Total collected', $this->major($totals['order_total_minor'])]);
+            fputcsv($out, ['Net to company (payout)', $this->major($totals['net_to_company_minor'])]);
+
+            // Blank separator, then the per-Event breakdown table.
+            fputcsv($out, []);
+            fputcsv($out, [
+                'Event', 'Orders', 'Tickets sold', 'Gross sales', 'Booking fees',
+                'Platform fees', 'Total collected', 'Net to company',
+            ]);
+
+            foreach ($perEvent as $row) {
+                fputcsv($out, [
+                    $row['event_name'],
+                    $row['orders'],
+                    $row['tickets_sold'],
+                    $this->major($row['gross_sales_minor']),
+                    $this->major($row['booking_fees_minor']),
+                    $this->major($row['application_fees_minor']),
+                    $this->major($row['order_total_minor']),
+                    $this->major($row['net_to_company_minor']),
+                ]);
+            }
+
+            fclose($out);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    /**
+     * The Company's confirmed Orders — the single query both the HTML report
+     * and the CSV export build their figures from, kept identical so the two
+     * surfaces can never diverge. Tenant-scoped via the global company scope.
+     *
+     * @return Collection<int, Order>
+     */
+    private function confirmedOrders()
+    {
+        return Order::query()
             ->whereIn('status', self::CONFIRMED_STATUSES)
             ->get();
+    }
 
-        // Company-wide totals in integer minor units. Net to company is what
-        // settles to the connected account: the collected Order_Total less the
-        // Platform's Application_Fee (the direct-charge fee skim).
-        $grossSalesMinor = (int) $confirmedOrders->sum('ticket_subtotal_minor');
-        $bookingFeesMinor = (int) $confirmedOrders->sum('booking_fee_minor');
+    /**
+     * Company-wide totals in integer minor units. Net to company is what
+     * settles to the connected account: the collected Order_Total less the
+     * Platform's Application_Fee (the direct-charge fee skim).
+     *
+     * @param  Collection<int, Order>  $confirmedOrders
+     * @return array<string, int>
+     */
+    private function companyTotals($confirmedOrders): array
+    {
         $applicationFeesMinor = (int) $confirmedOrders->sum('application_fee_minor');
         $orderTotalMinor = (int) $confirmedOrders->sum('order_total_minor');
-        $netToCompanyMinor = $orderTotalMinor - $applicationFeesMinor;
 
         $confirmedOrderIds = $confirmedOrders->pluck('id')->all();
 
@@ -91,22 +176,25 @@ class ReportController extends Controller
                 ->where('status', Ticket::STATUS_VALID)
                 ->count();
 
-        $totals = [
+        return [
             'orders' => $confirmedOrders->count(),
-            'gross_sales_minor' => $grossSalesMinor,
-            'booking_fees_minor' => $bookingFeesMinor,
+            'gross_sales_minor' => (int) $confirmedOrders->sum('ticket_subtotal_minor'),
+            'booking_fees_minor' => (int) $confirmedOrders->sum('booking_fee_minor'),
             'application_fees_minor' => $applicationFeesMinor,
             'order_total_minor' => $orderTotalMinor,
-            'net_to_company_minor' => $netToCompanyMinor,
+            'net_to_company_minor' => $orderTotalMinor - $applicationFeesMinor,
             'tickets_sold' => $ticketsSold,
         ];
+    }
 
-        $perEvent = $this->perEventBreakdown($confirmedOrders);
-
-        return view('dashboard.reports.index', [
-            'totals' => $totals,
-            'perEvent' => $perEvent,
-        ]);
+    /**
+     * Render integer minor currency units as a major-unit string with two
+     * decimal places (e.g. 12500 => "125.00") for the CSV, without a currency
+     * symbol so the value stays numeric in a spreadsheet.
+     */
+    private function major(int $minor): string
+    {
+        return number_format($minor / 100, 2, '.', '');
     }
 
     /**
@@ -127,7 +215,7 @@ class ReportController extends Controller
      * this row's `order_total_minor`, and `application_fees_minor` is recovered
      * as `order_total − net`, which is the service's own definition of net.
      *
-     * @param  \Illuminate\Support\Collection<int, Order>  $confirmedOrders
+     * @param  Collection<int, Order>  $confirmedOrders
      * @return list<array<string, int|string>>
      */
     private function perEventBreakdown($confirmedOrders): array

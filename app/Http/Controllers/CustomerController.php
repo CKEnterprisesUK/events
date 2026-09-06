@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -133,6 +134,69 @@ class CustomerController extends Controller
         return response()
             ->json($export, 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
             ->header('Content-Disposition', 'attachment; filename="gdpr-export.json"');
+    }
+
+    /**
+     * Export the WHOLE Customer roster as a CSV — one row per distinct
+     * `customer_email` the Company holds Orders for, with order count, confirmed
+     * spend and last-order date.
+     *
+     * This is a bulk export of personal data, so it carries the SAME
+     * data-controller authority as the per-Customer export: gated to the
+     * Owner/Admin via `ACTION_MANAGE_GDPR` (Box_Office, which can view the
+     * roster, deliberately cannot bulk-export it), and tenant-scoped so a
+     * Company only ever exports its own Customers. (Requirements 22.1, 22.5)
+     *
+     * The export is audited as a privacy event recording only THAT it happened
+     * and how many Customers it covered — never the exported names/emails
+     * themselves — keeping the audit trail free of the very PII being exported.
+     */
+    public function exportAll(): StreamedResponse
+    {
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_GDPR);
+
+        // Same aggregate shape as the roster (index), unpaginated, so the file
+        // matches exactly what the Company sees on screen.
+        $customers = Order::query()
+            ->selectRaw('customer_email')
+            ->selectRaw('MAX(customer_name) as customer_name')
+            ->selectRaw('COUNT(*) as orders_count')
+            ->selectRaw('MAX(created_at) as last_order_at')
+            ->selectRaw(
+                'SUM(CASE WHEN status IN (?, ?) THEN order_total_minor ELSE 0 END) as spend_minor',
+                [Order::STATUS_PAID, Order::STATUS_FREE_CONFIRMED],
+            )
+            ->groupBy('customer_email')
+            ->orderByDesc('last_order_at')
+            ->get();
+
+        $this->audit->record(
+            action: AuditLog::GDPR_CUSTOMERS_EXPORTED,
+            summary: 'Exported the full customer list ('.$customers->count().' customer(s))',
+            context: ['customers_exported' => $customers->count()],
+        );
+
+        $filename = 'customers-'.now()->format('Y-m-d').'.csv';
+
+        return response()->streamDownload(function () use ($customers): void {
+            $out = fopen('php://output', 'wb');
+
+            fputcsv($out, ['Name', 'Email', 'Orders', 'Confirmed spend (minor units)', 'Last order']);
+
+            foreach ($customers as $customer) {
+                fputcsv($out, [
+                    $customer->customer_name,
+                    $customer->customer_email,
+                    (int) $customer->orders_count,
+                    (int) $customer->spend_minor,
+                    $customer->last_order_at,
+                ]);
+            }
+
+            fclose($out);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
     }
 
     /**
