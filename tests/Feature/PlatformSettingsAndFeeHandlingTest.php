@@ -50,7 +50,7 @@ class PlatformSettingsAndFeeHandlingTest extends TestCase
         $this->assertSame(1, PlatformSetting::query()->count());
     }
 
-    public function test_company_defaults_fee_handling_mode_to_absorb(): void
+    public function test_company_defaults_fee_handling_mode_to_pass_on(): void
     {
         // Requirement 13.2 — mode defaults to pass_on when unset (the booking
         // fee is added onto the customer's ticket price by default).
