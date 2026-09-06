@@ -144,11 +144,11 @@ The stack is PHP/Laravel with Blade views, PHPUnit + Eris for property-based tes
     - ARIA `tablist`/`tab`/`tabpanel` markup + vanilla JS in `@push('scripts')` for click + keyboard nav (Left/Right/Home/End, Enter/Space) + `location.hash` deep-linking; no-JS renders all panels visible with the tab strip hidden until JS enables it
     - _Requirements: 1.1, 1.2, 1.3, 1.8_
 
-  - [~] 9.2 Rewrite `dashboard/events/show.blade.php` into the tab shell
+  - [-] 9.2 Rewrite `dashboard/events/show.blade.php` into the tab shell
     - Page head (title, publish/unpublish, status/errors) + optional hero + `_tabs`; map partials to tabs (Overview, Ticket types, Location, Share & QR, Report, Orders) per design, each panel carrying a visible heading
     - _Requirements: 1.1, 1.4, 1.5_
 
-  - [-] 9.3 Create `_hero.blade.php` partial
+  - [x] 9.3 Create `_hero.blade.php` partial
     - Per-event poster over company poster precedence, rendered via `Storage::disk('public')->url()`
     - _Requirements: 5.4, 5.5, 5.6_
 
@@ -168,23 +168,23 @@ The stack is PHP/Laravel with Blade views, PHPUnit + Eris for property-based tes
     - Move recent-orders list (with cancel/refund) from `show` into the Orders tab
     - _Requirements: 1.4_
 
-  - [-] 9.8 Update `dashboard/events/_form.blade.php`
+  - [x] 9.8 Update `dashboard/events/_form.blade.php`
     - Add `location_mode`/`address`/`poster` fields and hidden `latitude`/`longitude`
     - _Requirements: 4.1, 4.2, 5.1, 5.2_
 
-  - [-] 9.9 Update `dashboard/ticket-types/_form.blade.php`
+  - [x] 9.9 Update `dashboard/ticket-types/_form.blade.php`
     - Add `capacity_mode` toggle that shows/hides the capacity input (capacity always visible with no JS)
     - _Requirements: 2.1, 2.2, 2.3_
 
-  - [~] 9.10 Update `dashboard/events/index.blade.php`
+  - [-] 9.10 Update `dashboard/events/index.blade.php`
     - Render the resolved hero as a small banner/thumbnail per row
     - _Requirements: 5.4_
 
-  - [-] 9.11 Update public `events/show.blade.php`
+  - [x] 9.11 Update public `events/show.blade.php`
     - In-person with coordinates: read-only Leaflet map (CDN) + "Open in Google Maps" directions deep-link; online: email joining notice; accessible map label
     - _Requirements: 4.6, 4.7, 4.9_
 
-  - [-] 9.12 Update `checkout/success.blade.php`
+  - [x] 9.12 Update `checkout/success.blade.php`
     - Online events: add the email joining-info notice
     - _Requirements: 4.8_
 
