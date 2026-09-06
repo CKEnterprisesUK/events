@@ -88,6 +88,16 @@ class Event extends Model
     }
 
     /**
+     * The Orders placed against this Event.
+     *
+     * @return HasMany<Order, $this>
+     */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    /**
      * Whether this Event is published and therefore available to Customers at
      * its public page. (Requirements 5.4, 5.5)
      */

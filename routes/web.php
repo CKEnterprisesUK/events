@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\BrandingController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\EventPageController;
 use App\Http\Controllers\GdprController;
@@ -104,9 +105,8 @@ Route::middleware(['auth', 'company.active', 'session.timeout', 'dashboard.tenan
     ->prefix('dashboard')
     ->name('dashboard.')
     ->group(function () {
-        Route::get('/', function () {
-            return view('dashboard');
-        })->withoutMiddleware('dashboard.tenant')->name('home');
+        Route::get('/', [DashboardController::class, 'index'])
+            ->withoutMiddleware('dashboard.tenant')->name('home');
 
         // Event management (Admin-gated in the controller). Create/update/
         // publish are scoped to the authenticated user's Company by the
