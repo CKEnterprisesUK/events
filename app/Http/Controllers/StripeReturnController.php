@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Event;
 use App\Models\Order;
 use App\Models\Ticket;
+use App\Services\Branding\BrandingResolver;
 use App\Services\CapacityReservationService;
 use App\Services\TenantContext;
 use Illuminate\Contracts\View\View;
@@ -47,6 +48,7 @@ class StripeReturnController extends Controller
         Event $event,
         string $order,
         TenantContext $tenantContext,
+        BrandingResolver $branding,
     ): View {
         abort_unless($event->isPublished(), 404);
 
@@ -56,6 +58,7 @@ class StripeReturnController extends Controller
             'company' => $tenantContext->company(),
             'event' => $event,
             'order' => $orderModel,
+            'branding' => $branding->forEvent($event),
             // A paid Order is only confirmed by the webhook; until then the
             // return page shows it as awaiting confirmation.
             'awaitingConfirmation' => $orderModel->status === Order::STATUS_RESERVED,
@@ -73,6 +76,7 @@ class StripeReturnController extends Controller
         Event $event,
         string $order,
         TenantContext $tenantContext,
+        BrandingResolver $branding,
     ): View {
         abort_unless($event->isPublished(), 404);
 
@@ -93,6 +97,7 @@ class StripeReturnController extends Controller
             'company' => $tenantContext->company(),
             'event' => $event,
             'order' => $orderModel,
+            'branding' => $branding->forEvent($event),
         ]);
     }
 

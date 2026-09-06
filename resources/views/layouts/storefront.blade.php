@@ -57,8 +57,33 @@
             text-align: center;
             padding: 3rem 1.25rem 2rem;
         }
+        .store-header__inner { position: relative; }
         .store-header .store-logo { max-height: 96px; width: auto; margin: 0 auto 1.25rem; display: block; }
         .store-header h1 { font-size: 2rem; color: var(--ink); }
+
+        /* Poster / hero image atop a branded storefront. The header content
+           overlaps the base of the hero so the logo sits on the imagery. */
+        .store-header--poster {
+            padding-top: 0;
+            /* let the hero break out of the centred shell to full width */
+            margin-left: calc(50% - 50vw);
+            margin-right: calc(50% - 50vw);
+            width: 100vw;
+        }
+        .store-header--poster .store-header__inner {
+            max-width: 860px; margin: -3.25rem auto 0; padding: 0 1.25rem;
+        }
+        .store-hero { position: relative; width: 100%; aspect-ratio: 3 / 1; max-height: 380px; overflow: hidden; }
+        .store-hero__img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .store-hero__overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(to bottom, rgba(15,20,37,0) 40%, color-mix(in srgb, var(--surface-2) 92%, transparent) 100%);
+        }
+        .store-header--poster .store-logo {
+            position: relative; background: var(--surface);
+            padding: .6rem .9rem; border-radius: 14px;
+            box-shadow: 0 10px 30px rgba(15,20,37,.18); max-height: 108px;
+        }
 
         /* Content card */
         .store-body { padding-bottom: 3rem; }
@@ -67,16 +92,29 @@
             background: var(--surface); border: 1px dashed var(--line); border-radius: 10px;
             padding: 2.5rem 1.5rem; text-align: center; color: var(--muted); margin: 0;
         }
-        .event-list { list-style: none; padding: 0; margin: 0; display: grid; gap: .85rem; }
+        .event-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 1rem; }
         .event-list-item {
-            background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
-            padding: 1.15rem 1.35rem; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+            background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+            overflow: hidden; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
         }
-        .event-list-item:hover { border-color: var(--brand); box-shadow: 0 8px 24px rgba(27,31,46,.08); transform: translateY(-2px); }
-        .event-list-item > a { font-size: 1.15rem; font-weight: 600; color: var(--ink); display: inline-block; }
-        .event-list-item:hover > a { color: var(--brand); }
-        .event-list-item .event-venue,
-        .event-list-item .event-date { display: block; font-size: .92rem; color: var(--muted); margin-top: .25rem; }
+        .event-list-item:hover { border-color: var(--brand); box-shadow: 0 12px 30px rgba(27,31,46,.1); transform: translateY(-2px); }
+        .event-card { display: flex; align-items: stretch; gap: 0; color: inherit; }
+        .event-card__thumb { flex: 0 0 34%; max-width: 220px; background: var(--surface-2); }
+        .event-card__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .event-card__body { display: flex; flex-direction: column; gap: .3rem; padding: 1.15rem 1.35rem; flex: 1; }
+        .event-card__title { font-size: 1.2rem; font-weight: 600; color: var(--ink); }
+        .event-list-item:hover .event-card__title { color: var(--brand); }
+        .event-card .event-venue,
+        .event-card .event-date { font-size: .92rem; color: var(--muted); }
+        .event-card__cta {
+            margin-top: .5rem; font-size: .9rem; font-weight: 600; color: var(--brand);
+            display: inline-flex; align-items: center; gap: .3rem;
+        }
+
+        @media (max-width: 560px) {
+            .event-card { flex-direction: column; }
+            .event-card__thumb { flex-basis: auto; max-width: none; aspect-ratio: 16 / 9; }
+        }
 
         /* Storefront footer — advertises us without taking over the store */
         .store-footer { margin-top: auto; background: var(--navy); color: #c1c5d4; }

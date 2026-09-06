@@ -32,7 +32,15 @@
             <div class="field">
                 <label for="logo">Logo override</label>
                 <input type="file" name="logo" id="logo" accept="image/*">
+                <span class="field-hint">Overrides the company logo for this event only. Leave blank to inherit.</span>
                 @error('logo')<p class="error">{{ $message }}</p>@enderror
+            </div>
+
+            <div class="field">
+                <label for="poster">Poster / hero image</label>
+                <input type="file" name="poster" id="poster" accept="image/*">
+                <span class="field-hint">A wide hero image for this event's page (roughly 3:1, ~1600&times;540px). Overrides the storefront poster for this event. Max 8&nbsp;MB.</span>
+                @error('poster')<p class="error">{{ $message }}</p>@enderror
             </div>
 
             <div class="field">

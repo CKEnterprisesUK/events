@@ -20,13 +20,24 @@
 @endsection
 
 @section('content')
-    <header class="store-header">
-        @if ($branding->hasLogo())
-            <img class="store-logo"
-                 src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($branding->logoPath) }}"
-                 alt="{{ $company->name }} logo">
+    <header class="store-header {{ $branding->hasPoster() ? 'store-header--poster' : '' }}">
+        @if ($branding->hasPoster())
+            <div class="store-hero">
+                <img class="store-hero__img"
+                     src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($branding->posterPath) }}"
+                     alt="{{ $company->name }}">
+                <div class="store-hero__overlay"></div>
+            </div>
         @endif
-        <h1>{{ $company->name }}</h1>
+
+        <div class="store-header__inner">
+            @if ($branding->hasLogo())
+                <img class="store-logo"
+                     src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($branding->logoPath) }}"
+                     alt="{{ $company->name }} logo">
+            @endif
+            <h1>{{ $company->name }}</h1>
+        </div>
     </header>
 
     <main class="store-body">
@@ -38,18 +49,28 @@
             @else
                 <ul class="event-list">
                     @foreach ($events as $event)
-                        <li class="event-list-item">
-                            <a href="{{ url($company->slug . '/' . $event['id']) }}">
-                                {{ $event['name'] }}
+                        @php($poster = $event['poster_path'] ?? null)
+                        <li class="event-list-item {{ $poster ? 'event-list-item--poster' : '' }}">
+                            <a class="event-card" href="{{ url($company->slug . '/' . $event['id']) }}">
+                                @if ($poster)
+                                    <span class="event-card__thumb">
+                                        <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($poster) }}"
+                                             alt="" loading="lazy">
+                                    </span>
+                                @endif
+                                <span class="event-card__body">
+                                    <span class="event-card__title">{{ $event['name'] }}</span>
+                                    @if (! empty($event['starts_at']))
+                                        <time class="event-date" datetime="{{ $event['starts_at'] }}">
+                                            {{ \Illuminate\Support\Carbon::parse($event['starts_at'])->format('D j M Y, H:i') }}
+                                        </time>
+                                    @endif
+                                    @if (! empty($event['venue']))
+                                        <span class="event-venue">{{ $event['venue'] }}</span>
+                                    @endif
+                                    <span class="event-card__cta">View tickets &rarr;</span>
+                                </span>
                             </a>
-                            @if (! empty($event['venue']))
-                                <span class="event-venue">{{ $event['venue'] }}</span>
-                            @endif
-                            @if (! empty($event['starts_at']))
-                                <time class="event-date" datetime="{{ $event['starts_at'] }}">
-                                    {{ \Illuminate\Support\Carbon::parse($event['starts_at'])->format('D j M Y, H:i') }}
-                                </time>
-                            @endif
                         </li>
                     @endforeach
                 </ul>

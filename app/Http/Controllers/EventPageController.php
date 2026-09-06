@@ -45,6 +45,7 @@ class EventPageController extends Controller
             ->orderBy('id')
             ->get()
             ->map(fn (TicketType $type): array => [
+                'id' => $type->getKey(),
                 'name' => $type->name,
                 'price_minor' => $type->price_minor,
                 'is_free' => $type->isFree(),

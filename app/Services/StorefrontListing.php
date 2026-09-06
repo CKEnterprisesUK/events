@@ -35,7 +35,7 @@ class StorefrontListing
      * The published Events to show on the Company's Storefront, newest first.
      * Served from cache when warm; otherwise built from the database and cached.
      *
-     * @return Collection<int, array{id:int, name:string, venue:?string, starts_at:?string}>
+     * @return Collection<int, array{id:int, name:string, venue:?string, starts_at:?string, poster_path:?string}>
      */
     public function forCompany(Company $company): Collection
     {
@@ -61,10 +61,15 @@ class StorefrontListing
      * Build the listing payload from the database: the Company's published
      * Events only, newest first, as plain arrays. (Requirements 5.4, 8.2)
      *
-     * @return list<array{id:int, name:string, venue:?string, starts_at:?string}>
+     * @return list<array{id:int, name:string, venue:?string, starts_at:?string, poster_path:?string}>
      */
     private function build(Company $company): array
     {
+        // The Company hero is the fallback poster for any Event without its own,
+        // so the listing can show a thumbnail per Event. Resolved here (not at
+        // render) so the cached payload carries the effective poster directly.
+        $companyPoster = $company->poster_path;
+
         return Event::query()
             // Filter explicitly by Company and bypass the request-scoped tenant
             // global scope so the listing is built correctly whether or not a
@@ -81,6 +86,9 @@ class StorefrontListing
                 'name' => $event->name,
                 'venue' => $event->venue,
                 'starts_at' => $event->starts_at?->toIso8601String(),
+                // Event poster else the Company hero, so the listing thumbnail
+                // is populated even for Events that don't set their own.
+                'poster_path' => $this->firstFilled($event->poster_path, $companyPoster),
             ])
             ->all();
     }
@@ -88,5 +96,21 @@ class StorefrontListing
     private function cacheKey(int|string|null $companyId): string
     {
         return "storefront:listing:{$companyId}";
+    }
+
+    /**
+     * The first non-blank value among the given candidates, or null. Treats
+     * empty strings as "not set" so a blank Event poster falls through to the
+     * Company hero.
+     */
+    private function firstFilled(?string ...$values): ?string
+    {
+        foreach ($values as $value) {
+            if ($value !== null && $value !== '') {
+                return $value;
+            }
+        }
+
+        return null;
     }
 }

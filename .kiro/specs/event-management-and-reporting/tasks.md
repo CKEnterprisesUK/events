@@ -122,7 +122,7 @@ Implementation language is PHP (Laravel), matching the existing codebase. The te
 - [x] 8. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise. Confirm the existing `AccountantReportingTest` still passes after the refactor.
 
-- [ ] 9. Update EventController for publish gating, QR, and show view data
+- [x] 9. Update EventController for publish gating, QR, and show view data
   - [x] 9.1 Add blocker validation to `EventController::publish()`
     - Read `$event->publishBlockers()`; when non-empty, redirect back to `dashboard.events.show` with `publish_errors` (an array of the blocker messages) and leave the Event unpublished. When empty, publish as today and forget the storefront listing cache.
     - _Requirements: 1.1, 1.2_
@@ -137,16 +137,16 @@ Implementation language is PHP (Laravel), matching the existing codebase. The te
     - Resolve `EventReadiness` (checklist + capacity), the public URL, and `EventReportService::for($event)`; pass them to the view alongside the existing `event`, `ticketTypes`, `recentOrders`.
     - _Requirements: 1.4, 2.1, 3.1, 4.1, 4.2, 4.4, 5.1_
 
-  - [-] 9.4 Feature test for publish gating (`PublishGatingTest`)
+  - [x] 9.4 Feature test for publish gating (`PublishGatingTest`)
     - Publish succeeds with a ticket type + `starts_at`; refused with blocker list when either is missing (stays unpublished); unpublish always works regardless of blockers; non-admin roles get 403; foreign event gets 404.
     - _Requirements: 1.1, 1.2, 1.3, 1.5, 1.6_
 
-  - [-] 9.5 Property test: unpublish is unconditional
+  - [x] 9.5 Property test: unpublish is unconditional
     - **Property 2: Unpublish is unconditional**
     - Over generated Events in any state (including unmet blockers), assert unpublishing sets `is_published` to false.
     - **Validates: Requirements 1.3**
 
-  - [-] 9.6 Feature test for the QR endpoint (`EventQrTest`)
+  - [x] 9.6 Feature test for the QR endpoint (`EventQrTest`)
     - Admin gets 200 with `Content-Type: image/png` and non-empty bytes; non-admin roles get 403; foreign event gets 404; when `QrService` is bound to a fake that throws, the endpoint returns an error, not a PNG.
     - _Requirements: 4.3, 4.5, 4.6, 4.7_
 
@@ -154,7 +154,7 @@ Implementation language is PHP (Laravel), matching the existing codebase. The te
   - Create `app/Http/Controllers/EventReportController.php` with a constructor-injected `EventReportService`. `show(Event $event): View` authorizes `ACTION_VIEW_REPORTS`, then returns `dashboard.events.report` with `event` and `report` (`EventReportService::for($event)`). Tenant scoping yields 404 for foreign events; the gate yields 403.
   - _Requirements: 6.1, 6.2, 6.7, 6.8_
 
-  - [-] 10.1 Feature test for the report page (`EventReportPageTest`)
+  - [x] 10.1 Feature test for the report page (`EventReportPageTest`)
     - Accountant (and owner) get 200 and see the event's figures; admin/scanner get 403; foreign event gets 404; no CSV export link/route is present; figures match the shared service.
     - _Requirements: 6.1, 6.2, 6.7, 6.8, 6.9_
 
@@ -162,27 +162,27 @@ Implementation language is PHP (Laravel), matching the existing codebase. The te
   - In `routes/web.php`, inside the existing dashboard group, add `GET /events/{event}/qr` => `EventController@qr` named `events.qr`, and `GET /events/{event}/report` => `EventReportController@show` named `events.report`. No CSV export route.
   - _Requirements: 4.3, 6.1, 6.9_
 
-- [~] 12. Checkpoint - Ensure all tests pass
+- [x] 12. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 13. Add the additive Blade partials and report page, and wire the show page
-  - [~] 13.1 Create `resources/views/dashboard/events/_readiness.blade.php`
+  - [-] 13.1 Create `resources/views/dashboard/events/_readiness.blade.php`
     - Render each `ChecklistItem` with a satisfied/unsatisfied indicator and a "required to publish" badge on blocking items.
     - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
-  - [~] 13.2 Create `resources/views/dashboard/events/_capacity.blade.php`
+  - [-] 13.2 Create `resources/views/dashboard/events/_capacity.blade.php`
     - Render the static explainer copy (optional overall ceiling, null = unlimited, interaction with per-type sum) plus a non-blocking warning keyed on `CapacityComparison::state()` for `EVENT_BINDS` and `TYPES_BIND`.
     - _Requirements: 3.1, 3.2, 3.3_
 
-  - [~] 13.3 Create `resources/views/dashboard/events/_share.blade.php`
+  - [-] 13.3 Create `resources/views/dashboard/events/_share.blade.php`
     - Show the public URL, a copy-link button (inline Clipboard API script via `@push('scripts')`), a link to the `events.qr` endpoint, and the note that the URL/QR go live only after publishing.
     - _Requirements: 4.1, 4.2, 4.4_
 
-  - [~] 13.4 Create `resources/views/dashboard/events/_summary.blade.php`
+  - [-] 13.4 Create `resources/views/dashboard/events/_summary.blade.php`
     - Render Tickets_Sold, Gross_Revenue, Net_To_Company, Capacity_Utilisation, and confirmed order count from the `EventReport`.
     - _Requirements: 5.1_
 
-  - [~] 13.5 Create `resources/views/dashboard/events/report.blade.php`
+  - [-] 13.5 Create `resources/views/dashboard/events/report.blade.php`
     - Render core metrics (6.2), the per-ticket-type breakdown table (6.3), the orders-by-status breakdown (6.4), and the sales-over-time-by-day trend (6.5). No CSV export control.
     - _Requirements: 6.2, 6.3, 6.4, 6.5, 6.9_
 

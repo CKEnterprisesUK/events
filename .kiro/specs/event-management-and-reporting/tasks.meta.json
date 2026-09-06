@@ -420,6 +420,11 @@
         "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788699741181
+      },
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788700011446
       }
     ],
     "9.5 Property test: unpublish is unconditional": [
@@ -432,6 +437,11 @@
         "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788699744656
+      },
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788700013784
       }
     ],
     "9.6 Feature test for the QR endpoint (`EventQrTest`)": [
@@ -444,6 +454,11 @@
         "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788699742581
+      },
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788700012399
       }
     ],
     "10.1 Feature test for the report page (`EventReportPageTest`)": [
@@ -456,6 +471,11 @@
         "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788699743980
+      },
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788700014751
       }
     ],
     "11. Add the new routes": [
@@ -480,6 +500,11 @@
         "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788698895283
+      },
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788700015855
       }
     ],
     "13.1 Create `resources/views/dashboard/events/_readiness.blade.php`": [
@@ -487,6 +512,11 @@
         "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788698895310
+      },
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788700021511
       }
     ],
     "13.2 Create `resources/views/dashboard/events/_capacity.blade.php`": [
@@ -494,6 +524,11 @@
         "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788698895341
+      },
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788700022926
       }
     ],
     "13.3 Create `resources/views/dashboard/events/_share.blade.php`": [
@@ -501,6 +536,11 @@
         "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788698895367
+      },
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788700024331
       }
     ],
     "13.4 Create `resources/views/dashboard/events/_summary.blade.php`": [
@@ -508,6 +548,11 @@
         "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788698895401
+      },
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788700025080
       }
     ],
     "13.5 Create `resources/views/dashboard/events/report.blade.php`": [
@@ -515,6 +560,11 @@
         "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788698895442
+      },
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788700020064
       }
     ],
     "13.6 Modify `resources/views/dashboard/events/show.blade.php`": [
@@ -596,6 +646,13 @@
         "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788699734516
+      }
+    ],
+    "9. Update EventController for publish gating, QR, and show view data": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788700013817
       }
     ]
   }
