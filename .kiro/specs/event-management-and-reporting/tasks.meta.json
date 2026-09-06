@@ -1,0 +1,277 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Property test: publish gate is exactly the blocker predicate": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698894444
+      }
+    ],
+    "2.1 Create `app/Services/Events/ChecklistItem.php`": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698894485
+      },
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698909453
+      }
+    ],
+    "2.2 Create `app/Services/Events/EventReadinessReport.php`": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698894518
+      },
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698910882
+      }
+    ],
+    "2.3 Create `app/Services/Events/CapacityComparison.php`": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698894550
+      },
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698911800
+      }
+    ],
+    "2.4 Property test: capacity comparison classifies the ceiling correctly": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698894593
+      }
+    ],
+    "3.1 Property test: checklist reflects event state": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698894624
+      }
+    ],
+    "3.2 Property test: blocking items match the publish source of truth": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698894651
+      }
+    ],
+    "3.3 Property test: capacity warnings never block publishing": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698894677
+      }
+    ],
+    "3.4 Unit tests for EventReadiness checklist and capacity states": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698894708
+      }
+    ],
+    "4. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698894735
+      }
+    ],
+    "5. Create the shared accounting value object": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698894767
+      },
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698912982
+      }
+    ],
+    "6.1 Property test: confirmed-order accounting definitions": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698894802
+      }
+    ],
+    "6.2 Property test: capacity utilisation honours unlimited": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698894835
+      }
+    ],
+    "6.3 Property test: per-ticket-type breakdown is consistent": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698894868
+      }
+    ],
+    "6.4 Property test: orders-by-status breakdown is exhaustive": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698894901
+      }
+    ],
+    "6.5 Property test: sales-over-time matches grouped sums": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698894928
+      }
+    ],
+    "6.6 Unit tests for EventReportService accounting": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698894960
+      }
+    ],
+    "7.1 Property test: per-event figures agree with the company report": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698894992
+      }
+    ],
+    "8. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698895018
+      }
+    ],
+    "9.1 Add blocker validation to `EventController::publish()`": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698895058
+      }
+    ],
+    "9.2 Add `EventController::qr(Event $event, QrService $qr): Response`": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698895083
+      }
+    ],
+    "9.3 Extend `EventController::show()` with readiness, capacity, public URL, and report view data": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698895110
+      }
+    ],
+    "9.4 Feature test for publish gating (`PublishGatingTest`)": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698895135
+      }
+    ],
+    "9.5 Property test: unpublish is unconditional": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698895165
+      }
+    ],
+    "9.6 Feature test for the QR endpoint (`EventQrTest`)": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698895193
+      }
+    ],
+    "10.1 Feature test for the report page (`EventReportPageTest`)": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698895225
+      }
+    ],
+    "11. Add the new routes": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698895252
+      }
+    ],
+    "12. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698895283
+      }
+    ],
+    "13.1 Create `resources/views/dashboard/events/_readiness.blade.php`": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698895310
+      }
+    ],
+    "13.2 Create `resources/views/dashboard/events/_capacity.blade.php`": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698895341
+      }
+    ],
+    "13.3 Create `resources/views/dashboard/events/_share.blade.php`": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698895367
+      }
+    ],
+    "13.4 Create `resources/views/dashboard/events/_summary.blade.php`": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698895401
+      }
+    ],
+    "13.5 Create `resources/views/dashboard/events/report.blade.php`": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698895442
+      }
+    ],
+    "13.6 Modify `resources/views/dashboard/events/show.blade.php`": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698895469
+      }
+    ],
+    "14. Final checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698895501
+      }
+    ],
+    "1. Add publish source-of-truth methods to the Event model": [
+      {
+        "executionId": "e8f55a06-12de-40ac-a9ee-579eb30c1165",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788698908564
+      }
+    ]
+  }
+}
