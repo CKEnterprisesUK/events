@@ -380,6 +380,16 @@ Route::middleware('tenant')->group(function () {
         ->where('event', '[0-9]+')
         ->name('event.page');
 
+    // Self-service "lost my tickets" resend from the public Event page. Takes an
+    // email and re-queues the ticket email for every confirmed Order that email
+    // holds for this Event. The response is deliberately neutral and never
+    // reveals whether the email has a booking. Resolved within the active
+    // Company (foreign/unpublished Events 404). (Requirements 8.3, 14.3, 22.x)
+    Route::post('/{companySlug}/{event}/resend', [EventPageController::class, 'resendTickets'])
+        ->where('companySlug', '[A-Za-z0-9-]+')
+        ->where('event', '[0-9]+')
+        ->name('event.tickets.resend');
+
     // Checkout order creation at `/{company-slug}/{event-id}/checkout`. Resolves
     // within the active Company (foreign/unpublished Events 404), validates the
     // cart + consents, reserves capacity for a 900s window, snapshots the money

@@ -83,6 +83,56 @@ class EventPageController extends Controller
     }
 
     /**
+     * Self-service "lost my tickets" resend for the public Event page.
+     *
+     * A Customer enters the email they booked with; every confirmed Order that
+     * email holds for THIS Event has its ticket email re-queued through the same
+     * {@see SendTicketEmailJob} the original fulfilment and the dashboard resend
+     * use (so the QR is identical — a pure function of the Order_Reference).
+     *
+     * Privacy: the response NEVER reveals whether the email actually has any
+     * order. Whether zero or several Orders matched, the Customer sees the same
+     * neutral confirmation, so the form can't be used to probe who has booked.
+     * The Event is scoped to the active Company by the global tenant scope
+     * (foreign/unpublished Events 404).
+     */
+    public function resendTickets(
+        string $companySlug,
+        Event $event,
+        Request $request,
+        QrService $qr,
+    ): RedirectResponse {
+        abort_unless($event->isPublished(), 404);
+
+        $validated = $request->validate([
+            'email' => ['required', 'string', 'email:rfc', 'max:254'],
+        ]);
+
+        $email = strtolower(trim($validated['email']));
+
+        // Re-queue every confirmed (paid or free-confirmed) Order this email
+        // holds for this Event. Scoped to the active Company by the global
+        // tenant scope; unconfirmed/expired/cancelled orders are skipped.
+        $orders = Order::query()
+            ->where('event_id', $event->getKey())
+            ->whereRaw('LOWER(customer_email) = ?', [$email])
+            ->whereIn('status', [Order::STATUS_PAID, Order::STATUS_FREE_CONFIRMED])
+            ->get();
+
+        foreach ($orders as $order) {
+            SendTicketEmailJob::dispatch($order->getKey(), $qr->payloadFor($order));
+        }
+
+        // Always the same neutral message, regardless of what matched, so the
+        // endpoint never discloses whether the email has any booking.
+        return back()->with(
+            'resend_status',
+            'If that email address matches a booking for this event, we\'ll send the tickets to it shortly. '
+            .'If nothing arrives, please check your spam or junk folder, then contact the organiser using the details below.'
+        )->withFragment('support');
+    }
+
+    /**
      * Classify a Ticket_Type's sale window relative to `$now`, using the
      * half-open interval `[sale_starts_at, sale_ends_at)`:
      *   - `not_yet`  — before the window opens (Requirement 6.4);
