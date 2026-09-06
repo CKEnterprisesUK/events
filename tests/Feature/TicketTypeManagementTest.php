@@ -156,12 +156,11 @@ class TicketTypeManagementTest extends TestCase
 
         $this->assertSame(50, $ticketType->availableQuantity());
 
-        // The standalone ticket-types index is now folded into the manage-event
-        // show page's Ticket types tab (the index route redirects there). The
-        // tabbed show page renders all panels server-side, including the capped
-        // type's "{n} remaining" availability. (task 9.5)
+        // Ticket-type management lives on the dedicated "Tickets" screen, which
+        // renders each capped type's "{n} remaining" availability. (The index
+        // route redirects there.)
         $this->actingAs($admin)
-            ->get(route('dashboard.events.show', $event))
+            ->get(route('dashboard.events.tickets', $event))
             ->assertStatus(200)
             ->assertSee('50 remaining');
     }

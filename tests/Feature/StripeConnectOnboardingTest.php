@@ -154,4 +154,41 @@ class StripeConnectOnboardingTest extends TestCase
     {
         $this->get(route('dashboard.stripe.status'))->assertRedirect(route('login'));
     }
+
+    public function test_owner_can_switch_the_fee_handling_mode_from_payments(): void
+    {
+        // Default is pass_on; the Owner switches to absorb from the Payments page.
+        $owner = User::factory()->owner()->create();
+        $this->assertSame(Company::FEE_MODE_PASS_ON, $owner->company->fee_handling_mode);
+
+        $this->actingAs($owner)->put(route('dashboard.stripe.fee-mode'), [
+            'fee_handling_mode' => Company::FEE_MODE_ABSORB,
+        ])->assertRedirect(route('dashboard.stripe.status'));
+
+        $this->assertSame(Company::FEE_MODE_ABSORB, $owner->company->fresh()->fee_handling_mode);
+    }
+
+    public function test_fee_mode_rejects_an_unsupported_value(): void
+    {
+        $owner = User::factory()->owner()->create();
+
+        $this->actingAs($owner)->put(route('dashboard.stripe.fee-mode'), [
+            'fee_handling_mode' => 'waive',
+        ])->assertSessionHasErrors('fee_handling_mode');
+
+        // Unchanged from the default.
+        $this->assertSame(Company::FEE_MODE_PASS_ON, $owner->company->fresh()->fee_handling_mode);
+    }
+
+    public function test_non_owner_cannot_change_the_fee_mode(): void
+    {
+        $company = Company::factory()->create(['fee_handling_mode' => Company::FEE_MODE_PASS_ON]);
+        $admin = User::factory()->admin()->create(['company_id' => $company->id]);
+
+        $this->actingAs($admin)->put(route('dashboard.stripe.fee-mode'), [
+            'fee_handling_mode' => Company::FEE_MODE_ABSORB,
+        ])->assertForbidden();
+
+        $this->assertSame(Company::FEE_MODE_PASS_ON, $company->fresh()->fee_handling_mode);
+    }
 }
