@@ -74,23 +74,22 @@
         @endif
 
         @php
-            // Gather every sponsor banner across the listed events, keeping each
-            // unique path once so the storefront shows a single combined strip.
-            $sponsorPaths = $events
-                ->flatMap(fn ($event) => [$event['sponsor_top_path'] ?? null, $event['sponsor_bottom_path'] ?? null])
-                ->filter()
-                ->unique()
+            // Gather every sponsor across the listed events, keeping each unique
+            // logo (by image path) once so the storefront shows a single
+            // combined strip while preserving each sponsor's name/website/bio.
+            $sponsors = $events
+                ->flatMap(fn ($event) => $event['sponsors'] ?? [])
+                ->filter(fn ($sponsor) => filled($sponsor['path'] ?? null))
+                ->unique('path')
                 ->values();
         @endphp
 
-        @if ($sponsorPaths->isNotEmpty())
+        @if ($sponsors->isNotEmpty())
             <section class="store-section store-sponsors">
                 <h2>Our sponsors</h2>
                 <div class="store-sponsors__grid">
-                    @foreach ($sponsorPaths as $sponsorPath)
-                        <img class="store-sponsors__img"
-                             src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($sponsorPath) }}"
-                             alt="Sponsor" loading="lazy">
+                    @foreach ($sponsors as $sponsor)
+                        @include('storefront.partials.sponsor', ['sponsor' => $sponsor])
                     @endforeach
                 </div>
             </section>

@@ -23,6 +23,9 @@
     .fee-option strong { display: block; color: var(--ink); }
     .fee-option__desc { display: block; font-size: 0.85rem; color: var(--muted); margin-top: 0.15rem; }
     .fee-mode-form .error { color: #b91c1c; font-size: 0.85rem; margin: 0 0 0.75rem; }
+    .status-banner__cta { margin-top: 0.9rem; }
+    .btn-connect { font-size: 1.02rem; font-weight: 600; padding: 0.7rem 1.4rem; }
+    .status-banner__cta .btn-connect-hint { display: block; margin-top: 0.5rem; font-size: 0.85rem; color: var(--muted); }
 </style>
 @endpush
 
@@ -45,6 +48,13 @@
         <div class="status-banner status-banner--off" data-status="not_connected">
             <h2>Not connected</h2>
             <p>Connect a Stripe account to sell paid tickets. Until then you can only publish free events.</p>
+            <div class="status-banner__cta">
+                <form method="POST" action="{{ route('dashboard.stripe.start') }}">
+                    @csrf
+                    <button type="submit" class="btn btn-connect" data-action="connect-stripe">Connect Stripe</button>
+                    <span class="btn-connect-hint">Takes a couple of minutes. You'll be redirected to Stripe to finish setup.</span>
+                </form>
+            </div>
         </div>
     @elseif ($chargesEnabled)
         <div class="status-banner status-banner--ok" data-status="charges_enabled">
@@ -116,10 +126,12 @@
         </form>
     </div>
 
-    <form method="POST" action="{{ route('dashboard.stripe.start') }}">
-        @csrf
-        <button type="submit" class="btn">
-            {{ $connected ? ($chargesEnabled ? 'Manage on Stripe' : 'Finish Stripe onboarding') : 'Connect Stripe' }}
-        </button>
-    </form>
+    @if ($connected)
+        <form method="POST" action="{{ route('dashboard.stripe.start') }}">
+            @csrf
+            <button type="submit" class="btn">
+                {{ $chargesEnabled ? 'Manage on Stripe' : 'Finish Stripe onboarding' }}
+            </button>
+        </form>
+    @endif
 @endsection

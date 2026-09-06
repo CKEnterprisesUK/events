@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Company;
 use App\Models\Event;
-use App\Services\Branding\BrandingResolver;
 use App\Rules\SafeUpload;
+use App\Services\Branding\BrandingResolver;
 use App\Services\BrandingImageStore;
 use App\Services\RoleAuthorization;
 use Illuminate\Contracts\View\View;
@@ -223,6 +223,18 @@ class BrandingController extends Controller
             // does not silently keep a banner the organiser wanted gone.
             'remove_sponsor_top' => ['nullable', 'boolean'],
             'remove_sponsor_bottom' => ['nullable', 'boolean'],
+
+            // Per-sponsor metadata. Name/website/bio are shown on the public
+            // store page only; on_ticket controls whether the banner prints on
+            // the ticket PDF. Absent checkbox = not shown on ticket.
+            'sponsor_top_name' => ['nullable', 'string', 'max:255'],
+            'sponsor_top_website' => ['nullable', 'string', 'url', 'max:255'],
+            'sponsor_top_bio' => ['nullable', 'string', 'max:2000'],
+            'sponsor_top_on_ticket' => ['nullable', 'boolean'],
+            'sponsor_bottom_name' => ['nullable', 'string', 'max:255'],
+            'sponsor_bottom_website' => ['nullable', 'string', 'url', 'max:255'],
+            'sponsor_bottom_bio' => ['nullable', 'string', 'max:2000'],
+            'sponsor_bottom_on_ticket' => ['nullable', 'boolean'],
         ]);
 
         $attributes = [
@@ -238,19 +250,28 @@ class BrandingController extends Controller
             $attributes['poster_path'] = $this->imageStore->store($request->file('poster'), self::POSTER_DIRECTORY, $event->poster_path);
         }
 
+        $topRemoved = $request->boolean('remove_sponsor_top');
+        $bottomRemoved = $request->boolean('remove_sponsor_bottom');
+
         $attributes['sponsor_top_path'] = $this->resolveSponsor(
             $request,
             'sponsor_top',
-            $request->boolean('remove_sponsor_top'),
+            $topRemoved,
             $event->sponsor_top_path,
         );
 
         $attributes['sponsor_bottom_path'] = $this->resolveSponsor(
             $request,
             'sponsor_bottom',
-            $request->boolean('remove_sponsor_bottom'),
+            $bottomRemoved,
             $event->sponsor_bottom_path,
         );
+
+        // Per-sponsor metadata travels with the slot: cleared when the banner
+        // is removed, otherwise taken from the submitted fields. on_ticket is
+        // an unchecked-means-off checkbox.
+        $attributes += $this->sponsorMeta($data, 'sponsor_top', $topRemoved);
+        $attributes += $this->sponsorMeta($data, 'sponsor_bottom', $bottomRemoved);
 
         $event->update($attributes);
 
@@ -277,6 +298,34 @@ class BrandingController extends Controller
         }
 
         return $currentPath;
+    }
+
+    /**
+     * The per-sponsor metadata attributes for one slot (name, website, bio and
+     * the on_ticket print toggle). When the slot's banner was removed, the
+     * metadata is cleared and the sponsor is not printed on the ticket so no
+     * stray name/link/bio lingers without a logo.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function sponsorMeta(array $data, string $field, bool $removed): array
+    {
+        if ($removed) {
+            return [
+                "{$field}_name" => null,
+                "{$field}_website" => null,
+                "{$field}_bio" => null,
+                "{$field}_on_ticket" => false,
+            ];
+        }
+
+        return [
+            "{$field}_name" => $data["{$field}_name"] ?? null,
+            "{$field}_website" => $data["{$field}_website"] ?? null,
+            "{$field}_bio" => $data["{$field}_bio"] ?? null,
+            "{$field}_on_ticket" => (bool) ($data["{$field}_on_ticket"] ?? false),
+        ];
     }
 
     // ---- Helpers -------------------------------------------------------------

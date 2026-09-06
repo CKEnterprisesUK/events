@@ -103,21 +103,23 @@
                     </section>
                 @endif
 
-                {{-- Event sponsors: the same landscape banners printed on the
-                     e-ticket, surfaced publicly on the event page. --}}
-                @if ($event->sponsor_top_path || $event->sponsor_bottom_path)
-                    <section class="event-sponsors">
+                {{-- Event sponsors: the same logos optionally printed on the
+                     e-ticket, surfaced publicly on the event page with each
+                     sponsor's name, bio and website link revealed on click. --}}
+                @php
+                    $eventSponsors = collect([
+                        ['path' => $event->sponsor_top_path, 'name' => $event->sponsor_top_name, 'website' => $event->sponsor_top_website, 'bio' => $event->sponsor_top_bio],
+                        ['path' => $event->sponsor_bottom_path, 'name' => $event->sponsor_bottom_name, 'website' => $event->sponsor_bottom_website, 'bio' => $event->sponsor_bottom_bio],
+                    ])->filter(fn ($sponsor) => filled($sponsor['path']))->values();
+                @endphp
+                @if ($eventSponsors->isNotEmpty())
+                    <section class="event-sponsors store-sponsors">
                         <h2>Our sponsors</h2>
-                        @if ($event->sponsor_top_path)
-                            <img class="event-sponsors__img"
-                                 src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($event->sponsor_top_path) }}"
-                                 alt="Event sponsor">
-                        @endif
-                        @if ($event->sponsor_bottom_path)
-                            <img class="event-sponsors__img"
-                                 src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($event->sponsor_bottom_path) }}"
-                                 alt="Event sponsor">
-                        @endif
+                        <div class="store-sponsors__grid">
+                            @foreach ($eventSponsors as $sponsor)
+                                @include('storefront.partials.sponsor', ['sponsor' => $sponsor])
+                            @endforeach
+                        </div>
                     </section>
                 @endif
 

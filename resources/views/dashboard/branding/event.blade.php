@@ -52,8 +52,8 @@
 
             <hr>
 
-            <h2>Ticket design</h2>
-            <p>These appear on the downloadable A4 e-ticket. The bottom sponsor banner is also shown on your public event page and storefront.</p>
+            <h2>Ticket design &amp; sponsors</h2>
+            <p>Custom instructions appear on the downloadable A4 e-ticket. For each sponsor you can add a name, website and bio (shown on your public store page) and choose whether their logo prints on the ticket. If no sponsor logo is shown on the ticket, your own logo is printed instead.</p>
 
             <div class="field">
                 <label for="ticket_instructions">Custom instructions</label>
@@ -63,31 +63,99 @@
                 @error('ticket_instructions')<p class="error">{{ $message }}</p>@enderror
             </div>
 
-            <div class="field">
-                <label for="sponsor_top">Top sponsor banner</label>
-                @if ($event->sponsor_top_path)
-                    <img class="brand-poster" src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($event->sponsor_top_path) }}" alt="Top sponsor banner">
-                    <label class="consent">
-                        <input type="checkbox" name="remove_sponsor_top" value="1"> Remove this banner
-                    </label>
-                @endif
-                <input type="file" name="sponsor_top" id="sponsor_top" accept="image/*">
-                <span class="field-hint">A wide landscape banner shown across the top of the ticket. Max 8&nbsp;MB.</span>
-                @error('sponsor_top')<p class="error">{{ $message }}</p>@enderror
-            </div>
+            <fieldset class="sponsor-slot">
+                <legend>Top sponsor</legend>
 
-            <div class="field">
-                <label for="sponsor_bottom">Bottom sponsor banner</label>
-                @if ($event->sponsor_bottom_path)
-                    <img class="brand-poster" src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($event->sponsor_bottom_path) }}" alt="Bottom sponsor banner">
-                    <label class="consent">
-                        <input type="checkbox" name="remove_sponsor_bottom" value="1"> Remove this banner
-                    </label>
-                @endif
-                <input type="file" name="sponsor_bottom" id="sponsor_bottom" accept="image/*">
-                <span class="field-hint">A wide landscape banner shown across the bottom of the ticket and on the public event page. Max 8&nbsp;MB.</span>
-                @error('sponsor_bottom')<p class="error">{{ $message }}</p>@enderror
-            </div>
+                <div class="field">
+                    <label for="sponsor_top">Sponsor logo / banner</label>
+                    @if ($event->sponsor_top_path)
+                        <img class="brand-poster" src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($event->sponsor_top_path) }}" alt="Top sponsor banner">
+                        <label class="consent">
+                            <input type="checkbox" name="remove_sponsor_top" value="1"> Remove this sponsor
+                        </label>
+                    @endif
+                    <input type="file" name="sponsor_top" id="sponsor_top" accept="image/*">
+                    <span class="field-hint">A wide landscape banner shown across the top of the ticket. Max 8&nbsp;MB.</span>
+                    @error('sponsor_top')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="field">
+                    <label for="sponsor_top_name">Sponsor / company name</label>
+                    <input type="text" name="sponsor_top_name" id="sponsor_top_name"
+                           value="{{ old('sponsor_top_name', $event->sponsor_top_name) }}" maxlength="255">
+                    <span class="field-hint">Shown next to the logo on your public store page.</span>
+                    @error('sponsor_top_name')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="field">
+                    <label for="sponsor_top_website">Website link</label>
+                    <input type="url" name="sponsor_top_website" id="sponsor_top_website"
+                           value="{{ old('sponsor_top_website', $event->sponsor_top_website) }}" placeholder="https://example.com" maxlength="255">
+                    <span class="field-hint">The logo and name link here on your store page. Leave blank for no link.</span>
+                    @error('sponsor_top_website')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="field">
+                    <label for="sponsor_top_bio">Sponsor bio</label>
+                    <textarea name="sponsor_top_bio" id="sponsor_top_bio" rows="3" maxlength="2000">{{ old('sponsor_top_bio', $event->sponsor_top_bio) }}</textarea>
+                    <span class="field-hint">A short blurb shown alongside the logo on your store page only (not on the ticket).</span>
+                    @error('sponsor_top_bio')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                <label class="consent">
+                    <input type="checkbox" name="sponsor_top_on_ticket" value="1"
+                           @checked(old('sponsor_top_on_ticket', $event->sponsor_top_on_ticket))>
+                    Show this sponsor's logo on the ticket
+                </label>
+                <span class="field-hint">When no sponsor logo is shown on the ticket, your own logo is printed instead.</span>
+            </fieldset>
+
+            <fieldset class="sponsor-slot">
+                <legend>Bottom sponsor</legend>
+
+                <div class="field">
+                    <label for="sponsor_bottom">Sponsor logo / banner</label>
+                    @if ($event->sponsor_bottom_path)
+                        <img class="brand-poster" src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($event->sponsor_bottom_path) }}" alt="Bottom sponsor banner">
+                        <label class="consent">
+                            <input type="checkbox" name="remove_sponsor_bottom" value="1"> Remove this sponsor
+                        </label>
+                    @endif
+                    <input type="file" name="sponsor_bottom" id="sponsor_bottom" accept="image/*">
+                    <span class="field-hint">A wide landscape banner shown across the bottom of the ticket and on the public event page. Max 8&nbsp;MB.</span>
+                    @error('sponsor_bottom')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="field">
+                    <label for="sponsor_bottom_name">Sponsor / company name</label>
+                    <input type="text" name="sponsor_bottom_name" id="sponsor_bottom_name"
+                           value="{{ old('sponsor_bottom_name', $event->sponsor_bottom_name) }}" maxlength="255">
+                    <span class="field-hint">Shown next to the logo on your public store page.</span>
+                    @error('sponsor_bottom_name')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="field">
+                    <label for="sponsor_bottom_website">Website link</label>
+                    <input type="url" name="sponsor_bottom_website" id="sponsor_bottom_website"
+                           value="{{ old('sponsor_bottom_website', $event->sponsor_bottom_website) }}" placeholder="https://example.com" maxlength="255">
+                    <span class="field-hint">The logo and name link here on your store page. Leave blank for no link.</span>
+                    @error('sponsor_bottom_website')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="field">
+                    <label for="sponsor_bottom_bio">Sponsor bio</label>
+                    <textarea name="sponsor_bottom_bio" id="sponsor_bottom_bio" rows="3" maxlength="2000">{{ old('sponsor_bottom_bio', $event->sponsor_bottom_bio) }}</textarea>
+                    <span class="field-hint">A short blurb shown alongside the logo on your store page only (not on the ticket).</span>
+                    @error('sponsor_bottom_bio')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                <label class="consent">
+                    <input type="checkbox" name="sponsor_bottom_on_ticket" value="1"
+                           @checked(old('sponsor_bottom_on_ticket', $event->sponsor_bottom_on_ticket))>
+                    Show this sponsor's logo on the ticket
+                </label>
+                <span class="field-hint">When no sponsor logo is shown on the ticket, your own logo is printed instead.</span>
+            </fieldset>
 
             <button type="submit" class="btn">Save event branding</button>
         </form>

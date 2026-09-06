@@ -42,7 +42,15 @@ use Illuminate\Support\Facades\DB;
  * @property string|null $poster_path
  * @property string|null $ticket_instructions
  * @property string|null $sponsor_top_path
+ * @property string|null $sponsor_top_name
+ * @property string|null $sponsor_top_website
+ * @property string|null $sponsor_top_bio
+ * @property bool $sponsor_top_on_ticket
  * @property string|null $sponsor_bottom_path
+ * @property string|null $sponsor_bottom_name
+ * @property string|null $sponsor_bottom_website
+ * @property string|null $sponsor_bottom_bio
+ * @property bool $sponsor_bottom_on_ticket
  */
 class Event extends Model
 {
@@ -76,7 +84,15 @@ class Event extends Model
         'poster_path',
         'ticket_instructions',
         'sponsor_top_path',
+        'sponsor_top_name',
+        'sponsor_top_website',
+        'sponsor_top_bio',
+        'sponsor_top_on_ticket',
         'sponsor_bottom_path',
+        'sponsor_bottom_name',
+        'sponsor_bottom_website',
+        'sponsor_bottom_bio',
+        'sponsor_bottom_on_ticket',
     ];
 
     /**
@@ -85,6 +101,8 @@ class Event extends Model
     protected $attributes = [
         'is_published' => false,
         'location_mode' => self::LOCATION_IN_PERSON,
+        'sponsor_top_on_ticket' => true,
+        'sponsor_bottom_on_ticket' => true,
     ];
 
     /**
@@ -96,6 +114,8 @@ class Event extends Model
             'starts_at' => 'datetime',
             'capacity' => 'integer',
             'is_published' => 'boolean',
+            'sponsor_top_on_ticket' => 'boolean',
+            'sponsor_bottom_on_ticket' => 'boolean',
             'latitude' => 'decimal:7',
             'longitude' => 'decimal:7',
         ];

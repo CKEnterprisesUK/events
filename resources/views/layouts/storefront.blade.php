@@ -106,6 +106,25 @@
             background: var(--surface); border: 1px solid var(--line);
             border-radius: 12px; padding: .6rem 1rem;
         }
+        /* Click-to-reveal sponsor (name / bio / website link) */
+        .store-sponsor { display: inline-block; }
+        .store-sponsor__summary {
+            list-style: none; cursor: pointer; display: inline-flex;
+        }
+        .store-sponsor__summary::-webkit-details-marker { display: none; }
+        .store-sponsor__summary .store-sponsors__img { transition: box-shadow .15s ease; }
+        .store-sponsor__summary:hover .store-sponsors__img,
+        .store-sponsor[open] .store-sponsors__img {
+            box-shadow: 0 0 0 2px var(--brand, #2563eb);
+        }
+        .store-sponsor__info {
+            margin-top: .5rem; max-width: 22rem;
+            background: var(--surface); border: 1px solid var(--line);
+            border-radius: 12px; padding: .75rem 1rem;
+        }
+        .store-sponsor__name { font-weight: 600; margin: 0 0 .35rem; }
+        .store-sponsor__bio { margin: 0 0 .5rem; }
+        .store-sponsor__link { margin: 0; }
 
         /* Social / website + legal links */
         .store-links { display: flex; flex-direction: column; gap: .9rem; }

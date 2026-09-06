@@ -35,7 +35,7 @@ class StorefrontListing
      * The published Events to show on the Company's Storefront, newest first.
      * Served from cache when warm; otherwise built from the database and cached.
      *
-     * @return Collection<int, array{id:int, name:string, venue:?string, starts_at:?string, poster_path:?string, sponsor_top_path:?string, sponsor_bottom_path:?string}>
+     * @return Collection<int, array{id:int, name:string, venue:?string, starts_at:?string, poster_path:?string, sponsors:list<array{path:string, name:?string, website:?string, bio:?string}>}>
      */
     public function forCompany(Company $company): Collection
     {
@@ -61,7 +61,7 @@ class StorefrontListing
      * Build the listing payload from the database: the Company's published
      * Events only, newest first, as plain arrays. (Requirements 5.4, 8.2)
      *
-     * @return list<array{id:int, name:string, venue:?string, starts_at:?string, poster_path:?string, sponsor_top_path:?string, sponsor_bottom_path:?string}>
+     * @return list<array{id:int, name:string, venue:?string, starts_at:?string, poster_path:?string, sponsors:list<array{path:string, name:?string, website:?string, bio:?string}>}>
      */
     private function build(Company $company): array
     {
@@ -89,12 +89,44 @@ class StorefrontListing
                 // Event poster else the Company hero, so the listing thumbnail
                 // is populated even for Events that don't set their own.
                 'poster_path' => $this->firstFilled($event->poster_path, $companyPoster),
-                // Per-Event sponsor banners, surfaced in the storefront's
-                // combined "Sponsors" strip alongside the event listing.
-                'sponsor_top_path' => $event->sponsor_top_path,
-                'sponsor_bottom_path' => $event->sponsor_bottom_path,
+                // Per-Event sponsors (image + store-page name/website/bio),
+                // surfaced in the storefront's combined "Sponsors" strip.
+                'sponsors' => $this->sponsorsFor($event),
             ])
             ->all();
+    }
+
+    /**
+     * The Event's sponsors as plain arrays for the storefront: the top then
+     * bottom slot, each included only when it has an image. The on_ticket flag
+     * is a print-time choice and does not affect public store visibility, so
+     * every uploaded sponsor logo appears on the storefront.
+     *
+     * @return list<array{path:string, name:?string, website:?string, bio:?string}>
+     */
+    private function sponsorsFor(Event $event): array
+    {
+        $slots = [
+            [$event->sponsor_top_path, $event->sponsor_top_name, $event->sponsor_top_website, $event->sponsor_top_bio],
+            [$event->sponsor_bottom_path, $event->sponsor_bottom_name, $event->sponsor_bottom_website, $event->sponsor_bottom_bio],
+        ];
+
+        $sponsors = [];
+
+        foreach ($slots as [$path, $name, $website, $bio]) {
+            if ($path === null || $path === '') {
+                continue;
+            }
+
+            $sponsors[] = [
+                'path' => $path,
+                'name' => $name,
+                'website' => $website,
+                'bio' => $bio,
+            ];
+        }
+
+        return $sponsors;
     }
 
     private function cacheKey(int|string|null $companyId): string
