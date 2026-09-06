@@ -89,7 +89,14 @@ class StorefrontAndEventPageTest extends TestCase
         // Warm the cache while there is nothing published.
         $this->get("/{$company->slug}")->assertOk()->assertDontSee('Fresh Event');
 
-        $event = Event::factory()->for($company)->unpublished()->create(['name' => 'Fresh Event']);
+        $event = Event::factory()->for($company)->unpublished()->create([
+            'name' => 'Fresh Event',
+            'starts_at' => now()->addWeek(),
+        ]);
+
+        // The event must satisfy publish prerequisites (>=1 ticket type and a
+        // non-null starts_at) so publish is not a no-op.
+        TicketType::factory()->forEvent($event)->create();
 
         // Publishing through the dashboard must invalidate the cached listing.
         $this->actingAs($admin)->post("/dashboard/events/{$event->id}/publish")->assertRedirect();

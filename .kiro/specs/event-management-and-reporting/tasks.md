@@ -190,7 +190,7 @@ Implementation language is PHP (Laravel), matching the existing codebase. The te
     - Include the four partials additively (leaving existing content/controls intact), disable/annotate the publish button when `!$event->isPublishable()`, render `session('publish_errors')` if present, and add a link to the report page.
     - _Requirements: 1.4, 2.5, 5.1_
 
-- [-] 14. Final checkpoint - Ensure all tests pass
+- [x] 14. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise. Confirm `CapacityReservationServiceTest` and `AccountantReportingTest` remain green (engine and company report untouched).
 
 ## Notes
