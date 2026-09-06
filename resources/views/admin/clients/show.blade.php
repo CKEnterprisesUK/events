@@ -15,13 +15,34 @@
             </p>
         </div>
         <div class="admin-head__actions">
-            <a class="btn" href="{{ url('/' . $company->slug) }}" target="_blank" rel="noopener">View storefront</a>
+            @if (! $company->isSuspended())
+                <form method="POST" action="{{ route('admin.impersonate.start', $company) }}">
+                    @csrf
+                    <button type="submit" class="btn">Impersonate</button>
+                </form>
+            @endif
+            <a class="btn btn-outline" href="{{ url('/' . $company->slug) }}" target="_blank" rel="noopener">View storefront</a>
+            @if ($company->isSuspended())
+                <form method="POST" action="{{ route('admin.companies.unsuspend', $company) }}">
+                    @csrf
+                    <button type="submit" class="btn">Unsuspend</button>
+                </form>
+            @else
+                <form method="POST" action="{{ route('admin.companies.suspend', $company) }}">
+                    @csrf
+                    <button type="submit" class="btn btn-danger">Suspend</button>
+                </form>
+            @endif
         </div>
     </div>
 
     @if (session('status'))
         <p class="status" role="status">{{ session('status') }}</p>
     @endif
+
+    @error('company')
+        <p class="status status--error" role="alert">{{ $message }}</p>
+    @enderror
 
     <div class="admin-stats">
         <div class="admin-stat">

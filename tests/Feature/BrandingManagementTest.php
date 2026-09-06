@@ -163,6 +163,57 @@ class BrandingManagementTest extends TestCase
         $this->assertSame('#999999', $fresh->primary_colour);
     }
 
+    public function test_admin_sets_event_ticket_design_instructions_and_sponsors(): void
+    {
+        // Per-event ticket design: custom instructions plus top/bottom sponsor
+        // banner uploads are stored on the public disk and their paths persisted.
+        Storage::fake('public');
+
+        $company = Company::factory()->create();
+        $admin = User::factory()->admin()->create(['company_id' => $company->id]);
+        $event = Event::factory()->for($company)->create();
+
+        $this->actingAs($admin)->put(route('dashboard.branding.event.update', $event), [
+            'ticket_instructions' => 'Bring photo ID. Doors open 30 minutes early.',
+            'sponsor_top' => UploadedFile::fake()->image('sponsor-top.png', 1200, 300),
+            'sponsor_bottom' => UploadedFile::fake()->image('sponsor-bottom.png', 1200, 300),
+        ])->assertRedirect(route('dashboard.branding.event.edit', $event));
+
+        $fresh = $event->fresh();
+        $this->assertSame('Bring photo ID. Doors open 30 minutes early.', $fresh->ticket_instructions);
+        $this->assertNotNull($fresh->sponsor_top_path);
+        $this->assertNotNull($fresh->sponsor_bottom_path);
+        Storage::disk('public')->assertExists($fresh->sponsor_top_path);
+        Storage::disk('public')->assertExists($fresh->sponsor_bottom_path);
+    }
+
+    public function test_removing_a_sponsor_banner_clears_and_deletes_it(): void
+    {
+        // The explicit "remove" checkbox clears the stored banner and deletes
+        // the file, without needing a replacement upload.
+        Storage::fake('public');
+
+        $company = Company::factory()->create();
+        $admin = User::factory()->admin()->create(['company_id' => $company->id]);
+        $event = Event::factory()->for($company)->create();
+
+        // Seed an existing top banner.
+        $this->actingAs($admin)->put(route('dashboard.branding.event.update', $event), [
+            'sponsor_top' => UploadedFile::fake()->image('sponsor-top.png', 1200, 300),
+        ]);
+        $seeded = $event->fresh()->sponsor_top_path;
+        $this->assertNotNull($seeded);
+        Storage::disk('public')->assertExists($seeded);
+
+        // Now remove it.
+        $this->actingAs($admin)->put(route('dashboard.branding.event.update', $event), [
+            'remove_sponsor_top' => '1',
+        ])->assertRedirect(route('dashboard.branding.event.edit', $event));
+
+        $this->assertNull($event->fresh()->sponsor_top_path);
+        Storage::disk('public')->assertMissing($seeded);
+    }
+
     public function test_admin_cannot_override_branding_for_another_companys_event(): void
     {
         // Requirement 1.5 — cross-Company Event id surfaces as 404.

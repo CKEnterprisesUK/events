@@ -4,12 +4,14 @@ namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
-use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 
 /**
- * Super-admin controller for overseeing all Companies and toggling their
- * suspension state. (Requirements 20.1, 20.3, 20.4)
+ * Super-admin controller for toggling a Company's suspension state. The
+ * Company list and per-Company detail now live on the Clients surface
+ * ({@see ClientController}); this controller only performs the suspend /
+ * unsuspend actions, redirecting back to that Company's client page.
+ * (Requirements 20.3, 20.4)
  *
  * This lives on the separate super-admin surface (reserved `/admin` prefix,
  * guarded by `super.admin` on `is_super_admin`, resolving no Company). It is
@@ -27,21 +29,6 @@ use Illuminate\Http\RedirectResponse;
 class CompanyController extends Controller
 {
     /**
-     * List every Company on the Platform with its current status.
-     * (Requirements 20.1, 20.2)
-     */
-    public function index(): View
-    {
-        $companies = Company::query()
-            ->orderBy('name')
-            ->get();
-
-        return view('admin.companies.index', [
-            'companies' => $companies,
-        ]);
-    }
-
-    /**
      * Mark a Company as a Suspended_Company. (Requirement 20.3)
      */
     public function suspend(Company $company): RedirectResponse
@@ -49,7 +36,7 @@ class CompanyController extends Controller
         $company->update(['status' => Company::STATUS_SUSPENDED]);
 
         return redirect()
-            ->route('admin.companies.index')
+            ->route('admin.clients.show', $company)
             ->with('status', __(':name suspended.', ['name' => $company->name]));
     }
 
@@ -61,7 +48,7 @@ class CompanyController extends Controller
         $company->update(['status' => Company::STATUS_ACTIVE]);
 
         return redirect()
-            ->route('admin.companies.index')
+            ->route('admin.clients.show', $company)
             ->with('status', __(':name unsuspended.', ['name' => $company->name]));
     }
 }

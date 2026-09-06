@@ -59,7 +59,7 @@ class SuperAdminDashboardTest extends TestCase
     {
         // Requirement 20.1 — the separate super-admin surface is reachable.
         $this->actingAs($this->superAdmin())->get('/admin')->assertOk();
-        $this->actingAs($this->superAdmin())->get('/admin/companies')->assertOk();
+        $this->actingAs($this->superAdmin())->get('/admin/clients')->assertOk();
         $this->actingAs($this->superAdmin())->get('/admin/fees')->assertOk();
         $this->actingAs($this->superAdmin())->get('/admin/transactions')->assertOk();
     }
@@ -74,7 +74,7 @@ class SuperAdminDashboardTest extends TestCase
             User::factory()->scanner()->create(),
         ] as $user) {
             $this->actingAs($user)->get('/admin')->assertForbidden();
-            $this->actingAs($user)->get('/admin/companies')->assertForbidden();
+            $this->actingAs($user)->get('/admin/clients')->assertForbidden();
             $this->actingAs($user)->get('/admin/fees')->assertForbidden();
         }
     }
@@ -83,7 +83,7 @@ class SuperAdminDashboardTest extends TestCase
     {
         // Requirement 20.7 — guests never reach the super-admin surface.
         $this->get('/admin')->assertRedirect('/login');
-        $this->get('/admin/companies')->assertRedirect('/login');
+        $this->get('/admin/clients')->assertRedirect('/login');
         $this->get('/admin/fees')->assertRedirect('/login');
     }
 
@@ -91,12 +91,13 @@ class SuperAdminDashboardTest extends TestCase
 
     public function test_company_listing_shows_all_companies_across_the_platform(): void
     {
-        // Requirement 20.1 — all Companies, not tenant-scoped.
+        // Requirement 20.1 — all Companies, not tenant-scoped. The company list
+        // lives on the Clients surface.
         $a = Company::factory()->create(['name' => 'Alpha Org']);
         $b = Company::factory()->create(['name' => 'Beta Org']);
 
         $companies = $this->actingAs($this->superAdmin())
-            ->get('/admin/companies')
+            ->get('/admin/clients')
             ->assertOk()
             ->viewData('companies');
 
@@ -113,7 +114,7 @@ class SuperAdminDashboardTest extends TestCase
 
         $this->actingAs($this->superAdmin())
             ->post("/admin/companies/{$company->id}/suspend")
-            ->assertRedirect(route('admin.companies.index'));
+            ->assertRedirect(route('admin.clients.show', $company));
 
         $this->assertSame(Company::STATUS_SUSPENDED, $company->fresh()->status);
 
@@ -131,7 +132,7 @@ class SuperAdminDashboardTest extends TestCase
 
         $this->actingAs($this->superAdmin())
             ->post("/admin/companies/{$company->id}/unsuspend")
-            ->assertRedirect(route('admin.companies.index'));
+            ->assertRedirect(route('admin.clients.show', $company));
 
         $this->assertSame(Company::STATUS_ACTIVE, $company->fresh()->status);
 

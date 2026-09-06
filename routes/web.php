@@ -335,10 +335,10 @@ Route::middleware(['auth', 'super.admin', 'session.timeout'])
         Route::get('/settings', [SuperAdminSettingsController::class, 'index'])->name('settings.index');
         Route::post('/settings/test-mail', [SuperAdminSettingsController::class, 'sendTest'])->name('settings.test-mail');
 
-        // Oversee all Companies; suspend / unsuspend a Company. Suspension is
-        // enforced live elsewhere (ResolveTenant / EnsureCompanyActive) so it
-        // takes effect immediately. (20.1, 20.3, 20.4)
-        Route::get('/companies', [SuperAdminCompanyController::class, 'index'])->name('companies.index');
+        // Suspend / unsuspend a Company. The company list + detail live on the
+        // Clients surface; these actions redirect back to that client page.
+        // Suspension is enforced live elsewhere (ResolveTenant /
+        // EnsureCompanyActive) so it takes effect immediately. (20.3, 20.4)
         Route::post('/companies/{company}/suspend', [SuperAdminCompanyController::class, 'suspend'])->name('companies.suspend');
         Route::post('/companies/{company}/unsuspend', [SuperAdminCompanyController::class, 'unsuspend'])->name('companies.unsuspend');
 

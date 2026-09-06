@@ -76,7 +76,43 @@
 
         <p style="text-align:center;color:#9ca3af;font-size:12px;margin-top:16px;">
             Order reference {{ $order->order_reference }}
+            @if (!empty($supportEmail))
+                &middot; Questions about your order? Contact
+                <a href="mailto:{{ $supportEmail }}" style="color:#6b7280;">{{ $supportEmail }}</a>
+            @endif
         </p>
+
+        {{-- Platform footer. Presents the "Events by CK Enterprises" wordmark
+             and a sell-your-tickets CTA (mirroring the on-site promo footer),
+             then the legal notice making the Platform/Company relationship
+             explicit: the sale is a contract with the selling Company; Events by
+             CK Enterprises UK is only the ticketing platform it used. --}}
+        <div style="margin-top:24px;padding-top:20px;border-top:1px solid #e5e7eb;text-align:center;">
+            <p style="margin:0;font-size:15px;font-weight:bold;color:#111827;">
+                Events by <span style="color:#0f16c4;">CK Enterprises</span>
+            </p>
+            <p style="margin:6px 0 12px;font-size:13px;color:#6b7280;">
+                Branded ticketing and direct payouts for event organisers.
+            </p>
+            <a href="{{ url('/') }}"
+               style="display:inline-block;padding:10px 18px;background:#0f16c4;color:#ffffff;text-decoration:none;border-radius:6px;font-size:13px;font-weight:bold;">
+                Sell your tickets today
+            </a>
+
+            <p style="margin:20px 0 0;font-size:11px;line-height:1.6;color:#9ca3af;">
+                {{ $companyName }} used Events by CK Enterprises UK as its ticketing platform
+                to sell these tickets. Your purchase is a contract between you and
+                {{ $companyName }}, who is solely responsible for this event and the
+                tickets sold. Events by CK Enterprises UK provides the ticketing and
+                payment technology only and is not a party to that contract, nor the
+                organiser, promoter or seller of the event. Please direct any queries
+                about your order or the event to
+                {{ $companyName }}@if (!empty($supportEmail)) at <a href="mailto:{{ $supportEmail }}" style="color:#9ca3af;">{{ $supportEmail }}</a>@endif.
+            </p>
+            <p style="margin:12px 0 0;font-size:11px;color:#9ca3af;">
+                &copy; {{ date('Y') }} <a href="https://ckenterprises.co.uk/" style="color:#9ca3af;">CK Enterprises UK</a>. All rights reserved.
+            </p>
+        </div>
     </div>
 </body>
 </html>

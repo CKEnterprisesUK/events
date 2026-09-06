@@ -35,7 +35,7 @@ class ImpersonationController extends Controller
         // the companies list to unsuspend it first.
         if ($company->isSuspended()) {
             return redirect()
-                ->route('admin.companies.index')
+                ->route('admin.clients.show', $company)
                 ->withErrors(['company' => __('That company is suspended. Unsuspend it before jumping in.')]);
         }
 
