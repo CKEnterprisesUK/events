@@ -199,7 +199,9 @@ class ComplimentaryTicketIssuanceTest extends TestCase
     {
         Queue::fake();
 
-        foreach (['owner', 'accountant', 'scanner'] as $roleState) {
+        // The Owner, as the account superuser, may issue comps; only the
+        // non-Admin, non-Owner roles are forbidden here.
+        foreach (['accountant', 'scanner'] as $roleState) {
             $user = User::factory()->{$roleState}()->create();
             [$event, $type] = $this->eventWithType($user);
 

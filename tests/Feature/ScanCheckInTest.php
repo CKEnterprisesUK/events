@@ -274,11 +274,11 @@ class ScanCheckInTest extends TestCase
     public function test_non_scanner_roles_cannot_reach_the_scanner(): void
     {
         foreach ([
-            User::factory()->owner()->create(),
             User::factory()->admin()->create(),
             User::factory()->accountant()->create(),
         ] as $user) {
-            // 3.6/3.7 — check-in is the Scanner's action only.
+            // 3.6/3.7 — check-in belongs to the Scanner. (The Owner, as the
+            // account superuser, also holds check-in and is covered elsewhere.)
             $this->actingAs($user)->get('/dashboard/scan')->assertForbidden();
 
             $order = $this->confirmedOrderFor(

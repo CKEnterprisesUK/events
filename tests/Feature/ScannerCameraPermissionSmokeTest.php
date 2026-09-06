@@ -85,19 +85,23 @@ class ScannerCameraPermissionSmokeTest extends TestCase
     }
 
     /**
-     * The scanner page is gated to the Scanner role (3.6/3.7): non-Scanner
-     * Company roles cannot reach it, so the camera page is only served to the
-     * intended check-in operator.
+     * The scanner page is gated on the check-in permission (3.6/3.7): the
+     * Scanner role holds it, and the Owner — as the account superuser — holds
+     * every permission including check-in, so both are served the page. The
+     * Admin and Accountant roles do not have check-in and are forbidden.
      */
-    public function test_scanner_page_is_scanner_role_gated(): void
+    public function test_scanner_page_is_check_in_gated(): void
     {
-        // A Scanner is served the page.
-        $scanner = User::factory()->scanner()->create();
-        $this->actingAs($scanner)->get('/dashboard/scan')->assertStatus(200);
-
-        // Every other Company role is forbidden.
+        // Roles that hold the check-in permission are served the page.
         foreach ([
+            User::factory()->scanner()->create(),
             User::factory()->owner()->create(),
+        ] as $user) {
+            $this->actingAs($user)->get('/dashboard/scan')->assertStatus(200);
+        }
+
+        // Roles without check-in are forbidden.
+        foreach ([
             User::factory()->admin()->create(),
             User::factory()->accountant()->create(),
         ] as $user) {

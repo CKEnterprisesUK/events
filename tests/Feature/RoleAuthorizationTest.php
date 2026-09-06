@@ -37,19 +37,17 @@ class RoleAuthorizationTest extends TestCase
         $this->assertCount(4, User::ROLES);
     }
 
-    public function test_owner_permitted_set(): void
+    public function test_owner_can_do_everything(): void
     {
-        foreach ([
-            RoleAuthorization::ACTION_MANAGE_BILLING,
-            RoleAuthorization::ACTION_MANAGE_STRIPE,
-            RoleAuthorization::ACTION_MANAGE_SETTINGS,
-            RoleAuthorization::ACTION_MANAGE_USERS,
-        ] as $action) {
-            $this->assertTrue($this->matrix->roleCan(User::ROLE_OWNER, $action));
+        // The Owner is the account superuser: they hold the Owner-only actions
+        // AND every action delegated to Admin/Accountant/Scanner, so an Owner
+        // can manage events, refund orders, view reports and scan tickets too.
+        foreach (RoleAuthorization::actions() as $action) {
+            $this->assertTrue(
+                $this->matrix->roleCan(User::ROLE_OWNER, $action),
+                "Owner should be allowed action [{$action}].",
+            );
         }
-
-        // Owner does not manage events/orders or scan directly.
-        $this->assertFalse($this->matrix->roleCan(User::ROLE_OWNER, RoleAuthorization::ACTION_CHECK_IN));
     }
 
     public function test_admin_permitted_set(): void

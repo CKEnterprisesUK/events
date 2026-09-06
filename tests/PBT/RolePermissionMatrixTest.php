@@ -43,12 +43,10 @@ class RolePermissionMatrixTest extends PbtTestCase
     private function expectedMatrix(): array
     {
         return [
-            User::ROLE_OWNER => [
-                RoleAuthorization::ACTION_MANAGE_BILLING,
-                RoleAuthorization::ACTION_MANAGE_STRIPE,
-                RoleAuthorization::ACTION_MANAGE_SETTINGS,
-                RoleAuthorization::ACTION_MANAGE_USERS,
-            ],
+            // The Owner is the account superuser: their permitted set is the
+            // union of every action the matrix knows about (Owner-only actions
+            // plus everything delegated to Admin/Accountant/Scanner).
+            User::ROLE_OWNER => RoleAuthorization::actions(),
             User::ROLE_ADMIN => [
                 RoleAuthorization::ACTION_MANAGE_EVENTS,
                 RoleAuthorization::ACTION_MANAGE_TICKET_TYPES,

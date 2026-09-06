@@ -10,15 +10,20 @@ use App\Models\User;
  * whether a given (role, action) pair is authorised.
  *
  * Permitted sets (Requirements 3.3–3.7):
- *   - Owner:       billing, Stripe connection, Company settings, user management
+ *   - Owner:       every Company action (the Owner is the account superuser and
+ *                  can do anything an Admin/Accountant/Scanner can, in addition
+ *                  to the Owner-only billing/Stripe/settings/user-management)
  *   - Admin:       manage Events, Ticket_Types, Orders (incl. cancel/refund/comp)
  *   - Accountant:  read-only reports/payouts
  *   - Scanner:     check-in only
  *
  * A user is authorised for an action iff the action belongs to their role's
- * permitted set. Anything else is denied (the policies/gates translate a denial
- * into an authorisation error, leaving data unchanged). Super_Admins are gated
- * on the separate super-admin surface and are not part of this Company matrix.
+ * permitted set. The Owner's permitted set is the union of every action the
+ * matrix knows about, so the Owner stays all-powerful automatically as new
+ * actions are added. Anything else is denied (the policies/gates translate a
+ * denial into an authorisation error, leaving data unchanged). Super_Admins are
+ * gated on the separate super-admin surface and are not part of this Company
+ * matrix.
  */
 class RoleAuthorization
 {
@@ -51,8 +56,11 @@ class RoleAuthorization
     public const ACTION_CHECK_IN = 'check_in';
 
     /**
-     * The role → permitted-actions matrix. The keys are the exactly-four roles;
-     * the values are the closed set of actions each role may perform.
+     * The base role → permitted-actions matrix. The values here are the closed
+     * set of actions each role may perform. The Owner is a special case: rather
+     * than being listed here, the Owner is granted the union of every action
+     * (see {@see ownerActions()}), so the Owner is always able to do everything
+     * an Admin/Accountant/Scanner can, plus the Owner-only actions below.
      *
      * @var array<string, list<string>>
      */
@@ -81,6 +89,7 @@ class RoleAuthorization
 
     /**
      * Every action the matrix knows about (the union of all permitted sets).
+     * This is also exactly the Owner's permitted set. (Property 6)
      *
      * @return list<string>
      */
@@ -91,12 +100,17 @@ class RoleAuthorization
 
     /**
      * The permitted action set for a role, or an empty list for an unknown
-     * role.
+     * role. The Owner is granted every action the matrix knows about, so the
+     * Owner is a full account superuser within their Company.
      *
      * @return list<string>
      */
     public function permittedActions(string $role): array
     {
+        if ($role === User::ROLE_OWNER) {
+            return self::actions();
+        }
+
         return self::MATRIX[$role] ?? [];
     }
 
@@ -106,7 +120,7 @@ class RoleAuthorization
      */
     public function roleCan(string $role, string $action): bool
     {
-        return in_array($action, self::MATRIX[$role] ?? [], true);
+        return in_array($action, $this->permittedActions($role), true);
     }
 
     /**

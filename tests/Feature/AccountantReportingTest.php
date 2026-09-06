@@ -71,9 +71,9 @@ class AccountantReportingTest extends TestCase
     public function test_non_accountant_roles_cannot_view_reports(): void
     {
         // Requirements 3.5, 3.7 — reports are the Accountant's read-only slice;
-        // Owner/Admin/Scanner are not granted ACTION_VIEW_REPORTS.
+        // Admin/Scanner are not granted ACTION_VIEW_REPORTS. (The Owner, as the
+        // account superuser, does hold every permission including reports.)
         foreach ([
-            User::factory()->owner()->create(),
             User::factory()->admin()->create(),
             User::factory()->scanner()->create(),
         ] as $user) {
