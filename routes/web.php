@@ -93,22 +93,30 @@ Route::post('/stripe/webhook', [WebhookController::class, 'handle'])
 */
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'show'])->name('login');
-    Route::post('/login', [LoginController::class, 'login']);
+    // Rate-limited to blunt password brute-force / credential-stuffing: at most
+    // 5 attempts per minute per IP+email before a 429. (Security hardening)
+    Route::post('/login', [LoginController::class, 'login'])
+        ->middleware('throttle:login');
 
     // Public self-signup: creates a new Company (tenant) and its single Owner
     // user, then logs the Owner in. All other Company_Users join by invitation.
     Route::get('/register', [RegisterController::class, 'show'])->name('register');
-    Route::post('/register', [RegisterController::class, 'register']);
+    // Throttle signup to limit automated account/tenant creation abuse.
+    Route::post('/register', [RegisterController::class, 'register'])
+        ->middleware('throttle:auth');
 
     // Self-service password reset ("forgot password"), built on Laravel's
     // password broker. Request a link, receive a signed token by email, then
     // set a new password. The route names match the framework defaults
     // (password.request/email/reset/update) so the reset notification's URL and
-    // any framework helpers resolve correctly.
+    // any framework helpers resolve correctly. Throttled to prevent reset-link
+    // spam / email bombing and token-guessing.
     Route::get('/forgot-password', [PasswordResetController::class, 'requestForm'])->name('password.request');
-    Route::post('/forgot-password', [PasswordResetController::class, 'sendLink'])->name('password.email');
+    Route::post('/forgot-password', [PasswordResetController::class, 'sendLink'])
+        ->middleware('throttle:auth')->name('password.email');
     Route::get('/reset-password/{token}', [PasswordResetController::class, 'resetForm'])->name('password.reset');
-    Route::post('/reset-password', [PasswordResetController::class, 'reset'])->name('password.update');
+    Route::post('/reset-password', [PasswordResetController::class, 'reset'])
+        ->middleware('throttle:auth')->name('password.update');
 });
 
 Route::post('/logout', [LoginController::class, 'logout'])
@@ -417,6 +425,7 @@ Route::middleware('tenant')->group(function () {
     Route::post('/{companySlug}/{event}/resend', [EventPageController::class, 'resendTickets'])
         ->where('companySlug', '[A-Za-z0-9-]+')
         ->where('event', '[0-9]+')
+        ->middleware('throttle:public')
         ->name('event.tickets.resend');
 
     // Checkout order creation at `/{company-slug}/{event-id}/checkout`. Resolves
@@ -427,6 +436,7 @@ Route::middleware('tenant')->group(function () {
     Route::post('/{companySlug}/{event}/checkout', [CheckoutController::class, 'store'])
         ->where('companySlug', '[A-Za-z0-9-]+')
         ->where('event', '[0-9]+')
+        ->middleware('throttle:public')
         ->name('event.checkout');
 
     // Stripe Checkout return pages (display-only, never authoritative for paid

@@ -13,9 +13,13 @@ use App\Services\Stripe\FakeStripePaymentService;
 use App\Services\Stripe\StripePaymentService;
 use App\Services\Stripe\StripePaymentServiceStripeSdk;
 use App\Services\TenantContext;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Mail\Mailer;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 use Stripe\StripeClient;
 
 class AppServiceProvider extends ServiceProvider
@@ -100,6 +104,52 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->registerRoleGates();
+        $this->registerRateLimiters();
+    }
+
+    /**
+     * Register the named rate limiters referenced by the `throttle:*` route
+     * middleware. Limiters return a 429 once exceeded. (Security hardening)
+     *
+     *   - `login`  : credential submission — keyed on the submitted email plus
+     *                the client IP so brute-force / credential-stuffing against
+     *                one account is capped without letting one IP lock out every
+     *                account. 5 attempts/min.
+     *   - `auth`   : other unauthenticated auth actions (register, password-reset
+     *                request + submit) — keyed on IP. 10 requests/min.
+     *   - `public` : public storefront POSTs (checkout, ticket resend) — keyed on
+     *                IP to limit reservation abuse and resend/email bombing.
+     *                20 requests/min.
+     */
+    private function registerRateLimiters(): void
+    {
+        // Disable throttling under `testing` so high-volume suites (notably the
+        // property-based checkout tests that fire many POSTs in a loop) are not
+        // tripped by the production limits. The limiter wiring is still
+        // exercised; only the ceiling is lifted.
+        $unlimited = $this->app->environment('testing');
+
+        RateLimiter::for('login', function (Request $request) use ($unlimited): Limit {
+            if ($unlimited) {
+                return Limit::none();
+            }
+
+            $email = Str::lower((string) $request->input('email'));
+
+            return Limit::perMinute(5)->by($email.'|'.$request->ip());
+        });
+
+        RateLimiter::for('auth', function (Request $request) use ($unlimited): Limit {
+            return $unlimited
+                ? Limit::none()
+                : Limit::perMinute(10)->by((string) $request->ip());
+        });
+
+        RateLimiter::for('public', function (Request $request) use ($unlimited): Limit {
+            return $unlimited
+                ? Limit::none()
+                : Limit::perMinute(20)->by((string) $request->ip());
+        });
     }
 
     /**

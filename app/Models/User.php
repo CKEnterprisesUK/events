@@ -115,11 +115,25 @@ class User extends Authenticatable
     }
 
     /**
+     * Mass-assignable attributes.
+     *
+     * `is_super_admin` is deliberately EXCLUDED: it is the platform's highest
+     * privilege and is never set through a request/mass-assignment path (a
+     * Super_Admin is provisioned out-of-band, and the factory sets the flag via
+     * `forceFill`, which bypasses `$fillable`). Excluding it means that even if a
+     * future write path accidentally forwards untrusted input into
+     * `User::create()`/`->update()`, an attacker cannot escalate to Super_Admin.
+     * Set it explicitly with `forceFill(['is_super_admin' => true])` when needed.
+     *
+     * `role` remains fillable because it is written by two trusted paths
+     * (registration hardcodes Owner; invitation-accept copies the invitation's
+     * role) and is validated with `Rule::in(...)` at every entry point, so it can
+     * never elevate a user beyond the closed Company-role set.
+     *
      * @var list<string>
      */
     protected $fillable = [
         'company_id',
-        'is_super_admin',
         'role',
         'name',
         'email',

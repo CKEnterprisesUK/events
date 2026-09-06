@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Event;
+use App\Rules\SafeUpload;
 use App\Services\BrandingImageStore;
 use App\Services\EventReadiness;
 use App\Services\EventReportService;
@@ -217,7 +218,7 @@ class EventController extends Controller
             'capacity' => ['nullable', 'integer', 'min:1'],
             'primary_colour' => ['nullable', 'string', 'max:7'],
             'logo_path' => ['nullable', 'string', 'max:255'],
-            'poster' => ['nullable', 'image', 'mimes:jpeg,png,webp', 'max:4096'],
+            'poster' => ['nullable', 'image', 'mimes:jpeg,png,webp', 'max:4096', new SafeUpload],
         ]);
 
         unset($data['poster']);
@@ -403,7 +404,7 @@ class EventController extends Controller
             'logo_path' => ['nullable', 'string', 'max:255'],
             // The hero image is a file, not a persisted scalar; it is stored by
             // applyLocationAndPoster() and excluded from the returned attributes.
-            'poster' => ['nullable', 'image', 'mimes:jpeg,png,webp', 'max:4096'],
+            'poster' => ['nullable', 'image', 'mimes:jpeg,png,webp', 'max:4096', new SafeUpload],
         ]);
 
         // Return only the persistable scalar attributes; the poster file is

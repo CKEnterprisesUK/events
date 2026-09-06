@@ -71,7 +71,7 @@
                 <div class="field">
                     <label for="logo">Logo</label>
                     <input type="file" name="logo" id="logo" accept="image/*">
-                    <span class="field-hint">Your brand mark. Shown on the storefront header, tickets, and as the favicon. PNG or SVG with a transparent background works best.</span>
+                    <span class="field-hint">Your brand mark. Shown on the storefront header, tickets, and as the favicon. A PNG with a transparent background works best. Max 5&nbsp;MB.</span>
                     @error('logo')<p class="error">{{ $message }}</p>@enderror
                 </div>
 

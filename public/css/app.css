@@ -463,9 +463,16 @@ main.public-main.event-main { max-width: 1040px; padding-top: 0; }
 
 /* ---- Two-column layout ---- */
 .event-layout { display: grid; grid-template-columns: 1fr; gap: 2rem; }
+/* On a single column (mobile), lift the ticket/checkout panel above the event
+   description and support details so buyers reach the tickets first rather than
+   scrolling past the write-up and the company/support block. */
+.event-checkout { order: -1; }
 @media (min-width: 860px) {
     .event-layout { grid-template-columns: 1.4fr 1fr; align-items: start; }
-    .event-checkout { position: sticky; top: 1.5rem; }
+    /* Back to source order for the two-column layout: primary content left,
+       checkout right. */
+    .event-primary { order: 0; }
+    .event-checkout { order: 0; position: sticky; top: 1.5rem; }
 }
 
 .event-about h2 { margin-top: 0; }

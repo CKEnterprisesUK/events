@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Company;
 use App\Models\Event;
 use App\Services\Branding\BrandingResolver;
+use App\Rules\SafeUpload;
 use App\Services\BrandingImageStore;
 use App\Services\RoleAuthorization;
 use Illuminate\Contracts\View\View;
@@ -91,8 +92,10 @@ class BrandingController extends Controller
         $company = $this->currentCompany();
 
         $data = $request->validate([
-            'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp,svg', 'max:5120'],
-            'poster' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:8192'],
+            // SVG is intentionally excluded (stored-XSS risk) and the shared
+            // SafeUpload denylist backstops the allow-list. (Security hardening)
+            'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:5120', new SafeUpload],
+            'poster' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:8192', new SafeUpload],
             'primary_colour' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'terms_text' => ['nullable', 'string', 'max:20000'],
             'privacy_text' => ['nullable', 'string', 'max:20000'],
@@ -207,14 +210,15 @@ class BrandingController extends Controller
         Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
 
         $data = $request->validate([
-            'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp,svg', 'max:5120'],
-            'poster' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:8192'],
+            // SVG excluded here too; SafeUpload denylist backstops every slot.
+            'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:5120', new SafeUpload],
+            'poster' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:8192', new SafeUpload],
             'primary_colour' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
 
             // Per-event printed-ticket design.
             'ticket_instructions' => ['nullable', 'string', 'max:2000'],
-            'sponsor_top' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:8192'],
-            'sponsor_bottom' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:8192'],
+            'sponsor_top' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:8192', new SafeUpload],
+            'sponsor_bottom' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:8192', new SafeUpload],
             // Explicit "remove this sponsor" checkboxes so a blank file input
             // does not silently keep a banner the organiser wanted gone.
             'remove_sponsor_top' => ['nullable', 'boolean'],
