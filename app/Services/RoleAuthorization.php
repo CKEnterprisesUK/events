@@ -11,9 +11,12 @@ use App\Models\User;
  *
  * Permitted sets (Requirements 3.3–3.7):
  *   - Owner:       every Company action (the Owner is the account superuser and
- *                  can do anything an Admin/Accountant/Scanner can, in addition
- *                  to the Owner-only billing/Stripe/settings/user-management)
+ *                  can do anything a lower role can, in addition to the
+ *                  Owner-only billing/Stripe/settings/user-management)
  *   - Admin:       manage Events, Ticket_Types, Orders (incl. cancel/refund/comp)
+ *                  and GDPR data-subject handling
+ *   - Box_Office:  manage Events, Ticket_Types, Orders (incl. cancel/refund/comp)
+ *                  — a cut-down Admin with no Company settings or GDPR access
  *   - Accountant:  read-only reports/payouts
  *   - Scanner:     check-in only
  *
@@ -49,6 +52,12 @@ class RoleAuthorization
 
     public const ACTION_ISSUE_COMP = 'issue_comp';
 
+    // GDPR data-subject handling (export / anonymise). Held by the Owner and
+    // Admin: it is a data-controller compliance responsibility, so it sits with
+    // the roles trusted with the Company's Customer records — but not with the
+    // Box_Office/Accountant/Scanner operational roles.
+    public const ACTION_MANAGE_GDPR = 'gdpr';
+
     // Accountant action (read-only reporting/payouts).
     public const ACTION_VIEW_REPORTS = 'view_reports';
 
@@ -72,6 +81,18 @@ class RoleAuthorization
             self::ACTION_MANAGE_USERS,
         ],
         User::ROLE_ADMIN => [
+            self::ACTION_MANAGE_EVENTS,
+            self::ACTION_MANAGE_TICKET_TYPES,
+            self::ACTION_MANAGE_ORDERS,
+            self::ACTION_CANCEL_ORDER,
+            self::ACTION_REFUND_ORDER,
+            self::ACTION_ISSUE_COMP,
+            self::ACTION_MANAGE_GDPR,
+        ],
+        // Box_Office is a cut-down Admin: it runs the box office (events,
+        // ticket types, orders incl. cancel/refund/comp) but is NOT trusted
+        // with Company settings, users, Stripe, billing, or GDPR handling.
+        User::ROLE_BOX_OFFICE => [
             self::ACTION_MANAGE_EVENTS,
             self::ACTION_MANAGE_TICKET_TYPES,
             self::ACTION_MANAGE_ORDERS,

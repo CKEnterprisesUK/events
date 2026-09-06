@@ -5,21 +5,10 @@
                    ->eventCapacity (?int), ->typesSum (int), and ->state().
      The warning is advisory: it never prevents saving, publishing, or
      unpublishing the event. Do not style it as a blocking error. --}}
-<div class="panel">
-    <div class="panel__head"><h2>Capacity</h2></div>
-
-    {{-- Static explainer (Requirement 3.1). --}}
-    <p class="hint">
-        The overall capacity is an optional ceiling for the whole event.
-        Leave it blank for unlimited.
-    </p>
-    <p class="hint">
-        It works alongside the capacity you set on each ticket type. When both
-        are set, whichever is smaller — the overall event capacity or the sum of
-        the ticket-type capacities — binds first.
-    </p>
-
-    {{-- Non-blocking advisory keyed on the comparison state. --}}
+<div class="capacity-advisory">
+    {{-- Non-blocking advisory keyed on the comparison state. Rendered inside the
+         Overall capacity panel on the Tickets screen, so no panel/heading of its
+         own and no static explainer (the field's hint already covers that). --}}
     @switch($capacity->state())
         @case(\App\Services\Events\CapacityComparison::EVENT_BINDS)
             <p class="hint">

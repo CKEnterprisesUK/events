@@ -2,6 +2,8 @@
 
 @section('title', 'Order '.$order->order_reference)
 
+@section('chrome', 'minimal')
+
 @php
     $currency = $company->currency ?? 'GBP';
     $symbols = ['GBP' => '£', 'USD' => '$', 'EUR' => '€'];
@@ -17,9 +19,6 @@
 @endphp
 
 @push('head')
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cabin+Sketch:wght@700&display=swap" rel="stylesheet">
     @if ($branding->hasPrimaryColour())
         <style>:root { --brand: {{ $branding->primaryColour }}; }</style>
     @endif
@@ -107,13 +106,5 @@
         <a class="btn btn-outline" href="{{ route('event.page', ['companySlug' => $company->slug, 'event' => $event->id]) }}">
             Back to event
         </a>
-
-        <div class="checkout-madeby">
-            <a class="checkout-madeby__logo" href="{{ url('/') }}" aria-label="Events by CK Enterprises">
-                <span class="events">Events</span>
-                <span class="by">by</span>
-                <span class="ck">CK Enterprises</span>
-            </a>
-        </div>
     </section>
 @endsection

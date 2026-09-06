@@ -15,7 +15,7 @@
     Requirements 6.2, 6.3, 6.5.
 --}}
 @can('issue_comp')
-    <div class="panel form-panel">
+    <div class="panel form-panel panel--secondary">
         <div class="panel__head"><h2>Issue complimentary tickets</h2></div>
         @if ($ticketTypes->isEmpty())
             <div class="empty">

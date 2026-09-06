@@ -150,6 +150,9 @@ class EventController extends Controller
         return view('dashboard.events.tickets', $this->sharedViewData($event) + [
             'ticketTypes' => $event->ticketTypes()->latest()->get(),
             'eventRemaining' => $event->overallRemaining(),
+            // The advisory event-vs-types capacity comparison lives on this
+            // screen now, next to the overall-capacity field it explains.
+            'capacity' => $this->readiness->capacity($event),
         ]);
     }
 
@@ -263,6 +266,29 @@ class EventController extends Controller
         return redirect()
             ->route('dashboard.events.location', $event)
             ->with('status', 'Location updated.');
+    }
+
+    /**
+     * Persist the overall event capacity (the shared-pool ceiling) from the
+     * Tickets screen. Its own tiny action so capacity saves independently of
+     * the Overview details form. `null` = unlimited. (Requirements 3.1, 5.3)
+     */
+    public function updateCapacity(Request $request, Event $event): RedirectResponse
+    {
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+
+        $data = $request->validate([
+            'capacity' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $event->update(['capacity' => $data['capacity'] ?? null]);
+
+        // Overall capacity can gate shared-pool availability shown publicly.
+        $this->storefrontListing->forget($event->company);
+
+        return redirect()
+            ->route('dashboard.events.tickets', $event)
+            ->with('status', 'Overall capacity updated.');
     }
 
     /**

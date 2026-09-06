@@ -64,34 +64,4 @@
             @yield('section')
         </div>
     </div>
-
-    @push('head')
-    <style>
-        /* Second-level layout for the event manage screens: a fixed-width nav
-           column beside a fluid content column. Collapses to a single stacked
-           column on narrow viewports. */
-        .event-manage { display: grid; grid-template-columns: 240px 1fr; gap: 1.5rem; align-items: start; }
-        .event-manage__nav { display: flex; flex-direction: column; gap: 1.25rem; }
-        .event-manage__body { min-width: 0; }
-
-        /* Section nav — a vertical list of links that reads as a sidebar rather
-           than a row of buttons. Mirrors the primary sidebar's nav-link feel. */
-        .section-nav { display: flex; flex-direction: column; gap: .15rem; }
-        .section-nav__link { display: flex; align-items: center; gap: .6rem; padding: .55rem .7rem; border-radius: 7px; color: var(--text, #1f2430); text-decoration: none; font-weight: 500; }
-        .section-nav__link:hover { background: var(--surface-2, #f2f2f5); }
-        .section-nav__link.is-active { background: var(--brand, #2dd4bf); color: #06251f; }
-        .section-nav__ico { flex: none; width: 1.25rem; text-align: center; }
-        .section-nav__flag { margin-left: auto; font-size: .95rem; line-height: 1; }
-        .section-nav__flag--todo { color: #d64545; }
-        .section-nav__flag--done { color: #1a9c6e; }
-        .section-nav__link.is-active .section-nav__flag--todo,
-        .section-nav__link.is-active .section-nav__flag--done { color: inherit; }
-
-        @media (max-width: 800px) {
-            .event-manage { grid-template-columns: 1fr; }
-            .section-nav { flex-direction: row; flex-wrap: wrap; }
-            .section-nav__flag { margin-left: .35rem; }
-        }
-    </style>
-    @endpush
 @endsection

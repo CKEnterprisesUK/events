@@ -28,7 +28,13 @@
     @endif
 
     <div class="field">
-        <label for="venue">Venue name <span class="muted">(optional)</span></label>
+        <label for="venue">
+            Venue name <span class="muted">(optional)</span>
+            @if (filled($event->venue))
+                <span class="field-tick" title="Venue set" aria-hidden="true">&check;</span>
+                <span class="sr-only">(set)</span>
+            @endif
+        </label>
         <input id="venue" type="text" name="venue"
                value="{{ old('venue', $event->venue) }}"
                placeholder="e.g. The Roundhouse">

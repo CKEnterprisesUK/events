@@ -1,8 +1,8 @@
 {{--
     Core Event details fields for the Overview screen's edit form: name, when,
-    capacity, description, hero image. Venue and full location live on the
-    dedicated "Where" screen (dashboard/events/location.blade.php), so they are
-    intentionally absent here. Field names match EventController::validated().
+    description, hero image. Venue and full location live on the dedicated
+    "Where" screen; the overall event capacity lives on the "Tickets" screen
+    (next to the ticket types it governs). All are intentionally absent here.
 
     IMPORTANT: this partial includes a file upload (the hero/poster image), so
     the enclosing <form> MUST set enctype="multipart/form-data". This partial
@@ -18,20 +18,11 @@
     @error('name') <p class="error">{{ $message }}</p> @enderror
 </div>
 
-<div class="field-row">
-    <div class="field">
-        <label for="starts_at">Starts at <span class="muted">(optional)</span></label>
-        <input id="starts_at" type="datetime-local" name="starts_at"
-               value="{{ old('starts_at', $event?->starts_at?->format('Y-m-d\TH:i')) }}">
-        @error('starts_at') <p class="error">{{ $message }}</p> @enderror
-    </div>
-    <div class="field">
-        <label for="capacity">Overall capacity <span class="muted">(optional)</span></label>
-        <input id="capacity" type="number" name="capacity" min="1" placeholder="Unlimited"
-               value="{{ old('capacity', $event?->capacity) }}">
-        <p class="hint">Leave blank for unlimited.</p>
-        @error('capacity') <p class="error">{{ $message }}</p> @enderror
-    </div>
+<div class="field">
+    <label for="starts_at">Starts at <span class="muted">(optional)</span></label>
+    <input id="starts_at" type="datetime-local" name="starts_at"
+           value="{{ old('starts_at', $event?->starts_at?->format('Y-m-d\TH:i')) }}">
+    @error('starts_at') <p class="error">{{ $message }}</p> @enderror
 </div>
 
 <div class="field">

@@ -159,6 +159,10 @@ Route::middleware(['auth', 'company.active', 'session.timeout', 'dashboard.tenan
         // event-details update via a hidden name input. (Requirements 4.1–4.5)
         Route::patch('/events/{event}/location', [EventController::class, 'updateLocation'])->name('events.location.update');
         Route::get('/events/{event}/tickets', [EventController::class, 'tickets'])->name('events.tickets');
+        // Overall event capacity (the shared-pool ceiling) is edited on the
+        // Tickets screen, next to the ticket types it governs. Its own tiny
+        // route so it saves independently of the Overview details form.
+        Route::patch('/events/{event}/capacity', [EventController::class, 'updateCapacity'])->name('events.capacity.update');
         Route::get('/events/{event}/share', [EventController::class, 'share'])->name('events.share');
         Route::get('/events/{event}/orders', [EventController::class, 'orders'])->name('events.orders');
 

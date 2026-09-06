@@ -2,6 +2,8 @@
 
 @section('title', 'Payment not completed')
 
+@section('chrome', 'minimal')
+
 @push('head')
     @if ($branding->hasPrimaryColour())
         <style>:root { --brand: {{ $branding->primaryColour }}; }</style>
