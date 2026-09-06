@@ -13,6 +13,7 @@ use App\Http\Controllers\EventController;
 use App\Http\Controllers\EventPageController;
 use App\Http\Controllers\EventReportController;
 use App\Http\Controllers\GdprController;
+use App\Http\Controllers\HelpController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\OrderController;
@@ -22,6 +23,7 @@ use App\Http\Controllers\ScanController;
 use App\Http\Controllers\StorefrontController;
 use App\Http\Controllers\StripeConnectController;
 use App\Http\Controllers\StripeReturnController;
+use App\Http\Controllers\SupportController;
 use App\Http\Controllers\SuperAdmin\AuditController as SuperAdminAuditController;
 use App\Http\Controllers\SuperAdmin\ClientController as SuperAdminClientController;
 use App\Http\Controllers\SuperAdmin\CompanyController as SuperAdminCompanyController;
@@ -197,6 +199,21 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
             ->withoutMiddleware('dashboard.tenant')->name('profile.logout-other-sessions');
         Route::get('/profile/data', [ProfileController::class, 'downloadData'])
             ->withoutMiddleware('dashboard.tenant')->name('profile.data');
+
+        // Help & Knowledge portal + Contact support. Open to every authenticated
+        // Company_User (any role) and to an impersonating Super_Admin: the Help
+        // content is generic product guidance and a support request only ever
+        // acts on the raiser's own account/Company, so — like the profile
+        // routes above — no Company role gate applies and no tenant binding is
+        // needed (the SupportController resolves the acting Company explicitly).
+        // `store` records the "allow CK Enterprises to access my account"
+        // consent on the ticket. (Self-service help & support)
+        Route::get('/help', [HelpController::class, 'index'])
+            ->withoutMiddleware('dashboard.tenant')->name('help.index');
+        Route::get('/support', [SupportController::class, 'create'])
+            ->withoutMiddleware('dashboard.tenant')->name('support.create');
+        Route::post('/support', [SupportController::class, 'store'])
+            ->withoutMiddleware('dashboard.tenant')->name('support.store');
 
         // Event management (Admin-gated in the controller). Create/update/
         // publish are scoped to the authenticated user's Company by the

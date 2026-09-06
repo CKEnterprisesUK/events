@@ -407,20 +407,27 @@ main.dashboard-main { flex: 1; padding: 1.75rem; max-width: 1100px; width: 100%;
     background: var(--brand); border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-/* =============================================================================
-   Branding preview (dashboard branding forms)
-   ============================================================================= */
-.branding-preview {
-    display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem;
-    background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem;
-    padding: 1.25rem; margin-bottom: 1.5rem;
-}
-.branding-preview .brand-poster {
-    width: 100%; max-height: 220px; object-fit: cover; border-radius: 0.5rem; display: block;
-}
-.branding-preview .brand-logo { max-height: 72px; width: auto; display: block; }
 /* Generic field hint (outside the tabbed branding form). */
 .field-hint { display: block; font-size: 0.8125rem; color: var(--muted); margin-top: 0.25rem; }
+
+/* =============================================================================
+   Sponsor slots on the event branding form
+   ============================================================================= */
+.sponsor-slot {
+    border: 1px solid var(--border); border-radius: 0.75rem;
+    padding: 1rem 1.25rem 1.25rem; margin: 0 0 1.5rem;
+}
+.sponsor-slot > legend {
+    padding: 0 0.5rem; font-weight: 600; color: var(--ink);
+}
+/* Constrain the current-sponsor preview image so a large upload renders as a
+   modest thumbnail rather than at its full natural size. The preview reuses the
+   .brand-poster class but lives outside .branding-preview, so size it here. */
+.sponsor-slot .brand-poster {
+    display: block; width: auto; max-width: 320px; max-height: 120px;
+    object-fit: contain; border-radius: 0.5rem; border: 1px solid var(--border);
+    background: #fff; padding: 0.4rem; margin-bottom: 0.6rem;
+}
 
 /* =============================================================================
    Public event page + checkout (layouts.app / main.event-main)

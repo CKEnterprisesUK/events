@@ -96,6 +96,18 @@
             .user-chip .chip-text { display: none; }
             .user-chip .chip-caret { display: none; }
         }
+
+        /* Pin the Help & support nav section to the bottom of the sidebar.
+           The nav fills the sidebar height and the Support heading is pushed
+           down with an auto top margin, so Help sits in the bottom-left as a
+           persistent, always-available entry point. On short/scrolling nav
+           lists it simply follows the last item. */
+        .app-sidebar nav[aria-label="Primary"] {
+            display: flex;
+            flex-direction: column;
+            min-height: 100%;
+        }
+        .app-sidebar .nav-section-help { margin-top: auto; }
     </style>
     @stack('head')
 </head>
@@ -289,7 +301,11 @@
                             <a class="nav-link {{ $navActive('dashboard.users.*') ? 'active' : '' }}" href="{{ route('dashboard.users.index') }}"><span class="nav-ico">&#128101;</span> Team</a>
                         @endcan
                         @can('settings')
-                            <a class="nav-link {{ $navActive('dashboard.settings.*', 'dashboard.branding.*') ? 'active' : '' }}" href="{{ route('dashboard.branding.edit') }}"><span class="nav-ico">&#9881;</span> Settings</a>
+                            {{-- Only light up for COMPANY-level settings/branding.
+                                 Per-event branding (dashboard.branding.event.*)
+                                 is reached from an Event, so it must not mark
+                                 Settings active. --}}
+                            <a class="nav-link {{ $navActive('dashboard.settings.*', 'dashboard.branding.edit', 'dashboard.branding.update') ? 'active' : '' }}" href="{{ route('dashboard.branding.edit') }}"><span class="nav-ico">&#9881;</span> Settings</a>
                         @endcan
                         @can('stripe')
                             <a class="nav-link {{ $navActive('dashboard.stripe.*') ? 'active' : '' }}" href="{{ route('dashboard.stripe.status') }}"><span class="nav-ico">&#128179;</span> Payments</a>
@@ -305,6 +321,13 @@
                         <p class="nav-section">Public</p>
                         <a class="nav-link" href="{{ url('/' . $company->slug) }}" target="_blank" rel="noopener"><span class="nav-ico">&#128279;</span> View storefront</a>
                     @endif
+
+                    {{-- Help & support, pinned to the bottom of the sidebar.
+                         Open to every role (no @can gate) — generic product
+                         guidance and self-service support. --}}
+                    <p class="nav-section nav-section-help">Support</p>
+                    <a class="nav-link {{ $navActive('dashboard.help.*') ? 'active' : '' }}" href="{{ route('dashboard.help.index') }}"><span class="nav-ico">&#10067;</span> Help</a>
+                    <a class="nav-link {{ $navActive('dashboard.support.*') ? 'active' : '' }}" href="{{ route('dashboard.support.create') }}"><span class="nav-ico">&#128172;</span> Contact support</a>
                 @endif
             </nav>
         </aside>
