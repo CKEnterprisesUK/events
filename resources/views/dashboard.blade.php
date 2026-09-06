@@ -173,6 +173,7 @@
                             <th scope="col">Event</th>
                             <th scope="col">When</th>
                             <th scope="col">Status</th>
+                            <th scope="col">Sold</th>
                             <th scope="col" class="num">Orders</th>
                             <th scope="col"></th>
                         </tr>
@@ -195,6 +196,7 @@
                                         {{ $event->isPublished() ? 'Published' : 'Draft' }}
                                     </span>
                                 </td>
+                                <td>@include('dashboard.partials.sell-through', ['sellThrough' => $event->sell_through])</td>
                                 <td class="num">{{ number_format($event->confirmed_orders_count) }}</td>
                                 <td class="num">
                                     <a class="panel__link" href="{{ route('dashboard.events.show', $event) }}">Open</a>
@@ -226,6 +228,7 @@
                             <th scope="col">Event</th>
                             <th scope="col">When</th>
                             <th scope="col">Status</th>
+                            <th scope="col">Sold</th>
                             <th scope="col" class="num">Orders</th>
                             <th scope="col"></th>
                         </tr>
@@ -245,6 +248,7 @@
                                         {{ $event->isPublished() ? 'Published' : 'Draft' }}
                                     </span>
                                 </td>
+                                <td>@include('dashboard.partials.sell-through', ['sellThrough' => $event->sell_through])</td>
                                 <td class="num">{{ number_format($event->confirmed_orders_count) }}</td>
                                 <td class="num">
                                     <a class="panel__link" href="{{ route('dashboard.events.show', $event) }}">Open</a>
@@ -382,5 +386,17 @@
         display: flex; justify-content: space-between;
         font-size: 0.72rem; color: var(--muted); margin-top: 0.35rem;
     }
+
+    .sell-through { display: inline-flex; flex-direction: column; gap: 0.2rem; min-width: 84px; font-variant-numeric: tabular-nums; }
+    .sell-through__count { font-size: 0.85rem; font-weight: 600; color: var(--ink); }
+    .sell-through__cap { color: var(--muted); font-weight: 400; }
+    .sell-through__bar { display: block; height: 5px; width: 84px; border-radius: 999px; background: var(--border); overflow: hidden; }
+    .sell-through__fill { display: block; height: 100%; background: var(--brand); border-radius: 999px; }
+    .sell-through.is-almost-full .sell-through__fill { background: #d97706; }
+    .sell-through.is-sold-out .sell-through__fill { background: #047857; }
+    .sell-through__flag { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.02em; }
+    .sell-through.is-almost-full .sell-through__flag { color: #b45309; }
+    .sell-through.is-sold-out .sell-through__flag { color: #047857; }
+    .sell-through--unlimited .sell-through__count { color: var(--ink); }
 </style>
 @endpush

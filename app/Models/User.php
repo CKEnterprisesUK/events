@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Notifications\VerifyEmailNow;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -171,6 +172,19 @@ class User extends Authenticatable implements MustVerifyEmail
             'is_super_admin' => 'boolean',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Send the email-verification notification IMMEDIATELY.
+     *
+     * Overrides the framework default so verification uses {@see VerifyEmailNow}
+     * — a notification that is NOT queued — rather than waiting for the
+     * per-minute cron queue burst. Every other Platform email keeps its queued,
+     * cron-drained delivery. (See DEPLOYMENT.md for the queue/cron setup.)
+     */
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify(new VerifyEmailNow);
     }
 
     /**

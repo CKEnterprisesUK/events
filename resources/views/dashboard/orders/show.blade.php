@@ -112,8 +112,35 @@
                 <tr><td>Ticket subtotal</td><td class="num">{{ $money($order->ticket_subtotal_minor) }}</td></tr>
                 <tr><td>Booking fee</td><td class="num">{{ $money($order->booking_fee_minor) }}</td></tr>
                 <tr class="total"><td>Order total</td><td class="num">{{ $money($order->order_total_minor) }}</td></tr>
+                @if ($order->refunded_total_minor > 0)
+                    <tr><td>Refunded to date</td><td class="num">&minus;{{ $money($order->refunded_total_minor) }}</td></tr>
+                    <tr class="total"><td>Net retained</td><td class="num">{{ $money($order->order_total_minor - $order->refunded_total_minor) }}</td></tr>
+                @endif
             </tbody>
         </table>
+
+        @can('refund_order')
+            @if ($order->status === \App\Models\Order::STATUS_PAID && $order->refundableRemainingMinor() > 0)
+                <div class="panel__body" style="border-top: 1px solid var(--border); padding: 1.25rem;">
+                    <form method="POST" action="{{ route('dashboard.orders.partial-refund', $order) }}" class="inline-form"
+                          style="display: flex; align-items: flex-end; gap: 0.75rem; flex-wrap: wrap;"
+                          onsubmit="return confirm('Issue a partial Stripe refund for this amount?');">
+                        @csrf
+                        <div>
+                            <label for="partial-refund-amount" class="detail__label">Partial refund amount ({{ $currency }})</label>
+                            <input type="number" id="partial-refund-amount" name="amount" class="input"
+                                   step="0.01" min="0.01" max="{{ number_format($order->refundableRemainingMinor() / 100, 2, '.', '') }}"
+                                   placeholder="0.00" required>
+                        </div>
+                        <button type="submit" class="btn btn-outline">Refund amount</button>
+                        <span class="cell-dim">Up to {{ $money($order->refundableRemainingMinor()) }} remaining. Tickets stay valid until the full total is refunded.</span>
+                    </form>
+                    @error('amount')
+                        <p class="status status--error" style="margin-top: 0.5rem;">{{ $message }}</p>
+                    @enderror
+                </div>
+            @endif
+        @endcan
     </div>
 
     <div class="panel">

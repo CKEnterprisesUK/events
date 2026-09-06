@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Event;
 use App\Models\Order;
 use App\Models\Ticket;
+use App\Models\TicketType;
 use App\Services\Onboarding\OnboardingChecklist;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
@@ -145,8 +146,27 @@ class DashboardController extends Controller
             ->groupBy('event_id')
             ->pluck('aggregate', 'event_id');
 
-        $attachCounts = function (Event $event) use ($confirmedByEvent): void {
+        // Sell-through aggregates per event, computed once for both tables to
+        // avoid per-row queries. sold_count and capped per-type capacity are
+        // summed from ticket_types, scoped explicitly to the company + event
+        // ids (the tenant global scope is not active on this route).
+        $soldByEvent = TicketType::query()
+            ->withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->whereIn('event_id', $eventIdsForCounts)
+            ->selectRaw('event_id, SUM(sold_count) as sold, SUM(CASE WHEN capacity_mode = ? THEN capacity ELSE 0 END) as capped_capacity', [TicketType::MODE_CAPPED])
+            ->groupBy('event_id')
+            ->get()
+            ->keyBy('event_id');
+
+        $attachCounts = function (Event $event) use ($confirmedByEvent, $soldByEvent): void {
             $event->confirmed_orders_count = (int) ($confirmedByEvent[$event->id] ?? 0);
+
+            $agg = $soldByEvent->get($event->id);
+            $event->sell_through = $event->sellThrough(
+                (int) ($agg->sold ?? 0),
+                (int) ($agg->capped_capacity ?? 0),
+            );
         };
         $recentEvents->each($attachCounts);
         $upcomingEvents->each($attachCounts);

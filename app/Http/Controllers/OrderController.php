@@ -106,7 +106,31 @@ class OrderController extends Controller
             'order' => $order,
             'terminal' => $this->isTerminal($order),
             'canIssueTicket' => $this->canIssueTicket($order),
+            'history' => $this->historyFor($order),
         ]);
+    }
+
+    /**
+     * The audit trail for this Order, newest first: cancels, (partial) refunds,
+     * disputes, ticket re-sends and any other action recorded against it —
+     * including system/webhook rows (a `charge.refunded` or dispute webhook) so
+     * the operator sees the full "what happened and when" on one screen, with
+     * the reason and amount each action recorded. Scoped to the Order via the
+     * polymorphic auditable link; AuditLog is not tenant-scoped, so it is
+     * constrained here to this Order's Company as a defence-in-depth check on
+     * top of route-model binding already scoping the Order to the tenant.
+     *
+     * @return \Illuminate\Support\Collection<int, AuditLog>
+     */
+    private function historyFor(Order $order)
+    {
+        return AuditLog::query()
+            ->where('auditable_type', $order->getMorphClass())
+            ->where('auditable_id', $order->getKey())
+            ->where('company_id', $order->company_id)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get();
     }
 
     /**
@@ -166,13 +190,55 @@ class OrderController extends Controller
     }
 
     /**
+     * Validate and normalise the optional operator "reason" that accompanies a
+     * cancel/refund action. Free text up to 500 chars; blank is treated as no
+     * reason. Recorded in the audit trail so the "why" is visible on the Order.
+     */
+    private function validatedReason(Request $request): ?string
+    {
+        $validated = $request->validate([
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        return $this->normaliseReason($validated['reason'] ?? null);
+    }
+
+    /**
+     * Trim a submitted reason to a non-empty string, or null when absent/blank.
+     */
+    private function normaliseReason(?string $reason): ?string
+    {
+        $reason = trim((string) $reason);
+
+        return $reason === '' ? null : $reason;
+    }
+
+    /**
+     * Merge an optional reason into an audit context payload under the `reason`
+     * key, omitting it entirely when none was given so the trail stays clean.
+     *
+     * @param  array<string, mixed>  $context
+     * @return array<string, mixed>
+     */
+    private function contextWithReason(array $context, ?string $reason): array
+    {
+        if ($reason !== null) {
+            $context['reason'] = $reason;
+        }
+
+        return $context;
+    }
+
+    /**
      * Cancel an Order: void its Tickets so the QR fails at scan and return its
      * held capacity (reserved or sold) for resale. No money moves — a paid
      * Order is refunded via {@see refund()}. (Requirements 17.1, 17.3)
      */
-    public function cancel(Order $order): RedirectResponse
+    public function cancel(Request $request, Order $order): RedirectResponse
     {
         Gate::authorize(RoleAuthorization::ACTION_CANCEL_ORDER);
+
+        $reason = $this->validatedReason($request);
 
         // Log only when this call actually performed the transition; an
         // already-terminal Order is an idempotent no-op and records nothing.
@@ -181,7 +247,7 @@ class OrderController extends Controller
                 action: AuditLog::ORDER_CANCELLED,
                 auditable: $order,
                 summary: 'Cancelled order '.$order->order_reference,
-                context: ['order_reference' => $order->order_reference],
+                context: $this->contextWithReason(['order_reference' => $order->order_reference], $reason),
             );
         }
 
@@ -195,23 +261,26 @@ class OrderController extends Controller
      * Order is a no-op and issues no second refund. (Requirements 17.1, 17.2,
      * 17.3, 17.4)
      */
-    public function refund(Order $order): RedirectResponse
+    public function refund(Request $request, Order $order): RedirectResponse
     {
         Gate::authorize(RoleAuthorization::ACTION_REFUND_ORDER);
 
-        // Capture the refunded amount before the transition for the trail. Log
-        // only when this call actually refunded (idempotent no-op logs nothing).
-        $amountMinor = $order->order_total_minor;
+        $reason = $this->validatedReason($request);
+
+        // Capture the amount actually refunded (the outstanding balance) before
+        // the transition for the trail. Log only when this call actually
+        // refunded (idempotent no-op logs nothing).
+        $amountMinor = $order->refundableRemainingMinor();
 
         if ($this->cancellation->refund($order)) {
             $this->audit->record(
                 action: AuditLog::ORDER_REFUNDED,
                 auditable: $order,
                 summary: 'Refunded order '.$order->order_reference,
-                context: [
+                context: $this->contextWithReason([
                     'order_reference' => $order->order_reference,
                     'amount_minor' => $amountMinor,
-                ],
+                ], $reason),
             );
         }
 
@@ -238,7 +307,10 @@ class OrderController extends Controller
 
         $validated = $request->validate([
             'amount' => ['required', 'numeric', 'min:0.01'],
+            'reason' => ['nullable', 'string', 'max:500'],
         ]);
+
+        $reason = $this->normaliseReason($validated['reason'] ?? null);
 
         $amountMinor = (int) round(((float) $validated['amount']) * 100);
 
@@ -267,11 +339,11 @@ class OrderController extends Controller
                 action: $fullyRefunded ? AuditLog::ORDER_REFUNDED : AuditLog::ORDER_PARTIALLY_REFUNDED,
                 auditable: $order,
                 summary: ($fullyRefunded ? 'Refunded order ' : 'Partially refunded order ').$order->order_reference,
-                context: [
+                context: $this->contextWithReason([
                     'order_reference' => $order->order_reference,
                     'amount_minor' => $amountMinor,
                     'refunded_total_minor' => $order->refunded_total_minor,
-                ],
+                ], $reason),
             );
 
             return back()->with('status', $fullyRefunded

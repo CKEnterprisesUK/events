@@ -87,25 +87,47 @@ class OrderCancellationService
      * Idempotent — an already-terminal Order is left untouched and no refund is
      * issued, so a redelivered `charge.refunded` webhook after this does not
      * double-apply. (Requirements 17.1, 17.2, 17.3, 17.4)
+     *
+     * When the Order has already been PARTIALLY refunded, only the amount still
+     * outstanding ({@see Order::refundableRemainingMinor()}) is refunded through
+     * Stripe, so the customer is never refunded past the order total. The
+     * cumulative `refunded_total_minor` is then brought up to the full total.
      */
     public function refund(Order $order): bool
     {
         // Only a paid Order that still carries a charge is refunded through
         // Stripe; a free-confirmed or already-terminal Order moves straight to
-        // the void/capacity transition. Issue the refund BEFORE the DB
-        // transition so a Stripe failure aborts the whole operation and leaves
-        // the Order (and its money) unchanged. (Requirement 17.2)
+        // the void/capacity transition. Refund only what is still outstanding
+        // (the full total less any prior partial refunds). Issue the refund
+        // BEFORE the DB transition so a Stripe failure aborts the whole
+        // operation and leaves the Order (and its money) unchanged. (Req 17.2)
         if ($order->status === Order::STATUS_PAID && $order->stripe_charge_id !== null) {
-            $company = $order->company;
+            $remainingMinor = $order->refundableRemainingMinor();
 
-            $this->stripe->refundCharge(
-                connectedAccountId: (string) $company->stripe_account_id,
-                chargeId: (string) $order->stripe_charge_id,
-                amountMinor: $order->order_total_minor,
-            );
+            if ($remainingMinor > 0) {
+                $company = $order->company;
+
+                $this->stripe->refundCharge(
+                    connectedAccountId: (string) $company->stripe_account_id,
+                    chargeId: (string) $order->stripe_charge_id,
+                    amountMinor: $remainingMinor,
+                );
+            }
         }
 
-        return $this->applyTerminal($order, Order::STATUS_REFUNDED);
+        $transitioned = $this->applyTerminal($order, Order::STATUS_REFUNDED);
+
+        // The Order is now refunded in full: record the cumulative refunded
+        // total as the whole order total so the money accounting is complete.
+        if ($transitioned) {
+            Order::withoutGlobalScopes()
+                ->whereKey($order->getKey())
+                ->update(['refunded_total_minor' => $order->order_total_minor]);
+
+            $order->refunded_total_minor = $order->order_total_minor;
+        }
+
+        return $transitioned;
     }
 
     /**
