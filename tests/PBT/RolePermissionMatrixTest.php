@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Gate;
  *
  * Uses the Eris library (never hand-rolled generators) with a minimum of 100
  * iterations, per the design's Testing Strategy. Generates random
- * (role, action) pairs spanning all four Company roles and every action the
+ * (role, action) pairs spanning all Company roles and every action the
  * matrix knows about, and asserts authorisation is granted iff the action is
  * in that role's permitted set — checked at the matrix (`roleCan`), the user
  * (`authorize`), and the registered Gate. Denied actions must leave data
@@ -48,6 +48,17 @@ class RolePermissionMatrixTest extends PbtTestCase
             // plus everything delegated to Admin/Accountant/Scanner).
             User::ROLE_OWNER => RoleAuthorization::actions(),
             User::ROLE_ADMIN => [
+                RoleAuthorization::ACTION_MANAGE_EVENTS,
+                RoleAuthorization::ACTION_MANAGE_TICKET_TYPES,
+                RoleAuthorization::ACTION_MANAGE_ORDERS,
+                RoleAuthorization::ACTION_CANCEL_ORDER,
+                RoleAuthorization::ACTION_REFUND_ORDER,
+                RoleAuthorization::ACTION_ISSUE_COMP,
+                RoleAuthorization::ACTION_MANAGE_GDPR,
+            ],
+            // Box_Office is a cut-down Admin: the operational set with no
+            // company-settings/GDPR access.
+            User::ROLE_BOX_OFFICE => [
                 RoleAuthorization::ACTION_MANAGE_EVENTS,
                 RoleAuthorization::ACTION_MANAGE_TICKET_TYPES,
                 RoleAuthorization::ACTION_MANAGE_ORDERS,

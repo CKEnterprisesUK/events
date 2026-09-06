@@ -1,5 +1,5 @@
 -- =============================================================================
--- 024_replace_legal_urls_with_privacy_text_on_companies.sql
+-- 025_replace_legal_urls_with_privacy_text_on_companies.sql
 -- Event Ticketing Platform — versioned raw schema SQL for phpMyAdmin (no SSH on prod)
 -- =============================================================================
 --
@@ -34,7 +34,7 @@
 --       --skip-comments --skip-set-charset --no-data \
 --       events companies
 --
---   (migration: 2024_01_01_002300_replace_legal_urls_with_privacy_text_on_companies)
+--   (migration: 2024_01_01_002400_replace_legal_urls_with_privacy_text_on_companies)
 --
 -- Applying on prod:
 --   Paste this file into phpMyAdmin after 023_add_storefront_profile_to_companies.sql.
@@ -43,7 +43,7 @@
 --   this database later.
 --
 -- Changelog:
---   024 (initial) — add nullable `privacy_text`; drop `terms_url`, `privacy_url`.
+--   025 (initial) — add nullable `privacy_text`; drop `terms_url`, `privacy_url`.
 -- =============================================================================
 
 /*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
@@ -66,4 +66,4 @@ ALTER TABLE `companies`
 
 -- Keep Laravel's migration ledger consistent when applied via phpMyAdmin.
 INSERT INTO `migrations` (`migration`, `batch`) VALUES
-  ('2024_01_01_002300_replace_legal_urls_with_privacy_text_on_companies', 8);
+  ('2024_01_01_002400_replace_legal_urls_with_privacy_text_on_companies', 9);

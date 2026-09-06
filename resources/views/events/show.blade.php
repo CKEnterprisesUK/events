@@ -225,6 +225,19 @@
                                 </div>
                             </div>
                         @endif
+
+                        @if ($branding->hasPrivacy())
+                            <div class="terms-modal" data-privacy-modal hidden>
+                                <div class="terms-modal__backdrop" data-close-privacy></div>
+                                <div class="terms-modal__panel" role="dialog" aria-modal="true" aria-label="Privacy notice">
+                                    <div class="terms-modal__head">
+                                        <h3>Privacy notice</h3>
+                                        <button type="button" class="terms-modal__close" data-close-privacy aria-label="Close">&times;</button>
+                                    </div>
+                                    <div class="terms-modal__body">{{ $branding->privacyText }}</div>
+                                </div>
+                            </div>
+                        @endif
                     @endif
                 </div>
             </aside>
@@ -285,19 +298,24 @@
 
         recalc();
 
-        // Terms modal
-        var modal = document.querySelector('[data-terms-modal]');
-        if (modal) {
-            document.querySelectorAll('[data-open-terms]').forEach(function (el) {
+        // Legal modals: Terms & Conditions and Privacy notice, each shown on
+        // request from its checkout consent line.
+        function wireModal(modalSelector, openSelector, closeSelector) {
+            var modal = document.querySelector(modalSelector);
+            if (!modal) return;
+            document.querySelectorAll(openSelector).forEach(function (el) {
                 el.addEventListener('click', function () { modal.hidden = false; });
             });
-            modal.querySelectorAll('[data-close-terms]').forEach(function (el) {
+            modal.querySelectorAll(closeSelector).forEach(function (el) {
                 el.addEventListener('click', function () { modal.hidden = true; });
             });
             document.addEventListener('keydown', function (e) {
                 if (e.key === 'Escape') { modal.hidden = true; }
             });
         }
+
+        wireModal('[data-terms-modal]', '[data-open-terms]', '[data-close-terms]');
+        wireModal('[data-privacy-modal]', '[data-open-privacy]', '[data-close-privacy]');
     })();
 </script>
 @endpush

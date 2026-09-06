@@ -28,13 +28,13 @@ class RoleAuthorizationTest extends TestCase
         $this->matrix = app(RoleAuthorization::class);
     }
 
-    public function test_exactly_four_company_roles_are_supported(): void
+    public function test_the_supported_company_roles_are_the_closed_set(): void
     {
         $this->assertSame(
-            ['owner', 'admin', 'accountant', 'scanner'],
+            ['owner', 'admin', 'box_office', 'accountant', 'scanner'],
             User::ROLES,
         );
-        $this->assertCount(4, User::ROLES);
+        $this->assertCount(5, User::ROLES);
     }
 
     public function test_owner_can_do_everything(): void
@@ -59,12 +59,53 @@ class RoleAuthorizationTest extends TestCase
             RoleAuthorization::ACTION_CANCEL_ORDER,
             RoleAuthorization::ACTION_REFUND_ORDER,
             RoleAuthorization::ACTION_ISSUE_COMP,
+            // Admins handle GDPR data-subject requests alongside the Owner.
+            RoleAuthorization::ACTION_MANAGE_GDPR,
         ] as $action) {
             $this->assertTrue($this->matrix->roleCan(User::ROLE_ADMIN, $action));
         }
 
         $this->assertFalse($this->matrix->roleCan(User::ROLE_ADMIN, RoleAuthorization::ACTION_MANAGE_BILLING));
         $this->assertFalse($this->matrix->roleCan(User::ROLE_ADMIN, RoleAuthorization::ACTION_MANAGE_USERS));
+        $this->assertFalse($this->matrix->roleCan(User::ROLE_ADMIN, RoleAuthorization::ACTION_MANAGE_SETTINGS));
+    }
+
+    public function test_box_office_permitted_set(): void
+    {
+        // Box_Office runs the box office: events, ticket types and orders
+        // (including cancel/refund/comp), the same operational set as Admin.
+        foreach ([
+            RoleAuthorization::ACTION_MANAGE_EVENTS,
+            RoleAuthorization::ACTION_MANAGE_TICKET_TYPES,
+            RoleAuthorization::ACTION_MANAGE_ORDERS,
+            RoleAuthorization::ACTION_CANCEL_ORDER,
+            RoleAuthorization::ACTION_REFUND_ORDER,
+            RoleAuthorization::ACTION_ISSUE_COMP,
+        ] as $action) {
+            $this->assertTrue($this->matrix->roleCan(User::ROLE_BOX_OFFICE, $action));
+        }
+
+        // But it is NOT trusted with company settings, users, Stripe, billing,
+        // or GDPR handling.
+        foreach ([
+            RoleAuthorization::ACTION_MANAGE_SETTINGS,
+            RoleAuthorization::ACTION_MANAGE_USERS,
+            RoleAuthorization::ACTION_MANAGE_STRIPE,
+            RoleAuthorization::ACTION_MANAGE_BILLING,
+            RoleAuthorization::ACTION_MANAGE_GDPR,
+        ] as $action) {
+            $this->assertFalse($this->matrix->roleCan(User::ROLE_BOX_OFFICE, $action));
+        }
+    }
+
+    public function test_only_owner_and_admin_can_handle_gdpr(): void
+    {
+        $this->assertTrue($this->matrix->roleCan(User::ROLE_OWNER, RoleAuthorization::ACTION_MANAGE_GDPR));
+        $this->assertTrue($this->matrix->roleCan(User::ROLE_ADMIN, RoleAuthorization::ACTION_MANAGE_GDPR));
+
+        foreach ([User::ROLE_BOX_OFFICE, User::ROLE_ACCOUNTANT, User::ROLE_SCANNER] as $role) {
+            $this->assertFalse($this->matrix->roleCan($role, RoleAuthorization::ACTION_MANAGE_GDPR));
+        }
     }
 
     public function test_accountant_is_read_only_reports(): void

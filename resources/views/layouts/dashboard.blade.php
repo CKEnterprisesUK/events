@@ -239,9 +239,12 @@
                 @if ($isSuperAdmin && ! $impersonating)
                     {{-- Super Admin platform surface --}}
                     <p class="nav-section">Platform</p>
-                    <a class="nav-link {{ $navActive('admin.transactions.*', 'admin.home') ? 'active' : '' }}" href="{{ route('admin.transactions.index') }}"><span class="nav-ico">&#128202;</span> Transactions</a>
+                    <a class="nav-link {{ $navActive('admin.home') ? 'active' : '' }}" href="{{ route('admin.home') }}"><span class="nav-ico">&#128200;</span> Dashboard</a>
+                    <a class="nav-link {{ $navActive('admin.clients.*') ? 'active' : '' }}" href="{{ route('admin.clients.index') }}"><span class="nav-ico">&#127970;</span> Clients</a>
+                    <a class="nav-link {{ $navActive('admin.transactions.*') ? 'active' : '' }}" href="{{ route('admin.transactions.index') }}"><span class="nav-ico">&#128202;</span> Transactions</a>
                     <a class="nav-link {{ $navActive('admin.companies.*') ? 'active' : '' }}" href="{{ route('admin.companies.index') }}"><span class="nav-ico">&#127970;</span> Companies</a>
                     <a class="nav-link {{ $navActive('admin.fees.*') ? 'active' : '' }}" href="{{ route('admin.fees.index') }}"><span class="nav-ico">&#128176;</span> Fees</a>
+                    <a class="nav-link {{ $navActive('admin.settings.*') ? 'active' : '' }}" href="{{ route('admin.settings.index') }}"><span class="nav-ico">&#9881;</span> Settings</a>
                 @else
                     {{-- Company dashboard, adapts to the user's role --}}
                     @if ($impersonating)

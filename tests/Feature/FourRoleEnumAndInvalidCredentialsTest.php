@@ -12,8 +12,8 @@ use Tests\TestCase;
  *
  * Task 4.6 — pins two Requirement-3 guarantees explicitly:
  *
- *  (a) THE Platform SHALL support exactly four Company roles: Owner, Admin,
- *      Accountant, and Scanner. (Requirement 3.1)
+ *  (a) THE Platform SHALL support a closed set of Company roles: Owner, Admin,
+ *      Box_Office, Accountant, and Scanner. (Requirement 3.1)
  *  (b) IF a Company_User submits authentication credentials that do not match a
  *      valid Company_User account, THEN THE Platform SHALL deny access, return
  *      an error indicating the credentials are invalid, and grant no session.
@@ -26,15 +26,23 @@ class FourRoleEnumAndInvalidCredentialsTest extends TestCase
 {
     use RefreshDatabase;
 
-    // --- (a) Exactly four roles are supported. (Requirement 3.1) ---
+    // --- (a) The closed role set is supported. (Requirement 3.1) ---
 
-    public function test_exactly_four_company_roles_are_supported(): void
+    /**
+     * The complete, ordered closed set of Company roles.
+     *
+     * @var list<string>
+     */
+    private const EXPECTED_ROLES = ['owner', 'admin', 'box_office', 'accountant', 'scanner'];
+
+    public function test_the_closed_company_role_set_is_supported(): void
     {
-        $this->assertCount(4, User::ROLES);
+        $this->assertCount(count(self::EXPECTED_ROLES), User::ROLES);
         $this->assertSame(
             [
                 User::ROLE_OWNER,
                 User::ROLE_ADMIN,
+                User::ROLE_BOX_OFFICE,
                 User::ROLE_ACCOUNTANT,
                 User::ROLE_SCANNER,
             ],
@@ -42,21 +50,21 @@ class FourRoleEnumAndInvalidCredentialsTest extends TestCase
         );
     }
 
-    public function test_the_four_roles_are_owner_admin_accountant_scanner(): void
+    public function test_the_roles_are_owner_admin_box_office_accountant_scanner(): void
     {
-        $this->assertSame(['owner', 'admin', 'accountant', 'scanner'], User::ROLES);
+        $this->assertSame(self::EXPECTED_ROLES, User::ROLES);
     }
 
-    public function test_role_set_contains_no_roles_beyond_the_supported_four(): void
+    public function test_role_set_contains_no_roles_beyond_the_supported_set(): void
     {
-        foreach ([User::ROLE_OWNER, User::ROLE_ADMIN, User::ROLE_ACCOUNTANT, User::ROLE_SCANNER] as $role) {
+        foreach (self::EXPECTED_ROLES as $role) {
             $this->assertContains($role, User::ROLES);
         }
 
         // Nothing outside the closed set is present.
         $this->assertSame(
             [],
-            array_diff(User::ROLES, ['owner', 'admin', 'accountant', 'scanner']),
+            array_diff(User::ROLES, self::EXPECTED_ROLES),
         );
     }
 

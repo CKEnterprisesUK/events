@@ -185,13 +185,13 @@ class InvitationFlowsTest extends TestCase
         ]);
     }
 
-    public function test_only_admin_accountant_and_scanner_are_invitable(): void
+    public function test_every_non_owner_role_is_invitable(): void
     {
         [$owner, $company] = $this->ownerForCompany();
 
-        // Requirement 4.6 — the three non-Owner roles are the invitable set.
+        // Requirement 4.6 — every non-Owner role is invitable; Owner is not.
         $this->assertSame(
-            [User::ROLE_ADMIN, User::ROLE_ACCOUNTANT, User::ROLE_SCANNER],
+            [User::ROLE_ADMIN, User::ROLE_BOX_OFFICE, User::ROLE_ACCOUNTANT, User::ROLE_SCANNER],
             User::INVITABLE_ROLES,
         );
         $this->assertNotContains(User::ROLE_OWNER, User::INVITABLE_ROLES);

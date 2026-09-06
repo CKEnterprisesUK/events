@@ -30,6 +30,13 @@ use Illuminate\Support\Carbon;
  */
 class EventPageController extends Controller
 {
+    /**
+     * Remaining-stock ratio (of a capped type's own capacity) at or below
+     * which the storefront shows "Limited availability" rather than
+     * "Available". 0.2 = the final 20% of the type's capacity.
+     */
+    private const LIMITED_THRESHOLD = 0.2;
+
     public function show(
         string $companySlug,
         Event $event,
@@ -44,16 +51,23 @@ class EventPageController extends Controller
         $ticketTypes = $event->ticketTypes()
             ->orderBy('id')
             ->get()
-            ->map(fn (TicketType $type): array => [
-                'id' => $type->getKey(),
-                'name' => $type->name,
-                'price_minor' => $type->price_minor,
-                'is_free' => $type->isFree(),
-                'available' => max(0, $type->availableQuantity()),
-                'sold_out' => $type->availableQuantity() <= 0,
-                'sale_state' => $this->saleState($type, $now),
-                'on_sale' => $type->isOnSaleAt($now),
-            ]);
+            ->map(function (TicketType $type) use ($now): array {
+                $available = max(0, $type->availableQuantity());
+
+                return [
+                    'id' => $type->getKey(),
+                    'name' => $type->name,
+                    'price_minor' => $type->price_minor,
+                    'is_free' => $type->isFree(),
+                    // Kept for the quantity stepper's `max` bound so the form
+                    // can't request more than remain — never rendered as a count.
+                    'available' => $available,
+                    'sold_out' => $available <= 0,
+                    'availability_status' => $this->availabilityStatus($type, $available),
+                    'sale_state' => $this->saleState($type, $now),
+                    'on_sale' => $type->isOnSaleAt($now),
+                ];
+            });
 
         return view('events.show', [
             'company' => $tenantContext->company(),
@@ -86,5 +100,33 @@ class EventPageController extends Controller
         }
 
         return 'on_sale';
+    }
+
+    /**
+     * Coarse public availability signal derived from remaining stock, so the
+     * storefront never exposes exact inventory counts to Customers:
+     *   - `sold_out`  — nothing left;
+     *   - `limited`   — at or below {@see self::LIMITED_THRESHOLD} of the
+     *                   type's own capacity (capped types only);
+     *   - `available` — otherwise, including shared-pool/unlimited types with
+     *                   no finite per-type ceiling.
+     */
+    private function availabilityStatus(TicketType $type, int $available): string
+    {
+        if ($available <= 0) {
+            return 'sold_out';
+        }
+
+        // Only capped types have a finite ceiling to compute a percentage
+        // against; shared-pool / unlimited types are simply "available".
+        if ($type->isCapped() && (int) $type->capacity > 0) {
+            $ratio = $available / (int) $type->capacity;
+
+            if ($ratio <= self::LIMITED_THRESHOLD) {
+                return 'limited';
+            }
+        }
+
+        return 'available';
     }
 }

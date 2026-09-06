@@ -22,8 +22,9 @@ class UserFactory extends Factory
      * Define the model's default state.
      *
      * Defaults to a Company_User with the Admin role belonging to a freshly
-     * created Company. Use the `owner()`, `admin()`, `accountant()`,
-     * `scanner()`, and `superAdmin()` states, or override `company_id`/`role`,
+     * created Company. Use the `owner()`, `admin()`, `boxOffice()`,
+     * `accountant()`, `scanner()`, and `superAdmin()` states, or override
+     * `company_id`/`role`,
      * for other shapes.
      *
      * @return array<string, mixed>

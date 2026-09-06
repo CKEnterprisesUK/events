@@ -25,7 +25,7 @@ use Tests\TestCase;
  *   - 22.3 A public privacy policy page.
  *   - 22.4 Captured consents are surfaced in the export.
  *   - 22.5 Export/delete are scoped to the requesting Company.
- *   - 3.3/3.7 Owner-gated (ACTION_MANAGE_SETTINGS); other roles denied.
+ *   - 3.3/3.7 Gated on ACTION_MANAGE_GDPR (Owner + Admin); other roles denied.
  */
 class GdprDataToolsTest extends TestCase
 {
@@ -105,16 +105,29 @@ class GdprDataToolsTest extends TestCase
         $company = Company::factory()->create();
         $token = CustomerController::tokenFor('someone@example.com');
 
-        // Admin manages orders so may view the Customers roster, but GDPR
-        // export/anonymise stay Owner-gated (ACTION_MANAGE_SETTINGS).
+        // GDPR export/anonymise is gated on ACTION_MANAGE_GDPR, held only by
+        // the Owner and Admin. Box_Office, Accountant and Scanner are denied.
         foreach ([
-            User::factory()->admin()->create(['company_id' => $company->id]),
+            User::factory()->boxOffice()->create(['company_id' => $company->id]),
             User::factory()->accountant()->create(['company_id' => $company->id]),
             User::factory()->scanner()->create(['company_id' => $company->id]),
         ] as $user) {
             $this->actingAs($user)->post("/dashboard/customers/{$token}/export")->assertForbidden();
             $this->actingAs($user)->post("/dashboard/customers/{$token}/anonymise")->assertForbidden();
         }
+    }
+
+    public function test_admin_can_run_gdpr_export_and_anonymise(): void
+    {
+        $company = Company::factory()->create();
+        $admin = User::factory()->admin()->create(['company_id' => $company->id]);
+        $token = CustomerController::tokenFor('nobody@example.com');
+
+        // Admins now handle GDPR data-subject requests alongside the Owner. The
+        // customer has no orders, so both routes resolve without a 403 (export
+        // returns an empty document; anonymise touches nothing and redirects).
+        $this->actingAs($admin)->post("/dashboard/customers/{$token}/export")->assertOk();
+        $this->actingAs($admin)->post("/dashboard/customers/{$token}/anonymise")->assertRedirect();
     }
 
     public function test_guests_are_redirected_from_the_customers_page(): void

@@ -20,9 +20,12 @@ use App\Http\Controllers\ScanController;
 use App\Http\Controllers\StorefrontController;
 use App\Http\Controllers\StripeConnectController;
 use App\Http\Controllers\StripeReturnController;
+use App\Http\Controllers\SuperAdmin\ClientController as SuperAdminClientController;
 use App\Http\Controllers\SuperAdmin\CompanyController as SuperAdminCompanyController;
+use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboardController;
 use App\Http\Controllers\SuperAdmin\FeeController as SuperAdminFeeController;
 use App\Http\Controllers\SuperAdmin\ImpersonationController as SuperAdminImpersonationController;
+use App\Http\Controllers\SuperAdmin\SettingsController as SuperAdminSettingsController;
 use App\Http\Controllers\SuperAdmin\TransactionController as SuperAdminTransactionController;
 use App\Http\Controllers\TicketTypeController;
 use App\Http\Controllers\WebhookController;
@@ -307,10 +310,24 @@ Route::middleware(['auth', 'super.admin', 'session.timeout'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
+        // Platform dashboard: at-a-glance totals across every Company (companies,
+        // users, events, confirmed orders, gross sales, platform fees earned).
+        // This is the super-admin landing page. (20.1, 20.2)
+        Route::get('/', [SuperAdminDashboardController::class, 'index'])->name('home');
+
         // All Companies' transactions + total Application_Fees earned across the
         // whole Platform (cross-Company, bypasses the tenant scope). (20.1, 20.2)
-        Route::get('/', [SuperAdminTransactionController::class, 'index'])->name('home');
         Route::get('/transactions', [SuperAdminTransactionController::class, 'index'])->name('transactions.index');
+
+        // Clients (Companies) with per-Company stats, and a per-Company
+        // drill-down. A business view of each tenant's activity. (20.1)
+        Route::get('/clients', [SuperAdminClientController::class, 'index'])->name('clients.index');
+        Route::get('/clients/{company}', [SuperAdminClientController::class, 'show'])->name('clients.show');
+
+        // Platform settings, including a mail-troubleshooting tool that sends a
+        // diagnostic test email through the configured mailer. (20.7)
+        Route::get('/settings', [SuperAdminSettingsController::class, 'index'])->name('settings.index');
+        Route::post('/settings/test-mail', [SuperAdminSettingsController::class, 'sendTest'])->name('settings.test-mail');
 
         // Oversee all Companies; suspend / unsuspend a Company. Suspension is
         // enforced live elsewhere (ResolveTenant / EnsureCompanyActive) so it
