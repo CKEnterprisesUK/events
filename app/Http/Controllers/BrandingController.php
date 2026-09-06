@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Rules\SafeUpload;
 use App\Services\Branding\BrandingResolver;
 use App\Services\BrandingImageStore;
+use App\Services\EventReadiness;
 use App\Services\RoleAuthorization;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -52,14 +53,10 @@ class BrandingController extends Controller
      */
     private const POSTER_DIRECTORY = 'branding/posters';
 
-    /**
-     * Where uploaded per-Event sponsor banner images live on the `public` disk.
-     */
-    private const SPONSOR_DIRECTORY = 'branding/sponsors';
-
     public function __construct(
         private readonly BrandingResolver $resolver,
         private readonly BrandingImageStore $imageStore,
+        private readonly EventReadiness $readiness,
     ) {}
 
     // ---- Company-level branding (Owner, ACTION_MANAGE_SETTINGS) --------------
@@ -195,15 +192,18 @@ class BrandingController extends Controller
         return view('dashboard.branding.event', [
             'event' => $event,
             'branding' => $this->resolver->forEvent($event),
+            // The branding screen renders inside the manage-event layout, which
+            // needs the readiness checklist for the shared section nav sidebar.
+            'readiness' => $this->readiness->checklist($event),
         ]);
     }
 
     /**
      * Persist Event-level branding overrides (logo, poster, primary colour) for
-     * one Event, plus the per-Event printed-ticket design: two optional sponsor
-     * banner images (top/bottom) and the custom entry instructions printed on
-     * the ticket. Blank override fields clear the override so the Event falls
-     * back to the Company-level branding. (Requirement 7.5)
+     * one Event, plus the custom entry instructions printed on the ticket. Blank
+     * override fields clear the override so the Event falls back to the
+     * Company-level branding. Sponsors are managed on their own screen.
+     * (Requirement 7.5)
      */
     public function updateEvent(Request $request, Event $event): RedirectResponse
     {
@@ -215,26 +215,9 @@ class BrandingController extends Controller
             'poster' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:8192', new SafeUpload],
             'primary_colour' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
 
-            // Per-event printed-ticket design.
+            // Per-event printed-ticket design. Sponsors are managed on their own
+            // screen (dashboard.events.sponsors), no longer here.
             'ticket_instructions' => ['nullable', 'string', 'max:2000'],
-            'sponsor_top' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:8192', new SafeUpload],
-            'sponsor_bottom' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:8192', new SafeUpload],
-            // Explicit "remove this sponsor" checkboxes so a blank file input
-            // does not silently keep a banner the organiser wanted gone.
-            'remove_sponsor_top' => ['nullable', 'boolean'],
-            'remove_sponsor_bottom' => ['nullable', 'boolean'],
-
-            // Per-sponsor metadata. Name/website/bio are shown on the public
-            // store page only; on_ticket controls whether the banner prints on
-            // the ticket PDF. Absent checkbox = not shown on ticket.
-            'sponsor_top_name' => ['nullable', 'string', 'max:255'],
-            'sponsor_top_website' => ['nullable', 'string', 'url', 'max:255'],
-            'sponsor_top_bio' => ['nullable', 'string', 'max:2000'],
-            'sponsor_top_on_ticket' => ['nullable', 'boolean'],
-            'sponsor_bottom_name' => ['nullable', 'string', 'max:255'],
-            'sponsor_bottom_website' => ['nullable', 'string', 'url', 'max:255'],
-            'sponsor_bottom_bio' => ['nullable', 'string', 'max:2000'],
-            'sponsor_bottom_on_ticket' => ['nullable', 'boolean'],
         ]);
 
         $attributes = [
@@ -250,82 +233,11 @@ class BrandingController extends Controller
             $attributes['poster_path'] = $this->imageStore->store($request->file('poster'), self::POSTER_DIRECTORY, $event->poster_path);
         }
 
-        $topRemoved = $request->boolean('remove_sponsor_top');
-        $bottomRemoved = $request->boolean('remove_sponsor_bottom');
-
-        $attributes['sponsor_top_path'] = $this->resolveSponsor(
-            $request,
-            'sponsor_top',
-            $topRemoved,
-            $event->sponsor_top_path,
-        );
-
-        $attributes['sponsor_bottom_path'] = $this->resolveSponsor(
-            $request,
-            'sponsor_bottom',
-            $bottomRemoved,
-            $event->sponsor_bottom_path,
-        );
-
-        // Per-sponsor metadata travels with the slot: cleared when the banner
-        // is removed, otherwise taken from the submitted fields. on_ticket is
-        // an unchecked-means-off checkbox.
-        $attributes += $this->sponsorMeta($data, 'sponsor_top', $topRemoved);
-        $attributes += $this->sponsorMeta($data, 'sponsor_bottom', $bottomRemoved);
-
         $event->update($attributes);
 
         return redirect()
             ->route('dashboard.branding.event.edit', $event)
             ->with('status', 'Event branding updated.');
-    }
-
-    /**
-     * Resolve the stored path for one sponsor banner slot on save: a newly
-     * uploaded file replaces (and deletes) the old one; an explicit "remove"
-     * clears and deletes it; otherwise the existing path is kept unchanged.
-     */
-    private function resolveSponsor(Request $request, string $field, bool $remove, ?string $currentPath): ?string
-    {
-        if ($request->hasFile($field)) {
-            return $this->imageStore->store($request->file($field), self::SPONSOR_DIRECTORY, $currentPath);
-        }
-
-        if ($remove) {
-            $this->imageStore->delete($currentPath);
-
-            return null;
-        }
-
-        return $currentPath;
-    }
-
-    /**
-     * The per-sponsor metadata attributes for one slot (name, website, bio and
-     * the on_ticket print toggle). When the slot's banner was removed, the
-     * metadata is cleared and the sponsor is not printed on the ticket so no
-     * stray name/link/bio lingers without a logo.
-     *
-     * @param  array<string, mixed>  $data
-     * @return array<string, mixed>
-     */
-    private function sponsorMeta(array $data, string $field, bool $removed): array
-    {
-        if ($removed) {
-            return [
-                "{$field}_name" => null,
-                "{$field}_website" => null,
-                "{$field}_bio" => null,
-                "{$field}_on_ticket" => false,
-            ];
-        }
-
-        return [
-            "{$field}_name" => $data["{$field}_name"] ?? null,
-            "{$field}_website" => $data["{$field}_website"] ?? null,
-            "{$field}_bio" => $data["{$field}_bio"] ?? null,
-            "{$field}_on_ticket" => (bool) ($data["{$field}_on_ticket"] ?? false),
-        ];
     }
 
     // ---- Helpers -------------------------------------------------------------

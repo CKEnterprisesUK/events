@@ -34,9 +34,6 @@
         </div>
         <div class="page-head__actions">
             <a class="btn btn-outline btn-sm" href="{{ route('dashboard.events.index') }}">All events</a>
-            @can('settings')
-                <a class="btn btn-outline btn-sm" href="{{ route('dashboard.branding.event.edit', $event) }}">Branding</a>
-            @endcan
         </div>
     </div>
 
