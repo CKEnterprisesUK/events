@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#0b1739">
 
-    <title>Events by CK Enterprises UK · Simple ticketing for organisations that want to keep more</title>
+    <title>Events by CK Enterprises UK · Ticketing built by a team that already supports charities</title>
     <meta
         name="description"
-        content="Straightforward UK event ticketing for charities, community organisations and independent organisers. Direct Stripe payouts, branded storefronts, QR check-in and transparent pricing."
+        content="Events by CK Enterprises UK is straightforward event ticketing from a team already providing digital services to charities and small organisations. Direct Stripe payouts, branded storefronts, QR check-in and transparent pricing."
     >
 
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
@@ -24,11 +24,15 @@
 
     <style>
         :root {
-            --navy: #0b1739;
-            --navy-2: #12224b;
-            --blue: #1f63ff;
-            --blue-dark: #174fd0;
-            --blue-soft: #edf3ff;
+            --navy: #0f1425;
+            --navy-2: #1b1f2e;
+
+            /* Events by CK Enterprises UK brand colours */
+            --purple: #674df3;
+            --purple-dark: #5238d6;
+            --purple-soft: #f1efff;
+            --teal: #30f0b6;
+            --teal-dark: #17b989;
 
             --ink: #101828;
             --body: #475467;
@@ -121,7 +125,7 @@
             align-items: center;
             gap: .55rem;
             margin-bottom: 1rem;
-            color: var(--blue);
+            color: var(--purple);
             font-size: .78rem;
             font-weight: 700;
             letter-spacing: .08em;
@@ -165,11 +169,11 @@
 
         .btn-primary {
             color: #fff;
-            background: var(--blue);
+            background: var(--purple);
         }
 
         .btn-primary:hover {
-            background: var(--blue-dark);
+            background: var(--purple-dark);
         }
 
         .btn-secondary {
@@ -239,6 +243,14 @@
         .brand-ck {
             font-size: 1.22rem;
             line-height: 1;
+        }
+
+        .brand-events {
+            color: var(--teal);
+        }
+
+        .brand-ck {
+            color: #fff;
         }
 
         .brand-by {
@@ -406,7 +418,7 @@
 
         .hero-proof span::before {
             content: "✓";
-            color: #77d4ad;
+            color: var(--teal);
             font-weight: 800;
         }
 
@@ -414,6 +426,7 @@
             padding: 1.55rem;
 
             background: #fff;
+            border-top: 3px solid var(--teal);
             color: var(--body);
 
             border-radius: 10px;
@@ -442,7 +455,7 @@
         }
 
         .hero-price .number span {
-            color: var(--blue);
+            color: var(--purple);
         }
 
         .hero-price .desc {
@@ -483,6 +496,7 @@
         .proof-strip {
             background: #fff;
             border-bottom: 1px solid var(--line);
+            box-shadow: inset 0 2px 0 var(--purple);
         }
 
         .proof-strip-inner {
@@ -567,7 +581,7 @@
         .benefit-number {
             margin-bottom: .9rem;
 
-            color: var(--blue);
+            color: var(--purple);
 
             font-family: var(--heading-font);
             font-size: .8rem;
@@ -607,17 +621,17 @@
 
         .plain-list li::before {
             content: "—";
-            color: var(--blue);
+            color: var(--purple);
             font-weight: 800;
         }
 
         .audience-note {
             padding: 1.6rem;
 
-            background: var(--blue-soft);
-            border-left: 3px solid var(--blue);
+            background: var(--purple-soft);
+            border-left: 3px solid var(--purple);
 
-            color: #2f4779;
+            color: #493d88;
         }
 
         .audience-note strong {
@@ -648,7 +662,7 @@
         }
 
         .pricing-copy .price-line span {
-            color: var(--blue);
+            color: var(--purple);
         }
 
         .pricing-copy .price-sub {
@@ -725,8 +739,8 @@
         }
 
         .field input:focus {
-            outline: 3px solid rgba(31, 99, 255, .12);
-            border-color: var(--blue);
+            outline: 3px solid rgba(103, 77, 243, .12);
+            border-color: var(--purple);
         }
 
         .fee-mode {
@@ -762,7 +776,7 @@
 
         .toggle button.active {
             background: #fff;
-            color: var(--blue);
+            color: var(--purple);
 
             box-shadow: 0 1px 2px rgba(16, 24, 40, .08);
         }
@@ -800,7 +814,7 @@
         }
 
         .calc-row.total span:last-child {
-            color: var(--blue);
+            color: var(--purple);
 
             font-family: var(--heading-font);
             font-size: 1.35rem;
@@ -836,7 +850,7 @@
         .step-num {
             margin-bottom: 1.35rem;
 
-            color: var(--blue);
+            color: var(--purple);
 
             font-family: var(--heading-font);
             font-size: .82rem;
@@ -1208,14 +1222,15 @@
             <div class="container hero-grid">
                 <div>
                     <span class="eyebrow">
-                        Ticketing for charities &amp; independent organisers
+                        Ticketing from a team that already supports charities
                     </span>
 
                     <h1>Your event. Your customers. Your money.</h1>
 
                     <p class="lead">
-                        Sell tickets through your own branded storefront, take payments through your own
-                        connected Stripe account, and keep more of every sale with straightforward platform pricing.
+                        Events by CK Enterprises UK is built by the same team already providing digital services
+                        to charities and small organisations. Sell through your own branded storefront, take payments
+                        through your own connected Stripe account, and keep more of every ticket sale.
                     </p>
 
                     <div class="hero-actions">
@@ -1237,7 +1252,7 @@
                     <div class="hero-proof" aria-label="Key benefits">
                         <span>No monthly subscription</span>
                         <span>Direct Stripe payouts</span>
-                        <span>UK-based support</span>
+                        <span>Built by CK Enterprises UK</span>
                     </div>
                 </div>
 
@@ -1305,12 +1320,12 @@
                     <span class="eyebrow">Why Events by CK Enterprises UK</span>
 
                     <h2>
-                        Built to help organisations raise more, keep more and spend less time administering events.
+                        Ticketing built on the same practical approach we already bring to charity and small-organisation technology.
                     </h2>
 
                     <p>
-                        We have deliberately kept the platform focused on the things small and community-led
-                        organisers actually need.
+                        CK Enterprises UK already provides digital services to charities and small organisations.
+                        Events brings that same straightforward, support-led approach to ticketing.
                     </p>
                 </div>
 
@@ -1354,8 +1369,8 @@
                         <h3>Support from a UK technology partner</h3>
 
                         <p>
-                            CK Enterprises UK already supports charities and small organisations, so help is
-                            practical and human when you need it.
+                            Events is not a disconnected ticketing brand. It is made and supported by CK Enterprises UK,
+                            the same team already providing digital services to charities and small organisations.
                         </p>
                     </article>
                 </div>
@@ -1382,8 +1397,34 @@
                 <div class="audience-note">
                     <strong>Not trying to become another event marketplace.</strong>
 
-                    Events by CK Enterprises UK is built as a straightforward service for the organiser:
-                    branded sales, payments, tickets, check-in and reporting.
+                    Events by CK Enterprises UK is built as a straightforward extension of the digital services
+                    we already provide: branded sales, payments, tickets, check-in and reporting without turning
+                    your event into part of an advertising marketplace.
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="container audience-grid">
+                <div>
+                    <span class="eyebrow">Made by CK Enterprises UK</span>
+
+                    <h2>
+                        Ticketing from a technology partner that understands smaller organisations.
+                    </h2>
+                </div>
+
+                <div>
+                    <p style="margin-bottom: 1rem;">
+                        CK Enterprises UK already provides digital services and practical technology support
+                        to charities and small organisations. Events was built from that experience rather than
+                        around the needs of a large ticket marketplace.
+                    </p>
+
+                    <p>
+                        That means straightforward pricing, sensible data collection, direct Stripe payments
+                        and support from the people building the platform.
+                    </p>
                 </div>
             </div>
         </section>

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Jobs\ProcessWebhookJob;
+use App\Models\AuditLog;
 use App\Models\Company;
 use App\Models\Order;
 use App\Models\ProcessedWebhook;
@@ -40,6 +41,7 @@ class WebhookProcessor
     public function __construct(
         private readonly OrderFulfilmentService $fulfilment,
         private readonly OrderCancellationService $cancellation,
+        private readonly AuditLogger $audit,
     ) {}
 
     /**
@@ -138,6 +140,18 @@ class WebhookProcessor
         // nor re-fulfils. (Requirements 14.1, 14.3)
         if ($justPaid) {
             $this->fulfilment->fulfil($order->refresh());
+
+            // System event (no acting user): record the confirmed payment
+            // against the Order's own Company for the trail.
+            $this->audit->recordSystem(
+                action: AuditLog::WEBHOOK_PAYMENT_CONFIRMED,
+                auditable: $order,
+                summary: 'Payment confirmed for order '.$order->order_reference,
+                context: [
+                    'order_reference' => $order->order_reference,
+                    'amount_minor' => $order->order_total_minor,
+                ],
+            );
         }
     }
 
@@ -156,7 +170,17 @@ class WebhookProcessor
             return;
         }
 
-        $this->cancellation->markRefundedFromWebhook($order);
+        // Log only when this delivery actually performed the refund transition,
+        // so a redelivery (or convergence with a prior dashboard refund) records
+        // nothing.
+        if ($this->cancellation->markRefundedFromWebhook($order)) {
+            $this->audit->recordSystem(
+                action: AuditLog::WEBHOOK_REFUND_PROCESSED,
+                auditable: $order,
+                summary: 'Refund processed for order '.$order->order_reference,
+                context: ['order_reference' => $order->order_reference],
+            );
+        }
     }
 
     /**
@@ -171,7 +195,14 @@ class WebhookProcessor
             return;
         }
 
-        $this->cancellation->markDisputedFromWebhook($order);
+        if ($this->cancellation->markDisputedFromWebhook($order)) {
+            $this->audit->recordSystem(
+                action: AuditLog::WEBHOOK_DISPUTE_CREATED,
+                auditable: $order,
+                summary: 'Dispute opened on order '.$order->order_reference,
+                context: ['order_reference' => $order->order_reference],
+            );
+        }
     }
 
     /**

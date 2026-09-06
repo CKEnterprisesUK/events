@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Event;
 use App\Models\TicketType;
+use App\Services\AuditLogger;
 use App\Services\RoleAuthorization;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -45,6 +47,8 @@ class TicketTypeController extends Controller
     /** Maximum capacity. (Requirement 6.1) */
     private const MAX_CAPACITY = 1_000_000;
 
+    public function __construct(private readonly AuditLogger $audit) {}
+
     /**
      * Ticket-type management now lives on the dedicated "Tickets" manage screen
      * (dashboard.events.tickets). This route is kept registered so existing
@@ -83,6 +87,13 @@ class TicketTypeController extends Controller
         // BelongsToCompany trait; sold/reserved counts default to 0.
         $ticketType = $event->ticketTypes()->create($data);
 
+        $this->audit->record(
+            action: AuditLog::TICKET_TYPE_CREATED,
+            auditable: $ticketType,
+            summary: 'Created ticket type "'.$ticketType->name.'" for '.$event->name,
+            context: ['event_id' => (int) $event->getKey()],
+        );
+
         return redirect()
             ->route('dashboard.events.ticket-types.index', $event)
             ->with('status', 'Ticket type created.');
@@ -99,6 +110,13 @@ class TicketTypeController extends Controller
         $this->ensureBelongsToEvent($event, $ticketType);
 
         $ticketType->update($this->validated($request, $event));
+
+        $this->audit->record(
+            action: AuditLog::TICKET_TYPE_UPDATED,
+            auditable: $ticketType,
+            summary: 'Updated ticket type "'.$ticketType->name.'" for '.$event->name,
+            context: ['event_id' => (int) $event->getKey()],
+        );
 
         return redirect()
             ->route('dashboard.events.ticket-types.index', $event)

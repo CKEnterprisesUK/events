@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Event;
 use App\Rules\SafeUpload;
+use App\Services\AuditLogger;
 use App\Services\BrandingImageStore;
 use App\Services\EventReadiness;
 use App\Services\EventReportService;
@@ -49,6 +51,7 @@ class EventController extends Controller
         private EventReportService $reports,
         private GeocodingService $geocoder,
         private BrandingImageStore $images,
+        private readonly AuditLogger $audit,
     ) {}
 
     /**
@@ -89,6 +92,12 @@ class EventController extends Controller
         // BelongsToCompany trait; publish state defaults to unpublished and
         // location_mode defaults to in_person via the model's $attributes (5.5).
         $event = Event::create($data);
+
+        $this->audit->record(
+            action: AuditLog::EVENT_CREATED,
+            auditable: $event,
+            summary: 'Created event "'.$event->name.'"',
+        );
 
         return redirect()
             ->route('dashboard.events.show', $event)
@@ -226,6 +235,12 @@ class EventController extends Controller
 
         $event->update($data);
 
+        $this->audit->record(
+            action: AuditLog::EVENT_UPDATED,
+            auditable: $event,
+            summary: 'Updated event "'.$event->name.'"',
+        );
+
         // Updated details (name, start time) show on the public storefront
         // listing when the Event is published, so refresh the cache.
         $this->storefrontListing->forget($event->company);
@@ -313,6 +328,12 @@ class EventController extends Controller
 
         $event->publish();
 
+        $this->audit->record(
+            action: AuditLog::EVENT_PUBLISHED,
+            auditable: $event,
+            summary: 'Published event "'.$event->name.'"',
+        );
+
         // Publishing adds the Event to the public storefront listing; refresh
         // the cache so the next storefront request includes it. (Requirement 8.2)
         $this->storefrontListing->forget($event->company);
@@ -330,6 +351,12 @@ class EventController extends Controller
         Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
 
         $event->unpublish();
+
+        $this->audit->record(
+            action: AuditLog::EVENT_UNPUBLISHED,
+            auditable: $event,
+            summary: 'Unpublished event "'.$event->name.'"',
+        );
 
         // Unpublishing removes the Event from the public storefront listing;
         // refresh the cache so it no longer appears. (Requirement 5.5)

@@ -121,6 +121,15 @@ class CustomerController extends Controller
         $email = $this->decodeEmail($customer);
         $export = $this->gdpr->export($email);
 
+        // Record THAT an export happened, never the exported data. The customer
+        // is referenced by a salted hash of the email, not the email itself, so
+        // the audit trail holds no recoverable customer PII.
+        $this->audit->record(
+            action: AuditLog::GDPR_CUSTOMER_EXPORTED,
+            summary: 'Exported a customer\'s personal data',
+            context: ['customer_ref' => $this->customerRef($email)],
+        );
+
         return response()
             ->json($export, 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
             ->header('Content-Disposition', 'attachment; filename="gdpr-export.json"');
@@ -138,6 +147,18 @@ class CustomerController extends Controller
         $email = $this->decodeEmail($customer);
         $count = $this->gdpr->anonymise($email);
 
+        // Record THAT an anonymisation happened and how many orders it touched,
+        // referencing the customer by a salted hash rather than the (now gone)
+        // email. No recoverable PII enters the trail.
+        $this->audit->record(
+            action: AuditLog::GDPR_CUSTOMER_ANONYMISED,
+            summary: 'Anonymised a customer\'s personal data on '.$count.' order(s)',
+            context: [
+                'customer_ref' => $this->customerRef($email),
+                'orders_affected' => $count,
+            ],
+        );
+
         // After anonymisation the email is rewritten to the sentinel, so the
         // original token no longer resolves — send the Owner back to the roster.
         return redirect()
@@ -151,6 +172,20 @@ class CustomerController extends Controller
     public static function tokenFor(string $email): string
     {
         return rtrim(strtr(base64_encode($email), '+/', '-_'), '=');
+    }
+
+    /**
+     * A stable, non-reversible reference to a Customer for the audit trail: a
+     * keyed HMAC of the normalised email. It lets two audit rows about the same
+     * Customer be correlated without the trail ever holding the email itself
+     * (GDPR data-minimisation on the log). Keyed on APP_KEY so it cannot be
+     * recomputed off-platform from a guessed email list.
+     */
+    private function customerRef(string $email): string
+    {
+        $normalised = strtolower(trim($email));
+
+        return substr(hash_hmac('sha256', $normalised, (string) config('app.key')), 0, 32);
     }
 
     /**

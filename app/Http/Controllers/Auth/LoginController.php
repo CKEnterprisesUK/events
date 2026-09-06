@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Company;
+use App\Models\User;
+use App\Services\AuditLogger;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,6 +26,8 @@ use Illuminate\Validation\ValidationException;
  */
 class LoginController extends Controller
 {
+    public function __construct(private readonly AuditLogger $audit) {}
+
     /**
      * Show the login form.
      */
@@ -44,6 +49,23 @@ class LoginController extends Controller
         $remember = $request->boolean('remember');
 
         if (! Auth::attempt($credentials, $remember)) {
+            // Volume guard: only record a failed attempt when the email matches
+            // a real account, so random enumeration/credential-stuffing noise
+            // (which rate limiting already caps) does not bloat the trail. The
+            // attempt has no authenticated actor; attribute it to the target
+            // account's Company so it surfaces on that Company's activity view.
+            $target = User::where('email', $credentials['email'])->first();
+
+            if ($target !== null) {
+                $this->audit->record(
+                    action: AuditLog::AUTH_LOGIN_FAILED,
+                    auditable: $target,
+                    summary: 'Failed sign-in for '.$target->email,
+                    context: ['email' => $target->email],
+                    companyId: $target->company_id !== null ? (int) $target->company_id : null,
+                );
+            }
+
             throw ValidationException::withMessages([
                 'email' => __('auth.failed'),
             ]);
@@ -65,6 +87,14 @@ class LoginController extends Controller
         }
 
         $request->session()->regenerate();
+
+        // Record the successful sign-in. The actor/Company are resolved from the
+        // now-authenticated user by the logger; a Super_Admin has a null Company
+        // so it lands only on the platform trail.
+        $this->audit->record(
+            action: AuditLog::AUTH_LOGIN_SUCCEEDED,
+            summary: 'Signed in',
+        );
 
         // Super_Admins land on the platform (super-admin) surface by default;
         // from there they can jump into a specific Company's dashboard. Company
