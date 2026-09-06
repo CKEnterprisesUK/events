@@ -74,7 +74,7 @@ class OrderTicketDownloadAndResendTest extends TestCase
             (string) $response->headers->get('content-disposition'),
         );
         // dompdf output always begins with the PDF magic bytes.
-        $this->assertStringStartsWith('%PDF', $response->streamedContent());
+        $this->assertStringStartsWith('%PDF', $response->getContent());
     }
 
     public function test_admin_resends_the_ticket_email_reusing_the_same_qr_payload(): void
@@ -96,8 +96,16 @@ class OrderTicketDownloadAndResendTest extends TestCase
         Queue::assertPushed(SendTicketEmailJob::class, 1);
         Queue::assertPushed(
             SendTicketEmailJob::class,
-            fn (SendTicketEmailJob $job): bool => $job->qrPayload === $expectedPayload
-                && $job->orderId === $order->getKey(),
+            function (SendTicketEmailJob $job) use ($expectedPayload, $order): bool {
+                // The job carries the order id + QR payload as private readonly
+                // constructor args; read them via reflection to assert the
+                // resend reuses the same (deterministic) QR as the original send.
+                $props = (fn () => ['id' => $this->orderId, 'payload' => $this->qrPayload])
+                    ->call($job);
+
+                return $props['id'] === $order->getKey()
+                    && $props['payload'] === $expectedPayload;
+            },
         );
     }
 

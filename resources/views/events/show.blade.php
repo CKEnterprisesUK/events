@@ -4,6 +4,10 @@
 
 @section('main_class', 'event-main')
 
+{{-- Match the storefront and checkout pages: no marketing header, and only the
+     slim promo footer instead of the full site footer. --}}
+@section('chrome', 'minimal')
+
 @php
     $currency = $company->currency ?? 'GBP';
     $symbols = ['GBP' => '£', 'USD' => '$', 'EUR' => '€'];
@@ -11,6 +15,14 @@
     $money = fn (int $minor) => $symbol . number_format($minor / 100, 2);
 
     $hasOnSale = $ticketTypes->contains(fn ($t) => $t['on_sale'] && ! $t['sold_out']);
+
+    // Organiser identity + best contact route for a customer who needs help,
+    // mirroring the checkout success page: dedicated support inbox first, then
+    // the general company email, then phone.
+    $sellerName = $company->trading_name ?: ($company->name ?: $company->legal_name);
+    $supportEmail = $company->support_email ?: $company->email;
+    $supportPhone = $company->phone;
+    $supportWebsite = $company->website;
 @endphp
 
 @push('head')
@@ -120,6 +132,81 @@
                         <span class="event-organiser__name">{{ $company->name }}</span>
                     </section>
                 @endif
+
+                {{-- Support & lost tickets. A customer who has already bought can
+                     ask for their tickets to be resent, and find how to reach the
+                     organiser. The resend form intentionally never reveals whether
+                     an email has an order — it always returns the same neutral
+                     confirmation, so it can't be used to probe who has booked. --}}
+                <section class="event-support" id="support">
+                    <h2>Support &amp; lost tickets</h2>
+
+                    <div class="event-support__grid">
+                        <div class="event-support__resend">
+                            <h3>Lost your tickets?</h3>
+                            <p>
+                                Enter the email address you used when booking and we'll
+                                resend your tickets for this event.
+                            </p>
+
+                            @if (session('resend_status'))
+                                <p class="event-support__notice" role="status">
+                                    {{ session('resend_status') }}
+                                </p>
+                            @endif
+
+                            <form method="POST"
+                                  action="{{ route('event.tickets.resend', ['companySlug' => $company->slug, 'event' => $event->id]) }}"
+                                  class="event-support__form">
+                                @csrf
+
+                                <div class="field">
+                                    <label for="resend_email">Email address</label>
+                                    <input type="email" name="email" id="resend_email"
+                                           value="{{ old('email') }}" maxlength="254" required
+                                           autocomplete="email" inputmode="email">
+                                    @error('email')<p class="error">{{ $message }}</p>@enderror
+                                </div>
+
+                                <button type="submit" class="btn">Resend my tickets</button>
+                            </form>
+
+                            <p class="event-support__hint">
+                                If we don't find anything and you don't receive an email,
+                                please check your spam or junk folder, then contact
+                                {{ $sellerName }} using the details here.
+                            </p>
+                        </div>
+
+                        <div class="event-support__contact">
+                            <h3>Contact {{ $sellerName }}</h3>
+                            @if ($supportEmail || $supportPhone || $supportWebsite)
+                                <ul class="event-support__contacts">
+                                    @if ($supportEmail)
+                                        <li>
+                                            <span class="event-support__ico" aria-hidden="true">✉</span>
+                                            <a href="mailto:{{ $supportEmail }}?subject={{ rawurlencode('Ticket support — '.$event->name) }}">{{ $supportEmail }}</a>
+                                        </li>
+                                    @endif
+                                    @if ($supportPhone)
+                                        <li>
+                                            <span class="event-support__ico" aria-hidden="true">☎</span>
+                                            <a href="tel:{{ preg_replace('/[^0-9+]/', '', $supportPhone) }}">{{ $supportPhone }}</a>
+                                        </li>
+                                    @endif
+                                    @if ($supportWebsite)
+                                        <li>
+                                            <span class="event-support__ico" aria-hidden="true">🌐</span>
+                                            <a href="{{ $supportWebsite }}" target="_blank" rel="noopener">{{ preg_replace('#^https?://#', '', rtrim($supportWebsite, '/')) }}</a>
+                                        </li>
+                                    @endif
+                                </ul>
+                            @else
+                                <p class="muted">Contact the organiser where you first heard about this event.</p>
+                            @endif
+                        </div>
+                    </div>
+                </section>
             </div>
 
             {{-- Ticket selection + checkout --}}
