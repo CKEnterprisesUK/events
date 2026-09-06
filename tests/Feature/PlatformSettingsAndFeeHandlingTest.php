@@ -52,10 +52,11 @@ class PlatformSettingsAndFeeHandlingTest extends TestCase
 
     public function test_company_defaults_fee_handling_mode_to_absorb(): void
     {
-        // Requirement 13.2 — mode defaults to absorb when unset.
+        // Requirement 13.2 — mode defaults to pass_on when unset (the booking
+        // fee is added onto the customer's ticket price by default).
         $company = Company::create(['name' => 'Default Co', 'slug' => 'default-co']);
 
-        $this->assertSame(Company::FEE_MODE_ABSORB, $company->fresh()->fee_handling_mode);
+        $this->assertSame(Company::FEE_MODE_PASS_ON, $company->fresh()->fee_handling_mode);
     }
 
     public function test_owner_can_set_fee_handling_mode_to_pass_on(): void
