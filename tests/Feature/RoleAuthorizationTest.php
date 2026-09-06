@@ -61,6 +61,8 @@ class RoleAuthorizationTest extends TestCase
             RoleAuthorization::ACTION_ISSUE_COMP,
             // Admins handle GDPR data-subject requests alongside the Owner.
             RoleAuthorization::ACTION_MANAGE_GDPR,
+            // Admins can view the Company activity/audit trail.
+            RoleAuthorization::ACTION_VIEW_AUDIT_LOG,
         ] as $action) {
             $this->assertTrue($this->matrix->roleCan(User::ROLE_ADMIN, $action));
         }
@@ -93,8 +95,20 @@ class RoleAuthorizationTest extends TestCase
             RoleAuthorization::ACTION_MANAGE_STRIPE,
             RoleAuthorization::ACTION_MANAGE_BILLING,
             RoleAuthorization::ACTION_MANAGE_GDPR,
+            // The audit trail is an oversight surface, not a box-office one.
+            RoleAuthorization::ACTION_VIEW_AUDIT_LOG,
         ] as $action) {
             $this->assertFalse($this->matrix->roleCan(User::ROLE_BOX_OFFICE, $action));
+        }
+    }
+
+    public function test_only_owner_and_admin_can_view_the_audit_log(): void
+    {
+        $this->assertTrue($this->matrix->roleCan(User::ROLE_OWNER, RoleAuthorization::ACTION_VIEW_AUDIT_LOG));
+        $this->assertTrue($this->matrix->roleCan(User::ROLE_ADMIN, RoleAuthorization::ACTION_VIEW_AUDIT_LOG));
+
+        foreach ([User::ROLE_BOX_OFFICE, User::ROLE_ACCOUNTANT, User::ROLE_SCANNER] as $role) {
+            $this->assertFalse($this->matrix->roleCan($role, RoleAuthorization::ACTION_VIEW_AUDIT_LOG));
         }
     }
 
