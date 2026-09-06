@@ -90,6 +90,7 @@ class BrandingController extends Controller
             'poster' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:8192'],
             'primary_colour' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'terms_text' => ['nullable', 'string', 'max:20000'],
+            'privacy_text' => ['nullable', 'string', 'max:20000'],
             'support_email' => ['nullable', 'string', 'email', 'max:254'],
             'gdpr_contact_email' => ['nullable', 'string', 'email', 'max:254'],
 
@@ -100,8 +101,6 @@ class BrandingController extends Controller
             'instagram_url' => ['nullable', 'string', 'url', 'max:255'],
             'x_url' => ['nullable', 'string', 'url', 'max:255'],
             'linkedin_url' => ['nullable', 'string', 'url', 'max:255'],
-            'terms_url' => ['nullable', 'string', 'url', 'max:255'],
-            'privacy_url' => ['nullable', 'string', 'url', 'max:255'],
 
             // Legal/registration details maintained by the Owner after signup.
             // The registered name, organisation type, main organisation email
@@ -136,6 +135,7 @@ class BrandingController extends Controller
         $attributes = [
             'primary_colour' => $data['primary_colour'] ?? null,
             'terms_text' => $data['terms_text'] ?? null,
+            'privacy_text' => $data['privacy_text'] ?? null,
             'support_email' => $data['support_email'] ?? null,
             'gdpr_contact_email' => $data['gdpr_contact_email'] ?? null,
             'about_text' => $data['about_text'] ?? null,
@@ -143,8 +143,6 @@ class BrandingController extends Controller
             'instagram_url' => $data['instagram_url'] ?? null,
             'x_url' => $data['x_url'] ?? null,
             'linkedin_url' => $data['linkedin_url'] ?? null,
-            'terms_url' => $data['terms_url'] ?? null,
-            'privacy_url' => $data['privacy_url'] ?? null,
             'legal_name' => $data['legal_name'],
             'trading_name' => $data['trading_name'] ?? null,
             'organisation_type' => $data['organisation_type'],

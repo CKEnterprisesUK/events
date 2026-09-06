@@ -6,8 +6,8 @@
     // Map each tab to the fields it owns so a server-side validation error can
     // reveal the tab containing the first invalid field on reload.
     $tabFields = [
-        'appearance' => ['logo', 'poster', 'primary_colour', 'terms_text'],
-        'storefront' => ['about_text', 'facebook_url', 'instagram_url', 'x_url', 'linkedin_url', 'terms_url', 'privacy_url'],
+        'appearance' => ['logo', 'poster', 'primary_colour', 'terms_text', 'privacy_text'],
+        'storefront' => ['about_text', 'facebook_url', 'instagram_url', 'x_url', 'linkedin_url'],
         'organisation' => ['legal_name', 'trading_name', 'organisation_type', 'company_number', 'charity_number', 'website', 'email', 'phone'],
         'address' => ['address_line_1', 'address_line_2', 'city', 'postcode', 'country'],
         'contact' => ['support_email', 'gdpr_contact_email'],
@@ -91,11 +91,20 @@
                     @error('primary_colour')<p class="error">{{ $message }}</p>@enderror
                 </div>
 
-                {{-- Terms & Conditions shown at checkout. (7.3) --}}
+                {{-- Terms & Conditions shown to the customer on request at checkout. (7.3) --}}
                 <div class="field">
                     <label for="terms_text">Terms &amp; Conditions</label>
                     <textarea name="terms_text" id="terms_text" rows="6">{{ old('terms_text', $company->terms_text) }}</textarea>
+                    <span class="field-hint">Shown to the customer on request at checkout, when they accept the terms.</span>
                     @error('terms_text')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                {{-- Privacy Notice shown to the customer on request at checkout. --}}
+                <div class="field">
+                    <label for="privacy_text">Privacy notice</label>
+                    <textarea name="privacy_text" id="privacy_text" rows="6">{{ old('privacy_text', $company->privacy_text) }}</textarea>
+                    <span class="field-hint">Shown to the customer on request at checkout, when they agree to their details being processed.</span>
+                    @error('privacy_text')<p class="error">{{ $message }}</p>@enderror
                 </div>
             </div>
 
@@ -145,22 +154,7 @@
                     </div>
                 </div>
 
-                {{-- Links to the organiser's own legal pages. --}}
-                <div class="field">
-                    <label for="terms_url">Terms &amp; Conditions page (link)</label>
-                    <input type="url" name="terms_url" id="terms_url"
-                           value="{{ old('terms_url', $company->terms_url) }}" placeholder="https://yourcompany.com/terms">
-                    <span class="field-hint">A link to your own Terms &amp; Conditions page, shown in the storefront footer.</span>
-                    @error('terms_url')<p class="error">{{ $message }}</p>@enderror
-                </div>
-
-                <div class="field">
-                    <label for="privacy_url">Privacy notice (link)</label>
-                    <input type="url" name="privacy_url" id="privacy_url"
-                           value="{{ old('privacy_url', $company->privacy_url) }}" placeholder="https://yourcompany.com/privacy">
-                    <span class="field-hint">A link to your privacy notice, shown in the storefront footer.</span>
-                    @error('privacy_url')<p class="error">{{ $message }}</p>@enderror
-                </div>
+                <p class="field-hint">Your Terms &amp; Conditions and Privacy notice are set on the Branding tab and shown to customers on request at checkout.</p>
             </div>
 
             {{-- =================== Organisation details =================== --}}

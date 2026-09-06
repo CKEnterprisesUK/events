@@ -188,7 +188,14 @@
                                     <input type="hidden" name="consents[privacy]" value="0">
                                     <input type="checkbox" name="consents[privacy]" value="1" required
                                            {{ old('consents.privacy') ? 'checked' : '' }}>
-                                    <span>I agree to the processing of my details to fulfil this order.</span>
+                                    <span>
+                                        I agree to the processing of my details to fulfil this order
+                                        @if ($branding->hasPrivacy())
+                                            , as described in the <button type="button" class="linklike" data-open-privacy>privacy notice</button>.
+                                        @else
+                                            .
+                                        @endif
+                                    </span>
                                 </label>
                                 @error('consents.privacy')<p class="error">{{ $message }}</p>@enderror
 

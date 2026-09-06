@@ -46,7 +46,7 @@ class InvitationController extends Controller
     /**
      * List the Company's users and pending invitations. (Owner-gated.)
      */
-    public function index(): View
+    public function index(RoleAuthorization $authorization): View
     {
         Gate::authorize(RoleAuthorization::ACTION_MANAGE_USERS);
 
@@ -55,6 +55,7 @@ class InvitationController extends Controller
         return view('dashboard.users.index', [
             'users' => User::query()->where('company_id', $companyId)->get(),
             'invitations' => Invitation::query()->whereNull('accepted_at')->get(),
+            'capabilityMatrix' => $authorization->capabilityMatrix(),
         ]);
     }
 

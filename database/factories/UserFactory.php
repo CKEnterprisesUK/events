@@ -64,6 +64,16 @@ class UserFactory extends Factory
     }
 
     /**
+     * A Company Box_Office user (events/ticketing/orders, no company settings).
+     */
+    public function boxOffice(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => User::ROLE_BOX_OFFICE,
+        ]);
+    }
+
+    /**
      * A Company Accountant (read-only reports/payouts).
      */
     public function accountant(): static

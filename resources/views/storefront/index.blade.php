@@ -81,33 +81,17 @@
                 'X' => $company->x_url,
                 'LinkedIn' => $company->linkedin_url,
             ]);
-            $legalLinks = array_filter([
-                'Terms & Conditions' => $company->terms_url,
-                'Privacy notice' => $company->privacy_url,
-            ]);
         @endphp
 
-        @if (! empty($socialLinks) || ! empty($legalLinks))
+        @if (! empty($socialLinks))
             <section class="store-section store-links">
-                @if (! empty($socialLinks))
-                    <ul class="store-links__list" aria-label="Follow {{ $company->name }}">
-                        @foreach ($socialLinks as $label => $url)
-                            <li>
-                                <a href="{{ $url }}" target="_blank" rel="noopener noreferrer nofollow">{{ $label }}</a>
-                            </li>
-                        @endforeach
-                    </ul>
-                @endif
-
-                @if (! empty($legalLinks))
-                    <ul class="store-links__legal" aria-label="{{ $company->name }} legal">
-                        @foreach ($legalLinks as $label => $url)
-                            <li>
-                                <a href="{{ $url }}" target="_blank" rel="noopener noreferrer nofollow">{{ $label }}</a>
-                            </li>
-                        @endforeach
-                    </ul>
-                @endif
+                <ul class="store-links__list" aria-label="Follow {{ $company->name }}">
+                    @foreach ($socialLinks as $label => $url)
+                        <li>
+                            <a href="{{ $url }}" target="_blank" rel="noopener noreferrer nofollow">{{ $label }}</a>
+                        </li>
+                    @endforeach
+                </ul>
             </section>
         @endif
     </main>

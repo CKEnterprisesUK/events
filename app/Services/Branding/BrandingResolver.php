@@ -39,6 +39,7 @@ class BrandingResolver
             companyLogoPath: $companyLogo,
             // No Event context on a Storefront, so there is no event logo.
             eventLogoPath: null,
+            privacyText: $this->nullIfBlank($company->privacy_text),
         );
     }
 
@@ -55,6 +56,7 @@ class BrandingResolver
         $companyLogo = $company?->logo_path;
         $companyColour = $company?->primary_colour;
         $companyTerms = $company?->terms_text;
+        $companyPrivacy = $company?->privacy_text;
         $companyPoster = $company?->poster_path;
 
         return new EffectiveBranding(
@@ -68,6 +70,9 @@ class BrandingResolver
             // can show both when they differ, not just the resolved one.
             companyLogoPath: $this->nullIfBlank($companyLogo),
             eventLogoPath: $this->nullIfBlank($event->logo_path),
+            // Like Terms, the Privacy Notice is a Company checkout setting shown
+            // on request; Events do not override it.
+            privacyText: $this->nullIfBlank($companyPrivacy),
         );
     }
 

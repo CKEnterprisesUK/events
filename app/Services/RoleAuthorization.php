@@ -157,4 +157,44 @@ class RoleAuthorization
 
         return $this->roleCan($user->role, $action);
     }
+
+    /**
+     * A display-ready capability matrix for the team page. Each capability is a
+     * human-friendly label paired with the representative action that gates it;
+     * `roles` maps every Company role to whether it may perform that action, so
+     * the rendered table always mirrors the real permission matrix above.
+     *
+     * @return list<array{label: string, roles: array<string, bool>}>
+     */
+    public function capabilityMatrix(): array
+    {
+        $capabilities = [
+            'Manage events' => self::ACTION_MANAGE_EVENTS,
+            'Manage ticket types' => self::ACTION_MANAGE_TICKET_TYPES,
+            'Manage orders' => self::ACTION_MANAGE_ORDERS,
+            'Cancel / refund orders' => self::ACTION_REFUND_ORDER,
+            'Issue comp tickets' => self::ACTION_ISSUE_COMP,
+            'View reports & payouts' => self::ACTION_VIEW_REPORTS,
+            'Check in attendees' => self::ACTION_CHECK_IN,
+            'Handle GDPR requests' => self::ACTION_MANAGE_GDPR,
+            'Manage company settings' => self::ACTION_MANAGE_SETTINGS,
+            'Manage Stripe & payouts setup' => self::ACTION_MANAGE_STRIPE,
+            'Manage billing' => self::ACTION_MANAGE_BILLING,
+            'Manage the team' => self::ACTION_MANAGE_USERS,
+        ];
+
+        $rows = [];
+
+        foreach ($capabilities as $label => $action) {
+            $roles = [];
+
+            foreach (User::ROLES as $role) {
+                $roles[$role] = $this->roleCan($role, $action);
+            }
+
+            $rows[] = ['label' => $label, 'roles' => $roles];
+        }
+
+        return $rows;
+    }
 }

@@ -16,6 +16,46 @@
     @error('role') <p class="alert-error">{{ $message }}</p> @enderror
     @error('user') <p class="alert-error">{{ $message }}</p> @enderror
 
+    {{-- Role capabilities --}}
+    <div class="panel">
+        <div class="panel__head"><h2>What each role can do</h2></div>
+        <p class="role-matrix__intro">
+            Only Owners and Admins can handle GDPR requests. Owners also manage
+            company settings, Stripe, billing and the team. Box office staff run
+            events, ticketing and orders without access to company settings.
+        </p>
+        <div class="role-matrix__scroll">
+            <table class="data-table role-matrix">
+                <thead>
+                    <tr>
+                        <th>Capability</th>
+                        @foreach (\App\Models\User::ROLES as $role)
+                            <th class="num" title="{{ \App\Models\User::ROLE_META[$role]['description'] ?? '' }}">
+                                {{ \App\Models\User::roleLabel($role) }}
+                            </th>
+                        @endforeach
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($capabilityMatrix as $capability)
+                        <tr>
+                            <td><span class="cell-strong">{{ $capability['label'] }}</span></td>
+                            @foreach (\App\Models\User::ROLES as $role)
+                                <td class="num">
+                                    @if ($capability['roles'][$role])
+                                        <span class="role-matrix__yes" title="Allowed" aria-label="Allowed">&#10003;</span>
+                                    @else
+                                        <span class="role-matrix__no" title="Not allowed" aria-label="Not allowed">&ndash;</span>
+                                    @endif
+                                </td>
+                            @endforeach
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     {{-- Invite form --}}
     <div class="panel form-panel" id="invite" @if (! $errors->has('email')) hidden @endif>
         <div class="panel__head"><h2>Invite a user</h2></div>
@@ -31,7 +71,7 @@
                     <label for="role">Role</label>
                     <select id="role" name="role" required>
                         @foreach (\App\Models\User::INVITABLE_ROLES as $role)
-                            <option value="{{ $role }}">{{ ucfirst($role) }}</option>
+                            <option value="{{ $role }}">{{ \App\Models\User::roleLabel($role) }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -68,7 +108,7 @@
                                     @method('PUT')
                                     <select name="role" onchange="this.form.submit()" @if ($isSelf) disabled title="You can't change your own role" @endif>
                                         @foreach (\App\Models\User::ROLES as $role)
-                                            <option value="{{ $role }}" @selected($member->role === $role)>{{ ucfirst($role) }}</option>
+                                            <option value="{{ $role }}" @selected($member->role === $role)>{{ \App\Models\User::roleLabel($role) }}</option>
                                         @endforeach
                                     </select>
                                 </form>
@@ -104,7 +144,7 @@
                     @foreach ($invitations as $invitation)
                         <tr>
                             <td>{{ $invitation->email }}</td>
-                            <td><span class="pill pill--draft">{{ ucfirst($invitation->role) }}</span></td>
+                            <td><span class="pill pill--draft">{{ \App\Models\User::roleLabel($invitation->role) }}</span></td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -112,6 +152,17 @@
         @endif
     </div>
 @endsection
+
+@push('head')
+<style>
+    .role-matrix__intro { margin: 0; padding: 1rem 1.25rem; font-size: 0.88rem; color: var(--muted); border-bottom: 1px solid var(--border); }
+    .role-matrix__scroll { overflow-x: auto; }
+    .role-matrix th.num, .role-matrix td.num { text-align: center; white-space: nowrap; }
+    .role-matrix thead th { font-size: 0.85rem; }
+    .role-matrix__yes { color: #047857; font-weight: 700; }
+    .role-matrix__no { color: var(--border); }
+</style>
+@endpush
 
 @push('scripts')
 <script>

@@ -41,9 +41,8 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $instagram_url
  * @property string|null $x_url
  * @property string|null $linkedin_url
- * @property string|null $terms_url
- * @property string|null $privacy_url
  * @property string|null $terms_text
+ * @property string|null $privacy_text
  * @property string|null $support_email
  * @property string|null $gdpr_contact_email
  */
@@ -160,9 +159,8 @@ class Company extends Model
         'instagram_url',
         'x_url',
         'linkedin_url',
-        'terms_url',
-        'privacy_url',
         'terms_text',
+        'privacy_text',
         'support_email',
         'gdpr_contact_email',
     ];

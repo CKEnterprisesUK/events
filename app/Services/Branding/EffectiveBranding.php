@@ -29,6 +29,7 @@ final class EffectiveBranding
         public readonly ?string $posterPath = null,
         public readonly ?string $companyLogoPath = null,
         public readonly ?string $eventLogoPath = null,
+        public readonly ?string $privacyText = null,
     ) {}
 
     /**
@@ -78,5 +79,15 @@ final class EffectiveBranding
     public function hasTerms(): bool
     {
         return $this->termsText !== null && $this->termsText !== '';
+    }
+
+    /**
+     * Whether a Privacy Notice text is set to show at checkout. Like Terms, the
+     * Privacy Notice is authored in-app (Settings) and shown to the customer on
+     * request during checkout.
+     */
+    public function hasPrivacy(): bool
+    {
+        return $this->privacyText !== null && $this->privacyText !== '';
     }
 }
