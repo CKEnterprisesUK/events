@@ -22,16 +22,20 @@
         <p class="status">{{ session('status') }}</p>
     @endif
 
-    {{-- Create-event form, revealed by the "New event" button. --}}
+    {{-- Create-event form, revealed by the "New event" button. Deliberately
+         minimal — just the essentials to get an event created. The hero image,
+         description, capacity, location and everything else are edited on the
+         manage page afterwards, guided by the setup checklist. --}}
     <div class="panel form-panel" id="new-event" @if (! $errors->any()) hidden @endif>
         <div class="panel__head"><h2>Create an event</h2></div>
-        <form method="POST" action="{{ route('dashboard.events.store') }}" class="stack" enctype="multipart/form-data">
+        <form method="POST" action="{{ route('dashboard.events.store') }}" class="stack">
             @csrf
-            @include('dashboard.events._form', ['event' => null])
+            @include('dashboard.events._create_fields', ['event' => null])
             <div class="form-actions">
                 <button type="submit" class="btn">Create event</button>
                 <button type="button" class="btn btn-outline" data-toggle="new-event">Cancel</button>
             </div>
+            <p class="hint">You can add a description, hero image, capacity, ticket types and location once the event is created.</p>
         </form>
     </div>
 

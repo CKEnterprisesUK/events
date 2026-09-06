@@ -27,8 +27,11 @@
                         <button type="submit" class="btn btn-sm" @disabled(! empty($publishBlockers))>Publish</button>
                     </form>
                     @if (! empty($publishBlockers))
+                        {{-- The setup checklist below is the single source of truth for
+                             what's missing, so we don't restate each blocker here — just
+                             point the manager to it. --}}
                         <p class="hint muted" style="margin:.35rem 0 0;">
-                            Before publishing: {{ implode(' ', $publishBlockers) }}
+                            <a href="#panel-overview" data-tab-link="overview">Complete the setup checklist</a> to publish.
                         </p>
                     @endif
                 </div>
@@ -45,15 +48,14 @@
         <p class="status">{{ session('status') }}</p>
     @endif
 
+    {{-- A failed publish flashes 'publish_errors'; rather than a separate panel
+         restating the blockers, we surface a single pointer to the setup
+         checklist (the one on-screen source of truth) on the Overview tab. --}}
     @if (session('publish_errors'))
-        <div class="panel">
-            <div class="panel__head"><h2>Can’t publish yet</h2></div>
-            <ul class="error-list">
-                @foreach ((array) session('publish_errors') as $publishError)
-                    <li class="error">{{ $publishError }}</li>
-                @endforeach
-            </ul>
-        </div>
+        <p class="status" data-status="warning" role="status">
+            This event can’t be published yet. Check the
+            <a href="#panel-overview" data-tab-link="overview">setup checklist</a> for what’s still needed.
+        </p>
     @endif
 
     {{-- Hero banner (per-event poster, falling back to company poster) ---- --}}

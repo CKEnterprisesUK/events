@@ -66,6 +66,11 @@
                         <a class="nav-link {{ $navActive('dashboard.events.*') ? 'active' : '' }}" href="{{ route('dashboard.events.index') }}"><span class="nav-ico">&#127903;</span> Events</a>
                     @endcan
 
+                    @can('orders')
+                        <a class="nav-link {{ $navActive('dashboard.orders.*') ? 'active' : '' }}" href="{{ route('dashboard.orders.index') }}"><span class="nav-ico">&#129534;</span> Orders</a>
+                        <a class="nav-link {{ $navActive('dashboard.customers.*') ? 'active' : '' }}" href="{{ route('dashboard.customers.index') }}"><span class="nav-ico">&#128100;</span> Customers</a>
+                    @endcan
+
                     @can('view_reports')
                         <p class="nav-section">Finance</p>
                         <a class="nav-link {{ $navActive('dashboard.reports.*') ? 'active' : '' }}" href="{{ route('dashboard.reports.index') }}"><span class="nav-ico">&#128200;</span> Reports &amp; Payouts</a>
@@ -82,8 +87,7 @@
                             <a class="nav-link {{ $navActive('dashboard.users.*') ? 'active' : '' }}" href="{{ route('dashboard.users.index') }}"><span class="nav-ico">&#128101;</span> Team</a>
                         @endcan
                         @can('settings')
-                            <a class="nav-link {{ $navActive('dashboard.branding.*') ? 'active' : '' }}" href="{{ route('dashboard.branding.edit') }}"><span class="nav-ico">&#127912;</span> Branding</a>
-                            <a class="nav-link {{ $navActive('dashboard.gdpr.*') ? 'active' : '' }}" href="{{ route('dashboard.gdpr.index') }}"><span class="nav-ico">&#128274;</span> Data &amp; GDPR</a>
+                            <a class="nav-link {{ $navActive('dashboard.settings.*', 'dashboard.branding.*') ? 'active' : '' }}" href="{{ route('dashboard.branding.edit') }}"><span class="nav-ico">&#9881;</span> Settings</a>
                         @endcan
                         @can('stripe')
                             <a class="nav-link {{ $navActive('dashboard.stripe.*') ? 'active' : '' }}" href="{{ route('dashboard.stripe.status') }}"><span class="nav-ico">&#128179;</span> Payments</a>

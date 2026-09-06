@@ -72,11 +72,21 @@ class EventController extends Controller
     {
         Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
 
-        $data = $this->validated($request);
+        // The create FORM asks only for the essentials (name + optional
+        // start/venue); the hero image, capacity, description and location are
+        // added later on the manage page, guided by the setup checklist.
+        //
+        // Validation stays tolerant of the fuller payload, though: `poster` and
+        // the location fields are still accepted and applied when present, so
+        // programmatic callers (and the event-experience-polish hero-on-create
+        // contract) keep working. `location_mode` is optional here and falls
+        // back to the model default (in_person) when the slim form omits it.
+        $data = $this->validated($request, requireLocationMode: false);
         $data = $this->applyLocationAndPoster($request, $data, null);
 
         // company_id is auto-filled from the resolved tenant by the
-        // BelongsToCompany trait; publish state defaults to unpublished (5.5).
+        // BelongsToCompany trait; publish state defaults to unpublished and
+        // location_mode defaults to in_person via the model's $attributes (5.5).
         $event = Event::create($data);
 
         return redirect()
@@ -239,7 +249,7 @@ class EventController extends Controller
      *
      * @return array<string, mixed>
      */
-    private function validated(Request $request): array
+    private function validated(Request $request, bool $requireLocationMode = true): array
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -247,7 +257,10 @@ class EventController extends Controller
             'venue' => ['nullable', 'string', 'max:255'],
             'starts_at' => ['nullable', 'date'],
             'capacity' => ['nullable', 'integer', 'min:1'],
-            'location_mode' => ['required', Rule::in(Event::LOCATION_MODES)],
+            // The manage-page Overview/Location forms always submit location_mode
+            // and require it; the slim create form omits it, so store() relaxes
+            // this to `sometimes` and lets the model default (in_person) apply.
+            'location_mode' => [$requireLocationMode ? 'required' : 'sometimes', Rule::in(Event::LOCATION_MODES)],
             'address' => ['nullable', 'string', 'max:500'],
             // lat/lng come from the hidden inputs the mini-map writes; validated
             // but normally overwritten by a successful geocode on address change.

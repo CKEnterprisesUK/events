@@ -9,6 +9,7 @@ use App\Models\OrderConsent;
 use App\Models\Ticket;
 use App\Models\TicketType;
 use App\Models\User;
+use App\Http\Controllers\CustomerController;
 use App\Services\GdprService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -16,7 +17,8 @@ use Tests\TestCase;
 /**
  * Feature: event-ticketing-platform — task 25.1.
  *
- * Covers GdprController + GdprService and the public privacy policy page:
+ * Covers the GDPR data-subject tools (now surfaced on the Customers page via
+ * CustomerController), GdprService and the public privacy policy page:
  *   - 22.1 Export a Customer's stored personal data (incl. consents).
  *   - 22.2 Delete/anonymise a Customer's personal data while retaining the
  *          transactional records required for reconciliation.
@@ -91,35 +93,33 @@ class GdprDataToolsTest extends TestCase
 
     // ---- Gating (3.3, 3.7, Property 6) ---------------------------------------
 
-    public function test_owner_can_open_the_gdpr_tools(): void
+    public function test_owner_can_open_the_customers_page(): void
     {
         $owner = User::factory()->owner()->create();
 
-        $this->actingAs($owner)->get('/dashboard/gdpr')->assertOk();
+        $this->actingAs($owner)->get('/dashboard/customers')->assertOk();
     }
 
-    public function test_non_owner_roles_cannot_access_gdpr_tools(): void
+    public function test_non_owner_roles_cannot_run_gdpr_export_or_anonymise(): void
     {
         $company = Company::factory()->create();
+        $token = CustomerController::tokenFor('someone@example.com');
 
+        // Admin manages orders so may view the Customers roster, but GDPR
+        // export/anonymise stay Owner-gated (ACTION_MANAGE_SETTINGS).
         foreach ([
             User::factory()->admin()->create(['company_id' => $company->id]),
             User::factory()->accountant()->create(['company_id' => $company->id]),
             User::factory()->scanner()->create(['company_id' => $company->id]),
         ] as $user) {
-            $this->actingAs($user)->get('/dashboard/gdpr')->assertForbidden();
-            $this->actingAs($user)->post('/dashboard/gdpr/export', [
-                'customer_email' => 'someone@example.com',
-            ])->assertForbidden();
-            $this->actingAs($user)->post('/dashboard/gdpr/anonymise', [
-                'customer_email' => 'someone@example.com',
-            ])->assertForbidden();
+            $this->actingAs($user)->post("/dashboard/customers/{$token}/export")->assertForbidden();
+            $this->actingAs($user)->post("/dashboard/customers/{$token}/anonymise")->assertForbidden();
         }
     }
 
-    public function test_guests_are_redirected_from_gdpr_tools(): void
+    public function test_guests_are_redirected_from_the_customers_page(): void
     {
-        $this->get('/dashboard/gdpr')->assertRedirect('/login');
+        $this->get('/dashboard/customers')->assertRedirect('/login');
     }
 
     // ---- Export (22.1, 22.4) -------------------------------------------------
@@ -132,9 +132,8 @@ class GdprDataToolsTest extends TestCase
 
         $this->customerOrder($event, 'jo@example.com', name: 'Jo Bloggs', subtotal: 8_000, qty: 3);
 
-        $response = $this->actingAs($owner)->post('/dashboard/gdpr/export', [
-            'customer_email' => 'jo@example.com',
-        ]);
+        $token = CustomerController::tokenFor('jo@example.com');
+        $response = $this->actingAs($owner)->post("/dashboard/customers/{$token}/export");
 
         $response->assertOk();
         $response->assertHeader('content-disposition', 'attachment; filename="gdpr-export.json"');
@@ -171,9 +170,8 @@ class GdprDataToolsTest extends TestCase
         $otherEvent = Event::factory()->for($otherCompany)->unlimitedCapacity()->create();
         $this->customerOrder($otherEvent, 'shared@example.com', name: 'Foreign Customer');
 
-        $payload = $this->actingAs($owner)->post('/dashboard/gdpr/export', [
-            'customer_email' => 'shared@example.com',
-        ])->json();
+        $token = CustomerController::tokenFor('shared@example.com');
+        $payload = $this->actingAs($owner)->post("/dashboard/customers/{$token}/export")->json();
 
         $this->assertCount(1, $payload['orders']);
         $this->assertSame('Own Customer', $payload['orders'][0]['customer_name']);
@@ -198,9 +196,9 @@ class GdprDataToolsTest extends TestCase
         );
         $reference = $order->order_reference;
 
-        $this->actingAs($owner)->post('/dashboard/gdpr/anonymise', [
-            'customer_email' => 'erase-me@example.com',
-        ])->assertRedirect(route('dashboard.gdpr.index'));
+        $token = CustomerController::tokenFor('erase-me@example.com');
+        $this->actingAs($owner)->post("/dashboard/customers/{$token}/anonymise")
+            ->assertRedirect(route('dashboard.customers.index'));
 
         $order->refresh();
 
@@ -218,9 +216,7 @@ class GdprDataToolsTest extends TestCase
         $this->assertSame(6_400, $order->order_total_minor);
 
         // The original email no longer resolves any personal data on export.
-        $payload = $this->actingAs($owner)->post('/dashboard/gdpr/export', [
-            'customer_email' => 'erase-me@example.com',
-        ])->json();
+        $payload = $this->actingAs($owner)->post("/dashboard/customers/{$token}/export")->json();
         $this->assertCount(0, $payload['orders']);
     }
 
@@ -237,9 +233,9 @@ class GdprDataToolsTest extends TestCase
         $otherEvent = Event::factory()->for($otherCompany)->unlimitedCapacity()->create();
         $otherOrder = $this->customerOrder($otherEvent, 'shared@example.com', name: 'Foreign Customer');
 
-        $this->actingAs($owner)->post('/dashboard/gdpr/anonymise', [
-            'customer_email' => 'shared@example.com',
-        ])->assertRedirect();
+        $token = CustomerController::tokenFor('shared@example.com');
+        $this->actingAs($owner)->post("/dashboard/customers/{$token}/anonymise")
+            ->assertRedirect();
 
         $ownOrder->refresh();
         $this->assertSame(GdprService::ANONYMISED_NAME, $ownOrder->customer_name);

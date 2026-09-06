@@ -99,6 +99,19 @@
             });
         });
 
+        // Any element with [data-tab-link="KEY"] (e.g. the "setup checklist"
+        // pointers near the Publish control) activates that tab and moves focus
+        // to it, so those links behave like tab navigation rather than jumping
+        // to a hidden panel.
+        document.querySelectorAll('[data-tab-link]').forEach(function (link) {
+            link.addEventListener('click', function (event) {
+                var key = link.getAttribute('data-tab-link');
+                if (!hasKey(key)) return;
+                event.preventDefault();
+                activate(key, true);
+            });
+        });
+
         // Keyboard nav on the tablist (roving tabindex): Left/Right move and
         // activate (wrapping), Home/End jump to first/last, Enter/Space activate
         // the focused tab.

@@ -9,8 +9,10 @@ use App\Services\CompTicketService;
 use App\Services\OrderCancellationService;
 use App\Services\RoleAuthorization;
 use App\Services\TenantContext;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
@@ -44,6 +46,60 @@ class OrderController extends Controller
         private readonly OrderCancellationService $cancellation,
         private readonly CompTicketService $comps,
     ) {}
+
+    /**
+     * List the Company's Orders across every Event, most recent first. Supports
+     * a free-text search over the order reference and customer name/email, and
+     * a status filter. Scoped to the acting Company by the tenant global scope
+     * (the dashboard binds the Company onto the TenantContext), so a Company
+     * only ever sees its own Orders. (Requirements 10.1, 17.1)
+     */
+    public function index(Request $request): View
+    {
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_ORDERS);
+
+        $search = trim((string) $request->query('q', ''));
+        $status = (string) $request->query('status', '');
+
+        $orders = Order::query()
+            ->with('event')
+            ->when($search !== '', function ($query) use ($search): void {
+                $like = '%'.$search.'%';
+                $query->where(function ($q) use ($like): void {
+                    $q->where('order_reference', 'like', $like)
+                        ->orWhere('customer_name', 'like', $like)
+                        ->orWhere('customer_email', 'like', $like);
+                });
+            })
+            ->when($this->isKnownStatus($status), fn ($query) => $query->where('status', $status))
+            ->latest()
+            ->paginate(25)
+            ->withQueryString();
+
+        return view('dashboard.orders.index', [
+            'orders' => $orders,
+            'search' => $search,
+            'status' => $status,
+            'statuses' => $this->statusOptions(),
+        ]);
+    }
+
+    /**
+     * Show one Order with its Tickets (and their Ticket_Types), consent records
+     * and check-in status. Cross-Company Orders never match the tenant scope
+     * and surface as 404. (Requirements 10.5, 16.1, 22.4)
+     */
+    public function show(Order $order): View
+    {
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_ORDERS);
+
+        $order->load(['event', 'tickets.ticketType', 'consents']);
+
+        return view('dashboard.orders.show', [
+            'order' => $order,
+            'terminal' => $this->isTerminal($order),
+        ]);
+    }
 
     /**
      * Cancel an Order: void its Tickets so the QR fails at scan and return its
@@ -160,5 +216,54 @@ class OrderController extends Controller
         }
 
         return $quantities;
+    }
+
+    /**
+     * The Order statuses a client can filter by, as value => human label.
+     *
+     * @return array<string, string>
+     */
+    private function statusOptions(): array
+    {
+        $statuses = [
+            Order::STATUS_PAID,
+            Order::STATUS_FREE_CONFIRMED,
+            Order::STATUS_RESERVED,
+            Order::STATUS_CANCELLED,
+            Order::STATUS_REFUNDED,
+            Order::STATUS_DISPUTED,
+            Order::STATUS_EXPIRED,
+            Order::STATUS_VOIDED,
+        ];
+
+        $options = [];
+
+        foreach ($statuses as $value) {
+            $options[$value] = ucfirst(str_replace('_', ' ', $value));
+        }
+
+        return $options;
+    }
+
+    /**
+     * Whether the given value is one of the filterable Order statuses.
+     */
+    private function isKnownStatus(string $status): bool
+    {
+        return array_key_exists($status, $this->statusOptions());
+    }
+
+    /**
+     * Whether an Order is in a terminal state, so no further cancel/refund
+     * action applies.
+     */
+    private function isTerminal(Order $order): bool
+    {
+        return in_array($order->status, [
+            Order::STATUS_CANCELLED,
+            Order::STATUS_REFUNDED,
+            Order::STATUS_VOIDED,
+            Order::STATUS_EXPIRED,
+        ], true);
     }
 }

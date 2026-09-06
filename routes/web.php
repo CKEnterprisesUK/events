@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\BrandingController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\EventPageController;
@@ -148,6 +149,14 @@ Route::middleware(['auth', 'company.active', 'session.timeout', 'dashboard.tenan
         // the authenticated user's Company by the `dashboard.tenant` group
         // (foreign Orders 404) and converge with the refund/dispute webhooks via
         // the shared OrderCancellationService. (Requirements 17.1, 17.2, 17.3, 17.4)
+        // Cross-event Orders list + detail (Admin-gated in the controller via
+        // ACTION_MANAGE_ORDERS). The index paginates and supports search
+        // (reference / customer name / email) and a status filter; show renders
+        // one Order with its Tickets, consent records and check-in status. Both
+        // are scoped to the authenticated user's Company by the
+        // `dashboard.tenant` group (foreign Orders 404). (Requirements 10.1, 10.5, 17.1)
+        Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+        Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
         Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
         Route::post('/orders/{order}/refund', [OrderController::class, 'refund'])->name('orders.refund');
 
@@ -202,17 +211,20 @@ Route::middleware(['auth', 'company.active', 'session.timeout', 'dashboard.tenan
         // 21.1, 21.2, 21.3, 3.5, 3.7)
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
 
-        // GDPR data-subject tools (Owner-gated in the controller via
-        // ACTION_MANAGE_SETTINGS — GDPR handling is a data-controller
-        // compliance responsibility). Export a Customer's stored personal data
-        // as JSON, or delete/anonymise it while retaining transactional records.
-        // Both are scoped to the authenticated user's own Company by the
-        // `dashboard.tenant` group, so a Company can only ever export or
-        // anonymise its own Customer data — never another Company's.
-        // (Requirements 22.1, 22.2, 22.5, 3.3, 3.7)
-        Route::get('/gdpr', [GdprController::class, 'index'])->name('gdpr.index');
-        Route::post('/gdpr/export', [GdprController::class, 'export'])->name('gdpr.export');
-        Route::post('/gdpr/anonymise', [GdprController::class, 'anonymise'])->name('gdpr.anonymise');
+        // Customers roster + per-Customer detail (Admin-gated in the controller
+        // via ACTION_MANAGE_ORDERS). A Customer is identified by email (the
+        // Platform holds no separate Customer entity); the roster aggregates the
+        // Company's Orders and detail lists one Customer's orders/tickets/
+        // consents. The GDPR data-subject tools live here: export a Customer's
+        // stored personal data as JSON, or delete/anonymise it while retaining
+        // transactional records — both Owner-gated (ACTION_MANAGE_SETTINGS,
+        // data-controller responsibility) inside the controller. All scoped to
+        // the acting Company by `dashboard.tenant`. The `{customer}` segment is
+        // a URL-safe base64 token of the email. (Requirements 10.1, 22.1, 22.2, 22.5)
+        Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
+        Route::get('/customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
+        Route::post('/customers/{customer}/export', [CustomerController::class, 'export'])->name('customers.export');
+        Route::post('/customers/{customer}/anonymise', [CustomerController::class, 'anonymise'])->name('customers.anonymise');
 
         // Web QR scanner (Scanner-gated in the controller via ACTION_CHECK_IN).
         // The scanner page opens the phone camera in the browser and POSTs the
