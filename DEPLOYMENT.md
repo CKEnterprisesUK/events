@@ -1,4 +1,4 @@
-# Deployment (shared cPanel, no SSH)
+#  (shared cPanel, no SSH)
 
 Production runs on shared cPanel hosting: **no SSH access, no persistent
 process**. There is no long-running queue worker and no artisan-over-SSH deploy

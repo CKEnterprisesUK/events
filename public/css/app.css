@@ -125,6 +125,48 @@ main.public-main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; min-h
 }
 .slug-input input { border-radius: 0 0.5rem 0.5rem 0; }
 
+/* Wide auth card for the multi-step signup wizard. */
+.auth-card-wide { max-width: 720px; }
+
+/* Two/three-column rows inside the auth card (reuses the shared .field-row grid). */
+.auth-card .field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+.auth-card .field-row .field { margin-bottom: 1rem; }
+
+/* ---- Signup wizard: step progress indicator ---- */
+.wizard-steps {
+    list-style: none; display: flex; gap: 0.5rem; margin: 1.25rem 0 1.75rem; padding: 0;
+    counter-reset: step;
+}
+.wizard-step {
+    flex: 1 1 0; display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.6rem 0.75rem; border: 1px solid var(--border); border-radius: 0.5rem;
+    background: var(--surface); color: var(--muted); font-size: 0.9rem; min-width: 0;
+}
+.wizard-step-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1.6rem; height: 1.6rem; flex: none; border-radius: 50%;
+    background: #eef0ff; color: var(--brand); font-weight: 700; font-size: 0.85rem;
+}
+.wizard-step-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+.wizard-step.is-active { border-color: var(--brand); color: var(--ink); box-shadow: 0 0 0 3px rgba(15, 22, 196, 0.1); }
+.wizard-step.is-active .wizard-step-num { background: var(--brand); color: #fff; }
+.wizard-step.is-complete .wizard-step-num { background: var(--brand); color: #fff; }
+.wizard-step.is-complete .wizard-step-num::after { content: '✓'; }
+.wizard-step.is-complete .wizard-step-num { font-size: 0; }
+.wizard-step.is-complete .wizard-step-num::after { font-size: 0.85rem; }
+
+/* ---- Signup wizard: step panels ---- */
+.wizard-panel { border: none; padding: 0; margin: 0; min-width: 0; }
+.wizard-panel[hidden] { display: none; }
+.wizard-panel-title { font-size: 1.05rem; font-weight: 700; color: var(--ink); padding: 0; margin: 0 0 1rem; }
+.wizard-nav { justify-content: space-between; }
+.wizard-nav .btn[data-next] { margin-left: auto; }
+
+@media (max-width: 560px) {
+    .wizard-step-label { display: none; }
+    .wizard-step { justify-content: center; }
+}
+
 /* Landing hero */
 .hero { text-align: center; padding: 3rem 0 2.5rem; }
 .hero h1 { font-size: 2.5rem; max-width: 720px; margin: 0 auto 1rem; }

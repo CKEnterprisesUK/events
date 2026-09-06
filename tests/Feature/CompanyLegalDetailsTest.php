@@ -50,6 +50,22 @@ class CompanyLegalDetailsTest extends TestCase
         ], $overrides);
     }
 
+    public function test_signup_page_renders_the_multi_step_wizard(): void
+    {
+        $response = $this->get('/register');
+
+        $response->assertOk();
+        // The three-step progress indicator is present.
+        $response->assertSee('Signup progress', false);
+        $response->assertSee('Organisation', false);
+        $response->assertSee('Address', false);
+        $response->assertSee('Your account', false);
+        // Conditional registration-number fields are in the markup (revealed by
+        // JS based on the chosen organisation type).
+        $response->assertSee('Companies House number', false);
+        $response->assertSee('Charity Commission number', false);
+    }
+
     public function test_signup_captures_the_legal_details_on_the_company(): void
     {
         $response = $this->post('/register', $this->signupPayload());
