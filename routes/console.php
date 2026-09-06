@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\PruneAuditLogsJob;
 use App\Jobs\ReleaseExpiredReservationsJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -22,6 +23,20 @@ Artisan::command('reservations:release-expired', function () {
     dispatch_sync(new ReleaseExpiredReservationsJob);
     $this->info('Expired reservations released.');
 })->purpose('Release capacity held by reservations whose window has elapsed');
+
+// Prune audit-log rows past the retention window (24 months). Runs the job
+// SYNCHRONOUSLY, like reservations:release-expired above, for the same reason:
+// shared cPanel hosting disables `proc_open`, so `schedule:run` cannot be used
+// and cron must call the command directly. A DAILY cron is ample:
+//
+//   0 3 * * * cd /home/<user>/<app> && /opt/cpanel/ea-php85/root/usr/bin/php \
+//       artisan audit:prune >> /dev/null 2>&1
+//
+// (Security — audit retention; Hosting and Deployment Notes)
+Artisan::command('audit:prune', function () {
+    $deleted = dispatch_sync(new PruneAuditLogsJob);
+    $this->info("Pruned {$deleted} audit log row(s) past retention.");
+})->purpose('Delete audit-log records older than the retention window');
 
 // NOTE ON DRAINING THE QUEUE (ticket emails, webhook processing):
 // Do NOT use `schedule:run` here. On shared cPanel hosting `proc_open` is

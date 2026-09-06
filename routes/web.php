@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -21,6 +22,7 @@ use App\Http\Controllers\StorefrontController;
 use App\Http\Controllers\StripeConnectController;
 use App\Http\Controllers\StripeReturnController;
 use App\Http\Controllers\TrustController;
+use App\Http\Controllers\SuperAdmin\AuditController as SuperAdminAuditController;
 use App\Http\Controllers\SuperAdmin\ClientController as SuperAdminClientController;
 use App\Http\Controllers\SuperAdmin\CompanyController as SuperAdminCompanyController;
 use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboardController;
@@ -296,6 +298,14 @@ Route::middleware(['auth', 'company.active', 'session.timeout', 'dashboard.tenan
         // 21.1, 21.2, 21.3, 3.5, 3.7)
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
 
+        // Company activity trail (Owner/Admin-gated in the controller via
+        // ACTION_VIEW_AUDIT_LOG). READ-ONLY: a single GET renders the Company's
+        // own audit log — money, access, event, privacy and sign-in events —
+        // scoped EXPLICITLY to the acting Company (the audit_logs table carries
+        // no global tenant scope). Actions performed by an impersonating
+        // Super_Admin are flagged. (Security — accountability / audit trail)
+        Route::get('/activity', [AuditLogController::class, 'index'])->name('activity.index');
+
         // Customers roster + per-Customer detail (Admin-gated in the controller
         // via ACTION_MANAGE_ORDERS). A Customer is identified by email (the
         // Platform holds no separate Customer entity); the roster aggregates the
@@ -350,6 +360,12 @@ Route::middleware(['auth', 'super.admin', 'session.timeout'])
         // All Companies' transactions + total Application_Fees earned across the
         // whole Platform (cross-Company, bypasses the tenant scope). (20.1, 20.2)
         Route::get('/transactions', [SuperAdminTransactionController::class, 'index'])->name('transactions.index');
+
+        // Platform-wide, cross-tenant audit trail (forensics/compliance). Adds a
+        // Company filter and an impersonated-only toggle over the shared filters
+        // so staff can review exactly what was done while jumped into tenants.
+        // Read-only. (Security — accountability / audit trail)
+        Route::get('/audit', [SuperAdminAuditController::class, 'index'])->name('audit.index');
 
         // Clients (Companies) with per-Company stats, and a per-Company
         // drill-down. A business view of each tenant's activity. (20.1)

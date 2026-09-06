@@ -249,6 +249,7 @@
                     <a class="nav-link {{ $navActive('admin.home') ? 'active' : '' }}" href="{{ route('admin.home') }}"><span class="nav-ico">&#128200;</span> Dashboard</a>
                     <a class="nav-link {{ $navActive('admin.clients.*') ? 'active' : '' }}" href="{{ route('admin.clients.index') }}"><span class="nav-ico">&#127970;</span> Clients</a>
                     <a class="nav-link {{ $navActive('admin.transactions.*') ? 'active' : '' }}" href="{{ route('admin.transactions.index') }}"><span class="nav-ico">&#128202;</span> Transactions</a>
+                    <a class="nav-link {{ $navActive('admin.audit.*') ? 'active' : '' }}" href="{{ route('admin.audit.index') }}"><span class="nav-ico">&#128220;</span> Audit trail</a>
                     <a class="nav-link {{ $navActive('admin.fees.*') ? 'active' : '' }}" href="{{ route('admin.fees.index') }}"><span class="nav-ico">&#128176;</span> Fees</a>
                     <a class="nav-link {{ $navActive('admin.legal.*') ? 'active' : '' }}" href="{{ route('admin.legal.index') }}"><span class="nav-ico">&#128220;</span> Trust &amp; Legal</a>
                     <a class="nav-link {{ $navActive('admin.settings.*') ? 'active' : '' }}" href="{{ route('admin.settings.index') }}"><span class="nav-ico">&#9881;</span> Settings</a>
@@ -293,6 +294,11 @@
                             <a class="nav-link {{ $navActive('dashboard.stripe.*') ? 'active' : '' }}" href="{{ route('dashboard.stripe.status') }}"><span class="nav-ico">&#128179;</span> Payments</a>
                         @endcan
                     @endcanany
+
+                    @can('view_audit_log')
+                        <p class="nav-section">Oversight</p>
+                        <a class="nav-link {{ $navActive('dashboard.activity.*') ? 'active' : '' }}" href="{{ route('dashboard.activity.index') }}"><span class="nav-ico">&#128220;</span> Activity</a>
+                    @endcan
 
                     @if ($company)
                         <p class="nav-section">Public</p>

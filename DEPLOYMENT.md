@@ -30,6 +30,19 @@ The scheduler (`routes/console.php`) registers two per-minute tasks, both
 | `queue:work --stop-when-empty --max-time=50` | Drains the DB queue in a short burst — processes every pending job (ticket emails, Stripe webhook processing, capacity release) then exits instead of daemonising. `--max-time=50` caps a burst so a flood never overruns the next tick. |
 | `ReleaseExpiredReservationsJob` (`everyMinute`) | Sweeps reservations whose 900-second hold has elapsed and returns held capacity to each ticket type. |
 
+> **Note:** where `proc_open` is disabled on the host (common on shared cPanel),
+> `schedule:run` cannot spawn its child processes. In that case, point cron
+> **directly** at the artisan commands instead, as documented in
+> `routes/console.php` (`queue:work`, `reservations:release-expired`).
+
+**Audit-log retention (daily).** The audit trail is pruned to a 24-month
+retention window by a separate **daily** cron. It runs the job synchronously,
+so it works whether or not `schedule:run` is usable:
+
+```
+0 3 * * * cd /home/USER/events.domain && php artisan audit:prune >> /dev/null 2>&1
+```
+
 Because `queue:work` is invoked by the scheduler rather than run as a daemon,
 the cron line above is the only thing that must be configured on the host.
 
