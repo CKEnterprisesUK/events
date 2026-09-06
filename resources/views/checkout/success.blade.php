@@ -34,6 +34,13 @@
             </p>
         @endif
 
+        @if ($event->isOnline())
+            <p class="checkout-online-notice">
+                This is an online event — joining information will be sent to
+                <strong>{{ $order->customer_email }}</strong> by email.
+            </p>
+        @endif
+
         <dl class="order-summary">
             <dt>Order reference</dt>
             <dd class="order-reference">{{ $order->order_reference }}</dd>

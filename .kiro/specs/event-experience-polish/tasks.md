@@ -123,24 +123,24 @@ The stack is PHP/Laravel with Blade views, PHPUnit + Eris for property-based tes
     - `show()` passes location + hero + capacity-mode view data and computes event `overallRemaining()` once; `index()` resolves the hero thumbnail per row
     - _Requirements: 1.4, 1.5, 5.4, 5.5, 5.6_
 
-  - [-]* 7.5 Write feature test: event geocode/location save behaviour
+  - [x]* 7.5 Write feature test: event geocode/location save behaviour
     - In-person save stores lat/lng; failure saves without coordinates and flashes warning; unchanged address does not re-geocode; online save clears map fields
     - _Requirements: 4.2, 4.3, 4.5_
 
-  - [-]* 7.6 Write feature test: poster upload + hero precedence
+  - [x]* 7.6 Write feature test: poster upload + hero precedence
     - Accepts jpeg/png/webp ≤4 MB, rejects other types/oversize leaving existing poster unchanged; hero resolves per-event over company
     - **Property 10: Hero image precedence**
     - **Validates: Requirements 5.2, 5.3, 5.4, 5.5, 5.6**
 
-  - [-]* 7.7 Write property/feature test: comp issuance bound like a paid reservation
+  - [x]* 7.7 Write property/feature test: comp issuance bound like a paid reservation
     - **Property 8: Comp issuance is bound by capacity in the same way as a paid reservation** (capped: per-type + overall; shared-pool: overall only; over-request issues nothing)
     - **Validates: Requirements 6.4, 6.5**
 
-- [~] 8. Checkpoint - controllers + geocoding + image
+- [x] 8. Checkpoint - controllers + geocoding + image
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 9. Views: dashboard tab shell + partials
-  - [~] 9.1 Create accessible `_tabs.blade.php` tab shell
+  - [x] 9.1 Create accessible `_tabs.blade.php` tab shell
     - ARIA `tablist`/`tab`/`tabpanel` markup + vanilla JS in `@push('scripts')` for click + keyboard nav (Left/Right/Home/End, Enter/Space) + `location.hash` deep-linking; no-JS renders all panels visible with the tab strip hidden until JS enables it
     - _Requirements: 1.1, 1.2, 1.3, 1.8_
 
@@ -148,31 +148,31 @@ The stack is PHP/Laravel with Blade views, PHPUnit + Eris for property-based tes
     - Page head (title, publish/unpublish, status/errors) + optional hero + `_tabs`; map partials to tabs (Overview, Ticket types, Location, Share & QR, Report, Orders) per design, each panel carrying a visible heading
     - _Requirements: 1.1, 1.4, 1.5_
 
-  - [~] 9.3 Create `_hero.blade.php` partial
+  - [-] 9.3 Create `_hero.blade.php` partial
     - Per-event poster over company poster precedence, rendered via `Storage::disk('public')->url()`
     - _Requirements: 5.4, 5.5, 5.6_
 
-  - [~] 9.4 Create `_location.blade.php` partial
+  - [x] 9.4 Create `_location.blade.php` partial
     - Mode toggle + address field + Leaflet draggable mini-map writing hidden `latitude`/`longitude`; Leaflet CSS/JS from CDN via `@push('head')`/`@push('scripts')`; focusable container with accessible label
     - _Requirements: 4.1, 4.3, 4.9_
 
-  - [~] 9.5 Create `_ticket_types.blade.php` partial
+  - [x] 9.5 Create `_ticket_types.blade.php` partial
     - Move inline ticket-type management from `ticket-types/index`, posting to existing routes; mode-aware available column (capped per-type remaining; shared-pool event pooled remaining)
     - _Requirements: 6.1, 6.3, 2.6_
 
-  - [~] 9.6 Create `_comp.blade.php` partial
+  - [x] 9.6 Create `_comp.blade.php` partial
     - Move comp issuance form from `show`, posting to existing route; mode-aware per-row `max` via `availabilityFor($eventRemaining)`
     - _Requirements: 6.2, 6.3, 6.5_
 
-  - [~] 9.7 Create `_orders.blade.php` partial
+  - [x] 9.7 Create `_orders.blade.php` partial
     - Move recent-orders list (with cancel/refund) from `show` into the Orders tab
     - _Requirements: 1.4_
 
-  - [~] 9.8 Update `dashboard/events/_form.blade.php`
+  - [-] 9.8 Update `dashboard/events/_form.blade.php`
     - Add `location_mode`/`address`/`poster` fields and hidden `latitude`/`longitude`
     - _Requirements: 4.1, 4.2, 5.1, 5.2_
 
-  - [~] 9.9 Update `dashboard/ticket-types/_form.blade.php`
+  - [-] 9.9 Update `dashboard/ticket-types/_form.blade.php`
     - Add `capacity_mode` toggle that shows/hides the capacity input (capacity always visible with no JS)
     - _Requirements: 2.1, 2.2, 2.3_
 
@@ -180,11 +180,11 @@ The stack is PHP/Laravel with Blade views, PHPUnit + Eris for property-based tes
     - Render the resolved hero as a small banner/thumbnail per row
     - _Requirements: 5.4_
 
-  - [~] 9.11 Update public `events/show.blade.php`
+  - [-] 9.11 Update public `events/show.blade.php`
     - In-person with coordinates: read-only Leaflet map (CDN) + "Open in Google Maps" directions deep-link; online: email joining notice; accessible map label
     - _Requirements: 4.6, 4.7, 4.9_
 
-  - [~] 9.12 Update `checkout/success.blade.php`
+  - [-] 9.12 Update `checkout/success.blade.php`
     - Online events: add the email joining-info notice
     - _Requirements: 4.8_
 

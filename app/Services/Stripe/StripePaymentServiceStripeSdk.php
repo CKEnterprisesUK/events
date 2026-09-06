@@ -59,12 +59,14 @@ class StripePaymentServiceStripeSdk implements StripePaymentService
 
     public function retrieveAccountCapabilities(string $accountId): StripeAccountCapabilities
     {
-        $account = $this->client->accounts->retrieve($accountId);
+        return $this->withoutStripeNoticeEscalation(function () use ($accountId): StripeAccountCapabilities {
+            $account = $this->client->accounts->retrieve($accountId);
 
-        return new StripeAccountCapabilities(
-            accountId: $accountId,
-            chargesEnabled: (bool) ($account->charges_enabled ?? false),
-        );
+            return new StripeAccountCapabilities(
+                accountId: $accountId,
+                chargesEnabled: (bool) ($account->charges_enabled ?? false),
+            );
+        });
     }
 
     public function createCheckoutSession(
@@ -79,32 +81,42 @@ class StripePaymentServiceStripeSdk implements StripePaymentService
         // Direct charge on the connected account: the request is made on the
         // connected account (Stripe-Account header) and the Platform takes its
         // cut via `application_fee_amount`. (Requirement 12.1)
-        $session = $this->client->checkout->sessions->create([
-            'mode' => 'payment',
-            'success_url' => $successUrl,
-            'cancel_url' => $cancelUrl,
-            'metadata' => $metadata,
-            'line_items' => [[
-                'quantity' => 1,
-                'price_data' => [
-                    'currency' => $currency,
-                    'unit_amount' => $amountMinor,
-                    'product_data' => [
-                        'name' => $metadata['order_reference'] ?? 'Order',
+        return $this->withoutStripeNoticeEscalation(function () use (
+            $connectedAccountId,
+            $currency,
+            $amountMinor,
+            $applicationFeeMinor,
+            $successUrl,
+            $cancelUrl,
+            $metadata,
+        ): StripeCheckoutSession {
+            $session = $this->client->checkout->sessions->create([
+                'mode' => 'payment',
+                'success_url' => $successUrl,
+                'cancel_url' => $cancelUrl,
+                'metadata' => $metadata,
+                'line_items' => [[
+                    'quantity' => 1,
+                    'price_data' => [
+                        'currency' => $currency,
+                        'unit_amount' => $amountMinor,
+                        'product_data' => [
+                            'name' => $metadata['order_reference'] ?? 'Order',
+                        ],
                     ],
+                ]],
+                'payment_intent_data' => [
+                    'application_fee_amount' => $applicationFeeMinor,
                 ],
-            ]],
-            'payment_intent_data' => [
-                'application_fee_amount' => $applicationFeeMinor,
-            ],
-        ], [
-            'stripe_account' => $connectedAccountId,
-        ]);
+            ], [
+                'stripe_account' => $connectedAccountId,
+            ]);
 
-        return new StripeCheckoutSession(
-            id: $session->id,
-            url: $session->url,
-        );
+            return new StripeCheckoutSession(
+                id: $session->id,
+                url: $session->url,
+            );
+        });
     }
 
     public function refundCharge(
@@ -112,18 +124,20 @@ class StripePaymentServiceStripeSdk implements StripePaymentService
         string $chargeId,
         int $amountMinor,
     ): StripeRefund {
-        $refund = $this->client->refunds->create([
-            'charge' => $chargeId,
-            'amount' => $amountMinor,
-        ], [
-            'stripe_account' => $connectedAccountId,
-        ]);
+        return $this->withoutStripeNoticeEscalation(function () use ($connectedAccountId, $chargeId, $amountMinor): StripeRefund {
+            $refund = $this->client->refunds->create([
+                'charge' => $chargeId,
+                'amount' => $amountMinor,
+            ], [
+                'stripe_account' => $connectedAccountId,
+            ]);
 
-        return new StripeRefund(
-            id: $refund->id,
-            amountMinor: (int) $refund->amount,
-            status: (string) $refund->status,
-        );
+            return new StripeRefund(
+                id: $refund->id,
+                amountMinor: (int) $refund->amount,
+                status: (string) $refund->status,
+            );
+        });
     }
 
     public function constructWebhookEvent(
@@ -151,5 +165,44 @@ class StripePaymentServiceStripeSdk implements StripePaymentService
             type: (string) $event->type,
             data: $object !== null ? $object->toArray() : [],
         );
+    }
+
+    /**
+     * Run a Stripe SDK call while preventing an informational `stripe-notice`
+     * response header from crashing the request.
+     *
+     * On otherwise-successful (HTTP 2xx) responses the SDK surfaces any
+     * `stripe-notice` header — currently the "build on Accounts v2"
+     * recommendation for v1 account creation — via `trigger_error(..., E_USER_WARNING)`.
+     * Laravel's error handler promotes that warning to an `ErrorException`, so a
+     * successful API call (e.g. a connected account is actually created) still
+     * returns a 500. We install a scoped error handler that swallows only that
+     * specific Stripe notice and defers everything else to the previous handler,
+     * then restore it immediately in a `finally` so error handling elsewhere is
+     * unchanged. This is intentionally not a signal error: the recommendation is
+     * advisory and the v1 flow remains supported.
+     *
+     * @template T
+     *
+     * @param  callable():T  $callback
+     * @return T
+     */
+    private function withoutStripeNoticeEscalation(callable $callback): mixed
+    {
+        set_error_handler(
+            static function (int $severity, string $message, ?string $file = null, ?int $line = null): bool {
+                // Swallow only Stripe's advisory Accounts v2 notice; let any
+                // other warning fall through to the default handler.
+                return $severity === E_USER_WARNING
+                    && str_contains($message, 'Accounts v2');
+            },
+            E_USER_WARNING,
+        );
+
+        try {
+            return $callback();
+        } finally {
+            restore_error_handler();
+        }
     }
 }

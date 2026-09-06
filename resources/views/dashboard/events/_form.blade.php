@@ -1,6 +1,11 @@
 {{--
     Shared Event create/edit fields. Pass $event (an Event or null for create).
     Field names match EventController::validated().
+
+    IMPORTANT: this partial includes a file upload (the hero/poster image), so the
+    enclosing <form> MUST set enctype="multipart/form-data". This partial does NOT
+    own the <form> tag — the including views (dashboard/events/show.blade.php and the
+    create form in dashboard/events/index.blade.php) are responsible for setting it.
 --}}
 @php $event = $event ?? null; @endphp
 
@@ -38,4 +43,19 @@
     <label for="description">Description <span class="muted">(optional)</span></label>
     <textarea id="description" name="description" rows="4">{{ old('description', $event?->description) }}</textarea>
     @error('description') <p class="error">{{ $message }}</p> @enderror
+</div>
+
+<div class="field">
+    <label for="poster">Hero image <span class="muted">(optional)</span></label>
+    @if ($event?->poster_path)
+        <div class="poster-preview">
+            <img class="poster-thumb"
+                 src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($event->poster_path) }}"
+                 alt="Current hero image for {{ $event->name }}">
+            <p class="hint">Uploading a new image replaces the current one.</p>
+        </div>
+    @endif
+    <input id="poster" type="file" name="poster" accept="image/jpeg,image/png,image/webp">
+    <p class="hint">JPEG, PNG or WebP up to 4 MB. Shown at the top of this event's page.</p>
+    @error('poster') <p class="error">{{ $message }}</p> @enderror
 </div>

@@ -17,6 +17,12 @@
     @if ($branding->hasPrimaryColour())
         <style>:root { --brand: {{ $branding->primaryColour }}; }</style>
     @endif
+    @if ($event->isInPerson() && $event->hasCoordinates())
+        <link rel="stylesheet"
+              href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+              integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+              crossorigin="">
+    @endif
 @endpush
 
 @section('content')
@@ -58,6 +64,30 @@
                     <section class="event-about">
                         <h2>About this event</h2>
                         <div class="event-description">{{ $event->description }}</div>
+                    </section>
+                @endif
+
+                {{-- Event location: read-only map + Google Maps link for
+                     in-person events with coordinates; email-joining notice for
+                     online events. (Requirements 4.6, 4.7, 4.9) --}}
+                @if ($event->isInPerson() && $event->hasCoordinates())
+                    <section class="event-location">
+                        <h2>Location</h2>
+                        @if ($event->venue)
+                            <p class="event-location__venue">{{ $event->venue }}</p>
+                        @endif
+                        <div id="public-map" role="img"
+                             aria-label="Map showing the event location"
+                             style="height:300px"></div>
+                        <p class="event-location__actions">
+                            <a class="btn btn-outline" target="_blank" rel="noopener"
+                               href="https://www.google.com/maps/dir/?api=1&destination={{ $event->latitude }},{{ $event->longitude }}">Open in Google Maps</a>
+                        </p>
+                    </section>
+                @elseif ($event->isOnline())
+                    <section class="event-location">
+                        <h2>Location</h2>
+                        <p class="event-online-notice">This is an online event. Joining information will be sent to you by email.</p>
                     </section>
                 @endif
 
@@ -264,3 +294,35 @@
     })();
 </script>
 @endpush
+
+@if ($event->isInPerson() && $event->hasCoordinates())
+@push('scripts')
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+<script>
+    (function () {
+        // Read-only public map: guard on the container and Leaflet being present.
+        var mapEl = document.getElementById('public-map');
+        if (!mapEl || !window.L) return;
+
+        var lat = parseFloat(@json((string) $event->latitude));
+        var lng = parseFloat(@json((string) $event->longitude));
+        if (isNaN(lat) || isNaN(lng)) return;
+
+        var map = L.map(mapEl).setView([lat, lng], 15);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Non-draggable marker for a view-only pin.
+        L.marker([lat, lng], { draggable: false }).addTo(map);
+
+        // Keep the map sized correctly once laid out.
+        window.setTimeout(function () { map.invalidateSize(); }, 0);
+    })();
+</script>
+@endpush
+@endif

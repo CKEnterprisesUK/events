@@ -31,6 +31,10 @@
     "4.2 Write property test: migration backfill classifies existing types correctly": {
       "status": "passed",
       "lastRunTimestamp": 1788702804187
+    },
+    "7.7 Write property/feature test: comp issuance bound like a paid reservation": {
+      "status": "passed",
+      "lastRunTimestamp": 1788703282670
     }
   },
   "executionHistory": {
@@ -311,6 +315,16 @@
         "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788702011401
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703304264
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703321865
       }
     ],
     "9.1 Create accessible `_tabs.blade.php` tab shell": [
@@ -318,6 +332,16 @@
         "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788702011426
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703323263
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703457440
       }
     ],
     "9.2 Rewrite `dashboard/events/show.blade.php` into the tab shell": [
@@ -332,6 +356,11 @@
         "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788702011488
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703466500
       }
     ],
     "9.4 Create `_location.blade.php` partial": [
@@ -339,6 +368,16 @@
         "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788702011510
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703324208
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703458369
       }
     ],
     "9.5 Create `_ticket_types.blade.php` partial": [
@@ -346,6 +385,16 @@
         "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788702011535
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703325649
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703459794
       }
     ],
     "9.6 Create `_comp.blade.php` partial": [
@@ -353,6 +402,16 @@
         "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788702011563
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703327063
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703460756
       }
     ],
     "9.7 Create `_orders.blade.php` partial": [
@@ -360,6 +419,16 @@
         "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788702011588
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703327746
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703461760
       }
     ],
     "9.8 Update `dashboard/events/_form.blade.php`": [
@@ -367,6 +436,11 @@
         "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788702011610
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703468902
       }
     ],
     "9.9 Update `dashboard/ticket-types/_form.blade.php`": [
@@ -374,6 +448,11 @@
         "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788702011639
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703467445
       }
     ],
     "9.10 Update `dashboard/events/index.blade.php`": [
@@ -388,6 +467,11 @@
         "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788702011685
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703469804
       }
     ],
     "9.12 Update `checkout/success.blade.php`": [
@@ -395,6 +479,11 @@
         "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788702011710
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703470905
       }
     ],
     "10. Checkpoint - views": [
@@ -578,6 +667,11 @@
         "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788703113353
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703303369
       }
     ],
     "7.5 Write feature test: event geocode/location save behaviour": [
@@ -585,6 +679,11 @@
         "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788703114736
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703301905
       }
     ],
     "7.6 Write feature test: poster upload + hero precedence": [
@@ -592,6 +691,11 @@
         "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
         "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
         "timestamp": 1788703115460
+      },
+      {
+        "executionId": "f427a885-28d7-4275-aadb-ab4c5912d51c",
+        "chatSessionId": "sess_6d8207eb-eebc-4ca3-b4d2-89ba4e6e2cc4",
+        "timestamp": 1788703300977
       }
     ]
   }
