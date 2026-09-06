@@ -8,8 +8,10 @@ use App\Models\Order;
 use App\Models\Ticket;
 use App\Models\TicketType;
 use App\Services\Branding\BrandingResolver;
+use App\Services\Branding\EffectiveBranding;
 use App\Services\QrService;
 use Illuminate\Contracts\Mail\Mailer;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * The default {@see TicketMailer}: renders the branded {@see TicketMail} and
@@ -34,18 +36,49 @@ class SmtpTicketMailer implements TicketMailer
      */
     public function sendTicket(Order $order, string $qrPayload): void
     {
+        // Load the Event with its owning Company (no resolved tenant on the
+        // queue, so bypass the scope). The Company drives the sender name,
+        // reply-to, and the legal footer naming the selling organisation.
         $event = Event::withoutGlobalScopes()->findOrFail($order->event_id);
+        $company = $event->company;
+
+        $branding = $this->branding->forEvent($event);
 
         $mailable = new TicketMail(
             order: $order,
             qrPayload: $qrPayload,
             qrPng: $this->qr->png($qrPayload),
-            branding: $this->branding->forEvent($event),
+            branding: $branding,
             eventName: $event->name,
             lineItems: $this->lineItems($order),
+            companyName: $company?->name ?? config('app.name'),
+            logoUrl: $this->logoUrl($branding),
+            supportEmail: $company?->support_email,
         );
 
         $this->mailer->send($mailable);
+    }
+
+    /**
+     * Resolve the effective logo to an absolute URL for use as an email <img>
+     * src. Stored logos live on the public disk as relative paths, which render
+     * fine on-site through a relative URL but must be absolute in an email
+     * (there is no page origin to resolve against). Returns null when either no
+     * logo is set or it is already an absolute URL.
+     */
+    private function logoUrl(EffectiveBranding $branding): ?string
+    {
+        if (! $branding->hasLogo()) {
+            return null;
+        }
+
+        $path = (string) $branding->logoPath;
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        return url(Storage::disk('public')->url($path));
     }
 
     /**

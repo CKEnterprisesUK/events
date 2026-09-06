@@ -19,11 +19,12 @@
     <div style="max-width:600px;margin:0 auto;padding:24px;">
         <div style="background:#ffffff;border-radius:8px;overflow:hidden;border-top:6px solid {{ $primary }};">
             <div style="padding:24px;text-align:center;">
-                @if ($branding->hasLogo())
-                    <img src="{{ $branding->logoPath }}" alt="{{ $eventName }}" style="max-height:64px;margin-bottom:12px;">
+                @if (!empty($logoUrl))
+                    <img src="{{ $logoUrl }}" alt="{{ $companyName }}" style="max-height:64px;margin-bottom:12px;">
                 @endif
                 <h1 style="margin:0;font-size:20px;color:{{ $primary }};">{{ $eventName }}</h1>
                 <p style="margin:8px 0 0;color:#6b7280;">Your tickets are confirmed.</p>
+                <p style="margin:4px 0 0;font-size:13px;color:#9ca3af;">Sold by {{ $companyName }}</p>
             </div>
 
             <div style="padding:0 24px 8px;">

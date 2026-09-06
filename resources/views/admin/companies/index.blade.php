@@ -3,43 +3,49 @@
 @section('title', 'Super-Admin — Companies')
 
 @section('content')
-    <section>
-        <h1>Companies</h1>
+    <div class="admin-head">
+        <div>
+            <h1>Companies</h1>
+            <p>Oversee every company on the platform and manage suspension.</p>
+        </div>
+    </div>
 
-        <p class="muted">Oversee every Company on the Platform and manage suspension.</p>
+    @if (session('status'))
+        <p class="status" role="status">{{ session('status') }}</p>
+    @endif
 
-        @if (session('status'))
-            <p class="status" role="status">{{ session('status') }}</p>
-        @endif
-
+    <div class="admin-panel">
+        <div class="admin-panel__head"><h2>{{ number_format($companies->count()) }} {{ Str::plural('company', $companies->count()) }}</h2></div>
         @if ($companies->isEmpty())
-            <p>No companies yet.</p>
+            <div class="admin-empty">No companies yet.</div>
         @else
-            <table>
+            <table class="admin-table">
                 <thead>
                     <tr>
                         <th scope="col">Company</th>
                         <th scope="col">Slug</th>
                         <th scope="col">Status</th>
-                        <th scope="col">Action</th>
+                        <th scope="col" class="num">Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($companies as $company)
                         <tr data-company-id="{{ $company->id }}">
-                            <td>{{ $company->name }}</td>
-                            <td>{{ $company->slug }}</td>
-                            <td data-status="{{ $company->status }}">{{ $company->status }}</td>
                             <td>
+                                <a class="cell-strong" href="{{ route('admin.clients.show', $company) }}">{{ $company->name }}</a>
+                            </td>
+                            <td class="mono">{{ $company->slug }}</td>
+                            <td><span class="admin-pill admin-pill--{{ $company->status }}" data-status="{{ $company->status }}">{{ $company->status }}</span></td>
+                            <td class="num">
                                 @if ($company->isSuspended())
                                     <form method="POST" action="{{ route('admin.companies.unsuspend', $company) }}">
                                         @csrf
-                                        <button type="submit" class="btn">Unsuspend</button>
+                                        <button type="submit" class="btn btn-sm">Unsuspend</button>
                                     </form>
                                 @else
                                     <form method="POST" action="{{ route('admin.companies.suspend', $company) }}">
                                         @csrf
-                                        <button type="submit" class="btn">Suspend</button>
+                                        <button type="submit" class="btn btn-sm">Suspend</button>
                                     </form>
                                 @endif
                             </td>
@@ -48,5 +54,5 @@
                 </tbody>
             </table>
         @endif
-    </section>
+    </div>
 @endsection
