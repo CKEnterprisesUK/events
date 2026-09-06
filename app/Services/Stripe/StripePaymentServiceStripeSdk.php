@@ -33,26 +33,28 @@ class StripePaymentServiceStripeSdk implements StripePaymentService
         string $returnUrl,
         string $refreshUrl,
     ): StripeOnboardingLink {
-        $accountId = $existingAccountId;
+        return $this->withoutStripeNoticeEscalation(function () use ($existingAccountId, $returnUrl, $refreshUrl): StripeOnboardingLink {
+            $accountId = $existingAccountId;
 
-        if ($accountId === null) {
-            $account = $this->client->accounts->create([
-                'type' => 'standard',
+            if ($accountId === null) {
+                $account = $this->client->accounts->create([
+                    'type' => 'standard',
+                ]);
+                $accountId = $account->id;
+            }
+
+            $link = $this->client->accountLinks->create([
+                'account' => $accountId,
+                'return_url' => $returnUrl,
+                'refresh_url' => $refreshUrl,
+                'type' => 'account_onboarding',
             ]);
-            $accountId = $account->id;
-        }
 
-        $link = $this->client->accountLinks->create([
-            'account' => $accountId,
-            'return_url' => $returnUrl,
-            'refresh_url' => $refreshUrl,
-            'type' => 'account_onboarding',
-        ]);
-
-        return new StripeOnboardingLink(
-            accountId: $accountId,
-            url: $link->url,
-        );
+            return new StripeOnboardingLink(
+                accountId: $accountId,
+                url: $link->url,
+            );
+        });
     }
 
     public function retrieveAccountCapabilities(string $accountId): StripeAccountCapabilities
