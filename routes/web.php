@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\BrandingController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\EventController;
@@ -66,6 +67,11 @@ Route::post('/stripe/webhook', [WebhookController::class, 'handle'])
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'show'])->name('login');
     Route::post('/login', [LoginController::class, 'login']);
+
+    // Public self-signup: creates a new Company (tenant) and its single Owner
+    // user, then logs the Owner in. All other Company_Users join by invitation.
+    Route::get('/register', [RegisterController::class, 'show'])->name('register');
+    Route::post('/register', [RegisterController::class, 'register']);
 });
 
 Route::post('/logout', [LoginController::class, 'logout'])
