@@ -20,8 +20,9 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  *
  * The roster/detail are Admin-gated via `ACTION_MANAGE_ORDERS` (the same
  * authority that manages the underlying Orders). The GDPR export/anonymise
- * actions are Owner-gated via `ACTION_MANAGE_SETTINGS`, because data-subject
- * handling is a data-controller compliance responsibility. Every query runs
+ * actions are gated via `ACTION_MANAGE_GDPR` (held by the Owner and Admin),
+ * because data-subject handling is a data-controller compliance
+ * responsibility trusted only to those roles. Every query runs
  * under the `dashboard.tenant` group, so the global `company_id` scope confines
  * results to the acting Company — a Company only ever sees or acts on its own
  * Customers. (Requirements 10.1, 22.1, 22.2, 22.5)
@@ -99,18 +100,18 @@ class CustomerController extends Controller
             'confirmedSpendMinor' => (int) $orders
                 ->whereIn('status', [Order::STATUS_PAID, Order::STATUS_FREE_CONFIRMED])
                 ->sum('order_total_minor'),
-            'canManageGdpr' => Gate::allows(RoleAuthorization::ACTION_MANAGE_SETTINGS),
+            'canManageGdpr' => Gate::allows(RoleAuthorization::ACTION_MANAGE_GDPR),
         ]);
     }
 
     /**
      * Export this Customer's stored personal data as a downloadable JSON
-     * document. Owner-gated (data-controller responsibility) and tenant-scoped.
-     * (Requirements 22.1, 22.5)
+     * document. Gated to the Owner/Admin (data-controller responsibility) and
+     * tenant-scoped. (Requirements 22.1, 22.5)
      */
     public function export(string $customer): JsonResponse
     {
-        Gate::authorize(RoleAuthorization::ACTION_MANAGE_SETTINGS);
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_GDPR);
 
         $email = $this->decodeEmail($customer);
         $export = $this->gdpr->export($email);
@@ -122,12 +123,12 @@ class CustomerController extends Controller
 
     /**
      * Anonymise (delete) this Customer's personal data across every matching
-     * Order, retaining the transactional records. Owner-gated and
+     * Order, retaining the transactional records. Gated to the Owner/Admin and
      * tenant-scoped. (Requirements 22.2, 22.5)
      */
     public function anonymise(string $customer): RedirectResponse
     {
-        Gate::authorize(RoleAuthorization::ACTION_MANAGE_SETTINGS);
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_GDPR);
 
         $email = $this->decodeEmail($customer);
         $count = $this->gdpr->anonymise($email);

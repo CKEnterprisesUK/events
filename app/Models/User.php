@@ -12,7 +12,7 @@ use Illuminate\Support\Carbon;
 
 /**
  * A Platform user. Either a Company_User (belonging to one Company via
- * `company_id`, holding exactly one of the four Company roles) or a CK
+ * `company_id`, holding exactly one of the Company roles) or a CK
  * Enterprises Super_Admin (`is_super_admin = true`, `company_id`/`role` NULL,
  * operating the separate super-admin surface).
  *
@@ -38,11 +38,13 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     /**
-     * The exactly-four Company roles the Platform supports. (Requirement 3.1)
+     * The Company roles the Platform supports. (Requirement 3.1)
      */
     public const ROLE_OWNER = 'owner';
 
     public const ROLE_ADMIN = 'admin';
+
+    public const ROLE_BOX_OFFICE = 'box_office';
 
     public const ROLE_ACCOUNTANT = 'accountant';
 
@@ -56,6 +58,7 @@ class User extends Authenticatable
     public const ROLES = [
         self::ROLE_OWNER,
         self::ROLE_ADMIN,
+        self::ROLE_BOX_OFFICE,
         self::ROLE_ACCOUNTANT,
         self::ROLE_SCANNER,
     ];
@@ -68,9 +71,47 @@ class User extends Authenticatable
      */
     public const INVITABLE_ROLES = [
         self::ROLE_ADMIN,
+        self::ROLE_BOX_OFFICE,
         self::ROLE_ACCOUNTANT,
         self::ROLE_SCANNER,
     ];
+
+    /**
+     * Human-friendly labels and one-line descriptions for each Company role,
+     * used by the team page's role capabilities table.
+     *
+     * @var array<string, array{label: string, description: string}>
+     */
+    public const ROLE_META = [
+        self::ROLE_OWNER => [
+            'label' => 'Owner',
+            'description' => 'Full access, including billing, Stripe, company settings and the team.',
+        ],
+        self::ROLE_ADMIN => [
+            'label' => 'Admin',
+            'description' => 'Runs events, ticketing and orders, and handles GDPR requests.',
+        ],
+        self::ROLE_BOX_OFFICE => [
+            'label' => 'Box office',
+            'description' => 'Runs events, ticketing and orders, but cannot change company settings.',
+        ],
+        self::ROLE_ACCOUNTANT => [
+            'label' => 'Accountant',
+            'description' => 'Read-only access to reports and payouts.',
+        ],
+        self::ROLE_SCANNER => [
+            'label' => 'Scanner',
+            'description' => 'Checks in attendees at the door only.',
+        ],
+    ];
+
+    /**
+     * The human-friendly label for a role value, falling back to the raw value.
+     */
+    public static function roleLabel(?string $role): string
+    {
+        return self::ROLE_META[$role]['label'] ?? ucfirst((string) $role);
+    }
 
     /**
      * @var list<string>
