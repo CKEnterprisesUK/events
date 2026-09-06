@@ -107,6 +107,38 @@ class Event extends Model
     }
 
     /**
+     * The unmet publish prerequisites for this Event, as an ordered map of
+     * blocker key => human message. An empty array means the Event is
+     * publishable. This is the single source of truth reused by the controller
+     * (enforcement) and the Manage_Event_Page (presentation). (Requirements 1.1, 1.2)
+     *
+     * @return array<string, string>
+     */
+    public function publishBlockers(): array
+    {
+        $blockers = [];
+
+        if ($this->starts_at === null) {
+            $blockers['starts_at'] = 'Set a start date and time.';
+        }
+
+        // ticketTypes()->exists() is tenant-scoped like the Event itself.
+        if (! $this->ticketTypes()->exists()) {
+            $blockers['ticket_types'] = 'Add at least one ticket type.';
+        }
+
+        return $blockers;
+    }
+
+    /**
+     * Whether this Event has no unmet publish prerequisites. (Requirements 1.1, 1.2)
+     */
+    public function isPublishable(): bool
+    {
+        return $this->publishBlockers() === [];
+    }
+
+    /**
      * Publish the Event, making its page available to Customers. (5.4)
      */
     public function publish(): bool
