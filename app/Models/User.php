@@ -1,0 +1,167 @@
+<?php
+
+namespace App\Models;
+
+// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
+
+/**
+ * A Platform user. Either a Company_User (belonging to one Company via
+ * `company_id`, holding exactly one of the four Company roles) or a CK
+ * Enterprises Super_Admin (`is_super_admin = true`, `company_id`/`role` NULL,
+ * operating the separate super-admin surface).
+ *
+ * The User model deliberately does NOT use the `BelongsToCompany` global tenant
+ * scope: users are looked up in auth/dashboard context (reserved prefixes,
+ * where no tenant is resolved), so scoping them by the request-resolved Company
+ * would break login and Super_Admin access. Session/data scoping to the user's
+ * own Company is enforced via `company_id` comparisons (see `belongsToCompany`)
+ * and the role policies instead. (Requirements 3.1, 3.8, 3.10, 20.1)
+ *
+ * @property int $id
+ * @property int|null $company_id
+ * @property bool $is_super_admin
+ * @property string|null $role
+ * @property string $name
+ * @property string $email
+ * @property string $password
+ * @property Carbon|null $last_activity_at
+ */
+class User extends Authenticatable
+{
+    /** @use HasFactory<UserFactory> */
+    use HasFactory, Notifiable;
+
+    /**
+     * The exactly-four Company roles the Platform supports. (Requirement 3.1)
+     */
+    public const ROLE_OWNER = 'owner';
+
+    public const ROLE_ADMIN = 'admin';
+
+    public const ROLE_ACCOUNTANT = 'accountant';
+
+    public const ROLE_SCANNER = 'scanner';
+
+    /**
+     * The complete, closed set of Company roles. (Requirement 3.1)
+     *
+     * @var list<string>
+     */
+    public const ROLES = [
+        self::ROLE_OWNER,
+        self::ROLE_ADMIN,
+        self::ROLE_ACCOUNTANT,
+        self::ROLE_SCANNER,
+    ];
+
+    /**
+     * Roles that may be assigned by invitation (Owner is not invitable and is
+     * only ever the single seeded/transferred Owner). (Requirement 4.6)
+     *
+     * @var list<string>
+     */
+    public const INVITABLE_ROLES = [
+        self::ROLE_ADMIN,
+        self::ROLE_ACCOUNTANT,
+        self::ROLE_SCANNER,
+    ];
+
+    /**
+     * @var list<string>
+     */
+    protected $fillable = [
+        'company_id',
+        'is_super_admin',
+        'role',
+        'name',
+        'email',
+        'password',
+        'last_activity_at',
+    ];
+
+    /**
+     * @var list<string>
+     */
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    /**
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'is_super_admin' => false,
+    ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'last_activity_at' => 'datetime',
+            'is_super_admin' => 'boolean',
+            'password' => 'hashed',
+        ];
+    }
+
+    /**
+     * The Company this user belongs to (NULL for Super_Admins).
+     *
+     * @return BelongsTo<Company, $this>
+     */
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
+
+    /**
+     * Whether this user holds the given Company role.
+     */
+    public function hasRole(string $role): bool
+    {
+        return $this->role === $role;
+    }
+
+    /**
+     * Whether this user is the (single) Owner of their Company. (3.2)
+     */
+    public function isOwner(): bool
+    {
+        return $this->role === self::ROLE_OWNER;
+    }
+
+    /**
+     * Whether this user is a CK Enterprises Super_Admin. (20.1, 20.7)
+     */
+    public function isSuperAdmin(): bool
+    {
+        return (bool) $this->is_super_admin;
+    }
+
+    /**
+     * Whether this user belongs to the given Company. Used to scope an
+     * authenticated session to the user's own Company and to reject
+     * cross-Company access. (Requirements 3.8, 3.10)
+     */
+    public function belongsToCompany(int|Company $company): bool
+    {
+        if ($this->company_id === null) {
+            return false;
+        }
+
+        $companyId = $company instanceof Company ? $company->getKey() : $company;
+
+        return $this->company_id === $companyId;
+    }
+}

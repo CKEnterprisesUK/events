@@ -1,0 +1,1283 @@
+{
+  "pbtResults": {
+    "9.5 Write property test for free orders incur no money and no charge": {
+      "status": "passed",
+      "lastRunTimestamp": 1788639368417
+    },
+    "9.4 Write property test for Order_Total consistency across fee modes": {
+      "status": "passed",
+      "lastRunTimestamp": 1788639372367
+    },
+    "15.2 Write property test for direct-charge failure leaves order unpaid": {
+      "status": "passed",
+      "lastRunTimestamp": 1788683249384
+    }
+  },
+  "executionHistory": {
+    "1.1 Scaffold the Laravel app, MySQL connection, and database queue tables": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637130248
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637212585
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788638084384
+      }
+    ],
+    "1.2 Auth scaffolding, base layout, and landing page route": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637130494
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788638090807
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788638305931
+      }
+    ],
+    "2.1 Create companies table, TenantContext, and slug validation": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637130547
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788638354292
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788638764703
+      }
+    ],
+    "2.3 Implement ResolveTenant and EnforceTenantScope middleware with global company_id scope": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637130575
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788639008595
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788639278727
+      }
+    ],
+    "3.1 Enforce suspension across storefront, events, sales, and login": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637130609
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788639495857
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788640056858
+      }
+    ],
+    "4.1 Create users table, four-role model, and RoleService with single-Owner invariant": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637130638
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788639496771
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788640056100
+      }
+    ],
+    "4.2 Implement SessionTimeout middleware (30-minute idle)": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637130670
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788640065845
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788640396303
+      }
+    ],
+    "5.1 Implement invitations table and InvitationController flows": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637130700
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788641009724
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788641402372
+      }
+    ],
+    "6.1 Create events table and EventController (create/update/publish)": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637130739
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788640407194
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788640997426
+      }
+    ],
+    "6.2 Create ticket_types table and TicketTypeController with field/sale-window validation": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637130767
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788642252723
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788658933600
+      }
+    ],
+    "7. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637130800
+      }
+    ],
+    "8.1 Implement CapacityReservationService with FOR UPDATE and 900s window": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637130832
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788641411115
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788641791423
+      }
+    ],
+    "8.2 Implement ReleaseExpiredReservationsJob (scheduled)": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637130859
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788641803704
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788642244805
+      }
+    ],
+    "9.1 Create platform_settings and add company fee fields + fee handling mode": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637130890
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788638355332
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788638361093
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788638775184
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788639003257
+      }
+    ],
+    "9.2 Implement FeeCalculationService (selection, clamp, round-half-up, Order_Total, free orders)": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637130918
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788639009641
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788639279858
+      }
+    ],
+    "10. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637130949
+      }
+    ],
+    "11.1 Implement BrandingController (logo, colour, T&Cs, custom fields, event overrides)": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637130983
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788641805175
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788642247581
+      }
+    ],
+    "12.1 Implement StorefrontController and EventPageController with listing cache": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637131008
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788680423009
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788681022982
+      }
+    ],
+    "12.2 Create orders/tickets/order_consents tables and CheckoutController order creation": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637131040
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788681029073
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788681818842
+      }
+    ],
+    "13. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637131068
+      }
+    ],
+    "14.1 Implement StripePaymentService interface + fake and StripeConnectController onboarding": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637131100
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788640408380
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788640998507
+      }
+    ],
+    "15.1 Create Checkout Session as direct charge with application_fee_amount and return pages": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637131132
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788682350467
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788683064793
+      }
+    ],
+    "16.1 Implement VerifyStripeSignature, processed_webhooks, WebhookController + WebhookProcessor + ProcessWebhookJob": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637131159
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788683314393
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788683884153
+      }
+    ],
+    "17. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637131185
+      }
+    ],
+    "18.1 Implement QrService, MailService abstraction, OrderFulfilmentService, and SendTicketEmailJob": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637131216
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788684126920
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788684937744
+      }
+    ],
+    "19.1 Implement ScanController and scanner page with camera + atomic single-scan": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637131249
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788684949016
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788685465382
+      }
+    ],
+    "20.1 Implement OrderController cancel/refund and webhook void handling": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637131275
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788684950010
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788685466407
+      }
+    ],
+    "21.1 Implement complimentary ticket issuance in OrderController": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637131308
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788685471626
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788685918753
+      }
+    ],
+    "22. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637131341
+      }
+    ],
+    "23.1 Implement super-admin guard and SuperAdmin controllers": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637131367
+      }
+    ],
+    "24.1 Implement ReportController with Accountant read-only scope": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637131397
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788685931484
+      }
+    ],
+    "25.1 Implement GdprController + GdprService and privacy policy page": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637131424
+      }
+    ],
+    "26.1 Configure cron scheduler, queue draining, storage symlink, webhook exemptions, and HMAC secret stability": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637131450
+      }
+    ],
+    "27. Final checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "31feee10-2a6a-4e2f-bc4c-be1a8153d57e",
+        "chatSessionId": "sess_05e5d1eb-9728-4805-83e1-58cf111b2e2a",
+        "timestamp": 1788637131485
+      }
+    ],
+    "1.3 Feature test for landing page rendering": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637203257
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788638309285
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788638350192
+      }
+    ],
+    "2.2 Write property test for slug validity": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637203284
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788639007194
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788639277799
+      }
+    ],
+    "2.4 Write property test for tenant isolation": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637203309
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788639285269
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788639486450
+      }
+    ],
+    "2.5 Write property test for unresolved/missing tenant": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637203341
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788639286235
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788639487855
+      }
+    ],
+    "3.2 Write property test for suspension gating and reversibility": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637203380
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788640064896
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788640397214
+      }
+    ],
+    "4.3 Write property test for owner uniqueness invariant": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637203417
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788640067238
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788640395096
+      }
+    ],
+    "4.4 Write property test for role permission matrix": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637203443
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788640068188
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788640393979
+      }
+    ],
+    "4.5 Write property test for session idle timeout boundary": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637203477
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788641799951
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788642246196
+      }
+    ],
+    "4.6 Write feature tests for four-role enum and invalid credentials": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637203504
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788640069312
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788640392554
+      }
+    ],
+    "5.2 Write feature tests for invitation flows": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637203535
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788641801351
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788642243555
+      }
+    ],
+    "6.3 Write property test for ticket-type field and sale-window validation": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637203574
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788658939268
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788680407468
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788680418488
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788681018383
+      }
+    ],
+    "6.4 Write property test for publish and sale-window gating": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637203603
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788658940198
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788680403741
+      }
+    ],
+    "8.3 Write property test for no oversell under concurrency": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637203638
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788658941708
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788680408838
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788680419426
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788681019327
+      }
+    ],
+    "8.4 Write property test for reservation release restores availability": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637203678
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788658942629
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788680409839
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788680420820
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788681020706
+      }
+    ],
+    "9.3 Write property test for application fee computation, selection, clamping, and rounding": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637203709
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788639287625
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788639488806
+      }
+    ],
+    "9.4 Write property test for Order_Total consistency across fee modes": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637203745
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788639288578
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788639490205
+      }
+    ],
+    "9.5 Write property test for free orders incur no money and no charge": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637203776
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788639289667
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788639491147
+      }
+    ],
+    "9.6 Write property test for fee-mode change does not mutate existing orders": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637203815
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788639497957
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788640057895
+      }
+    ],
+    "11.2 Write feature tests for branding resolution and rendering": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637203865
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788658943749
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788680410803
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788680421789
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788681022101
+      }
+    ],
+    "12.3 Write property test for checkout customer and consent validation": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637203903
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788681828392
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788682341193
+      }
+    ],
+    "12.4 Write property test for ticket rows match requested quantities": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637203934
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788681829361
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788682342593
+      }
+    ],
+    "12.5 Write property test for Order_Reference uniqueness": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637203968
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788681830750
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788682343546
+      }
+    ],
+    "12.6 Write property test for charges-enabled gating": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637204001
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788681831696
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788682344609
+      }
+    ],
+    "12.7 Write feature tests for landing/storefront/event page rendering": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637204034
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788681832745
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788682339880
+      }
+    ],
+    "14.2 Write feature test for capability-update enabling paid sales": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637204075
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788641802301
+      },
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788642248516
+      }
+    ],
+    "15.2 Write property test for direct-charge failure leaves order unpaid": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637204107
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788683070365
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788683309339
+      }
+    ],
+    "15.3 Reuse Property 17 assertion against the Stripe mock": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637204133
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788683071173
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788683309839
+      }
+    ],
+    "16.2 Write property test for webhook signature gating": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637204169
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788683890906
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788684119264
+      }
+    ],
+    "16.3 Write property test for webhook idempotency": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637204200
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788683892048
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788684120639
+      }
+    ],
+    "16.4 Write feature test for enqueue-on-valid-webhook": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637204232
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788683889964
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788684121602
+      }
+    ],
+    "18.2 Write property test for one QR per order and token validity": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637204265
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788684947567
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788685463083
+      }
+    ],
+    "18.3 Write feature test for enqueue-on-confirm of the ticket email": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637204302
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788684946662
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788685463951
+      }
+    ],
+    "19.2 Write property test for single atomic check-in": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637204330
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788685927965
+      }
+    ],
+    "19.3 Smoke test for scanner camera/permission behaviour": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637204364
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788685930297
+      }
+    ],
+    "20.2 Write property test for cancel/refund voids tickets and blocks scan": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637204397
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788685929350
+      }
+    ],
+    "20.3 Write feature tests for refund/dispute webhook transitions": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637204425
+      },
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788685927006
+      }
+    ],
+    "23.2 Write property test for total fees earned aggregation": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637204457
+      }
+    ],
+    "25.2 Write property test for GDPR anonymisation retains transactional records": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637204487
+      }
+    ],
+    "25.3 Write feature test for privacy policy page rendering": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637204516
+      }
+    ],
+    "26.2 Smoke test for cron command draining the DB queue": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637204553
+      }
+    ],
+    "26.3 Smoke test that generated SQL matches the migrations (drift guard)": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788637204582
+      }
+    ],
+    "1. Laravel project foundation and app scaffold": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788638350232
+      }
+    ],
+    "2. Companies, tenancy resolution, and global scope": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788639487892
+      }
+    ],
+    "9. Fee calculation engine and platform/company settings": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788640057930
+      }
+    ],
+    "3. Company suspension gating and reversibility": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788640397254
+      }
+    ],
+    "5. User invitations and management": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788642243647
+      }
+    ],
+    "4. Users, roles, single-Owner invariant, and session timeout": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788642246273
+      }
+    ],
+    "14. Stripe Connect onboarding (mocked in tests)": [
+      {
+        "executionId": "137f2e79-b5b6-42d2-9362-012e1695526c",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788642248548
+      }
+    ],
+    "6. Events and ticket types management": [
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788681018431
+      }
+    ],
+    "8. Capacity / reservation service": [
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788681020741
+      }
+    ],
+    "11. Branding and ticket customisation": [
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788681022143
+      }
+    ],
+    "12. Public storefront, event pages, listing cache, and checkout order creation": [
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788682344649
+      }
+    ],
+    "15. Stripe Checkout direct charge + return pages + free-order confirmation (mocked)": [
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788683309879
+      }
+    ],
+    "16. Stripe webhooks: signature, idempotency, and enqueue": [
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788684121644
+      }
+    ],
+    "18. QR service, order fulfilment, and queued ticket email": [
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788685463993
+      }
+    ],
+    "21. Complimentary / free ticket issuance": [
+      {
+        "executionId": "b5011032-418e-4ef2-a22a-1d64783d822a",
+        "chatSessionId": "sess_fb30634b-be64-42df-8e7e-73ad827d868b",
+        "timestamp": 1788685918790
+      }
+    ]
+  }
+}
