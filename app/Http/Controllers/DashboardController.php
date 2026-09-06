@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\SuperAdmin\ImpersonationController;
+use App\Models\Company;
 use App\Models\Event;
 use App\Models\Order;
 use App\Services\Onboarding\OnboardingChecklist;
@@ -28,9 +30,20 @@ class DashboardController extends Controller
     public function index(Request $request): View
     {
         $user = $request->user();
-        $companyId = $user?->company_id;
 
-        // No Company (Super_Admin): render the shell with empty figures.
+        // A Super_Admin who has jumped into a Company operates on that Company's
+        // dashboard; otherwise a Company_User operates on their own Company.
+        if ($user?->isSuperAdmin()) {
+            $impersonatedId = $request->session()->get(ImpersonationController::SESSION_KEY);
+            $company = $impersonatedId !== null ? Company::find($impersonatedId) : null;
+        } else {
+            $company = $user?->company;
+        }
+
+        $companyId = $company?->getKey();
+
+        // No Company (Super_Admin not impersonating): render the shell with
+        // empty figures and steer them to the platform surface.
         if ($companyId === null) {
             return view('dashboard', [
                 'stats' => null,
@@ -39,8 +52,6 @@ class DashboardController extends Controller
                 'onboarding' => null,
             ]);
         }
-
-        $company = $user->company;
 
         // New-customer onboarding checklist. Only the Owner can complete the
         // Stripe/contacts/branding steps, so only the Owner sees it — and only

@@ -106,35 +106,94 @@ class EventController extends Controller
     {
         Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
 
-        $ticketTypes = $event->ticketTypes()->latest()->get();
-
-        $recentOrders = $event->orders()
-            ->latest()
-            ->limit(20)
-            ->get();
-
-        return view('dashboard.events.show', [
-            'event' => $event,
-            'ticketTypes' => $ticketTypes,
-            'recentOrders' => $recentOrders,
-            // Overall remaining capacity computed once (null = unlimited) so the
-            // ticket-type and comp partials can derive mode-aware availability
-            // via TicketType::availabilityFor() without an N+1. (Requirements 2.6, 1.4)
-            'eventRemaining' => $event->overallRemaining(),
-            // Publish-readiness checklist and the advisory capacity comparison
-            // (Requirements 1.4, 2.1, 3.1).
-            'readiness' => $this->readiness->checklist($event),
+        // Overview screen: at-a-glance stats, capacity advisory and the
+        // event-details edit form. Location/tickets/share/orders now each live
+        // on their own dedicated screen. (Requirement 5.1)
+        return view('dashboard.events.show', $this->sharedViewData($event) + [
             'capacity' => $this->readiness->capacity($event),
-            // The public event page URL for the share panel; live only once the
-            // Event is published (Requirements 4.1, 4.2, 4.4).
+            'report' => $this->reports->for($event),
+        ]);
+    }
+
+    /**
+     * Show the dedicated create screen. Kept intentionally minimal — the fuller
+     * details (description, hero, capacity, location, ticket types) are added on
+     * the manage screens afterwards, guided by the setup checklist. (Req 5.1, 5.2)
+     */
+    public function create(): View
+    {
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+
+        return view('dashboard.events.create');
+    }
+
+    /**
+     * The "Where" screen: a single form owning venue name, location type
+     * (in person / online), address and the draggable map pin. Replaces the old
+     * Location tab and its hidden-name workaround. (Requirements 4.1, 4.3, 4.9)
+     */
+    public function location(Event $event): View
+    {
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+
+        return view('dashboard.events.location', $this->sharedViewData($event));
+    }
+
+    /**
+     * The Tickets screen: ticket-type management + complimentary issuance.
+     * (Requirements 6.1, 6.3, 2.6, 18.1)
+     */
+    public function tickets(Event $event): View
+    {
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+
+        return view('dashboard.events.tickets', $this->sharedViewData($event) + [
+            'ticketTypes' => $event->ticketTypes()->latest()->get(),
+            'eventRemaining' => $event->overallRemaining(),
+        ]);
+    }
+
+    /**
+     * The Share screen: public link + downloadable QR code. (Requirements 4.1, 4.2, 4.4)
+     */
+    public function share(Event $event): View
+    {
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+
+        return view('dashboard.events.share', $this->sharedViewData($event) + [
             'publicUrl' => route('event.page', [
                 'companySlug' => $event->company->slug,
                 'event' => $event->id,
             ]),
-            // At-a-glance accounting summary from the single reporting source of
-            // truth (Requirement 5.1).
-            'report' => $this->reports->for($event),
         ]);
+    }
+
+    /**
+     * The Orders screen: recent orders with cancel/refund. (Requirements 10.1, 17.1)
+     */
+    public function orders(Event $event): View
+    {
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+
+        return view('dashboard.events.orders', $this->sharedViewData($event) + [
+            'recentOrders' => $event->orders()->latest()->limit(20)->get(),
+        ]);
+    }
+
+    /**
+     * Data every manage screen needs to render the section nav + publish
+     * checklist wrapper: the Event itself and its readiness report. Kept in one
+     * place so the screens stay consistent and cheap. (Requirement 1.4)
+     *
+     * @return array<string, mixed>
+     */
+    private function sharedViewData(Event $event): array
+    {
+        return [
+            'event' => $event,
+            // Drives the pinned setup checklist shown alongside every screen.
+            'readiness' => $this->readiness->checklist($event),
+        ];
     }
 
     /**
@@ -144,18 +203,66 @@ class EventController extends Controller
     {
         Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
 
-        $data = $this->validated($request);
-        $data = $this->applyLocationAndPoster($request, $data, $event);
+        // The Overview form owns only the core details (name, when, capacity,
+        // description, hero image). Venue and the full location are edited on
+        // the dedicated "Where" screen via updateLocation(), so this request
+        // neither requires nor touches any location field. (Requirement 5.3)
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'starts_at' => ['nullable', 'date'],
+            'capacity' => ['nullable', 'integer', 'min:1'],
+            'primary_colour' => ['nullable', 'string', 'max:7'],
+            'logo_path' => ['nullable', 'string', 'max:255'],
+            'poster' => ['nullable', 'image', 'mimes:jpeg,png,webp', 'max:4096'],
+        ]);
+
+        unset($data['poster']);
+        $data = $this->applyPoster($request, $data, $event);
 
         $event->update($data);
 
-        // Updated details (name, venue, start time) show on the public
-        // storefront listing when the Event is published, so refresh the cache.
+        // Updated details (name, start time) show on the public storefront
+        // listing when the Event is published, so refresh the cache.
         $this->storefrontListing->forget($event->company);
 
         return redirect()
             ->route('dashboard.events.show', $event)
             ->with('status', 'Event updated.');
+    }
+
+    /**
+     * Persist the "Where" screen. Validates ONLY the location fields (mode,
+     * venue, address, pin) so the section form no longer needs to carry the
+     * event's name as a hidden input to survive the full update() validation.
+     * Reuses applyLocationAndPoster() for the geocode/pin resolution, then
+     * updates just those columns — every other Event attribute is untouched.
+     * (Requirements 4.1, 4.2, 4.3, 4.4, 4.5)
+     */
+    public function updateLocation(Request $request, Event $event): RedirectResponse
+    {
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+
+        $data = $request->validate([
+            'location_mode' => ['required', Rule::in(Event::LOCATION_MODES)],
+            'venue' => ['nullable', 'string', 'max:255'],
+            'address' => ['nullable', 'string', 'max:500'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+        ]);
+
+        // Resolve the pin (geocode a changed in-person address, or honour a
+        // dragged pin) exactly as the combined form did. No poster on this form.
+        $data = $this->applyLocationAndPoster($request, $data, $event);
+
+        $event->update($data);
+
+        // Venue shows on the public storefront listing; refresh its cache.
+        $this->storefrontListing->forget($event->company);
+
+        return redirect()
+            ->route('dashboard.events.location', $event)
+            ->with('status', 'Location updated.');
     }
 
     /**
@@ -268,7 +375,6 @@ class EventController extends Controller
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'primary_colour' => ['nullable', 'string', 'max:7'],
             'logo_path' => ['nullable', 'string', 'max:255'],
-            'ticket_field_defs' => ['nullable', 'array'],
             // The hero image is a file, not a persisted scalar; it is stored by
             // applyLocationAndPoster() and excluded from the returned attributes.
             'poster' => ['nullable', 'image', 'mimes:jpeg,png,webp', 'max:4096'],
@@ -335,8 +441,20 @@ class EventController extends Controller
             $data['longitude'] = null;
         }
 
-        // Hero image upload — same disk/dir/delete-old semantics as
-        // BrandingController. (Requirement 5.1)
+        return $this->applyPoster($request, $data, $event);
+    }
+
+    /**
+     * Store an uploaded hero image (if present) and set `poster_path` on the
+     * attribute array — same disk/dir/delete-old semantics as
+     * {@see \App\Http\Controllers\BrandingController}. Shared by store()
+     * (via applyLocationAndPoster) and the Overview update(). (Requirement 5.1)
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function applyPoster(Request $request, array $data, ?Event $event): array
+    {
         if ($request->hasFile('poster')) {
             $data['poster_path'] = $this->images->store(
                 $request->file('poster'),

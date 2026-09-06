@@ -60,17 +60,12 @@ class EventManagementTest extends TestCase
         $event = Event::factory()->create([
             'primary_colour' => '#123456',
             'logo_path' => 'logos/event.png',
-            'ticket_field_defs' => ['fields' => [['key' => 'row', 'label' => 'Row']]],
         ]);
 
         $fresh = $event->fresh();
 
         $this->assertSame('#123456', $fresh->primary_colour);
         $this->assertSame('logos/event.png', $fresh->logo_path);
-        $this->assertSame(
-            ['fields' => [['key' => 'row', 'label' => 'Row']]],
-            $fresh->ticket_field_defs
-        );
     }
 
     // ---- Dashboard CRUD (Admin) ---------------------------------------------

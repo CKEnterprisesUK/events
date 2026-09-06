@@ -5,9 +5,9 @@ namespace App\Services\Branding;
 /**
  * The resolved, effective branding for a surface (a Company Storefront, or an
  * Event page / ticket). It carries the concrete logo, poster/hero image,
- * primary colour, Terms & Conditions text, and custom ticket-info field
- * definitions that should be applied, after Event-level overrides have been
- * layered over the Company-level defaults. (Requirements 7.1–7.5)
+ * primary colour, and Terms & Conditions text that should be applied, after
+ * Event-level overrides have been layered over the Company-level defaults.
+ * (Requirements 7.1–7.5)
  *
  * This is an immutable value object: the {@see BrandingResolver} produces it and
  * the Storefront/event pages, checkout, and ticket rendering read from it.
@@ -19,20 +19,13 @@ namespace App\Services\Branding;
  *   - {@see $eventLogoPath}    the Event's own logo override, if any.
  * An Event page can therefore show the event logo AND the organiser's company
  * logo when they differ, rather than only one.
- *
- * @phpstan-type TicketFieldDefs list<array<string, mixed>>
  */
 final class EffectiveBranding
 {
-    /**
-     * @param  list<array<string, mixed>>  $ticketFieldDefs  the custom ticket
-     *   information field definitions printed on tickets (Requirement 7.4).
-     */
     public function __construct(
         public readonly ?string $logoPath,
         public readonly ?string $primaryColour,
         public readonly ?string $termsText,
-        public readonly array $ticketFieldDefs,
         public readonly ?string $posterPath = null,
         public readonly ?string $companyLogoPath = null,
         public readonly ?string $eventLogoPath = null,
@@ -85,13 +78,5 @@ final class EffectiveBranding
     public function hasTerms(): bool
     {
         return $this->termsText !== null && $this->termsText !== '';
-    }
-
-    /**
-     * Whether any custom ticket information fields are defined. (7.4)
-     */
-    public function hasTicketFields(): bool
-    {
-        return $this->ticketFieldDefs !== [];
     }
 }

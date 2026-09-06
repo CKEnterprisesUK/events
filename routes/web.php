@@ -22,6 +22,7 @@ use App\Http\Controllers\StripeConnectController;
 use App\Http\Controllers\StripeReturnController;
 use App\Http\Controllers\SuperAdmin\CompanyController as SuperAdminCompanyController;
 use App\Http\Controllers\SuperAdmin\FeeController as SuperAdminFeeController;
+use App\Http\Controllers\SuperAdmin\ImpersonationController as SuperAdminImpersonationController;
 use App\Http\Controllers\SuperAdmin\TransactionController as SuperAdminTransactionController;
 use App\Http\Controllers\TicketTypeController;
 use App\Http\Controllers\WebhookController;
@@ -138,12 +139,28 @@ Route::middleware(['auth', 'company.active', 'session.timeout', 'dashboard.tenan
         // publish are scoped to the authenticated user's Company by the
         // `dashboard.tenant` group. (Requirements 5.1, 5.2, 5.3, 5.4, 5.5)
         Route::get('/events', [EventController::class, 'index'])->name('events.index');
+        // Dedicated create screen. Declared before `/events/{event}` so the
+        // literal `create` segment is not resolved as an Event id.
+        Route::get('/events/create', [EventController::class, 'create'])->name('events.create');
         Route::post('/events', [EventController::class, 'store'])->name('events.store');
         Route::get('/events/{event}', [EventController::class, 'show'])->name('events.show');
         Route::put('/events/{event}', [EventController::class, 'update'])->name('events.update');
         Route::patch('/events/{event}', [EventController::class, 'update']);
         Route::post('/events/{event}/publish', [EventController::class, 'publish'])->name('events.publish');
         Route::post('/events/{event}/unpublish', [EventController::class, 'unpublish'])->name('events.unpublish');
+
+        // Dedicated per-section manage screens. Each is its own URL (no JS-only
+        // tabs) so a section can be linked to and bookmarked directly. The
+        // Overview screen is `events.show` above; these are its siblings.
+        // (Requirements 5.1, 5.3, 4.1, 4.3)
+        Route::get('/events/{event}/location', [EventController::class, 'location'])->name('events.location');
+        // Location-only update: validates just the "Where" fields (mode, venue,
+        // address, pin) so the section form no longer piggy-backs on the full
+        // event-details update via a hidden name input. (Requirements 4.1–4.5)
+        Route::patch('/events/{event}/location', [EventController::class, 'updateLocation'])->name('events.location.update');
+        Route::get('/events/{event}/tickets', [EventController::class, 'tickets'])->name('events.tickets');
+        Route::get('/events/{event}/share', [EventController::class, 'share'])->name('events.share');
+        Route::get('/events/{event}/orders', [EventController::class, 'orders'])->name('events.orders');
 
         // Event QR code + per-event report (Admin-gated / Accountant-gated in
         // their controllers). `qr` streams a PNG of the public Event page URL
@@ -298,6 +315,13 @@ Route::middleware(['auth', 'super.admin', 'session.timeout'])
         Route::get('/fees', [SuperAdminFeeController::class, 'index'])->name('fees.index');
         Route::put('/fees/global', [SuperAdminFeeController::class, 'updateGlobal'])->name('fees.global.update');
         Route::put('/fees/companies/{company}', [SuperAdminFeeController::class, 'updateCompany'])->name('fees.company.update');
+
+        // Jump into a Company's dashboard as the acting Super_Admin (and step
+        // back out). Impersonation is a session flag honoured by
+        // `dashboard.tenant`; a Super_Admin already holds every Company ability
+        // via the Gate::before hook, so this only binds the acting tenant.
+        Route::post('/impersonate/stop', [SuperAdminImpersonationController::class, 'stop'])->name('impersonate.stop');
+        Route::post('/impersonate/{company}', [SuperAdminImpersonationController::class, 'start'])->name('impersonate.start');
     });
 
 /*

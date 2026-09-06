@@ -43,7 +43,7 @@ class CompanyFactory extends Factory
             // kept unique per generated row.
             'slug' => Str::slug($name).'-'.Str::lower(Str::random(6)),
             'status' => Company::STATUS_ACTIVE,
-            'fee_handling_mode' => Company::FEE_MODE_ABSORB,
+            'fee_handling_mode' => Company::FEE_MODE_PASS_ON,
             'company_fee_percent' => null,
             'stripe_account_id' => null,
             'stripe_charges_enabled' => false,
@@ -51,7 +51,6 @@ class CompanyFactory extends Factory
             'primary_colour' => null,
             'logo_path' => null,
             'terms_text' => null,
-            'ticket_field_defs' => null,
         ];
     }
 

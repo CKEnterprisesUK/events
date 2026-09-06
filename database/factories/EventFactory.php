@@ -34,7 +34,6 @@ class EventFactory extends Factory
             'is_published' => false,
             'primary_colour' => null,
             'logo_path' => null,
-            'ticket_field_defs' => null,
         ];
     }
 

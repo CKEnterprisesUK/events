@@ -7,10 +7,10 @@
     // reveal the tab containing the first invalid field on reload.
     $tabFields = [
         'appearance' => ['logo', 'poster', 'primary_colour', 'terms_text'],
+        'storefront' => ['about_text', 'facebook_url', 'instagram_url', 'x_url', 'linkedin_url', 'terms_url', 'privacy_url'],
         'organisation' => ['legal_name', 'trading_name', 'organisation_type', 'company_number', 'charity_number', 'website', 'email', 'phone'],
         'address' => ['address_line_1', 'address_line_2', 'city', 'postcode', 'country'],
         'contact' => ['support_email', 'gdpr_contact_email'],
-        'tickets' => ['ticket_field_defs'],
     ];
 
     $errorTab = 'appearance';
@@ -28,7 +28,7 @@
     <section>
         <div class="page-head">
             <h1>Settings</h1>
-            <p class="muted" style="margin:.25rem 0 0;">Your branding, organisation details, contact info and ticket fields.</p>
+            <p class="muted" style="margin:.25rem 0 0;">Your branding, organisation details and contact info.</p>
         </div>
 
         @if (session('status'))
@@ -59,10 +59,10 @@
 
             <div class="tab-list" role="tablist" aria-label="Branding and settings sections">
                 <button type="button" class="tab-btn" role="tab" data-tab="appearance">Branding<span class="tab-flag" aria-hidden="true"></span></button>
+                <button type="button" class="tab-btn" role="tab" data-tab="storefront">Storefront<span class="tab-flag" aria-hidden="true"></span></button>
                 <button type="button" class="tab-btn" role="tab" data-tab="organisation">Organisation<span class="tab-flag" aria-hidden="true"></span></button>
                 <button type="button" class="tab-btn" role="tab" data-tab="address">Address<span class="tab-flag" aria-hidden="true"></span></button>
                 <button type="button" class="tab-btn" role="tab" data-tab="contact">Contact<span class="tab-flag" aria-hidden="true"></span></button>
-                <button type="button" class="tab-btn" role="tab" data-tab="tickets">Ticket fields<span class="tab-flag" aria-hidden="true"></span></button>
             </div>
 
             {{-- =================== Branding (appearance) =================== --}}
@@ -96,6 +96,70 @@
                     <label for="terms_text">Terms &amp; Conditions</label>
                     <textarea name="terms_text" id="terms_text" rows="6">{{ old('terms_text', $company->terms_text) }}</textarea>
                     @error('terms_text')<p class="error">{{ $message }}</p>@enderror
+                </div>
+            </div>
+
+            {{-- =================== Storefront profile =================== --}}
+            <div class="tab-panel" role="tabpanel" data-tab-panel="storefront" hidden>
+                <p class="field-hint" style="margin-bottom: 0.75rem;">Extra details shown on your public storefront: a short introduction to your organisation and links to your website, social profiles and legal pages.</p>
+
+                {{-- About-the-company blurb shown on the storefront. --}}
+                <div class="field">
+                    <label for="about_text">About your organisation</label>
+                    <textarea name="about_text" id="about_text" rows="5" placeholder="Tell customers who you are and what you do.">{{ old('about_text', $company->about_text) }}</textarea>
+                    <span class="field-hint">Displayed under your events on the public storefront. Plain text.</span>
+                    @error('about_text')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                {{-- Social media links. The organisation website lives on the
+                     Organisation tab and is also shown on the storefront. --}}
+                <div class="field-row">
+                    <div class="field">
+                        <label for="facebook_url">Facebook</label>
+                        <input type="url" name="facebook_url" id="facebook_url"
+                               value="{{ old('facebook_url', $company->facebook_url) }}" placeholder="https://facebook.com/yourpage">
+                        @error('facebook_url')<p class="error">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div class="field">
+                        <label for="instagram_url">Instagram</label>
+                        <input type="url" name="instagram_url" id="instagram_url"
+                               value="{{ old('instagram_url', $company->instagram_url) }}" placeholder="https://instagram.com/yourhandle">
+                        @error('instagram_url')<p class="error">{{ $message }}</p>@enderror
+                    </div>
+                </div>
+
+                <div class="field-row">
+                    <div class="field">
+                        <label for="x_url">X (Twitter)</label>
+                        <input type="url" name="x_url" id="x_url"
+                               value="{{ old('x_url', $company->x_url) }}" placeholder="https://x.com/yourhandle">
+                        @error('x_url')<p class="error">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div class="field">
+                        <label for="linkedin_url">LinkedIn</label>
+                        <input type="url" name="linkedin_url" id="linkedin_url"
+                               value="{{ old('linkedin_url', $company->linkedin_url) }}" placeholder="https://linkedin.com/company/yourcompany">
+                        @error('linkedin_url')<p class="error">{{ $message }}</p>@enderror
+                    </div>
+                </div>
+
+                {{-- Links to the organiser's own legal pages. --}}
+                <div class="field">
+                    <label for="terms_url">Terms &amp; Conditions page (link)</label>
+                    <input type="url" name="terms_url" id="terms_url"
+                           value="{{ old('terms_url', $company->terms_url) }}" placeholder="https://yourcompany.com/terms">
+                    <span class="field-hint">A link to your own Terms &amp; Conditions page, shown in the storefront footer.</span>
+                    @error('terms_url')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="field">
+                    <label for="privacy_url">Privacy notice (link)</label>
+                    <input type="url" name="privacy_url" id="privacy_url"
+                           value="{{ old('privacy_url', $company->privacy_url) }}" placeholder="https://yourcompany.com/privacy">
+                    <span class="field-hint">A link to your privacy notice, shown in the storefront footer.</span>
+                    @error('privacy_url')<p class="error">{{ $message }}</p>@enderror
                 </div>
             </div>
 
@@ -230,19 +294,6 @@
                     <span class="field-hint">Where data-subject and privacy requests are handled.</span>
                     @error('gdpr_contact_email')<p class="error">{{ $message }}</p>@enderror
                 </div>
-            </div>
-
-            {{-- =================== Custom ticket fields =================== --}}
-            <div class="tab-panel" role="tabpanel" data-tab-panel="tickets" hidden>
-                <p class="field-hint" style="margin-bottom: 0.75rem;">Custom information fields printed on each ticket.</p>
-                @php($fields = $branding->ticketFieldDefs)
-                @for ($i = 0; $i < 5; $i++)
-                    <div class="field">
-                        <input type="text" name="ticket_field_defs[]"
-                               value="{{ $fields[$i]['label'] ?? '' }}" placeholder="Field label {{ $i + 1 }}">
-                    </div>
-                @endfor
-                @error('ticket_field_defs.*')<p class="error">{{ $message }}</p>@enderror
             </div>
 
             <div class="form-actions">

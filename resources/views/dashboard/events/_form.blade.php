@@ -1,11 +1,13 @@
 {{--
-    Shared Event create/edit fields. Pass $event (an Event or null for create).
-    Field names match EventController::validated().
+    Core Event details fields for the Overview screen's edit form: name, when,
+    capacity, description, hero image. Venue and full location live on the
+    dedicated "Where" screen (dashboard/events/location.blade.php), so they are
+    intentionally absent here. Field names match EventController::validated().
 
-    IMPORTANT: this partial includes a file upload (the hero/poster image), so the
-    enclosing <form> MUST set enctype="multipart/form-data". This partial does NOT
-    own the <form> tag — the including views (dashboard/events/show.blade.php and the
-    create form in dashboard/events/index.blade.php) are responsible for setting it.
+    IMPORTANT: this partial includes a file upload (the hero/poster image), so
+    the enclosing <form> MUST set enctype="multipart/form-data". This partial
+    does NOT own the <form> tag — dashboard/events/show.blade.php is responsible
+    for setting it.
 --}}
 @php $event = $event ?? null; @endphp
 
@@ -14,13 +16,6 @@
     <input id="name" type="text" name="name" required
            value="{{ old('name', $event?->name) }}">
     @error('name') <p class="error">{{ $message }}</p> @enderror
-</div>
-
-<div class="field">
-    <label for="venue">Venue <span class="muted">(optional)</span></label>
-    <input id="venue" type="text" name="venue"
-           value="{{ old('venue', $event?->venue) }}">
-    @error('venue') <p class="error">{{ $message }}</p> @enderror
 </div>
 
 <div class="field-row">

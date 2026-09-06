@@ -35,10 +35,17 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $currency
  * @property string|null $primary_colour
  * @property string|null $logo_path
+ * @property string|null $poster_path
+ * @property string|null $about_text
+ * @property string|null $facebook_url
+ * @property string|null $instagram_url
+ * @property string|null $x_url
+ * @property string|null $linkedin_url
+ * @property string|null $terms_url
+ * @property string|null $privacy_url
  * @property string|null $terms_text
  * @property string|null $support_email
  * @property string|null $gdpr_contact_email
- * @property array|null $ticket_field_defs
  */
 class Company extends Model
 {
@@ -148,10 +155,16 @@ class Company extends Model
         'primary_colour',
         'logo_path',
         'poster_path',
+        'about_text',
+        'facebook_url',
+        'instagram_url',
+        'x_url',
+        'linkedin_url',
+        'terms_url',
+        'privacy_url',
         'terms_text',
         'support_email',
         'gdpr_contact_email',
-        'ticket_field_defs',
     ];
 
     /**
@@ -160,7 +173,10 @@ class Company extends Model
     protected $attributes = [
         'status' => self::STATUS_ACTIVE,
         'country' => 'GB',
-        'fee_handling_mode' => self::FEE_MODE_ABSORB,
+        // Default to passing the platform fee on to the customer as a booking
+        // fee (added onto the ticket price). Owners can switch to absorbing it
+        // from the Payments page. (Requirement 13.1)
+        'fee_handling_mode' => self::FEE_MODE_PASS_ON,
         'stripe_charges_enabled' => false,
     ];
 
@@ -172,7 +188,6 @@ class Company extends Model
         return [
             'stripe_charges_enabled' => 'boolean',
             'company_fee_percent' => 'decimal:2',
-            'ticket_field_defs' => 'array',
         ];
     }
 

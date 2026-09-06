@@ -11,8 +11,8 @@
 --   the optional overall Event capacity (NULL = unlimited); `is_published`
 --   gates public availability (published => page served to Customers,
 --   unpublished => view/purchase blocked); the branding columns
---   (`primary_colour`, `logo_path`, `ticket_field_defs`) are per-Event
---   overrides of the Company-level branding. Applied on shared cPanel hosting
+--   (`primary_colour`, `logo_path`) are per-Event overrides of the
+--   Company-level branding. Applied on shared cPanel hosting
 --   by pasting this file into phpMyAdmin (Import / SQL tab) in filename order
 --   (after 002_create_companies.sql, which creates the referenced `companies`
 --   table).
@@ -63,7 +63,6 @@ CREATE TABLE `events` (
   `is_published` tinyint(1) NOT NULL DEFAULT 0,
   `primary_colour` varchar(7) DEFAULT NULL,
   `logo_path` varchar(255) DEFAULT NULL,
-  `ticket_field_defs` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`ticket_field_defs`)),
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),

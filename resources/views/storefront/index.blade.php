@@ -2,17 +2,6 @@
 
 @section('title', $company->name)
 
-@section('favicon')
-    @if ($branding->hasLogo())
-        <link rel="icon" href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($branding->logoPath) }}">
-        <link rel="apple-touch-icon" href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($branding->logoPath) }}">
-    @else
-        <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
-        <link rel="icon" type="image/png" href="{{ asset('images/favicon.png') }}">
-        <link rel="apple-touch-icon" href="{{ asset('images/favicon.png') }}">
-    @endif
-@endsection
-
 @section('brand-style')
     @if ($branding->hasPrimaryColour())
         <style>:root { --brand: {{ $branding->primaryColour }}; }</style>
@@ -76,5 +65,50 @@
                 </ul>
             @endif
         </section>
+
+        @if (filled($company->about_text))
+            <section class="store-section store-about">
+                <h2>About {{ $company->name }}</h2>
+                <p class="store-about__text">{!! nl2br(e($company->about_text)) !!}</p>
+            </section>
+        @endif
+
+        @php
+            $socialLinks = array_filter([
+                'Website' => $company->website,
+                'Facebook' => $company->facebook_url,
+                'Instagram' => $company->instagram_url,
+                'X' => $company->x_url,
+                'LinkedIn' => $company->linkedin_url,
+            ]);
+            $legalLinks = array_filter([
+                'Terms & Conditions' => $company->terms_url,
+                'Privacy notice' => $company->privacy_url,
+            ]);
+        @endphp
+
+        @if (! empty($socialLinks) || ! empty($legalLinks))
+            <section class="store-section store-links">
+                @if (! empty($socialLinks))
+                    <ul class="store-links__list" aria-label="Follow {{ $company->name }}">
+                        @foreach ($socialLinks as $label => $url)
+                            <li>
+                                <a href="{{ $url }}" target="_blank" rel="noopener noreferrer nofollow">{{ $label }}</a>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+
+                @if (! empty($legalLinks))
+                    <ul class="store-links__legal" aria-label="{{ $company->name }} legal">
+                        @foreach ($legalLinks as $label => $url)
+                            <li>
+                                <a href="{{ $url }}" target="_blank" rel="noopener noreferrer nofollow">{{ $label }}</a>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+            </section>
+        @endif
     </main>
 @endsection

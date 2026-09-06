@@ -37,8 +37,9 @@ class CompanyTenantContextTest extends TestCase
         $this->assertSame('acme-charity', $fresh->slug);
         // Requirement 2.x — status defaults to active.
         $this->assertSame(Company::STATUS_ACTIVE, $fresh->status);
-        // Requirements 13.1, 13.2 — fee handling mode defaults to absorb.
-        $this->assertSame(Company::FEE_MODE_ABSORB, $fresh->fee_handling_mode);
+        // Requirements 13.1, 13.2 — fee handling mode defaults to pass_on (the
+        // booking fee is added onto the customer's ticket price by default).
+        $this->assertSame(Company::FEE_MODE_PASS_ON, $fresh->fee_handling_mode);
         // Requirements 12.3/12.4 — NULL override means use the global fee.
         $this->assertNull($fresh->company_fee_percent);
         $this->assertNull($fresh->stripe_account_id);
@@ -60,7 +61,6 @@ class CompanyTenantContextTest extends TestCase
             'primary_colour' => '#ff8800',
             'logo_path' => 'logos/bright.png',
             'terms_text' => 'Please arrive early.',
-            'ticket_field_defs' => ['fields' => [['key' => 'seat', 'label' => 'Seat']]],
         ]);
 
         $fresh = $company->fresh();
@@ -74,10 +74,6 @@ class CompanyTenantContextTest extends TestCase
         $this->assertSame('#ff8800', $fresh->primary_colour);
         $this->assertSame('logos/bright.png', $fresh->logo_path);
         $this->assertSame('Please arrive early.', $fresh->terms_text);
-        $this->assertSame(
-            ['fields' => [['key' => 'seat', 'label' => 'Seat']]],
-            $fresh->ticket_field_defs
-        );
     }
 
     public function test_slug_is_unique_at_the_database_level(): void

@@ -1,7 +1,7 @@
 {{--
     Branded ticket email for a confirmed Order. Shows the effective
-    Company/Event branding (logo, primary colour), the customisable ticket
-    information fields, the Order breakdown, and the single scannable QR_Code —
+    Company/Event branding (logo, primary colour), the Order breakdown, and the
+    single scannable QR_Code —
     a rendered PNG of the payload {Order_Reference}.HMAC(secret, Order_Reference)
     — that the attendee presents at entry. (Requirements 14.1, 14.4, 14.6)
 --}}
@@ -50,19 +50,6 @@
                     </tbody>
                 </table>
 
-                {{-- Customisable ticket information fields. (Requirements 7.4, 14.6) --}}
-                @if ($branding->hasTicketFields())
-                    <div style="margin-bottom:16px;">
-                        @foreach ($branding->ticketFieldDefs as $field)
-                            @if (is_array($field) && isset($field['label']))
-                                <p style="margin:0 0 4px;font-size:13px;color:#374151;">
-                                    <strong>{{ $field['label'] }}:</strong>
-                                    {{ $field['value'] ?? '' }}
-                                </p>
-                            @endif
-                        @endforeach
-                    </div>
-                @endif
             </div>
 
             {{-- The single scannable QR_Code for the Order, rendered as an inline

@@ -13,8 +13,10 @@ use Tests\TestCase;
 /**
  * Feature: event-experience-polish
  *
- * Task 7.5 — event geocode/location save behaviour in EventController's
- * store()/update() via applyLocationAndPoster().
+ * Task 7.5 — event geocode/location save behaviour in EventController: create
+ * accepts location fields via store(); edits go through the dedicated
+ * updateLocation() (PATCH .../location). Both resolve the pin via
+ * applyLocationAndPoster().
  *
  * Requirements:
  *  - 4.2: saving an in-person event with an address geocodes it synchronously
@@ -121,11 +123,10 @@ class EventGeocodeLocationTest extends TestCase
             }
         });
 
-        $this->actingAs($admin)->put("/dashboard/events/{$event->id}", [
-            'name' => 'Pinned Event',
+        $this->actingAs($admin)->patch("/dashboard/events/{$event->id}/location", [
             'location_mode' => Event::LOCATION_IN_PERSON,
             'address' => 'X',
-        ])->assertRedirect(route('dashboard.events.show', $event));
+        ])->assertRedirect(route('dashboard.events.location', $event));
 
         $fresh = $event->fresh();
         $this->assertEqualsWithDelta(10.0, (float) $fresh->latitude, 0.0000001);
@@ -147,10 +148,9 @@ class EventGeocodeLocationTest extends TestCase
         // Geocoding must not run for an online save.
         $this->fakeGeocoder(new GeocodeResult(1.0, 2.0));
 
-        $this->actingAs($admin)->put("/dashboard/events/{$event->id}", [
-            'name' => 'Going Online',
+        $this->actingAs($admin)->patch("/dashboard/events/{$event->id}/location", [
             'location_mode' => Event::LOCATION_ONLINE,
-        ])->assertRedirect(route('dashboard.events.show', $event));
+        ])->assertRedirect(route('dashboard.events.location', $event));
 
         $fresh = $event->fresh();
         $this->assertSame(Event::LOCATION_ONLINE, $fresh->location_mode);

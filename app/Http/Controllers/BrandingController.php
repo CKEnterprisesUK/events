@@ -93,6 +93,16 @@ class BrandingController extends Controller
             'support_email' => ['nullable', 'string', 'email', 'max:254'],
             'gdpr_contact_email' => ['nullable', 'string', 'email', 'max:254'],
 
+            // Public storefront profile: about-the-company blurb and external
+            // links (social profiles + the organiser's own legal pages).
+            'about_text' => ['nullable', 'string', 'max:5000'],
+            'facebook_url' => ['nullable', 'string', 'url', 'max:255'],
+            'instagram_url' => ['nullable', 'string', 'url', 'max:255'],
+            'x_url' => ['nullable', 'string', 'url', 'max:255'],
+            'linkedin_url' => ['nullable', 'string', 'url', 'max:255'],
+            'terms_url' => ['nullable', 'string', 'url', 'max:255'],
+            'privacy_url' => ['nullable', 'string', 'url', 'max:255'],
+
             // Legal/registration details maintained by the Owner after signup.
             // The registered name, organisation type, main organisation email
             // and registered address stay required; the rest are optional.
@@ -121,9 +131,6 @@ class BrandingController extends Controller
             'city' => ['required', 'string', 'max:255'],
             'postcode' => ['required', 'string', 'max:20'],
             'country' => ['required', 'string', 'size:2'],
-
-            'ticket_field_defs' => ['nullable', 'array'],
-            'ticket_field_defs.*' => ['nullable', 'string', 'max:100'],
         ]);
 
         $attributes = [
@@ -131,6 +138,13 @@ class BrandingController extends Controller
             'terms_text' => $data['terms_text'] ?? null,
             'support_email' => $data['support_email'] ?? null,
             'gdpr_contact_email' => $data['gdpr_contact_email'] ?? null,
+            'about_text' => $data['about_text'] ?? null,
+            'facebook_url' => $data['facebook_url'] ?? null,
+            'instagram_url' => $data['instagram_url'] ?? null,
+            'x_url' => $data['x_url'] ?? null,
+            'linkedin_url' => $data['linkedin_url'] ?? null,
+            'terms_url' => $data['terms_url'] ?? null,
+            'privacy_url' => $data['privacy_url'] ?? null,
             'legal_name' => $data['legal_name'],
             'trading_name' => $data['trading_name'] ?? null,
             'organisation_type' => $data['organisation_type'],
@@ -144,7 +158,6 @@ class BrandingController extends Controller
             'city' => $data['city'],
             'postcode' => $data['postcode'],
             'country' => strtoupper($data['country']),
-            'ticket_field_defs' => $this->normaliseFieldDefs($data['ticket_field_defs'] ?? null),
         ];
 
         if ($request->hasFile('logo')) {
@@ -180,9 +193,9 @@ class BrandingController extends Controller
     }
 
     /**
-     * Persist Event-level branding overrides (logo, primary colour, custom
-     * ticket-info fields) for one Event. Blank values clear the override so the
-     * Event falls back to the Company-level branding. (Requirement 7.5)
+     * Persist Event-level branding overrides (logo, poster, primary colour) for
+     * one Event. Blank values clear the override so the Event falls back to the
+     * Company-level branding. (Requirement 7.5)
      */
     public function updateEvent(Request $request, Event $event): RedirectResponse
     {
@@ -192,13 +205,10 @@ class BrandingController extends Controller
             'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp,svg', 'max:5120'],
             'poster' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:8192'],
             'primary_colour' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'ticket_field_defs' => ['nullable', 'array'],
-            'ticket_field_defs.*' => ['nullable', 'string', 'max:100'],
         ]);
 
         $attributes = [
             'primary_colour' => $data['primary_colour'] ?? null,
-            'ticket_field_defs' => $this->normaliseFieldDefs($data['ticket_field_defs'] ?? null),
         ];
 
         if ($request->hasFile('logo')) {
@@ -217,38 +227,6 @@ class BrandingController extends Controller
     }
 
     // ---- Helpers -------------------------------------------------------------
-
-    /**
-     * Normalise submitted custom ticket-info field definitions into the stored
-     * shape: a list of `['label' => ...]` entries, dropping blanks. Storing a
-     * structured shape keeps ticket rendering stable as fields grow richer.
-     * (Requirement 7.4)
-     *
-     * @param  array<int|string, mixed>|null  $fields
-     * @return list<array<string, string>>
-     */
-    private function normaliseFieldDefs(?array $fields): array
-    {
-        if ($fields === null) {
-            return [];
-        }
-
-        $defs = [];
-
-        foreach ($fields as $field) {
-            if (! is_string($field)) {
-                continue;
-            }
-
-            $label = trim($field);
-
-            if ($label !== '') {
-                $defs[] = ['label' => $label];
-            }
-        }
-
-        return $defs;
-    }
 
     /**
      * The authenticated Company_User's own Company. An authenticated

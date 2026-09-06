@@ -40,7 +40,6 @@ use Illuminate\Support\Facades\DB;
  * @property string|null $primary_colour
  * @property string|null $logo_path
  * @property string|null $poster_path
- * @property array|null $ticket_field_defs
  */
 class Event extends Model
 {
@@ -72,7 +71,6 @@ class Event extends Model
         'primary_colour',
         'logo_path',
         'poster_path',
-        'ticket_field_defs',
     ];
 
     /**
@@ -94,7 +92,6 @@ class Event extends Model
             'is_published' => 'boolean',
             'latitude' => 'decimal:7',
             'longitude' => 'decimal:7',
-            'ticket_field_defs' => 'array',
         ];
     }
 

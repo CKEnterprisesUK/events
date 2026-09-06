@@ -50,16 +50,6 @@
                 @error('primary_colour')<p class="error">{{ $message }}</p>@enderror
             </div>
 
-            <fieldset class="field">
-                <legend>Custom ticket fields override</legend>
-                @php($fields = is_array($event->ticket_field_defs) ? array_values($event->ticket_field_defs) : [])
-                @for ($i = 0; $i < 5; $i++)
-                    <input type="text" name="ticket_field_defs[]"
-                           value="{{ $fields[$i]['label'] ?? '' }}" placeholder="Field label">
-                @endfor
-                @error('ticket_field_defs.*')<p class="error">{{ $message }}</p>@enderror
-            </fieldset>
-
             <button type="submit" class="btn">Save event branding</button>
         </form>
     </section>

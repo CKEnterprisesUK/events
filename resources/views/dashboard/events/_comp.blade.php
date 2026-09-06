@@ -20,7 +20,7 @@
         @if ($ticketTypes->isEmpty())
             <div class="empty">
                 <p>Add a ticket type before issuing complimentary tickets.</p>
-                <a class="btn btn-sm" href="{{ route('dashboard.events.show', ['event' => $event, 'tab' => 'ticket-types']) }}">Add ticket type</a>
+                <a class="btn btn-sm" href="{{ route('dashboard.events.tickets', $event) }}">Add ticket type</a>
             </div>
         @else
             <form method="POST" action="{{ route('dashboard.events.comp', $event) }}" class="stack" id="comp-form">

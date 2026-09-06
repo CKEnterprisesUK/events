@@ -24,8 +24,9 @@ return new class extends Migration
             $table->string('slug', 255)->unique();
             // Suspension flag. (Requirement 2.x, 20.3, 20.4)
             $table->enum('status', ['active', 'suspended'])->default('active');
-            // Who bears the Application_Fee; defaults to Absorb. (13.1, 13.2)
-            $table->enum('fee_handling_mode', ['absorb', 'pass_on'])->default('absorb');
+            // Who bears the Application_Fee; defaults to Pass_On (the booking
+            // fee is added onto the customer's ticket price). (13.1, 13.2)
+            $table->enum('fee_handling_mode', ['absorb', 'pass_on'])->default('pass_on');
             // Per-Company fee override; NULL => use Global_Fee_Percent. (12.3, 12.4, 20.6)
             $table->decimal('company_fee_percent', 5, 2)->nullable();
             // Stripe Connect linkage. (11.2)

@@ -10,18 +10,19 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Feature: event-experience-polish — task 9.13
+ * Feature: event management — dedicated per-section screens.
  *
- * Covers the tabbed manage-event page (the tab shell that renders all six
- * panels server-side) and the inline ticket-type / comp management that posts
- * to the existing controller routes.
+ * The manage-event area is a set of dedicated screens, each its own URL, linked
+ * from a per-event section sidebar (Overview / Where / Tickets / Share / Report
+ * / Orders) with a pinned setup checklist:
+ *   - Overview  GET dashboard.events.show      → EventController@show
+ *   - Where     GET dashboard.events.location  → EventController@location
+ *   - Tickets   GET dashboard.events.tickets   → EventController@tickets
+ *   - Share     GET dashboard.events.share     → EventController@share
+ *   - Orders    GET dashboard.events.orders    → EventController@orders
  *
- * Requirements: 1.1, 1.2, 1.3, 1.6, 1.7, 1.8 (accessible tab shell, no-JS
- * reachability, manager-only, tenant isolation), 6.1, 6.2, 6.3, 6.6, 6.7
- * (inline ticket-type management), 7.3, 7.4 (comp issuance from the tab).
- *
- * The manage page is GET route('dashboard.events.show', $event) →
- * EventController@show, rendering dashboard.events.show (the tabbed shell).
+ * Requirements: 1.6, 1.7 (manager-only, tenant isolation), 6.1, 6.2, 6.3, 6.6,
+ * 6.7 (ticket-type management), 7.3, 7.4 (comp issuance), 4.1, 4.3 (location).
  */
 class EventManageTabsTest extends TestCase
 {
@@ -35,9 +36,9 @@ class EventManageTabsTest extends TestCase
         return [$admin, $event];
     }
 
-    // ---- Tab shell rendering -------------------------------------------------
+    // ---- Section navigation --------------------------------------------------
 
-    public function test_manage_page_renders_the_six_tabs(): void
+    public function test_overview_screen_renders_the_section_nav(): void
     {
         [$admin, $event] = $this->adminAndEvent();
 
@@ -45,81 +46,85 @@ class EventManageTabsTest extends TestCase
 
         $response->assertStatus(200);
 
-        // Tab labels (Requirement 1.1).
-        foreach (['Overview', 'Ticket types', 'Location', 'Share &amp; QR', 'Report', 'Orders'] as $label) {
+        // Section labels (the sidebar).
+        foreach (['Overview', 'Where', 'Tickets', 'Share', 'Report', 'Orders'] as $label) {
             $response->assertSee($label, false);
         }
 
-        // ARIA tab markup (Requirements 1.2, 1.8).
-        $response->assertSee('role="tab"', false);
-        $response->assertSee('aria-controls="panel-ticket-types"', false);
+        // Each section links to its own dedicated URL.
+        $response->assertSee(route('dashboard.events.location', $event), false);
+        $response->assertSee(route('dashboard.events.tickets', $event), false);
+        $response->assertSee(route('dashboard.events.share', $event), false);
+        $response->assertSee(route('dashboard.events.orders', $event), false);
+    }
 
-        // The six panels render server-side (Requirement 1.3).
+    public function test_each_section_screen_loads(): void
+    {
+        [$admin, $event] = $this->adminAndEvent();
+
         foreach ([
-            'id="panel-overview"',
-            'id="panel-ticket-types"',
-            'id="panel-location"',
-            'id="panel-share"',
-            'id="panel-report"',
-            'id="panel-orders"',
-        ] as $panel) {
-            $response->assertSee($panel, false);
+            'dashboard.events.show',
+            'dashboard.events.location',
+            'dashboard.events.tickets',
+            'dashboard.events.share',
+            'dashboard.events.orders',
+        ] as $route) {
+            $this->actingAs($admin)
+                ->get(route($route, $event))
+                ->assertStatus(200);
         }
     }
 
-    public function test_panels_are_visible_without_js(): void
+    public function test_tickets_screen_shows_ticket_type_and_comp_forms(): void
     {
         [$admin, $event] = $this->adminAndEvent();
-        // Give the event a ticket type so the ticket-types panel has content.
-        $ticketType = TicketType::factory()->forEvent($event)->create(['name' => 'General Admission']);
+        // The comp form only renders once the event has at least one ticket type.
+        TicketType::factory()->forEvent($event)->create(['name' => 'General Admission']);
 
-        $response = $this->actingAs($admin)->get(route('dashboard.events.show', $event));
+        $response = $this->actingAs($admin)->get(route('dashboard.events.tickets', $event));
 
         $response->assertStatus(200);
-
-        // Panels are rendered as tabpanels with no `hidden` attribute server-side;
-        // JS adds `hidden` to inactive panels only. (Requirement 1.3)
-        $response->assertSee('role="tabpanel"', false);
-
-        // Content from multiple panels is present in the DOM simultaneously,
-        // demonstrating no-JS reachability: the ticket type name (ticket-types
-        // panel) AND the orders panel content both render. (Requirement 1.3)
         $response->assertSee('General Admission', false);
-        $response->assertSee('id="panel-orders"', false);
-    }
-
-    public function test_ticket_type_and_comp_forms_post_to_existing_routes(): void
-    {
-        [$admin, $event] = $this->adminAndEvent();
-        // The comp form only renders once the event has at least one ticket
-        // type (otherwise the panel shows an "add a ticket type" prompt).
-        TicketType::factory()->forEvent($event)->create();
-
-        $response = $this->actingAs($admin)->get(route('dashboard.events.show', $event));
-
-        $response->assertStatus(200);
-
-        // Inline management posts to the existing routes (Requirements 6.1,
-        // 6.2, 6.3, 7.3).
         $response->assertSee(route('dashboard.events.ticket-types.store', $event), false);
         $response->assertSee(route('dashboard.events.comp', $event), false);
+    }
+
+    public function test_where_screen_shows_venue_and_location_form(): void
+    {
+        [$admin, $event] = $this->adminAndEvent();
+
+        $response = $this->actingAs($admin)->get(route('dashboard.events.location', $event));
+
+        $response->assertStatus(200);
+        // The unified "Where" form posts to the dedicated location route.
+        $response->assertSee(route('dashboard.events.location.update', $event), false);
+        // Venue now lives here.
+        $response->assertSee('name="venue"', false);
+        // And the location type toggle.
+        $response->assertSee('name="location_mode"', false);
     }
 
     // ---- Access control ------------------------------------------------------
 
     public function test_non_manager_gets_403(): void
     {
-        // A scanner and an accountant are not managers of events. (Requirements
-        // 1.6, 6.6)
         foreach ([
             User::factory()->scanner()->create(),
             User::factory()->accountant()->create(),
         ] as $user) {
             $event = Event::factory()->for(Company::find($user->company_id))->create();
 
-            $this->actingAs($user)
-                ->get(route('dashboard.events.show', $event))
-                ->assertForbidden();
+            foreach ([
+                'dashboard.events.show',
+                'dashboard.events.location',
+                'dashboard.events.tickets',
+                'dashboard.events.share',
+                'dashboard.events.orders',
+            ] as $route) {
+                $this->actingAs($user)
+                    ->get(route($route, $event))
+                    ->assertForbidden();
+            }
         }
     }
 
@@ -128,8 +133,6 @@ class EventManageTabsTest extends TestCase
         $admin = User::factory()->admin()->create();
         $otherEvent = Event::factory()->create(); // different Company
 
-        // Cross-Company event is not found under the tenant scope. (Requirements
-        // 1.7, 6.7, 7.4)
         $this->actingAs($admin)
             ->get(route('dashboard.events.show', $otherEvent))
             ->assertNotFound();
@@ -137,12 +140,11 @@ class EventManageTabsTest extends TestCase
 
     // ---- Inline management end-to-end ---------------------------------------
 
-    public function test_admin_can_create_a_ticket_type_from_the_tab(): void
+    public function test_admin_can_create_a_ticket_type_from_the_tickets_screen(): void
     {
         [$admin, $event] = $this->adminAndEvent();
 
-        // Capped ticket type created via the tab's form -> existing store route.
-        // (Requirements 6.1, 6.2, 6.3)
+        // Capped ticket type created via the tickets screen's form.
         $this->actingAs($admin)->post(
             route('dashboard.events.ticket-types.store', $event),
             [
@@ -165,7 +167,6 @@ class EventManageTabsTest extends TestCase
         ]);
 
         // Shared-pool ticket type: no capacity submitted -> stored capacity null.
-        // (Requirement 6.3, 2.x)
         $this->actingAs($admin)->post(
             route('dashboard.events.ticket-types.store', $event),
             [

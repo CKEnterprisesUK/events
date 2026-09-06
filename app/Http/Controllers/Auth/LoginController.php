@@ -66,6 +66,13 @@ class LoginController extends Controller
 
         $request->session()->regenerate();
 
+        // Super_Admins land on the platform (super-admin) surface by default;
+        // from there they can jump into a specific Company's dashboard. Company
+        // users land on their own dashboard.
+        if (Auth::user()->isSuperAdmin()) {
+            return redirect()->intended('/admin');
+        }
+
         return redirect()->intended('/dashboard');
     }
 

@@ -25,7 +25,7 @@ use Tests\TestCase;
  *
  * The public Storefront / event-page rendering wiring is task 12.1; these tests
  * assert the resolver output and its render-readiness contract (hasLogo,
- * hasPrimaryColour, hasTerms, hasTicketFields) that those surfaces consume, and
+ * hasPrimaryColour, hasTerms) that those surfaces consume, and
  * that an uploaded logo resolves to a stored, displayable asset.
  *
  * Requirements: 7.1, 7.2, 7.3, 7.4, 7.5.
@@ -148,36 +148,6 @@ class BrandingResolutionAndRenderingTest extends TestCase
         $this->assertNull($branding->termsText);
     }
 
-    // ---- 7.4 Custom ticket-info fields available for tickets -----------------
-
-    public function test_ticket_fields_are_available_for_ticket_rendering(): void
-    {
-        // Requirement 7.4 — defined custom fields are available to print on
-        // issued tickets.
-        $company = Company::factory()->create([
-            'ticket_field_defs' => [['label' => 'Seat'], ['label' => 'Table']],
-        ]);
-
-        $branding = $this->resolver()->forCompany($company);
-
-        $this->assertTrue($branding->hasTicketFields());
-        $this->assertSame(
-            [['label' => 'Seat'], ['label' => 'Table']],
-            $branding->ticketFieldDefs,
-        );
-    }
-
-    public function test_no_ticket_fields_means_none_are_printed(): void
-    {
-        // Requirement 7.4 — with no fields defined, tickets print none.
-        $company = Company::factory()->create(['ticket_field_defs' => null]);
-
-        $branding = $this->resolver()->forCompany($company);
-
-        $this->assertFalse($branding->hasTicketFields());
-        $this->assertSame([], $branding->ticketFieldDefs);
-    }
-
     // ---- 7.5 Event-level overrides reach the Event surface -------------------
 
     public function test_event_surface_renders_event_level_logo_and_colour_override(): void
@@ -207,22 +177,6 @@ class BrandingResolutionAndRenderingTest extends TestCase
         $this->assertSame('#0A0B0C', $eventBranding->primaryColour);
     }
 
-    public function test_event_surface_renders_event_level_ticket_field_override(): void
-    {
-        // Requirement 7.5 — Event-level ticket fields reach that Event's tickets.
-        $company = Company::factory()->create([
-            'ticket_field_defs' => [['label' => 'Seat']],
-        ]);
-        $event = Event::factory()->for($company)->create([
-            'ticket_field_defs' => [['label' => 'VIP Table']],
-        ]);
-
-        $branding = $this->resolver()->forEvent($event);
-
-        $this->assertTrue($branding->hasTicketFields());
-        $this->assertSame([['label' => 'VIP Table']], $branding->ticketFieldDefs);
-    }
-
     public function test_event_surface_inherits_unset_facets_from_company(): void
     {
         // Requirement 7.5 — facets not overridden at the Event level fall back
@@ -230,21 +184,18 @@ class BrandingResolutionAndRenderingTest extends TestCase
         $company = Company::factory()->create([
             'logo_path' => 'branding/logos/co.png',
             'primary_colour' => '#010203',
-            'ticket_field_defs' => [['label' => 'Seat']],
         ]);
         $event = Event::factory()->for($company)->create([
             'logo_path' => null,
             'primary_colour' => '#0A0B0C',
-            'ticket_field_defs' => null,
         ]);
 
         $branding = $this->resolver()->forEvent($event);
 
-        // Logo + fields inherited from the Company, colour is the Event override.
+        // Logo inherited from the Company, colour is the Event override.
         $this->assertTrue($branding->hasLogo());
         $this->assertSame('branding/logos/co.png', $branding->logoPath);
         $this->assertSame('#0A0B0C', $branding->primaryColour);
-        $this->assertSame([['label' => 'Seat']], $branding->ticketFieldDefs);
     }
 
     public function test_event_override_does_not_leak_onto_the_company_storefront(): void
@@ -269,7 +220,6 @@ class BrandingResolutionAndRenderingTest extends TestCase
             'logo_path' => null,
             'primary_colour' => null,
             'terms_text' => null,
-            'ticket_field_defs' => null,
         ]);
 
         $branding = $this->resolver()->forCompany($company);
@@ -278,6 +228,5 @@ class BrandingResolutionAndRenderingTest extends TestCase
         $this->assertFalse($branding->hasLogo());
         $this->assertFalse($branding->hasPrimaryColour());
         $this->assertFalse($branding->hasTerms());
-        $this->assertFalse($branding->hasTicketFields());
     }
 }

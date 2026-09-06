@@ -46,23 +46,17 @@ class TicketTypeController extends Controller
     private const MAX_CAPACITY = 1_000_000;
 
     /**
-     * The standalone nested ticket-types page has been folded into the manage
-     * event show page's "Ticket types" tab. This route is kept registered so
-     * existing bookmarks/links keep working, but now redirects to the tab.
-     *
-     * A 302 cannot carry a URL #fragment reliably, so the target tab is passed
-     * as a `tab` query param that the show page's tab JS (task 9.1) reads to
-     * activate the Ticket types tab. Cross-Company Events never match the
-     * tenant scope and surface as 404. (Requirements 1.5, 6.1, 6.3)
+     * Ticket-type management now lives on the dedicated "Tickets" manage screen
+     * (dashboard.events.tickets). This route is kept registered so existing
+     * bookmarks/links and the store/update redirects keep working; it simply
+     * forwards to that screen. Cross-Company Events never match the tenant scope
+     * and surface as 404. (Requirements 1.5, 6.1, 6.3)
      */
     public function index(Event $event): RedirectResponse
     {
         Gate::authorize(RoleAuthorization::ACTION_MANAGE_TICKET_TYPES);
 
-        return redirect()->route('dashboard.events.show', [
-            'event' => $event,
-            'tab' => 'ticket-types',
-        ]);
+        return redirect()->route('dashboard.events.tickets', $event);
     }
 
     /**

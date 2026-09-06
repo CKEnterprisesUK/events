@@ -69,25 +69,19 @@ class BrandingManagementTest extends TestCase
         Storage::disk('public')->assertExists($logoPath);
     }
 
-    public function test_owner_sets_primary_colour_terms_and_custom_fields(): void
+    public function test_owner_sets_primary_colour_and_terms(): void
     {
-        // Requirements 7.2, 7.3, 7.4.
+        // Requirements 7.2, 7.3.
         $owner = User::factory()->owner()->create();
 
         $this->actingAs($owner)->put(route('dashboard.branding.update'), $this->orgFields([
             'primary_colour' => '#ABCDEF',
             'terms_text' => 'You agree to the terms.',
-            'ticket_field_defs' => ['Seat', 'Table', ''],
         ]))->assertRedirect();
 
         $company = $owner->company->fresh();
         $this->assertSame('#ABCDEF', $company->primary_colour);
         $this->assertSame('You agree to the terms.', $company->terms_text);
-        // Blank field entries are dropped; the rest stored as label defs. (7.4)
-        $this->assertSame(
-            [['label' => 'Seat'], ['label' => 'Table']],
-            $company->ticket_field_defs,
-        );
     }
 
     public function test_uploading_a_new_logo_removes_the_previous_one(): void
@@ -163,12 +157,10 @@ class BrandingManagementTest extends TestCase
 
         $this->actingAs($admin)->put(route('dashboard.branding.event.update', $event), [
             'primary_colour' => '#999999',
-            'ticket_field_defs' => ['VIP note'],
         ])->assertRedirect(route('dashboard.branding.event.edit', $event));
 
         $fresh = $event->fresh();
         $this->assertSame('#999999', $fresh->primary_colour);
-        $this->assertSame([['label' => 'VIP note']], $fresh->ticket_field_defs);
     }
 
     public function test_admin_cannot_override_branding_for_another_companys_event(): void
@@ -207,12 +199,11 @@ class BrandingManagementTest extends TestCase
 
     public function test_resolver_returns_company_branding_for_storefront(): void
     {
-        // Requirements 7.1–7.4 — Company-level branding as-is.
+        // Requirements 7.1–7.3 — Company-level branding as-is.
         $company = Company::factory()->create([
             'logo_path' => 'branding/logos/co.png',
             'primary_colour' => '#010203',
             'terms_text' => 'Company terms.',
-            'ticket_field_defs' => [['label' => 'Seat']],
         ]);
 
         $branding = app(BrandingResolver::class)->forCompany($company);
@@ -220,7 +211,6 @@ class BrandingManagementTest extends TestCase
         $this->assertSame('branding/logos/co.png', $branding->logoPath);
         $this->assertSame('#010203', $branding->primaryColour);
         $this->assertSame('Company terms.', $branding->termsText);
-        $this->assertSame([['label' => 'Seat']], $branding->ticketFieldDefs);
     }
 
     public function test_resolver_prefers_event_overrides_over_company(): void
@@ -230,12 +220,10 @@ class BrandingManagementTest extends TestCase
             'logo_path' => 'branding/logos/co.png',
             'primary_colour' => '#010203',
             'terms_text' => 'Company terms.',
-            'ticket_field_defs' => [['label' => 'Seat']],
         ]);
         $event = Event::factory()->for($company)->create([
             'logo_path' => 'branding/logos/event.png',
             'primary_colour' => '#0A0B0C',
-            'ticket_field_defs' => [['label' => 'Table']],
         ]);
 
         $branding = app(BrandingResolver::class)->forEvent($event);
@@ -244,7 +232,6 @@ class BrandingManagementTest extends TestCase
         $this->assertSame('#0A0B0C', $branding->primaryColour);
         // Terms are a Company checkout setting; Events do not override. (7.3)
         $this->assertSame('Company terms.', $branding->termsText);
-        $this->assertSame([['label' => 'Table']], $branding->ticketFieldDefs);
     }
 
     public function test_resolver_falls_back_to_company_where_event_unset(): void
@@ -253,20 +240,17 @@ class BrandingManagementTest extends TestCase
         $company = Company::factory()->create([
             'logo_path' => 'branding/logos/co.png',
             'primary_colour' => '#010203',
-            'ticket_field_defs' => [['label' => 'Seat']],
         ]);
         $event = Event::factory()->for($company)->create([
             'logo_path' => null,
             'primary_colour' => '#0A0B0C',
-            'ticket_field_defs' => null,
         ]);
 
         $branding = app(BrandingResolver::class)->forEvent($event);
 
-        // Logo and fields inherited; only colour overridden.
+        // Logo inherited; only colour overridden.
         $this->assertSame('branding/logos/co.png', $branding->logoPath);
         $this->assertSame('#0A0B0C', $branding->primaryColour);
-        $this->assertSame([['label' => 'Seat']], $branding->ticketFieldDefs);
     }
 
     public function test_resolver_treats_blank_event_override_as_unset(): void

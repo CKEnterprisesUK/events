@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Controllers\SuperAdmin\ImpersonationController;
 use App\Models\Company;
 use App\Services\TenantContext;
 use Closure;
@@ -20,8 +21,13 @@ use Symfony\Component\HttpFoundation\Response;
  * every Company-owned query is scoped to the user's own Company and
  * cross-Company access is denied. (Requirements 5.1, 3.8, 3.10)
  *
- * Super_Admins (no `company_id`) establish no Company here; they operate on the
- * separate super-admin surface.
+ * Super_Admins (no `company_id`) normally establish no Company here and operate
+ * on the separate super-admin surface. But when a Super_Admin has "jumped into"
+ * a Company (an `impersonate_company_id` session flag set from `/admin`), this
+ * middleware binds THAT Company instead, so the Super_Admin acts inside the
+ * dashboard as an admin of the chosen tenant. (Super_Admins already hold every
+ * Company ability via the Gate::before hook, so only the tenant binding is
+ * needed.) A suspended Company is never bound.
  */
 class ResolveDashboardTenant
 {
@@ -31,14 +37,35 @@ class ResolveDashboardTenant
     {
         $user = $request->user();
 
-        if ($user !== null && $user->company_id !== null && ! $this->tenantContext->hasCompany()) {
-            $company = Company::find($user->company_id);
+        if ($user !== null && ! $this->tenantContext->hasCompany()) {
+            $companyId = $this->resolveCompanyId($request, $user);
 
-            if ($company !== null) {
-                $this->tenantContext->setCompany($company);
+            if ($companyId !== null) {
+                $company = Company::find($companyId);
+
+                if ($company !== null && ! $company->isSuspended()) {
+                    $this->tenantContext->setCompany($company);
+                }
             }
         }
 
         return $next($request);
+    }
+
+    /**
+     * Resolve which Company id should be bound for this dashboard request.
+     *
+     * A Super_Admin binds the Company they have jumped into (session flag); a
+     * Company_User binds their own `company_id`.
+     */
+    private function resolveCompanyId(Request $request, $user): ?int
+    {
+        if ($user->isSuperAdmin()) {
+            $impersonatedId = $request->session()->get(ImpersonationController::SESSION_KEY);
+
+            return $impersonatedId !== null ? (int) $impersonatedId : null;
+        }
+
+        return $user->company_id !== null ? (int) $user->company_id : null;
     }
 }

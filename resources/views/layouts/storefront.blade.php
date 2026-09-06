@@ -73,7 +73,7 @@
         .store-header--poster .store-header__inner {
             max-width: 860px; margin: -3.25rem auto 0; padding: 0 1.25rem;
         }
-        .store-hero { position: relative; width: 100%; aspect-ratio: 3 / 1; max-height: 380px; overflow: hidden; }
+        .store-hero { position: relative; width: 100%; aspect-ratio: 3 / 1; max-height: 320px; overflow: hidden; }
         .store-hero__img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .store-hero__overlay {
             position: absolute; inset: 0;
@@ -87,7 +87,33 @@
 
         /* Content card */
         .store-body { padding-bottom: 3rem; }
+        .store-section { margin-top: 2.5rem; }
+        .store-section:first-child { margin-top: 0; }
         .store-section h2 { font-size: 1.15rem; margin-bottom: 1rem; color: var(--ink); }
+
+        /* About-the-company blurb */
+        .store-about__text {
+            background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+            padding: 1.35rem 1.5rem; margin: 0; color: var(--body);
+        }
+
+        /* Social / website + legal links */
+        .store-links { display: flex; flex-direction: column; gap: .9rem; }
+        .store-links__list, .store-links__legal {
+            list-style: none; padding: 0; margin: 0;
+            display: flex; flex-wrap: wrap; gap: .6rem .9rem; align-items: center;
+        }
+        .store-links__list a {
+            display: inline-flex; align-items: center;
+            padding: .45rem .9rem; border-radius: 999px;
+            border: 1px solid var(--line); background: var(--surface);
+            font-size: .9rem; font-weight: 600; color: var(--ink);
+            transition: border-color .15s ease, color .15s ease;
+        }
+        .store-links__list a:hover { border-color: var(--brand); color: var(--brand); }
+        .store-links__legal { font-size: .85rem; }
+        .store-links__legal a { color: var(--muted); }
+        .store-links__legal a:hover { color: var(--brand); }
         .empty {
             background: var(--surface); border: 1px dashed var(--line); border-radius: 10px;
             padding: 2.5rem 1.5rem; text-align: center; color: var(--muted); margin: 0;
@@ -137,6 +163,12 @@
         .store-footer__bar {
             border-top: 1px solid rgba(255,255,255,.08);
             text-align: center; padding: 1rem 1.25rem; font-size: .8rem; color: #71768c;
+        }
+
+        /* On desktop, keep the hero compact so it doesn't dominate the page:
+           a shorter, wider crop with a lower height cap. */
+        @media (min-width: 768px) {
+            .store-hero { aspect-ratio: 4 / 1; max-height: 260px; }
         }
 
         @media (max-width: 520px) {
