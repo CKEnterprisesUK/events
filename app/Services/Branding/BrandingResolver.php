@@ -29,11 +29,17 @@ class BrandingResolver
      */
     public function forCompany(Company $company): EffectiveBranding
     {
+        $companyLogo = $this->nullIfBlank($company->logo_path);
+
         return new EffectiveBranding(
-            logoPath: $this->nullIfBlank($company->logo_path),
+            logoPath: $companyLogo,
             primaryColour: $this->nullIfBlank($company->primary_colour),
             termsText: $this->nullIfBlank($company->terms_text),
             ticketFieldDefs: $this->normaliseFieldDefs($company->ticket_field_defs),
+            posterPath: $this->nullIfBlank($company->poster_path),
+            companyLogoPath: $companyLogo,
+            // No Event context on a Storefront, so there is no event logo.
+            eventLogoPath: null,
         );
     }
 
@@ -51,6 +57,7 @@ class BrandingResolver
         $companyColour = $company?->primary_colour;
         $companyTerms = $company?->terms_text;
         $companyFields = $company?->ticket_field_defs;
+        $companyPoster = $company?->poster_path;
 
         return new EffectiveBranding(
             logoPath: $this->coalesce($event->logo_path, $companyLogo),
@@ -58,6 +65,12 @@ class BrandingResolver
             // Terms are a Company checkout setting; Events do not override them.
             termsText: $this->nullIfBlank($companyTerms),
             ticketFieldDefs: $this->resolveFieldDefs($event->ticket_field_defs, $companyFields),
+            // The poster/hero: Event override else the Company Storefront hero.
+            posterPath: $this->coalesce($event->poster_path, $companyPoster),
+            // Expose the Company and Event logos separately so the Event page
+            // can show both when they differ, not just the resolved one.
+            companyLogoPath: $this->nullIfBlank($companyLogo),
+            eventLogoPath: $this->nullIfBlank($event->logo_path),
         );
     }
 

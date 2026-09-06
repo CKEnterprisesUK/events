@@ -52,9 +52,8 @@ class RegisterController extends Controller
             'legal_name' => ['required', 'string', 'max:255'],
             'trading_name' => ['nullable', 'string', 'max:255'],
             'organisation_type' => ['required', Rule::in(array_keys(Company::ORGANISATION_TYPES))],
-            // Companies House number is expected for companies and CICs; the
-            // Charity Commission number for charities. Both are optional
-            // otherwise, and never both required at once.
+            // A registered company and a CIC always have a Companies House
+            // number, so it is required for those types and optional otherwise.
             'company_number' => [
                 'nullable',
                 'string',
@@ -65,12 +64,10 @@ class RegisterController extends Controller
                     true,
                 )),
             ],
-            'charity_number' => [
-                'nullable',
-                'string',
-                'max:50',
-                Rule::requiredIf(fn (): bool => $request->input('organisation_type') === Company::TYPE_CHARITY),
-            ],
+            // Optional even for charities: small charities under the
+            // registration threshold, and excepted/exempt charities, have no
+            // Charity Commission number.
+            'charity_number' => ['nullable', 'string', 'max:50'],
             'website' => ['nullable', 'string', 'url', 'max:255'],
             'organisation_email' => ['required', 'string', 'email', 'max:254'],
             'phone' => ['nullable', 'string', 'max:50'],

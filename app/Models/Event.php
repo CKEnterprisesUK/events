@@ -54,6 +54,7 @@ class Event extends Model
         'is_published',
         'primary_colour',
         'logo_path',
+        'poster_path',
         'ticket_field_defs',
     ];
 

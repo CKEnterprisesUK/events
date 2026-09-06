@@ -116,16 +116,24 @@ class CompanyLegalDetailsTest extends TestCase
         $this->assertDatabaseCount('companies', 0);
     }
 
-    public function test_signup_requires_a_charity_number_for_charities(): void
+    public function test_charity_can_sign_up_without_a_charity_number(): void
     {
-        $response = $this->from('/register')->post('/register', $this->signupPayload([
+        // Not every charity is registered with the Charity Commission (small,
+        // excepted, or exempt charities), so the number is optional.
+        $response = $this->post('/register', $this->signupPayload([
+            'slug' => 'small-charity',
             'organisation_type' => Company::TYPE_CHARITY,
             'company_number' => '',
             'charity_number' => '',
+            'organisation_email' => 'trustee@small-charity.test',
         ]));
 
-        $response->assertSessionHasErrors('charity_number');
-        $this->assertDatabaseCount('companies', 0);
+        $response->assertRedirect('/dashboard');
+
+        $company = Company::query()->where('slug', 'small-charity')->firstOrFail();
+        $this->assertSame(Company::TYPE_CHARITY, $company->organisation_type);
+        $this->assertNull($company->charity_number);
+        $this->assertNull($company->company_number);
     }
 
     public function test_signup_requires_a_company_number_for_cics(): void

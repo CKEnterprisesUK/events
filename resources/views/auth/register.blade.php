@@ -105,11 +105,12 @@
                     @error('company_number')<p class="error">{{ $message }}</p>@enderror
                 </div>
 
-                {{-- Charity Commission number: shown only for Charity. --}}
+                {{-- Charity Commission number: shown only for Charity, optional
+                     (some charities are not registered with the Commission). --}}
                 <div class="field" data-when-type="charity" hidden>
-                    <label for="charity_number">Charity Commission number</label>
-                    <input id="charity_number" type="text" name="charity_number" value="{{ old('charity_number') }}" data-conditional-required>
-                    <p class="hint">Required for charities.</p>
+                    <label for="charity_number">Charity Commission number <span class="muted">(if registered)</span></label>
+                    <input id="charity_number" type="text" name="charity_number" value="{{ old('charity_number') }}">
+                    <p class="hint">Leave blank if your charity isn't registered with the Charity Commission.</p>
                     @error('charity_number')<p class="error">{{ $message }}</p>@enderror
                 </div>
 

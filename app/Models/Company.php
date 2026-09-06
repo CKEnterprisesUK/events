@@ -147,6 +147,7 @@ class Company extends Model
         'currency',
         'primary_colour',
         'logo_path',
+        'poster_path',
         'terms_text',
         'support_email',
         'gdpr_contact_email',

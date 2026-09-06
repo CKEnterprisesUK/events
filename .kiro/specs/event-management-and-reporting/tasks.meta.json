@@ -39,6 +39,10 @@
     "7.1 Property test: per-event figures agree with the company report": {
       "status": "passed",
       "lastRunTimestamp": 1788699714828
+    },
+    "9.5 Property test: unpublish is unconditional": {
+      "status": "passed",
+      "lastRunTimestamp": 1788699835401
     }
   },
   "executionHistory": {

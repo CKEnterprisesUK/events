@@ -6,7 +6,7 @@
     // Map each tab to the fields it owns so a server-side validation error can
     // reveal the tab containing the first invalid field on reload.
     $tabFields = [
-        'appearance' => ['logo', 'primary_colour', 'terms_text'],
+        'appearance' => ['logo', 'poster', 'primary_colour', 'terms_text'],
         'organisation' => ['legal_name', 'trading_name', 'organisation_type', 'company_number', 'charity_number', 'website', 'email', 'phone'],
         'address' => ['address_line_1', 'address_line_2', 'city', 'postcode', 'country'],
         'contact' => ['support_email', 'gdpr_contact_email'],
@@ -36,6 +36,10 @@
 
         {{-- Effective Company branding preview: logo (7.1), primary colour (7.2). --}}
         <div class="branding-preview" @if ($branding->hasPrimaryColour()) style="--brand: {{ $branding->primaryColour }}" @endif>
+            @if ($branding->hasPoster())
+                <img class="brand-poster" src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($branding->posterPath) }}" alt="Storefront poster">
+            @endif
+
             @if ($branding->hasLogo())
                 <img class="brand-logo" src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($branding->logoPath) }}" alt="Company logo">
             @else
@@ -66,7 +70,16 @@
                 <div class="field">
                     <label for="logo">Logo</label>
                     <input type="file" name="logo" id="logo" accept="image/*">
+                    <span class="field-hint">Your brand mark. Shown on the storefront header, tickets, and as the favicon. PNG or SVG with a transparent background works best.</span>
                     @error('logo')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                {{-- Storefront poster / hero image shown atop the Storefront. --}}
+                <div class="field">
+                    <label for="poster">Storefront poster</label>
+                    <input type="file" name="poster" id="poster" accept="image/*">
+                    <span class="field-hint">A wide hero image displayed at the top of your public storefront. Landscape (roughly 3:1) around 1600&times;540px looks best. Max 8&nbsp;MB.</span>
+                    @error('poster')<p class="error">{{ $message }}</p>@enderror
                 </div>
 
                 {{-- Primary brand colour applied to the Storefront. (7.2) --}}
@@ -123,12 +136,13 @@
                     @error('company_number')<p class="error">{{ $message }}</p>@enderror
                 </div>
 
-                {{-- Charity Commission number: relevant to Charity. --}}
+                {{-- Charity Commission number: relevant to Charity, optional
+                     (some charities are not registered with the Commission). --}}
                 <div class="field" data-when-type="charity">
                     <label for="charity_number">Charity Commission number</label>
                     <input type="text" name="charity_number" id="charity_number"
-                           value="{{ old('charity_number', $company->charity_number) }}" data-conditional-required>
-                    <span class="field-hint">Required for charities.</span>
+                           value="{{ old('charity_number', $company->charity_number) }}">
+                    <span class="field-hint">Leave blank if the charity isn't registered with the Charity Commission.</span>
                     @error('charity_number')<p class="error">{{ $message }}</p>@enderror
                 </div>
 

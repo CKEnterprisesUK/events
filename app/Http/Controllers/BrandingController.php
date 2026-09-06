@@ -46,6 +46,11 @@ class BrandingController extends Controller
      */
     private const LOGO_DIRECTORY = 'branding/logos';
 
+    /**
+     * Where uploaded posters/hero images live on the `public` disk.
+     */
+    private const POSTER_DIRECTORY = 'branding/posters';
+
     public function __construct(private readonly BrandingResolver $resolver) {}
 
     // ---- Company-level branding (Owner, ACTION_MANAGE_SETTINGS) --------------
@@ -79,6 +84,7 @@ class BrandingController extends Controller
 
         $data = $request->validate([
             'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp,svg', 'max:5120'],
+            'poster' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:8192'],
             'primary_colour' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'terms_text' => ['nullable', 'string', 'max:20000'],
             'support_email' => ['nullable', 'string', 'email', 'max:254'],
@@ -100,12 +106,10 @@ class BrandingController extends Controller
                     true,
                 )),
             ],
-            'charity_number' => [
-                'nullable',
-                'string',
-                'max:50',
-                Rule::requiredIf(fn (): bool => $request->input('organisation_type') === Company::TYPE_CHARITY),
-            ],
+            // Optional even for charities: small charities under the
+            // registration threshold, and excepted/exempt charities, have no
+            // Charity Commission number.
+            'charity_number' => ['nullable', 'string', 'max:50'],
             'website' => ['nullable', 'string', 'url', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:254'],
             'phone' => ['nullable', 'string', 'max:50'],
@@ -141,7 +145,11 @@ class BrandingController extends Controller
         ];
 
         if ($request->hasFile('logo')) {
-            $attributes['logo_path'] = $this->storeLogo($request, $company->logo_path);
+            $attributes['logo_path'] = $this->storeImage($request, 'logo', self::LOGO_DIRECTORY, $company->logo_path);
+        }
+
+        if ($request->hasFile('poster')) {
+            $attributes['poster_path'] = $this->storeImage($request, 'poster', self::POSTER_DIRECTORY, $company->poster_path);
         }
 
         $company->update($attributes);
@@ -179,6 +187,7 @@ class BrandingController extends Controller
 
         $data = $request->validate([
             'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp,svg', 'max:5120'],
+            'poster' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:8192'],
             'primary_colour' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'ticket_field_defs' => ['nullable', 'array'],
             'ticket_field_defs.*' => ['nullable', 'string', 'max:100'],
@@ -190,7 +199,11 @@ class BrandingController extends Controller
         ];
 
         if ($request->hasFile('logo')) {
-            $attributes['logo_path'] = $this->storeLogo($request, $event->logo_path);
+            $attributes['logo_path'] = $this->storeImage($request, 'logo', self::LOGO_DIRECTORY, $event->logo_path);
+        }
+
+        if ($request->hasFile('poster')) {
+            $attributes['poster_path'] = $this->storeImage($request, 'poster', self::POSTER_DIRECTORY, $event->poster_path);
         }
 
         $event->update($attributes);
@@ -203,13 +216,14 @@ class BrandingController extends Controller
     // ---- Helpers -------------------------------------------------------------
 
     /**
-     * Store the uploaded logo on the `public` disk and return its relative path
-     * for persistence in `logo_path`. Any previously stored logo on the same
-     * disk is removed so old files do not accumulate. (Requirement 7.1)
+     * Store an uploaded image (logo or poster) on the `public` disk under the
+     * given directory and return its relative path for persistence. Any
+     * previously stored file at the same slot on the same disk is removed so old
+     * files do not accumulate. (Requirements 7.1, 7.5)
      */
-    private function storeLogo(Request $request, ?string $previousPath): string
+    private function storeImage(Request $request, string $field, string $directory, ?string $previousPath): string
     {
-        $path = $request->file('logo')->store(self::LOGO_DIRECTORY, 'public');
+        $path = $request->file($field)->store($directory, 'public');
 
         if ($previousPath !== null && $previousPath !== '' && $previousPath !== $path) {
             Storage::disk('public')->delete($previousPath);

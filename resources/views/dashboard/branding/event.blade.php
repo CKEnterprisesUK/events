@@ -14,6 +14,9 @@
 
         {{-- Effective (resolved) branding for this Event: override else Company. --}}
         <div class="branding-preview" @if ($branding->hasPrimaryColour()) style="--brand: {{ $branding->primaryColour }}" @endif>
+            @if ($branding->hasPoster())
+                <img class="brand-poster" src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($branding->posterPath) }}" alt="Event poster">
+            @endif
             @if ($branding->hasLogo())
                 <img class="brand-logo" src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($branding->logoPath) }}" alt="Event logo">
             @endif
