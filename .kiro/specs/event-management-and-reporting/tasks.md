@@ -8,38 +8,38 @@ Implementation language is PHP (Laravel), matching the existing codebase. The te
 
 ## Tasks
 
-- [-] 1. Add publish source-of-truth methods to the Event model
+- [x] 1. Add publish source-of-truth methods to the Event model
   - In `app/Models/Event.php`, add `publishBlockers(): array` returning an ordered map of blocker key => human message: `starts_at` when `starts_at` is null ("Set a start date and time."), `ticket_types` when `ticketTypes()->exists()` is false ("Add at least one ticket type."). Empty array === publishable.
   - Add `isPublishable(): bool` as sugar over `publishBlockers() === []`.
   - Keep `publish()`/`unpublish()` behaviour untouched; these methods only read state.
   - _Requirements: 1.1, 1.2_
 
-- [~] 1.1 Property test: publish gate is exactly the blocker predicate
+- [-] 1.1 Property test: publish gate is exactly the blocker predicate
   - **Property 1: Publish gate is exactly the blocker predicate**
   - Over generated Events with/without `starts_at` and with/without ticket types, assert `isPublishable()` is true iff both prerequisites are met, and `publishBlockers()` keys are exactly the unmet prerequisites.
   - **Validates: Requirements 1.1, 1.2**
 
 - [ ] 2. Create the readiness value objects
-  - [-] 2.1 Create `app/Services/Events/ChecklistItem.php`
+  - [x] 2.1 Create `app/Services/Events/ChecklistItem.php`
     - Immutable final class with public readonly `string $key`, `string $label`, `bool $satisfied`, `bool $blocking`.
     - _Requirements: 2.2, 2.3, 2.4_
 
-  - [-] 2.2 Create `app/Services/Events/EventReadinessReport.php`
+  - [x] 2.2 Create `app/Services/Events/EventReadinessReport.php`
     - Immutable value object wrapping `list<ChecklistItem>`; expose the ordered items for the view to render.
     - _Requirements: 2.1_
 
-  - [-] 2.3 Create `app/Services/Events/CapacityComparison.php`
+  - [x] 2.3 Create `app/Services/Events/CapacityComparison.php`
     - Constructor `(?int $eventCapacity, int $typesSum)`. Constants `UNLIMITED`, `EVENT_BINDS`, `TYPES_BIND`, `BALANCED`.
     - `state(): string` — `UNLIMITED` when capacity null, `EVENT_BINDS` when capacity < typesSum, `TYPES_BIND` when capacity > typesSum, `BALANCED` when equal.
     - `isSane(): bool` — advisory only; implement cleanly (remove the design's redundant ternary): unlimited or balanced => true, any mismatch (`EVENT_BINDS`/`TYPES_BIND`) => false. Sanity is informational and never blocks publish.
     - _Requirements: 3.2, 3.3, 3.4_
 
-  - [~] 2.4 Property test: capacity comparison classifies the ceiling correctly
+  - [-] 2.4 Property test: capacity comparison classifies the ceiling correctly
     - **Property 5: Capacity comparison classifies the ceiling correctly**
     - Over generated `(?int capacity, int typesSum)`, assert `state()` matches null/`<`/`>`/`=` classification.
     - **Validates: Requirements 3.2, 3.3**
 
-- [ ] 3. Create the EventReadiness service
+- [-] 3. Create the EventReadiness service
   - Create `app/Services/EventReadiness.php` (stateless, mirrors `OnboardingChecklist`).
   - `checklist(Event): EventReadinessReport` — builds the ordered items {name, start date, venue, ticket type, capacity sanity}, deriving each `satisfied` flag from the Event state, using `publishBlockers()` as the single source of truth for `starts_at` and `ticket_types`. Mark start-date and ticket-type items `blocking: true`; name, venue, and capacity-sanity `blocking: false`.
   - `capacity(Event): CapacityComparison` — build from `$event->capacity` and `(int) $event->ticketTypes()->sum('capacity')`.
@@ -68,12 +68,12 @@ Implementation language is PHP (Laravel), matching the existing codebase. The te
 - [~] 4. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [-] 5. Create the shared accounting value object
+- [x] 5. Create the shared accounting value object
   - Create `app/Services/Reporting/EventReport.php` (immutable final class): `int $confirmedOrders`, `int $ticketsSold`, `int $grossRevenueMinor`, `int $netToCompanyMinor`, `?int $capacity`, `array $perTicketType`, `array $ordersByStatus`, `array $salesByDay`.
   - `utilisation(): float|string` — returns `'unlimited'` when capacity is null or 0, otherwise `round(ticketsSold / capacity * 100, 1)`.
   - _Requirements: 5.4, 6.2_
 
-- [ ] 6. Create the EventReportService (single accounting source of truth)
+- [-] 6. Create the EventReportService (single accounting source of truth)
   - Create `app/Services/EventReportService.php`. Define `CONFIRMED_STATUSES = [Order::STATUS_PAID, Order::STATUS_FREE_CONFIRMED]` (same definition currently in `ReportController`).
   - `for(Event): EventReport` — load the Event's confirmed orders; compute confirmed order count, tickets sold (count of `valid` tickets on confirmed orders), gross revenue (`order_total_minor` sum), net to company (`order_total_minor − application_fee_minor` sum), and pass through `capacity`.
   - Private `perTicketType(Event, array $confirmedIds): array` — per type: sold = valid confirmed tickets of that type; remaining = `capacity − sold_count − reserved_count`; revenue derived from that type's confirmed tickets.
