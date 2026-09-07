@@ -1091,48 +1091,91 @@ fieldset.field > legend {
    inline styles.
    ============================================================================= */
 :root {
-    --pub-navy: #141a2e;
-    --pub-teal: #35c9b5;
-    --pub-purple: #6d5efc;
-    --pub-purple-dark: #5a4be0;
+    --pub-navy: #0f1425;
+    --pub-teal: #30f0b6;
+    --pub-purple: #674df3;
+    --pub-purple-dark: #5238d6;
 }
 
-/* The shared wordmark, in both header and footer. */
+/* The shared wordmark, in both header and footer. Sizes match the landing
+   page brand (.brand-*) so the header does not read as squished. */
 .pub-logo {
-    display: inline-flex; align-items: baseline; gap: 0.4rem;
+    display: inline-flex; align-items: baseline; gap: 0.36rem; min-width: 0;
     font-family: 'Cabin Sketch', cursive; font-weight: 700; line-height: 1;
-    text-decoration: none; color: #fff;
+    text-decoration: none; color: #fff; white-space: nowrap;
 }
-.pub-logo .events { font-size: 1.5rem; color: var(--pub-teal); }
+.pub-logo .events { font-size: 1.22rem; color: var(--pub-teal); }
 .pub-logo .by {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    font-weight: 500; font-size: 0.75rem; letter-spacing: 0.04em;
-    color: #9aa0b5; text-transform: uppercase;
+    font-weight: 600; font-size: 0.68rem; letter-spacing: 0.05em;
+    color: #8ea0ca; text-transform: uppercase;
 }
-.pub-logo .ck { font-size: 1.5rem; color: #fff; }
+.pub-logo .ck { font-size: 1.22rem; color: #fff; }
 
-/* Header */
+@media (max-width: 640px) {
+    .pub-header__inner { min-height: 62px; }
+    .pub-logo .events, .pub-logo .ck { font-size: 1.02rem; }
+    .pub-logo .by { margin-inline: 0.28rem; font-size: 0.61rem; }
+    .pub-mobile-nav__actions { grid-template-columns: 1fr; }
+}
+
+/* Header — matches the landing page chrome (.site-header / .header-inner). */
 .pub-header {
-    position: sticky; top: 0; z-index: 50;
-    background: var(--pub-navy);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(20, 26, 46, 0.98);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 .pub-header__inner {
-    width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 1.5rem;
-    height: 68px; display: flex; align-items: center; justify-content: space-between;
+    width: min(100% - 32px, 1120px); margin: 0 auto; padding: 0;
+    min-height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
 }
-.pub-nav { display: flex; align-items: center; gap: 1.5rem; }
+.pub-nav { display: flex; align-items: center; gap: 1.35rem; }
 .pub-nav form { margin: 0; }
-.pub-nav__link { color: #c8ccdb; font-weight: 500; font-size: 0.95rem; text-decoration: none; }
+.pub-nav__link {
+    color: #c7d0e6; font-weight: 600; font-size: 0.92rem; text-decoration: none;
+    background: none; border: 0; padding: 0; font-family: inherit; cursor: pointer;
+}
 .pub-nav__link:hover { color: #fff; }
 .pub-nav__btn {
     display: inline-flex; align-items: center; justify-content: center;
-    padding: 0.6rem 1.2rem; border-radius: 6px; border: 1px solid transparent;
-    background: var(--pub-purple); color: #fff; font-weight: 600; font-size: 0.95rem;
+    min-height: 46px; padding: 0.6rem 1.2rem; border-radius: 7px; border: 1px solid transparent;
+    background: var(--pub-purple); color: #fff; font-weight: 700; font-size: 0.95rem;
     font-family: inherit; cursor: pointer; text-decoration: none;
     transition: background 0.15s ease;
 }
 .pub-nav__btn:hover { background: var(--pub-purple-dark); color: #fff; }
+.pub-nav__btn--secondary {
+    background: #fff; color: var(--pub-navy); border-color: #d0d5dd; width: 100%;
+}
+.pub-nav__btn--secondary:hover { background: #f2f4f7; color: var(--pub-navy); }
+
+/* Mobile menu toggle + drawer, mirroring the landing page behaviour. */
+.pub-mobile-toggle {
+    display: none; width: 44px; height: 44px; align-items: center; justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 7px;
+    background: transparent; color: #fff; cursor: pointer;
+}
+.pub-mobile-toggle svg { width: 22px; height: 22px; }
+
+.pub-mobile-nav { display: none; background: var(--pub-navy); border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.pub-mobile-nav.open { display: block; }
+.pub-mobile-nav__inner {
+    width: min(100% - 32px, 1120px); margin: 0 auto;
+    padding-top: 0.6rem; padding-bottom: 0.95rem;
+}
+.pub-mobile-nav__inner a:not(.pub-nav__btn) {
+    min-height: 46px; display: flex; align-items: center; color: #d7deed; font-weight: 600; text-decoration: none;
+}
+.pub-mobile-nav__actions {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; padding-top: 0.75rem;
+}
+.pub-mobile-nav__actions form { margin: 0; }
+.pub-mobile-nav__actions .pub-nav__btn { width: 100%; }
+
+@media (max-width: 940px) {
+    .pub-nav { display: none; }
+    .pub-mobile-toggle { display: inline-flex; }
+}
 
 /* Footer */
 .pub-footer { background: var(--pub-navy); color: #8b90a5; margin-top: 3rem; }
