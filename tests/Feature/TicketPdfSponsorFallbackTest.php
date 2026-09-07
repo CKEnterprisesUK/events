@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\EventSponsor;
 use App\Models\Order;
 use App\Services\TicketPdfService;
+use Barryvdh\DomPDF\PDF;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -39,12 +40,12 @@ class TicketPdfSponsorFallbackTest extends TestCase
         $captured = [];
 
         $this->app->bind('dompdf.wrapper', function ($app) use (&$captured) {
-            $real = $app->make(\Barryvdh\DomPDF\PDF::class);
+            $real = $app->make(PDF::class);
 
-            return new class($real, $captured) extends \Barryvdh\DomPDF\PDF
+            return new class($real, $captured) extends PDF
             {
                 /** @param array<string, mixed> $captured */
-                public function __construct(\Barryvdh\DomPDF\PDF $real, private array &$captured)
+                public function __construct(PDF $real, private array &$captured)
                 {
                     parent::__construct(
                         $real->getDomPDF(),

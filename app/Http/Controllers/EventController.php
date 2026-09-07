@@ -16,6 +16,7 @@ use App\Services\StorefrontListing;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\Response;
@@ -40,7 +41,7 @@ class EventController extends Controller
 {
     /**
      * Where uploaded hero images (posters) live on the `public` disk.
-     * Matches {@see \App\Http\Controllers\BrandingController} so a per-event
+     * Matches {@see BrandingController} so a per-event
      * hero and a company hero share the same disk and directory. (Requirement 5.1)
      */
     private const POSTER_DIRECTORY = 'branding/posters';
@@ -535,7 +536,7 @@ class EventController extends Controller
         // an unchanged past date does not trip the "not in the past" rule.
         $current = $event?->starts_at?->format('Y-m-d\TH:i');
         $unchanged = $current !== null
-            && $current === \Illuminate\Support\Carbon::parse($submitted)->format('Y-m-d\TH:i');
+            && $current === Carbon::parse($submitted)->format('Y-m-d\TH:i');
 
         if (! $unchanged) {
             $rules[] = 'after_or_equal:now';
@@ -616,7 +617,7 @@ class EventController extends Controller
     /**
      * Store an uploaded hero image (if present) and set `poster_path` on the
      * attribute array — same disk/dir/delete-old semantics as
-     * {@see \App\Http\Controllers\BrandingController}. Shared by store()
+     * {@see BrandingController}. Shared by store()
      * (via applyLocationAndPoster) and the Overview update(). (Requirement 5.1)
      *
      * @param  array<string, mixed>  $data

@@ -95,9 +95,15 @@ class SupportRequest extends Model
     ];
 
     /**
+     * `company_id` is mass-assignable because the "Contact support" form runs
+     * OUTSIDE the tenant middleware (no active tenant to auto-fill it), so the
+     * controller sets it explicitly from the acting user's Company. When a
+     * tenant IS active the {@see BelongsToCompany} trait still fills it for you.
+     *
      * @var list<string>
      */
     protected $fillable = [
+        'company_id',
         'user_id',
         'category',
         'subject',

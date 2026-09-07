@@ -77,6 +77,26 @@ class TicketTypeManagementTest extends TestCase
         $this->assertSame(12.50, round($ticketType->price_minor / 100, 2));
     }
 
+    public function test_sale_window_must_end_by_the_event_start(): void
+    {
+        // When the Event has a start time, ticket sales must close by then —
+        // a window that ends after the event starts is rejected.
+        $admin = User::factory()->admin()->create();
+        $event = Event::factory()->for(Company::find($admin->company_id))->create([
+            'starts_at' => now()->addWeek(),
+        ]);
+
+        $this->actingAs($admin)->from(route('dashboard.events.ticket-types.index', $event))
+            ->post("/dashboard/events/{$event->id}/ticket-types", $this->validPayload([
+                'sale_starts_at' => now()->addDay()->toDateTimeString(),
+                // Ends a day AFTER the event has started — not allowed.
+                'sale_ends_at' => now()->addWeek()->addDay()->toDateTimeString(),
+            ]))
+            ->assertSessionHasErrors('sale_ends_at');
+
+        $this->assertSame(0, TicketType::withoutGlobalScopes()->where('event_id', $event->id)->count());
+    }
+
     public function test_price_zero_is_stored_as_free(): void
     {
         [$admin, $event] = $this->adminWithEvent();

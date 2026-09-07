@@ -218,6 +218,53 @@ class EventManagementTest extends TestCase
         $this->assertDatabaseCount('events', 0);
     }
 
+    // ---- Start-date validation ----------------------------------------------
+
+    public function test_event_cannot_be_created_with_a_start_date_in_the_past(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)->from('/dashboard/events')->post('/dashboard/events', [
+            'name' => 'Backdated',
+            'location_mode' => Event::LOCATION_IN_PERSON,
+            'starts_at' => now()->subDay()->format('Y-m-d\TH:i'),
+        ])->assertSessionHasErrors('starts_at');
+
+        $this->assertDatabaseCount('events', 0);
+    }
+
+    public function test_event_cannot_be_updated_to_a_past_start_date(): void
+    {
+        $company = Company::factory()->create();
+        $admin = User::factory()->admin()->create(['company_id' => $company->id]);
+        $event = Event::factory()->for($company)->create(['starts_at' => now()->addWeek()]);
+
+        $this->actingAs($admin)->from(route('dashboard.events.show', $event))
+            ->put("/dashboard/events/{$event->id}", [
+                'name' => $event->name,
+                'starts_at' => now()->subDay()->format('Y-m-d\TH:i'),
+            ])->assertSessionHasErrors('starts_at');
+    }
+
+    public function test_event_with_an_existing_past_start_can_still_be_re_saved(): void
+    {
+        // An organiser editing an event whose start has already passed must not
+        // be forced to move the date — re-saving the unchanged past date is OK.
+        $company = Company::factory()->create();
+        $admin = User::factory()->admin()->create(['company_id' => $company->id]);
+        $past = now()->subWeek()->startOfMinute();
+        $event = Event::factory()->for($company)->create(['starts_at' => $past]);
+
+        $this->actingAs($admin)->put("/dashboard/events/{$event->id}", [
+            'name' => 'Renamed but same date',
+            'location_mode' => Event::LOCATION_IN_PERSON,
+            'starts_at' => $past->format('Y-m-d\TH:i'),
+        ])->assertRedirect(route('dashboard.events.show', $event))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('Renamed but same date', $event->fresh()->name);
+    }
+
     // ---- Public publish gating ----------------------------------------------
 
     public function test_published_event_page_is_available_to_customers(): void
