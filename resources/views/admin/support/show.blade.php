@@ -90,7 +90,7 @@
                     <div class="consent-note granted">
                         <strong>Access granted.</strong>
                         The customer allowed CK Enterprises to access their account to assist
-                        with this request@if ($ticket->access_consent_at) on {{ $ticket->access_consent_at->format('j M Y, H:i') }}@endif.
+                        with this request{{ $ticket->access_consent_at ? ' on ' . $ticket->access_consent_at->format('j M Y, H:i') : '' }}.
                         You can jump into
                         @if ($company)
                             <a href="{{ route('admin.clients.show', $company) }}">{{ $company->name }}</a>

@@ -16,6 +16,12 @@
 
     $hasOnSale = $ticketTypes->contains(fn ($t) => $t['on_sale'] && ! $t['sold_out']);
 
+    // Lowest purchasable price across on-sale, non-sold-out ticket types,
+    // for the mobile "Book now" bar. Null when nothing is on sale.
+    $bookNowFromMinor = $hasOnSale
+        ? $ticketTypes->filter(fn ($t) => $t['on_sale'] && ! $t['sold_out'])->min(fn ($t) => $t['price_minor'])
+        : null;
+
     // Organiser identity + best contact route for a customer who needs help,
     // mirroring the checkout success page: dedicated support inbox first, then
     // the general company email, then phone.
@@ -373,16 +379,6 @@
              sticky aside) so it can be fixed to the viewport bottom on small
              screens. Suppressed entirely when there are no tickets or nothing
              is on sale, so it never advertises a price that leads nowhere. --}}
-        @php
-            // Lowest purchasable price across on-sale, non-sold-out ticket
-            // types. Reads the already-loaded $ticketTypes collection; the
-            // 'price_minor' key is confirmed against _ticket_row.blade.php.
-            $bookNowFromMinor = $hasOnSale
-                ? $ticketTypes->filter(fn ($t) => $t['on_sale'] && ! $t['sold_out'])
-                    ->min(fn ($t) => $t['price_minor'])
-                : null;
-        @endphp
-
         @if ($hasOnSale && $bookNowFromMinor !== null)
             <div class="book-now-bar" data-book-now-bar>
                 <div class="book-now-bar__price">
