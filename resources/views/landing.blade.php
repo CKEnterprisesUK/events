@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#0f1425">
 
-    <title>Events by CK Enterprises UK · Straightforward event ticketing</title>
+    <title>Events by CK Enterprises UK · Ticketing built by a team that already supports charities</title>
     <meta
         name="description"
-        content="Straightforward event ticketing for charities, community organisations and small event organisers. Direct Stripe payouts, branded storefronts, QR check-in and transparent pricing."
+        content="Events by CK Enterprises UK is straightforward event ticketing from a team already providing digital services to charities and small organisations. Direct Stripe payouts, branded storefronts, QR check-in and transparent pricing."
     >
 
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
@@ -24,28 +24,24 @@
 
     <style>
         :root {
-            /* Existing Events by CK Enterprises UK palette */
             --navy: #0f1425;
             --navy-2: #1b1f2e;
+
+            /* Events by CK Enterprises UK brand colours */
             --purple: #674df3;
             --purple-dark: #5238d6;
             --purple-soft: #f4f1ff;
             --teal: #30f0b6;
-            --teal-dark: #149d79;
             --teal-soft: #e8fff7;
 
             --ink: #101828;
             --body: #475467;
             --muted: #667085;
             --line: #e4e7ec;
-            --line-strong: #d0d5dd;
+
             --surface: #ffffff;
             --surface-alt: #fbfbfe;
             --surface-soft: #f8fafc;
-
-            --shadow-sm: 0 2px 8px rgba(16, 24, 40, .05);
-            --shadow-md: 0 14px 34px rgba(16, 24, 40, .09);
-            --shadow-lg: 0 24px 60px rgba(16, 24, 40, .12);
 
             --heading-font: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             --logo-font: 'Cabin Sketch', cursive;
@@ -56,14 +52,14 @@
 
         html {
             scroll-behavior: smooth;
-            scroll-padding-top: 88px;
+            scroll-padding-top: 80px;
         }
 
         body {
             margin: 0;
+            font-family: var(--body-font);
             color: var(--body);
             background: var(--surface);
-            font-family: var(--body-font);
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
             text-rendering: optimizeLegibility;
@@ -76,11 +72,6 @@
             text-decoration: none;
         }
 
-        img {
-            display: block;
-            max-width: 100%;
-        }
-
         button,
         input {
             font: inherit;
@@ -88,156 +79,141 @@
 
         button { appearance: none; }
 
+        img {
+            display: block;
+            max-width: 100%;
+        }
+
         h1,
         h2,
         h3 {
             margin: 0;
             color: var(--ink);
             font-family: var(--heading-font);
-            letter-spacing: -.028em;
+            letter-spacing: -0.025em;
         }
 
         h1 {
-            max-width: 820px;
-            font-size: clamp(2.55rem, 5.6vw, 4.7rem);
-            line-height: .98;
+            max-width: 760px;
+            font-size: clamp(2.3rem, 5vw, 4.15rem);
+            line-height: 1.02;
         }
 
         h2 {
-            font-size: clamp(1.95rem, 3.2vw, 2.85rem);
-            line-height: 1.08;
+            font-size: clamp(1.8rem, 3vw, 2.55rem);
+            line-height: 1.12;
         }
 
         h3 {
-            font-size: 1.08rem;
+            font-size: 1.06rem;
             line-height: 1.3;
         }
 
         p { margin: 0; }
 
         .container {
-            width: min(100% - 36px, 1180px);
-            margin-inline: auto;
+            width: min(100% - 32px, 1120px);
+            margin: 0 auto;
         }
 
         .eyebrow {
             display: inline-flex;
             align-items: center;
             gap: .55rem;
-            margin-bottom: .85rem;
+            margin-bottom: .9rem;
             color: var(--purple);
-            font-size: .76rem;
-            font-weight: 800;
-            letter-spacing: .085em;
+            font-size: .78rem;
+            font-weight: 700;
+            letter-spacing: .08em;
             text-transform: uppercase;
         }
 
         .eyebrow::before {
             content: "";
-            width: 22px;
+            width: 24px;
             height: 2px;
             background: currentColor;
         }
 
         .btn {
-            min-height: 47px;
+            min-height: 46px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: .5rem;
+            gap: .55rem;
             padding: .72rem 1.15rem;
             border: 1px solid transparent;
-            border-radius: 8px;
-            font-size: .94rem;
+            border-radius: 7px;
             font-weight: 700;
+            font-size: .95rem;
             cursor: pointer;
             transition:
-                transform .15s ease,
                 background-color .15s ease,
                 border-color .15s ease,
-                box-shadow .15s ease;
+                color .15s ease,
+                transform .15s ease;
         }
 
-        .btn:hover {
-            transform: translateY(-1px);
-        }
+        .btn:hover { transform: translateY(-1px); }
 
         .btn-primary {
             color: #fff;
             background: var(--purple);
-            box-shadow: 0 8px 18px rgba(103, 77, 243, .19);
         }
 
         .btn-primary:hover {
             background: var(--purple-dark);
-            box-shadow: 0 10px 22px rgba(103, 77, 243, .24);
         }
 
         .btn-secondary {
             color: var(--ink);
             background: #fff;
-            border-color: var(--line-strong);
+            border-color: #d0d5dd;
         }
 
         .btn-secondary:hover {
             border-color: #98a2b3;
-            box-shadow: var(--shadow-sm);
         }
 
-        .btn-dark {
+        .btn-on-dark {
+            color: var(--navy);
+            background: #fff;
+        }
+
+        .btn-on-dark:hover {
+            background: #f2f4f7;
+        }
+
+        .btn-link {
+            color: #d7deed;
+            background: transparent;
+            padding-inline: .25rem;
+        }
+
+        .btn-link:hover {
             color: #fff;
-            background: var(--navy);
+            transform: none;
         }
-
-        .btn-dark:hover {
-            background: var(--navy-2);
-        }
-
-        .text-link {
-            display: inline-flex;
-            align-items: center;
-            gap: .4rem;
-            color: var(--purple);
-            font-weight: 700;
-        }
-
-        .text-link:hover { text-decoration: underline; }
 
         /* Header */
         .site-header {
             position: sticky;
             top: 0;
             z-index: 100;
-            background: rgba(255, 255, 255, .96);
-            border-bottom: 1px solid rgba(228, 231, 236, .9);
-            backdrop-filter: blur(14px);
+            background: rgba(15, 20, 37, .98);
+            border-bottom: 1px solid rgba(255, 255, 255, .08);
         }
 
         .header-inner {
-            min-height: 72px;
+            min-height: 68px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 1.25rem;
+            gap: 1rem;
         }
 
         .brand {
             display: inline-flex;
-            align-items: center;
-            gap: .62rem;
-            min-width: 0;
-        }
-
-        .brand-mark {
-            width: 36px;
-            height: 36px;
-            flex: 0 0 36px;
-            border-radius: 8px;
-            object-fit: contain;
-        }
-
-        .brand-copy {
-            display: flex;
             align-items: baseline;
             min-width: 0;
             font-family: var(--logo-font);
@@ -247,36 +223,36 @@
 
         .brand-events,
         .brand-ck {
-            font-size: 1.13rem;
+            font-size: 1.22rem;
             line-height: 1;
         }
 
-        .brand-events { color: var(--purple); }
-        .brand-ck { color: var(--navy); }
+        .brand-events { color: var(--teal); }
+        .brand-ck { color: #fff; }
 
         .brand-by {
-            margin-inline: .32rem;
-            color: #8b95aa;
+            margin: 0 .36rem;
+            color: #8ea0ca;
             font-family: var(--body-font);
-            font-size: .62rem;
-            font-weight: 700;
-            letter-spacing: .055em;
+            font-size: .68rem;
+            font-weight: 600;
+            letter-spacing: .05em;
             text-transform: uppercase;
         }
 
         .desktop-nav {
             display: flex;
             align-items: center;
-            gap: 1.2rem;
+            gap: 1.35rem;
         }
 
         .desktop-nav .nav-link {
-            color: #344054;
-            font-size: .9rem;
+            color: #c7d0e6;
+            font-size: .92rem;
             font-weight: 600;
         }
 
-        .desktop-nav .nav-link:hover { color: var(--purple); }
+        .desktop-nav .nav-link:hover { color: #fff; }
 
         .mobile-toggle {
             display: none;
@@ -284,10 +260,10 @@
             height: 44px;
             align-items: center;
             justify-content: center;
-            border: 1px solid var(--line);
-            border-radius: 8px;
-            color: var(--navy);
-            background: #fff;
+            border: 1px solid rgba(255, 255, 255, .15);
+            border-radius: 7px;
+            background: transparent;
+            color: #fff;
             cursor: pointer;
         }
 
@@ -298,69 +274,72 @@
 
         .mobile-nav {
             display: none;
-            background: #fff;
-            border-top: 1px solid var(--line);
+            background: var(--navy);
+            border-top: 1px solid rgba(255, 255, 255, .08);
         }
 
         .mobile-nav.open { display: block; }
 
         .mobile-nav-inner {
-            padding-block: .65rem 1rem;
+            padding-top: .6rem;
+            padding-bottom: .95rem;
         }
 
         .mobile-nav a:not(.btn) {
             min-height: 46px;
             display: flex;
             align-items: center;
-            color: #344054;
+            color: #d7deed;
             font-weight: 600;
         }
 
         .mobile-nav-actions {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: .7rem;
+            gap: .75rem;
             padding-top: .75rem;
         }
+
+        .mobile-nav-actions .btn { width: 100%; }
 
         /* Hero */
         .hero {
             position: relative;
             overflow: hidden;
-            padding: 5rem 0 4.4rem;
+            padding: 3.8rem 0 3rem;
             background:
-                radial-gradient(circle at 86% 15%, rgba(48, 240, 182, .14), transparent 25%),
-                radial-gradient(circle at 82% 35%, rgba(103, 77, 243, .12), transparent 36%),
-                linear-gradient(180deg, #fff 0%, #fbfbfe 100%);
+                radial-gradient(circle at top right, rgba(103, 77, 243, .22), transparent 32%),
+                linear-gradient(180deg, #12172c 0%, #0f1425 100%);
+            color: #fff;
         }
 
         .hero::after {
             content: "";
             position: absolute;
-            inset: auto -170px -240px auto;
-            width: 470px;
-            height: 470px;
-            border: 1px solid rgba(103, 77, 243, .12);
+            right: -160px;
+            bottom: -220px;
+            width: 460px;
+            height: 460px;
+            border: 1px solid rgba(255, 255, 255, .07);
             border-radius: 50%;
-            pointer-events: none;
         }
 
         .hero-grid {
             position: relative;
             z-index: 1;
             display: grid;
-            grid-template-columns: minmax(0, 1.05fr) minmax(340px, .72fr);
-            gap: 3rem;
+            grid-template-columns: minmax(0, 1.2fr) minmax(300px, .62fr);
+            gap: 2.4rem;
             align-items: center;
         }
 
-        .hero h1 span { color: var(--purple); }
+        .hero h1 { color: #fff; }
 
         .hero .lead {
-            max-width: 720px;
-            margin-top: 1.3rem;
-            color: #475467;
-            font-size: clamp(1.02rem, 1.8vw, 1.14rem);
+            max-width: 690px;
+            margin-top: 1.15rem;
+            color: #c9d2e6;
+            font-size: clamp(1.02rem, 2vw, 1.14rem);
             line-height: 1.72;
         }
 
@@ -368,325 +347,295 @@
             display: flex;
             flex-wrap: wrap;
             gap: .75rem;
-            margin-top: 1.65rem;
+            margin-top: 1.55rem;
         }
 
         .hero-proof {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: .8rem;
-            margin-top: 1.65rem;
-        }
-
-        .hero-proof-item {
             display: flex;
-            gap: .72rem;
-            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: .7rem 1.1rem;
+            margin-top: 1.2rem;
+            color: #9aa9c9;
+            font-size: .88rem;
         }
 
-        .hero-proof-icon {
-            width: 36px;
-            height: 36px;
-            flex: 0 0 36px;
-            display: grid;
-            place-items: center;
-            border-radius: 50%;
-            color: var(--purple);
-            background: var(--purple-soft);
+        .hero-proof span {
+            display: inline-flex;
+            align-items: center;
+            gap: .45rem;
+        }
+
+        .hero-proof span::before {
+            content: "✓";
+            color: var(--teal);
             font-weight: 800;
         }
 
-        .hero-proof-item:nth-child(2) .hero-proof-icon {
-            color: var(--teal-dark);
-            background: var(--teal-soft);
-        }
-
-        .hero-proof-item strong {
+        .hero-side {
             display: block;
-            color: var(--ink);
-            font-size: .84rem;
         }
 
-        .hero-proof-item small {
-            display: block;
-            margin-top: .08rem;
-            color: var(--muted);
-            font-size: .76rem;
-            line-height: 1.4;
-        }
-
-        .hero-visual {
-            position: relative;
-            min-height: 400px;
-        }
-
-        .hero-browser {
-            position: relative;
-            overflow: hidden;
+        .hero-photo,
+        .hero-price {
             background: #fff;
-            border: 1px solid var(--line);
-            border-radius: 16px;
-            box-shadow: var(--shadow-lg);
-            transform: rotate(1.2deg);
+            border-radius: 10px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, .20);
+            overflow: hidden;
         }
 
-        .browser-bar {
-            display: flex;
-            align-items: center;
-            gap: .4rem;
-            height: 34px;
-            padding: 0 .85rem;
-            background: #f2f4f7;
-            border-bottom: 1px solid var(--line);
+        .hero-photo {
+            border-top: 3px solid var(--teal);
         }
 
-        .browser-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #c7cdd6;
-        }
-
-        .hero-browser img {
+        .hero-photo img {
             width: 100%;
             aspect-ratio: 16 / 10;
             object-fit: cover;
-            object-position: top;
         }
 
-        .hero-floating {
-            position: absolute;
-            left: -28px;
-            bottom: -22px;
-            width: min(290px, 78%);
-            padding: 1rem 1.05rem;
-            background: var(--navy);
-            border-radius: 12px;
-            box-shadow: var(--shadow-md);
-            color: #fff;
+        .hero-photo-copy {
+            padding: .95rem 1rem 1rem;
         }
 
-        .hero-floating strong {
+        .hero-photo-copy strong {
             display: block;
-            font-family: var(--heading-font);
-            font-size: 1rem;
+            color: var(--ink);
+            font-size: .94rem;
         }
 
-        .hero-floating p {
-            margin-top: .28rem;
-            color: #c7d0e6;
-            font-size: .81rem;
-            line-height: 1.45;
-        }
-
-        .hero-floating .accent {
-            color: var(--teal);
-        }
-
-        /* Shared section styles */
-        .section {
-            padding: 4.5rem 0;
-        }
-
-        .section.alt { background: var(--surface-alt); }
-        .section.soft { background: var(--surface-soft); }
-
-        .section-heading {
-            max-width: 850px;
-            margin-bottom: 2rem;
-        }
-
-        .section-heading.with-aside {
-            max-width: none;
-            display: grid;
-            grid-template-columns: minmax(0, .9fr) minmax(280px, .65fr);
-            gap: 2.5rem;
-            align-items: end;
-        }
-
-        .section-heading p {
-            margin-top: .7rem;
+        .hero-photo-copy p {
+            margin-top: .25rem;
             color: var(--muted);
+            font-size: .84rem;
         }
 
-        .section-heading.with-aside > p {
-            margin-top: 0;
-            padding-bottom: .15rem;
+        .hero-price {
+            padding: 1.35rem 1.4rem 1.4rem;
+            color: var(--body);
+            border-top: 3px solid var(--purple);
         }
 
-        /* Product showcase */
-        .product-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 1rem;
-        }
-
-        .product-card {
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            background: #fff;
-            border: 1px solid var(--line);
-            border-radius: 13px;
-            box-shadow: var(--shadow-sm);
-            transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
-        }
-
-        .product-card:hover {
-            transform: translateY(-3px);
-            border-color: #d7d1ff;
-            box-shadow: var(--shadow-md);
-        }
-
-        .product-media {
-            position: relative;
-            overflow: hidden;
-            background: #eef1f6;
-            border-bottom: 1px solid var(--line);
-        }
-
-        .product-media img {
-            width: 100%;
-            aspect-ratio: 16 / 10.4;
-            object-fit: cover;
-            object-position: center;
-            transition: transform .22s ease;
-        }
-
-        .product-card:hover .product-media img { transform: scale(1.015); }
-
-        .product-card.product-ui .product-media img {
-            object-position: top;
-        }
-
-        .product-body {
-            min-height: 128px;
-            display: flex;
-            flex-direction: column;
-            padding: 1rem 1.05rem 1.1rem;
-        }
-
-        .product-title-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: .8rem;
-        }
-
-        .product-arrow {
-            color: var(--purple);
-            font-size: 1.15rem;
-            font-weight: 800;
-        }
-
-        .product-body p {
-            margin-top: .42rem;
+        .hero-price .small {
             color: var(--muted);
-            font-size: .88rem;
-            line-height: 1.5;
-        }
-
-        .asset-note {
-            margin-top: 1rem;
-            padding: .85rem 1rem;
-            color: #605a79;
-            background: var(--purple-soft);
-            border: 1px solid #e8e3ff;
-            border-radius: 9px;
-            font-size: .82rem;
-        }
-
-        .asset-note code {
-            color: var(--purple-dark);
+            font-size: .78rem;
             font-weight: 700;
+            letter-spacing: .06em;
+            text-transform: uppercase;
         }
 
-        /* Benefit / trust cards */
-        .benefit-grid {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: .9rem;
+        .hero-price .number {
+            margin-top: .25rem;
+            color: var(--ink);
+            font-family: var(--heading-font);
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1.1;
         }
 
-        .benefit {
-            min-height: 190px;
-            padding: 1.35rem;
-            background: #fff;
-            border: 1px solid var(--line);
-            border-radius: 11px;
-        }
+        .hero-price .number span { color: var(--purple); }
 
-        .benefit-icon,
-        .step-icon,
-        .trust-icon {
-            width: 43px;
-            height: 43px;
-            display: grid;
-            place-items: center;
-            margin-bottom: 1rem;
-            border-radius: 10px;
-            color: var(--purple);
-            background: var(--purple-soft);
-        }
-
-        .benefit-icon svg,
-        .step-icon svg,
-        .trust-icon svg {
-            width: 22px;
-            height: 22px;
-        }
-
-        .benefit p {
-            margin-top: .5rem;
-            color: var(--muted);
+        .hero-price .desc {
+            margin-top: .48rem;
             font-size: .9rem;
         }
 
-        /* Steps */
-        .steps {
+        .hero-price dl {
+            margin: 1rem 0 0;
+            padding-top: .95rem;
+            border-top: 1px solid var(--line);
+        }
+
+        .hero-price dl > div {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: .34rem 0;
+            font-size: .88rem;
+        }
+
+        .hero-price dt { color: var(--muted); }
+        .hero-price dd {
+            margin: 0;
+            color: var(--ink);
+            font-weight: 700;
+            text-align: right;
+        }
+
+        /* Proof strip */
+        .proof-strip {
+            background: linear-gradient(180deg, #ffffff 0%, #faf8ff 100%);
+            border-bottom: 1px solid var(--line);
+            box-shadow: inset 0 2px 0 var(--purple);
+        }
+
+        .proof-strip-inner {
+            min-height: 62px;
             display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: .9rem;
+            grid-template-columns: repeat(4, 1fr);
+            align-items: stretch;
         }
 
-        .step {
-            position: relative;
-            min-height: 185px;
-            padding: 1.3rem;
+        .proof-item {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: .72rem 1rem;
+            border-right: 1px solid var(--line);
+            color: var(--muted);
+            font-size: .88rem;
+        }
+
+        .proof-item:first-child { padding-left: 0; }
+        .proof-item:last-child { border-right: 0; }
+
+        .proof-item strong {
+            display: block;
+            margin-bottom: .08rem;
+            color: var(--ink);
+            font-size: .92rem;
+        }
+
+        /* General sections */
+        .section {
+            padding: 3.35rem 0;
+        }
+
+        .section.alt {
+            background: var(--surface-alt);
+        }
+
+        .section.soft {
+            background: linear-gradient(180deg, #ffffff 0%, #fbfbfe 100%);
+        }
+
+        .section-heading {
+            max-width: 820px;
+            margin-bottom: 1.9rem;
+        }
+
+        .section-heading p {
+            margin-top: .65rem;
+            color: var(--muted);
+            font-size: 1rem;
+        }
+
+        /* Benefits */
+        .benefit-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            border-top: 1px solid var(--line);
+            border-left: 1px solid var(--line);
             background: #fff;
-            border: 1px solid var(--line);
-            border-radius: 11px;
         }
 
-        .step-number {
-            position: absolute;
-            top: 1.25rem;
-            right: 1.25rem;
-            color: #8a7df7;
+        .benefit {
+            min-height: 176px;
+            padding: 1.5rem;
+            background: #fff;
+            border-right: 1px solid var(--line);
+            border-bottom: 1px solid var(--line);
+        }
+
+        .benefit-number {
+            margin-bottom: .85rem;
+            color: var(--purple);
             font-family: var(--heading-font);
-            font-size: .77rem;
+            font-size: .8rem;
             font-weight: 800;
         }
 
-        .step p {
-            margin-top: .5rem;
+        .benefit p {
+            margin-top: .55rem;
             color: var(--muted);
-            font-size: .89rem;
+        }
+
+        /* Split sections */
+        .split-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.75rem;
+            align-items: center;
+        }
+
+        .photo-panel {
+            overflow: hidden;
+            border-radius: 12px;
+            box-shadow: 0 12px 26px rgba(16, 24, 40, .08);
+            background: #fff;
+            border: 1px solid var(--line);
+        }
+
+        .photo-panel img {
+            width: 100%;
+            aspect-ratio: 16 / 10;
+            object-fit: cover;
+        }
+
+        .photo-caption {
+            padding: .85rem 1rem 1rem;
+            background: #fff;
+        }
+
+        .photo-caption strong {
+            display: block;
+            color: var(--ink);
+            font-size: .95rem;
+        }
+
+        .photo-caption p {
+            margin-top: .25rem;
+            color: var(--muted);
+            font-size: .87rem;
+        }
+
+        .plain-list {
+            list-style: none;
+            margin: 1.15rem 0 0;
+            padding: 0;
+        }
+
+        .plain-list li {
+            display: flex;
+            gap: .65rem;
+            padding: .58rem 0;
+            color: var(--body);
+            border-bottom: 1px solid var(--line);
+        }
+
+        .plain-list li::before {
+            content: "\2014";
+            color: var(--purple);
+            font-weight: 800;
+        }
+
+        .audience-note {
+            margin-top: 1.05rem;
+            padding: 1.25rem 1.3rem;
+            background: var(--purple-soft);
+            border-left: 3px solid var(--purple);
+            color: #493d88;
+            border-radius: 8px;
+        }
+
+        .audience-note strong {
+            display: block;
+            margin-bottom: .35rem;
+            color: var(--ink);
         }
 
         /* Pricing */
         .pricing-shell {
             display: grid;
-            grid-template-columns: minmax(0, .78fr) minmax(380px, 1fr);
-            gap: 2.2rem;
+            grid-template-columns: .86fr 1.14fr;
+            gap: 1.85rem;
             align-items: start;
         }
 
         .pricing-copy .price-line {
-            margin-top: 1rem;
+            margin-top: .95rem;
             color: var(--ink);
             font-family: var(--heading-font);
-            font-size: 2.55rem;
+            font-size: 2.45rem;
             font-weight: 800;
             line-height: 1;
         }
@@ -694,23 +643,24 @@
         .pricing-copy .price-line span { color: var(--purple); }
 
         .pricing-copy .price-sub {
-            margin-top: .65rem;
+            margin-top: .55rem;
             color: var(--muted);
         }
 
         .pricing-copy ul {
-            margin: 1.15rem 0 0;
+            margin: 1.1rem 0 0;
             padding-left: 1.15rem;
+            color: var(--body);
         }
 
-        .pricing-copy li { margin-bottom: .42rem; }
+        .pricing-copy li { margin-bottom: .4rem; }
 
         .calc {
-            padding: 1.35rem;
+            padding: 1.25rem;
             background: #fff;
             border: 1px solid var(--line);
-            border-radius: 12px;
-            box-shadow: var(--shadow-sm);
+            border-radius: 10px;
+            box-shadow: 0 10px 24px rgba(16, 24, 40, .04);
         }
 
         .calc-grid {
@@ -721,9 +671,9 @@
 
         .field label {
             display: block;
-            margin-bottom: .4rem;
+            margin-bottom: .42rem;
             color: var(--ink);
-            font-size: .84rem;
+            font-size: .86rem;
             font-weight: 700;
         }
 
@@ -742,8 +692,8 @@
             width: 100%;
             min-height: 46px;
             padding: .7rem .85rem .7rem 1.75rem;
-            border: 1px solid var(--line-strong);
-            border-radius: 8px;
+            border: 1px solid #d0d5dd;
+            border-radius: 7px;
             color: var(--ink);
             background: #fff;
         }
@@ -768,20 +718,19 @@
         }
 
         .toggle button {
-            min-height: 42px;
-            padding: .6rem .8rem;
+            min-height: 40px;
             border: 0;
             border-radius: 6px;
-            color: var(--muted);
             background: transparent;
+            color: var(--muted);
             font-weight: 700;
             cursor: pointer;
         }
 
         .toggle button.active {
-            color: var(--purple);
             background: #fff;
-            box-shadow: 0 1px 3px rgba(16, 24, 40, .08);
+            color: var(--purple);
+            box-shadow: 0 1px 2px rgba(16, 24, 40, .08);
         }
 
         .calc-result {
@@ -805,7 +754,7 @@
         }
 
         .calc-row.total {
-            margin-top: .35rem;
+            margin-top: .4rem;
             padding-top: .75rem;
             border-top: 1px solid var(--line);
             font-size: 1rem;
@@ -814,68 +763,52 @@
         .calc-row.total span:last-child {
             color: var(--purple);
             font-family: var(--heading-font);
-            font-size: 1.3rem;
+            font-size: 1.32rem;
         }
 
         .calc-hint {
-            margin-top: .65rem;
+            margin-top: .72rem;
             color: var(--muted);
             font-size: .78rem;
         }
 
-        /* Trust section */
-        .trust-panel {
-            padding: 2rem;
-            background:
-                linear-gradient(120deg, rgba(103, 77, 243, .08), rgba(48, 240, 182, .08)),
-                #fff;
-            border: 1px solid #e2e0f3;
-            border-radius: 15px;
-        }
-
-        .trust-panel-head {
+        /* How it works */
+        .steps {
             display: grid;
-            grid-template-columns: minmax(0, .9fr) minmax(280px, .7fr);
-            gap: 2rem;
-            align-items: end;
-            margin-bottom: 1.7rem;
+            grid-template-columns: repeat(4, 1fr);
+            border-top: 1px solid var(--line);
+            border-left: 1px solid var(--line);
+            background: #fff;
         }
 
-        .trust-panel-head p { color: var(--muted); }
-
-        .trust-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            background: rgba(255, 255, 255, .72);
-            border: 1px solid rgba(228, 231, 236, .9);
-            border-radius: 11px;
-            overflow: hidden;
-        }
-
-        .trust-item {
-            padding: 1.3rem;
+        .step {
+            min-height: 172px;
+            padding: 1.35rem;
+            background: #fff;
             border-right: 1px solid var(--line);
+            border-bottom: 1px solid var(--line);
         }
 
-        .trust-item:last-child { border-right: 0; }
-
-        .trust-item:nth-child(2) .trust-icon {
-            color: var(--teal-dark);
-            background: var(--teal-soft);
+        .step-num {
+            margin-bottom: .95rem;
+            color: var(--purple);
+            font-family: var(--heading-font);
+            font-size: .82rem;
+            font-weight: 800;
         }
 
-        .trust-item p {
-            margin-top: .4rem;
+        .step p {
+            margin-top: .5rem;
             color: var(--muted);
-            font-size: .86rem;
+            font-size: .91rem;
         }
 
         /* Closing CTA */
         .closing {
-            padding: 3.6rem 0;
+            padding: 3rem 0;
             background:
-                radial-gradient(circle at 10% 50%, rgba(48, 240, 182, .08), transparent 25%),
-                linear-gradient(135deg, #151b34 0%, var(--navy) 100%);
+                radial-gradient(circle at left center, rgba(48, 240, 182, .08), transparent 28%),
+                linear-gradient(180deg, #12172c 0%, #0f1425 100%);
             color: #fff;
         }
 
@@ -883,7 +816,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 2rem;
+            gap: 1.5rem;
         }
 
         .closing h2 { color: #fff; }
@@ -900,33 +833,19 @@
             flex: 0 0 auto;
         }
 
-        .closing .btn-secondary {
-            color: #fff;
-            background: transparent;
-            border-color: rgba(255, 255, 255, .25);
-        }
-
-        .closing .btn-secondary:hover {
-            border-color: rgba(255, 255, 255, .55);
-            background: rgba(255, 255, 255, .05);
-        }
-
         /* Footer */
         .site-footer {
-            padding: 2rem 0 1.5rem;
+            padding: 1.7rem 0;
             background: #08122c;
             color: #8e9aba;
-            font-size: .84rem;
+            font-size: .85rem;
         }
-
-        .site-footer .brand-ck { color: #fff; }
-        .site-footer .brand-events { color: var(--teal); }
 
         .footer-grid {
             display: flex;
             align-items: flex-start;
             justify-content: space-between;
-            gap: 1.4rem;
+            gap: 1.2rem;
         }
 
         .footer-links {
@@ -939,58 +858,67 @@
         .footer-links a:hover { color: #fff; }
 
         .footer-copy {
-            display: flex;
-            justify-content: space-between;
-            gap: 1.5rem;
-            margin-top: 1.2rem;
-            padding-top: 1.1rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
             border-top: 1px solid rgba(255, 255, 255, .08);
         }
 
-        .footer-company {
-            max-width: 560px;
-            text-align: right;
-        }
-
-        /* Responsive */
-        @media (max-width: 1020px) {
+        /* Tablet */
+        @media (max-width: 940px) {
             .desktop-nav { display: none; }
             .mobile-toggle { display: inline-flex; }
 
             .hero-grid,
             .pricing-shell,
-            .trust-panel-head {
+            .split-grid {
                 grid-template-columns: 1fr;
+                gap: 1.5rem;
             }
 
-            .hero-visual {
-                width: min(760px, 100%);
-                min-height: 0;
-                margin-inline: auto;
+            .proof-strip-inner {
+                grid-template-columns: 1fr 1fr;
             }
 
-            .hero-proof,
-            .product-grid,
-            .benefit-grid,
+            .proof-item:nth-child(2) { border-right: 0; }
+            .proof-item:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+            .proof-item:nth-child(3) { padding-left: 0; }
+
             .steps {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
+                grid-template-columns: 1fr 1fr;
             }
 
-            .section-heading.with-aside {
-                grid-template-columns: 1fr;
-                gap: .8rem;
+            .closing-inner {
+                flex-direction: column;
+                align-items: flex-start;
             }
-
-            .section-heading.with-aside > p { max-width: 720px; }
         }
 
-        @media (max-width: 720px) {
+        /* Mobile */
+        @media (max-width: 640px) {
+            .container {
+                width: min(100% - 28px, 1120px);
+            }
+
+            .header-inner {
+                min-height: 62px;
+            }
+
+            .brand-events,
+            .brand-ck {
+                font-size: 1.02rem;
+            }
+
+            .brand-by {
+                margin-inline: .28rem;
+                font-size: .61rem;
+            }
+
             .hero {
-                padding: 3.5rem 0 3.4rem;
+                padding: 2.7rem 0 2.35rem;
             }
 
             .hero h1 {
-                font-size: clamp(2.35rem, 12vw, 3.3rem);
+                font-size: clamp(2.05rem, 11vw, 3rem);
             }
 
             .hero-actions {
@@ -1000,40 +928,59 @@
 
             .hero-actions .btn { width: 100%; }
 
-            .hero-proof,
-            .product-grid,
+            .hero-proof {
+                display: grid;
+                gap: .5rem;
+            }
+
+            .hero-price,
+            .hero-photo-copy {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+
+            .section {
+                padding: 2.7rem 0;
+            }
+
+            .section-heading {
+                margin-bottom: 1.4rem;
+            }
+
             .benefit-grid,
             .steps,
-            .trust-grid,
+            .proof-strip-inner,
             .calc-grid,
             .toggle {
                 grid-template-columns: 1fr;
             }
 
-            .hero-floating {
-                position: relative;
-                left: 0;
-                bottom: auto;
-                width: auto;
-                margin-top: .8rem;
+            .benefit,
+            .step {
+                min-height: 0;
+                padding: 1.25rem;
             }
 
-            .section {
-                padding: 3.4rem 0;
-            }
-
-            .trust-panel { padding: 1.25rem; }
-
-            .trust-item {
+            .proof-item,
+            .proof-item:first-child,
+            .proof-item:nth-child(3) {
+                padding: .8rem 0;
                 border-right: 0;
                 border-bottom: 1px solid var(--line);
             }
 
-            .trust-item:last-child { border-bottom: 0; }
+            .proof-item:last-child { border-bottom: 0; }
 
-            .closing-inner {
-                flex-direction: column;
+            .calc {
+                padding: 1.05rem;
+            }
+
+            .calc-row {
                 align-items: flex-start;
+            }
+
+            .closing {
+                padding: 2.55rem 0;
             }
 
             .closing-actions {
@@ -1042,12 +989,9 @@
                 grid-template-columns: 1fr;
             }
 
-            .footer-grid,
-            .footer-copy {
+            .footer-grid {
                 flex-direction: column;
             }
-
-            .footer-company { text-align: left; }
 
             .footer-links {
                 display: grid;
@@ -1056,23 +1000,11 @@
             }
         }
 
-        @media (max-width: 500px) {
-            .container { width: min(100% - 28px, 1180px); }
-
-            .brand-events,
+        @media (max-width: 420px) {
             .brand-ck {
-                font-size: .98rem;
-            }
-
-            .brand-by {
-                margin-inline: .25rem;
-                font-size: .57rem;
-            }
-
-            .brand-mark {
-                width: 32px;
-                height: 32px;
-                flex-basis: 32px;
+                max-width: 170px;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
 
             .mobile-nav-actions,
@@ -1098,13 +1030,10 @@
 <body>
     <header class="site-header">
         <div class="container header-inner">
-            <a class="brand" href="{{ url('/') }}" aria-label="Events by CK Enterprises UK home">
-                <img class="brand-mark" src="{{ asset('images/favicon.png') }}" alt="" aria-hidden="true">
-                <span class="brand-copy">
-                    <span class="brand-events">Events</span>
-                    <span class="brand-by">by</span>
-                    <span class="brand-ck">CK Enterprises UK</span>
-                </span>
+            <a class="brand" href="{{ url('/') }}" aria-label="Events by CK Enterprises UK">
+                <span class="brand-events">Events</span>
+                <span class="brand-by">by</span>
+                <span class="brand-ck">CK Enterprises UK</span>
             </a>
 
             <nav class="desktop-nav" aria-label="Primary navigation">
@@ -1112,7 +1041,6 @@
                 <a class="nav-link" href="#pricing">Pricing</a>
                 <a class="nav-link" href="#how">How it works</a>
                 <a class="nav-link" href="{{ route('trust.index') }}">Trust &amp; Legal</a>
-                <a class="nav-link" href="{{ url('/contact') }}">Contact</a>
 
                 @auth
                     <a class="btn btn-primary" href="{{ route('dashboard.home') }}">Dashboard</a>
@@ -1130,7 +1058,14 @@
                 aria-controls="mobile-menu"
                 aria-label="Open navigation"
             >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    aria-hidden="true"
+                >
                     <path d="M4 7h16M4 12h16M4 17h16"/>
                 </svg>
             </button>
@@ -1142,7 +1077,6 @@
                 <a href="#pricing">Pricing</a>
                 <a href="#how">How it works</a>
                 <a href="{{ route('trust.index') }}">Trust &amp; Legal</a>
-                <a href="{{ url('/contact') }}">Contact</a>
 
                 <div class="mobile-nav-actions">
                     @auth
@@ -1160,277 +1094,177 @@
         <section class="hero">
             <div class="container hero-grid">
                 <div>
-                    <span class="eyebrow">Straightforward ticketing for organisations that run real events</span>
+                    <span class="eyebrow">Ticketing from a team that already supports charities</span>
 
-                    <h1>Your event. Your customers. <span>Your money.</span></h1>
+                    <h1>Your event. Your customers. Your money.</h1>
 
                     <p class="lead">
-                        Events by CK Enterprises UK gives charities, community organisations and small event organisers
-                        a straightforward way to sell tickets online. Build your own branded storefront, take payments
-                        through your connected Stripe account and scan QR tickets at the door.
+                        Events by CK Enterprises UK is built by the same team already providing digital services
+                        to charities and small organisations. Sell through your own branded storefront, take payments
+                        through your own connected Stripe account, and keep more of every ticket sale.
                     </p>
 
                     <div class="hero-actions">
                         @auth
                             <a class="btn btn-primary" href="{{ route('dashboard.home') }}">Go to dashboard</a>
                         @else
-                            <a class="btn btn-primary" href="{{ url('/register') }}">Start selling tickets →</a>
-                            <a class="btn btn-secondary" href="{{ url('/contact') }}">Talk to us</a>
+                            <a class="btn btn-primary" href="{{ url('/register') }}">Start selling tickets</a>
                         @endauth
+
+                        <a class="btn btn-link" href="#pricing">See the numbers →</a>
                     </div>
 
                     <div class="hero-proof" aria-label="Key benefits">
-                        <div class="hero-proof-item">
-                            <div class="hero-proof-icon">£</div>
-                            <div>
-                                <strong>No monthly subscription</strong>
-                                <small>Pay a simple {{ number_format($feePercent, 2) }}% platform fee per ticket.</small>
-                            </div>
-                        </div>
-
-                        <div class="hero-proof-item">
-                            <div class="hero-proof-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                    <rect x="3" y="5" width="18" height="14" rx="2"/>
-                                    <path d="M3 10h18"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <strong>Direct Stripe payouts</strong>
-                                <small>Payments settle through your connected Stripe account.</small>
-                            </div>
-                        </div>
-
-                        <div class="hero-proof-item">
-                            <div class="hero-proof-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                                    <circle cx="9" cy="7" r="4"/>
-                                    <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <strong>Built by CK Enterprises UK</strong>
-                                <small>A real UK technology business behind the platform.</small>
-                            </div>
-                        </div>
+                        <span>No monthly subscription</span>
+                        <span>Direct Stripe payouts</span>
+                        <span>Built by CK Enterprises UK</span>
                     </div>
                 </div>
 
-                <div class="hero-visual" aria-label="Events platform preview">
-                    <div class="hero-browser">
-                        <div class="browser-bar" aria-hidden="true">
-                            <span class="browser-dot"></span>
-                            <span class="browser-dot"></span>
-                            <span class="browser-dot"></span>
-                        </div>
-                        <img
-                            src="{{ asset('images/home/storefront.png') }}"
-                            alt="Example public event storefront with ticket selection"
-                        >
-                    </div>
+                <div class="hero-side">
+                    <aside class="hero-price" aria-label="Example platform cost">
+                        <div class="small">Simple platform pricing</div>
 
-                    <div class="hero-floating">
-                        <strong><span class="accent">Your brand.</span> Your event.</strong>
-                        <p>No competing-event marketplace and no buyer account required before somebody can book.</p>
-                    </div>
+                        <div class="number">
+                            <span>{{ number_format($feePercent, $feePercent == (int) $feePercent ? 0 : 2) }}%</span>
+                            per ticket
+                        </div>
+
+                        <p class="desc">
+                            No fixed CK Enterprises UK charge per ticket and no monthly platform subscription.
+                        </p>
+
+                        <dl>
+                            <div>
+                                <dt>Example ticket sales</dt>
+                                <dd>£1,000</dd>
+                            </div>
+                            <div>
+                                <dt>Platform fee</dt>
+                                <dd>£{{ number_format(1000 * ($feePercent / 100), 2) }}</dd>
+                            </div>
+                            <div>
+                                <dt>Funds</dt>
+                                <dd>Your Stripe account</dd>
+                            </div>
+                        </dl>
+                    </aside>
                 </div>
             </div>
         </section>
 
-        <section class="section soft" id="platform">
-            <div class="container">
-                <div class="section-heading with-aside">
-                    <div>
-                        <span class="eyebrow">Powerful tools. Real events.</span>
-                        <h2>See the platform in action.</h2>
-                    </div>
-
-                    <p>
-                        Everything needed to create, sell and manage tickets — from your booking portal to the final
-                        scan at the door.
-                    </p>
+        <div class="proof-strip" aria-label="Platform principles">
+            <div class="container proof-strip-inner">
+                <div class="proof-item">
+                    <strong>Your own storefront</strong>
+                    Your branding, not a marketplace.
                 </div>
-
-                <div class="product-grid">
-                    <article class="product-card product-ui">
-                        <div class="product-media">
-                            <img
-                                src="{{ asset('images/home/booking-portal.png') }}"
-                                alt="Events booking portal showing ticket type configuration"
-                                loading="lazy"
-                            >
-                        </div>
-                        <div class="product-body">
-                            <div class="product-title-row">
-                                <h3>Inside Booking Portal</h3>
-                                <span class="product-arrow" aria-hidden="true">→</span>
-                            </div>
-                            <p>Create and manage events, ticket types, capacity, sales windows, orders and reporting.</p>
-                        </div>
-                    </article>
-
-                    <article class="product-card">
-                        <div class="product-media">
-                            <img
-                                src="{{ asset('images/home/gate-scanning.jpg') }}"
-                                alt="Event staff scanning a QR ticket at the gate"
-                                loading="lazy"
-                            >
-                        </div>
-                        <div class="product-body">
-                            <div class="product-title-row">
-                                <h3>Scan tickets at the gate</h3>
-                                <span class="product-arrow" aria-hidden="true">→</span>
-                            </div>
-                            <p>Quick QR check-in from a modern phone or tablet, without specialist scanning hardware.</p>
-                        </div>
-                    </article>
-
-                    <article class="product-card product-ui">
-                        <div class="product-media">
-                            <img
-                                src="{{ asset('images/home/storefront.png') }}"
-                                alt="Example online ticket storefront for a public event"
-                                loading="lazy"
-                            >
-                        </div>
-                        <div class="product-body">
-                            <div class="product-title-row">
-                                <h3>Online Storefront Example</h3>
-                                <span class="product-arrow" aria-hidden="true">→</span>
-                            </div>
-                            <p>A clean, mobile-friendly event page that keeps your organisation and your event front and centre.</p>
-                        </div>
-                    </article>
+                <div class="proof-item">
+                    <strong>No buyer accounts</strong>
+                    Less friction at checkout.
                 </div>
-
-                {{--
-                    Expected image assets:
-                    public/images/home/booking-portal.png
-                    public/images/home/gate-scanning.jpg
-                    public/images/home/storefront.png
-                --}}
+                <div class="proof-item">
+                    <strong>No advertising trackers</strong>
+                    Customer data stays focused on the event.
+                </div>
+                <div class="proof-item">
+                    <strong>Phone-based check-in</strong>
+                    Scan QR tickets without specialist hardware.
+                </div>
             </div>
-        </section>
+        </div>
 
-        <section class="section" id="why">
+        <section class="section soft" id="why">
             <div class="container">
                 <div class="section-heading">
                     <span class="eyebrow">Why Events by CK Enterprises UK</span>
-                    <h2>Built to be straightforward, accountable and easy to trust.</h2>
+
+                    <h2>
+                        Ticketing built on the same practical approach we already bring to charity and
+                        small-organisation technology.
+                    </h2>
+
                     <p>
-                        The platform is designed for organisations that need dependable ticketing without becoming
-                        part of a large event marketplace.
+                        CK Enterprises UK already provides digital services to charities and small organisations.
+                        Events brings that same straightforward, support-led approach to ticketing.
                     </p>
                 </div>
 
                 <div class="benefit-grid">
                     <article class="benefit">
-                        <div class="benefit-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <path d="M12 2 3 6v6c0 5 3.8 8.7 9 10 5.2-1.3 9-5 9-10V6l-9-4Z"/>
-                                <path d="m9 12 2 2 4-4"/>
-                            </svg>
-                        </div>
-                        <h3>A real company behind it</h3>
-                        <p>Events is operated by CK Enterprises Group Limited and supported by CK Enterprises UK.</p>
+                        <div class="benefit-number">01</div>
+                        <h3>Keep more of each ticket sale</h3>
+                        <p>
+                            Transparent percentage pricing without a separate fixed CK Enterprises UK charge
+                            on every ticket.
+                        </p>
                     </article>
 
                     <article class="benefit">
-                        <div class="benefit-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <rect x="3" y="5" width="18" height="14" rx="2"/>
-                                <path d="M3 10h18"/>
-                            </svg>
-                        </div>
-                        <h3>Your Stripe account</h3>
-                        <p>Event income is processed through your connected Stripe account rather than a pooled platform wallet.</p>
+                        <div class="benefit-number">02</div>
+                        <h3>Your funds go through your Stripe account</h3>
+                        <p>
+                            Connect Stripe and receive event income through your own payment account rather than
+                            a pooled platform wallet.
+                        </p>
                     </article>
 
                     <article class="benefit">
-                        <div class="benefit-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <path d="M4 4h16v16H4z"/>
-                                <path d="M8 9h8M8 13h5"/>
-                            </svg>
-                        </div>
-                        <h3>Your own storefront</h3>
-                        <p>Keep customers focused on your organisation without competing event recommendations or advertising feeds.</p>
+                        <div class="benefit-number">03</div>
+                        <h3>Your customers are there for your organisation</h3>
+                        <p>
+                            Your storefront is focused on your organisation, with no competing-event marketplace
+                            or advertising feed.
+                        </p>
                     </article>
 
                     <article class="benefit">
-                        <div class="benefit-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <path d="M4 14a8 8 0 0 1 16 0"/>
-                                <path d="M4 14v4a2 2 0 0 0 2 2h2v-6H4ZM20 14v4a2 2 0 0 1-2 2h-2v-6h4Z"/>
-                            </svg>
-                        </div>
-                        <h3>UK-based support</h3>
-                        <p>Need to discuss your event or ticket setup? Contact the team behind the platform directly.</p>
+                        <div class="benefit-number">04</div>
+                        <h3>Support from a UK technology partner</h3>
+                        <p>
+                            Events is not a disconnected ticketing brand. It is made and supported by CK Enterprises UK,
+                            the same team already providing digital services to charities and small organisations.
+                        </p>
                     </article>
                 </div>
             </div>
         </section>
 
-        <section class="section alt" id="how">
-            <div class="container">
-                <div class="section-heading with-aside">
-                    <div>
-                        <span class="eyebrow">Get started in minutes</span>
-                        <h2>From setup to the front door in four steps.</h2>
+        <section class="section alt">
+            <div class="container split-grid">
+                <div class="photo-panel">
+                    <img
+                        src="https://bonfire.greenmount.org.uk/wp-content/uploads/2021/08/342FA8F9-CE51-464F-96F1-68E124011B81-1024x607-1.jpeg"
+                        alt="Crowd gathered at a community fundraising event"
+                        loading="lazy"
+                    >
+                    <div class="photo-caption">
+                        <strong>Designed for real-world community fundraising</strong>
+                        <p>
+                            A good event platform helps organisers sell tickets, keep queues moving
+                            and leave more money with the organisation.
+                        </p>
                     </div>
-                    <p>A simple process for getting your event online, taking bookings and checking guests in.</p>
                 </div>
 
-                <div class="steps">
-                    <article class="step">
-                        <span class="step-number">01</span>
-                        <div class="step-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                                <circle cx="9" cy="7" r="4"/>
-                            </svg>
-                        </div>
-                        <h3>Create your organisation</h3>
-                        <p>Add your organisation details, branding and the people who need access.</p>
-                    </article>
+                <div>
+                    <span class="eyebrow">A practical fit</span>
 
-                    <article class="step">
-                        <span class="step-number">02</span>
-                        <div class="step-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <rect x="3" y="5" width="18" height="14" rx="2"/>
-                                <path d="M3 10h18"/>
-                            </svg>
-                        </div>
-                        <h3>Connect Stripe</h3>
-                        <p>Link your Stripe account for secure payment processing and direct payouts.</p>
-                    </article>
+                    <h2>Designed for organisations that run real-world events without a dedicated ticketing team.</h2>
 
-                    <article class="step">
-                        <span class="step-number">03</span>
-                        <div class="step-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <rect x="3" y="4" width="18" height="18" rx="2"/>
-                                <path d="M16 2v4M8 2v4M3 10h18"/>
-                            </svg>
-                        </div>
-                        <h3>Publish your event</h3>
-                        <p>Create ticket types, set capacity and share your branded storefront.</p>
-                    </article>
+                    <ul class="plain-list">
+                        <li>Charity fundraisers and community events</li>
+                        <li>Scout groups, clubs and voluntary organisations</li>
+                        <li>PTAs, schools and local groups</li>
+                        <li>Independent venues and small event organisers</li>
+                    </ul>
 
-                    <article class="step">
-                        <span class="step-number">04</span>
-                        <div class="step-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <path d="M3 5a2 2 0 0 1 2-2h4v4H3V5ZM15 3h4a2 2 0 0 1 2 2v4h-4V7h-2V3ZM3 15h4v2h2v4H5a2 2 0 0 1-2-2v-4ZM17 15h4v4a2 2 0 0 1-2 2h-4v-4h2v-2Z"/>
-                                <path d="M10 10h4v4h-4z"/>
-                            </svg>
-                        </div>
-                        <h3>Scan tickets at the door</h3>
-                        <p>Validate QR tickets on a modern phone or tablet and keep arrivals moving.</p>
-                    </article>
+                    <div class="audience-note">
+                        <strong>Not trying to become another event marketplace.</strong>
+                        Events by CK Enterprises UK is built as a straightforward extension of the digital services
+                        we already provide: branded sales, payments, tickets, check-in and reporting without turning
+                        your event into part of an advertising marketplace.
+                    </div>
                 </div>
             </div>
         </section>
@@ -1439,6 +1273,7 @@
             <div class="container pricing-shell">
                 <div class="pricing-copy">
                     <span class="eyebrow">Transparent pricing</span>
+
                     <h2>Know what the platform costs before you sell a ticket.</h2>
 
                     <div class="price-line">
@@ -1447,13 +1282,13 @@
                     </div>
 
                     <p class="price-sub">
-                        No setup charge and no monthly platform subscription. Stripe's own payment-processing charges are separate.
+                        No setup charge. No monthly subscription. Stripe's payment-processing charges are separate.
                     </p>
 
                     <ul>
                         <li>Absorb the platform fee or include it in the customer-facing ticket price.</li>
-                        <li>Customer pricing is shown before checkout.</li>
-                        <li>Charities and community organisations can <a class="text-link" href="{{ url('/contact') }}">talk to us</a> about their needs.</li>
+                        <li>Mandatory customer pricing is shown transparently before checkout.</li>
+                        <li>Eligible charities and community organisations can discuss tailored rates.</li>
                     </ul>
                 </div>
 
@@ -1491,9 +1326,15 @@
                     <div class="fee-mode">
                         <div class="field">
                             <label>How do you want to handle the platform fee?</label>
+
                             <div class="toggle" role="group" aria-label="Fee handling">
-                                <button type="button" id="mode-absorb" class="active">Organisation absorbs it</button>
-                                <button type="button" id="mode-passon">Include it in ticket price</button>
+                                <button type="button" id="mode-absorb" class="active">
+                                    Organisation absorbs it
+                                </button>
+
+                                <button type="button" id="mode-passon">
+                                    Include it in ticket price
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1519,60 +1360,45 @@
                             <span>£<span id="result-payout">{{ number_format(1000 - ((round(10 * ($feePercent / 100), 2)) * 100), 2) }}</span></span>
                         </div>
 
-                        <p class="calc-hint">Estimate excludes Stripe's own payment-processing charges.</p>
+                        <p class="calc-hint">
+                            Estimate excludes Stripe's own payment-processing charges.
+                        </p>
                     </div>
                 </div>
             </div>
         </section>
 
-        <section class="section soft">
+        <section class="section soft" id="how">
             <div class="container">
-                <div class="trust-panel">
-                    <div class="trust-panel-head">
-                        <div>
-                            <span class="eyebrow">A platform you can trust</span>
-                            <h2>Real people. A real company.</h2>
-                        </div>
-                        <p>
-                            Clear ownership, direct contact and straightforward pricing matter when you are trusting
-                            a platform with your event and your customers.
-                        </p>
-                    </div>
+                <div class="section-heading">
+                    <span class="eyebrow">How it works</span>
+                    <h2>From setup to the front door in four steps.</h2>
+                </div>
 
-                    <div class="trust-grid">
-                        <article class="trust-item">
-                            <div class="trust-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                    <path d="M12 2 3 6v6c0 5 3.8 8.7 9 10 5.2-1.3 9-5 9-10V6l-9-4Z"/>
-                                </svg>
-                            </div>
-                            <h3>Operated by CK Enterprises Group Limited</h3>
-                            <p>A UK company behind the Events platform, with clear legal and trust information.</p>
-                        </article>
+                <div class="steps">
+                    <article class="step">
+                        <div class="step-num">01</div>
+                        <h3>Create your organisation</h3>
+                        <p>Add your organisation details, branding and the people who need access.</p>
+                    </article>
 
-                        <article class="trust-item">
-                            <div class="trust-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                    <path d="M4 14a8 8 0 0 1 16 0"/>
-                                    <path d="M4 14v4a2 2 0 0 0 2 2h2v-6H4ZM20 14v4a2 2 0 0 1-2 2h-2v-6h4Z"/>
-                                </svg>
-                            </div>
-                            <h3>UK-based support</h3>
-                            <p>Speak directly to the team if you need help planning, configuring or running your event.</p>
-                        </article>
+                    <article class="step">
+                        <div class="step-num">02</div>
+                        <h3>Connect Stripe</h3>
+                        <p>Link your own Stripe account so ticket payments settle through your organisation.</p>
+                    </article>
 
-                        <article class="trust-item">
-                            <div class="trust-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                    <line x1="19" y1="5" x2="5" y2="19"/>
-                                    <circle cx="6.5" cy="6.5" r="2.5"/>
-                                    <circle cx="17.5" cy="17.5" r="2.5"/>
-                                </svg>
-                            </div>
-                            <h3>Transparent {{ number_format($feePercent, 2) }}% pricing</h3>
-                            <p>No monthly platform subscription and no separate fixed CK Enterprises UK charge per ticket.</p>
-                        </article>
-                    </div>
+                    <article class="step">
+                        <div class="step-num">03</div>
+                        <h3>Publish your event</h3>
+                        <p>Create ticket types, set capacity and share your branded storefront link.</p>
+                    </article>
+
+                    <article class="step">
+                        <div class="step-num">04</div>
+                        <h3>Scan tickets at the door</h3>
+                        <p>Use a modern phone browser to validate QR tickets and keep track of arrivals.</p>
+                    </article>
                 </div>
             </div>
         </section>
@@ -1581,18 +1407,26 @@
             <div class="container closing-inner">
                 <div>
                     <h2>Planning an event?</h2>
+
                     <p>
-                        Start building it now, or speak to CK Enterprises UK about your organisation, expected ticket
-                        volume or how Events could fit your requirements.
+                        Start with the platform, or speak to CK Enterprises UK if you want to discuss
+                        your organisation, expected ticket volume or charity pricing.
                     </p>
                 </div>
 
                 <div class="closing-actions">
                     @auth
-                        <a class="btn btn-primary" href="{{ route('dashboard.home') }}">Go to dashboard</a>
+                        <a class="btn btn-on-dark" href="{{ route('dashboard.home') }}">Go to dashboard</a>
                     @else
-                        <a class="btn btn-primary" href="{{ url('/register') }}">Get started</a>
-                        <a class="btn btn-secondary" href="{{ url('/contact') }}">Talk to us</a>
+                        <a class="btn btn-on-dark" href="{{ url('/register') }}">Get started</a>
+                        <a
+                            class="btn btn-link"
+                            href="https://ckenterprises.co.uk/#contact"
+                            target="_blank"
+                            rel="noopener"
+                        >
+                            Talk to us
+                        </a>
                     @endauth
                 </div>
             </div>
@@ -1602,21 +1436,17 @@
     <footer class="site-footer">
         <div class="container">
             <div class="footer-grid">
-                <a class="brand" href="{{ url('/') }}" aria-label="Events by CK Enterprises UK home">
-                    <img class="brand-mark" src="{{ asset('images/favicon.png') }}" alt="" aria-hidden="true">
-                    <span class="brand-copy">
-                        <span class="brand-events">Events</span>
-                        <span class="brand-by">by</span>
-                        <span class="brand-ck">CK Enterprises UK</span>
-                    </span>
+                <a class="brand" href="{{ url('/') }}" aria-label="Events by CK Enterprises UK">
+                    <span class="brand-events">Events</span>
+                    <span class="brand-by">by</span>
+                    <span class="brand-ck">CK Enterprises UK</span>
                 </a>
 
                 <div class="footer-links">
                     <a href="#why">Why us</a>
                     <a href="#pricing">Pricing</a>
                     <a href="#how">How it works</a>
-                    <a href="{{ route('trust.index') }}">Trust Centre</a>
-                    <a href="{{ url('/contact') }}">Contact</a>
+                    <a href="{{ route('trust.index') }}">Trust &amp; Legal</a>
                     <a href="https://ckenterprises.co.uk/" target="_blank" rel="noopener">CK Enterprises UK</a>
                     @guest
                         <a href="{{ url('/login') }}">Log in</a>
@@ -1625,17 +1455,17 @@
             </div>
 
             <div class="footer-copy">
-                <div>&copy; {{ date('Y') }} CK Enterprises UK. All rights reserved.</div>
-                <div class="footer-company">
-                    Events by CK Enterprises UK is operated by CK Enterprises Group Limited.
-                </div>
+                &copy; {{ date('Y') }} CK Enterprises UK.
+                Events by CK Enterprises UK is operated by CK Enterprises Group Limited.
             </div>
         </div>
     </footer>
 
     <script>
         (function () {
-            /* Mobile navigation */
+            /*
+             * Mobile navigation
+             */
             var toggle = document.getElementById('mobile-menu-toggle');
             var menu = document.getElementById('mobile-menu');
 
@@ -1649,6 +1479,7 @@
 
                 toggle.addEventListener('click', function () {
                     var isOpen = menu.classList.toggle('open');
+
                     toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
                     toggle.setAttribute('aria-label', isOpen ? 'Close navigation' : 'Open navigation');
                     document.body.classList.toggle('menu-open', isOpen);
@@ -1659,29 +1490,42 @@
                 });
 
                 window.addEventListener('resize', function () {
-                    if (window.innerWidth > 1020) closeMenu();
+                    if (window.innerWidth > 940) {
+                        closeMenu();
+                    }
                 });
 
                 document.addEventListener('keydown', function (event) {
-                    if (event.key === 'Escape') closeMenu();
+                    if (event.key === 'Escape') {
+                        closeMenu();
+                    }
                 });
             }
 
-            /* Pricing calculator */
+            /*
+             * Pricing calculator
+             */
             var root = document.querySelector('.calc');
-            if (!root) return;
+
+            if (!root) {
+                return;
+            }
 
             var feePct = Math.max(0, parseFloat(root.getAttribute('data-fee')) || 0);
+
             var priceEl = document.getElementById('calc-price');
             var qtyEl = document.getElementById('calc-qty');
+
             var absorbBtn = document.getElementById('mode-absorb');
             var passOnBtn = document.getElementById('mode-passon');
+
             var outModeLabel = document.getElementById('result-mode-label');
             var outBuyerPrice = document.getElementById('result-buyer-price');
             var outFeeEach = document.getElementById('result-fee-each');
             var outFeeTotal = document.getElementById('result-fee-total');
             var outPayoutLabel = document.getElementById('result-payout-label');
             var outPayout = document.getElementById('result-payout');
+
             var passOn = false;
 
             function money(value) {
@@ -1694,19 +1538,23 @@
             function recalc() {
                 var price = Math.max(0, parseFloat(priceEl.value) || 0);
                 var qty = Math.max(0, parseInt(qtyEl.value, 10) || 0);
+
                 var feeEach = Math.round(price * (feePct / 100) * 100) / 100;
                 var feeTotal = Math.round(feeEach * qty * 100) / 100;
+
                 var buyerPrice;
                 var payout;
 
                 if (passOn) {
                     buyerPrice = price + feeEach;
                     payout = Math.round(price * qty * 100) / 100;
+
                     outModeLabel.textContent = 'Ticket price including platform fee';
                     outPayoutLabel.textContent = 'You receive before Stripe fees';
                 } else {
                     buyerPrice = price;
                     payout = Math.round((price * qty - feeTotal) * 100) / 100;
+
                     outModeLabel.textContent = 'Ticket price';
                     outPayoutLabel.textContent = 'You receive before Stripe fees';
                 }
@@ -1728,8 +1576,14 @@
                 element.addEventListener('input', recalc);
             });
 
-            absorbBtn.addEventListener('click', function () { setMode(false); });
-            passOnBtn.addEventListener('click', function () { setMode(true); });
+            absorbBtn.addEventListener('click', function () {
+                setMode(false);
+            });
+
+            passOnBtn.addEventListener('click', function () {
+                setMode(true);
+            });
+
             recalc();
         })();
     </script>

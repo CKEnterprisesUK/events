@@ -1317,3 +1317,76 @@ fieldset.field > legend {
 .checkout-section:last-of-type { margin-bottom: 0; }
 .checkout-section__title { margin: 0 0 1rem; font-size: 1.1rem; }
 .checkout-section .field { margin-bottom: 0.85rem; }
+
+/* =============================================================================
+   Ticket_Accordion (Req 6, 10.2, 10.6) — the inline accordion that replaces the
+   old show/hide ticket-type table. Uses the existing tokens (--border, --brand,
+   --muted, --radius, --surface) and the global :focus-visible ring; no new
+   design primitives are introduced.
+   ========================================================================== */
+
+/* The accordion is a .panel, so it already has the card frame + margin. Strip
+   the panel's default horizontal padding on the inner list wrapper — each row
+   provides its own edge-to-edge separators. */
+.ticket-acc { padding: 0; }
+.ticket-acc__list { display: block; }
+
+/* One accordion item: separated by a hairline rule, no rounded corners of its
+   own (the parent .panel clips the outer radius). */
+.ticket-acc__item { border-bottom: 1px solid var(--border); }
+.ticket-acc__item:last-child { border-bottom: none; }
+
+/* Summary row: the whole row is a single <button> (click-anywhere, Req 6.4).
+   A responsive column layout keeps name / price / remaining / status / chevron
+   aligned; it reflows to a compact two-line stack on narrow screens. */
+.ticket-acc__summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto auto 1.25rem;
+    align-items: center; gap: 0.75rem;
+    width: 100%; text-align: left;
+    padding: 0.85rem 1.15rem;
+    background: none; border: none; cursor: pointer;
+    font: inherit; color: var(--ink);
+    transition: background 0.12s ease;
+}
+.ticket-acc__summary:hover { background: color-mix(in srgb, var(--brand) 4%, #fff); }
+.ticket-acc__name { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ticket-acc__price { font-weight: 600; color: var(--ink); white-space: nowrap; }
+.ticket-acc__remaining { color: var(--muted); font-size: 0.875rem; white-space: nowrap; }
+
+/* Chevron: rotates 180° when the row's summary is expanded (aria-expanded). */
+.ticket-acc__chev { color: var(--muted); transition: transform 0.15s ease; }
+.ticket-acc__summary[aria-expanded="true"] .ticket-acc__chev { transform: rotate(180deg); }
+
+/* Body: the inline edit form, revealed when the row is open. `hidden` handles
+   the collapsed state (no JS needed for the closed default). */
+.ticket-acc__body {
+    padding: 0.25rem 1.15rem 1.15rem;
+    border-top: 1px solid var(--border);
+    background: #fbfbfd;
+}
+.ticket-acc__body[hidden] { display: none; }
+
+/* Add control row: sits below the list, inside the panel frame. */
+.ticket-acc__add { padding: 0.85rem 1.15rem; border-top: 1px solid var(--border); }
+.ticket-acc__add .btn { display: inline-flex; align-items: center; gap: 0.4rem; }
+
+/* Two-column edit grid (Req 6.10, 10.2): name / price side by side on desktop,
+   with description + the availability/sales fieldsets spanning the full width.
+   Single column on narrow screens. */
+.ticket-form__grid { display: grid; grid-template-columns: 1fr; gap: 0 1rem; margin-top: 0.75rem; }
+@media (min-width: 720px) {
+    .ticket-form__grid { grid-template-columns: 1fr 1fr; }
+    /* Description and the two control fieldsets read better full-width. */
+    .ticket-form__description,
+    .ticket-form__availability,
+    .ticket-form__sales { grid-column: 1 / -1; }
+}
+
+/* The availability quantity input is a nested field within the fieldset; give
+   it a little breathing room from the radio chips above it. */
+.ticket-form__availability [data-capacity-field] { margin-top: 0.5rem; }
+.ticket-form__sales .consent { margin: 0.35rem 0; }
+.ticket-form__sales [data-sales-start],
+.ticket-form__sales [data-sales-end] { margin-bottom: 0.5rem; }
+.ticket-form__delete { margin-left: auto; }

@@ -7,8 +7,11 @@
 @section('active_section', 'tickets')
 
 @section('section')
-    {{-- Ticket types come first — the main job of this screen. --}}
-    @include('dashboard.events._ticket_types', [
+    {{-- Ticket types come first — the main job of this screen. The inline
+         accordion (Req 6) replaces the old show/hide table; it derives its
+         currency symbol and store/update/destroy routes itself, so it only
+         needs the event, the existing types, and the overall remaining. --}}
+    @include('dashboard.events._ticket_accordion', [
         'event' => $event,
         'ticketTypes' => $ticketTypes,
         'eventRemaining' => $eventRemaining,

@@ -12,7 +12,7 @@ Property-based testing applies only to the pure-domain slice (Correctness Proper
 
 ## Tasks
 
-- [ ] 1. Schema additions and `TicketType` domain model
+- [x] 1. Schema additions and `TicketType` domain model
   - [x] 1.1 Add the `description` migration and raw SQL files
     - Create migration `database/migrations/2025_XX_XX_000000_add_description_to_ticket_types.php` adding a nullable `text` `description` column after `name` (with a `down()` that drops it).
     - Create `database/sql/036_add_description_to_ticket_types.sql` with the `ALTER TABLE ... ADD COLUMN description` DDL plus the `migrations` ledger insert, following the numbered house style.
@@ -44,16 +44,16 @@ Property-based testing applies only to the pure-domain slice (Correctness Proper
     - Cover `isUnlimited()`, and `saleStatusLabel()` across published/draft × window states.
     - _Requirements: 7.4, 8.7, 8.8_
 
-  - [-] 1.7 REGRESSION: rewrite existing `isOnSaleAt` tests to the new semantics
+  - [x] 1.7 REGRESSION: rewrite existing `isOnSaleAt` tests to the new semantics
     - Locate the existing tests that assume a null bound means "never on sale" and rewrite them to the new effective-interval semantics, documenting that the behaviour change is intentional.
     - _Requirements: 8.7, 8.8, Design: "Regression for the semantic change"_
 
-- [ ] 2. Capacity advisory for unbounded types
+- [x] 2. Capacity advisory for unbounded types
   - [x] 2.1 Extend `CapacityComparison` with `typesUnbounded` and update `state()`
     - Add a `bool $typesUnbounded` constructor arg (default `false`); update `state()` so a null event capacity → `UNLIMITED`, `typesUnbounded` → `EVENT_BINDS`, else the three-way capped-sum comparison; keep `isSane()` true only for `UNLIMITED`/`BALANCED`.
     - _Requirements: 7.6, Design: "CapacityComparison + EventReadiness::capacity()"_
 
-  - [-] 2.2 Update `EventReadiness::capacity()` to detect unbounded types
+  - [x] 2.2 Update `EventReadiness::capacity()` to detect unbounded types
     - Compute `typesSum` from capped types only and set `typesUnbounded` when any `unlimited` or `shared_pool` type is present.
     - _Requirements: 7.6_
 
@@ -66,8 +66,8 @@ Property-based testing applies only to the pure-domain slice (Correctness Proper
     - Equal caps → `BALANCED`; unbounded types + finite event cap → `EVENT_BINDS`; no event cap → `UNLIMITED`.
     - _Requirements: 7.6_
 
-- [ ] 3. Public sale-state semantics (checkout + event page)
-  - [~] 3.1 Update `EventPageController::saleState()` and verify the checkout gate
+- [x] 3. Public sale-state semantics (checkout + event page)
+  - [x] 3.1 Update `EventPageController::saleState()` and verify the checkout gate
     - Revise `saleState()` to the effective-interval logic (`start` null = opens at publication, `end = sale_ends_at ?? event?->starts_at`), returning `not_yet` / `ended` / `on_sale`; leave the per-type array shape unchanged.
     - Confirm `CheckoutController` relies on `isPurchasableAt()` so it inherits the new semantics with no further change.
     - _Requirements: 8.7, 8.8, Design: "Public event page array shape"_
@@ -77,12 +77,12 @@ Property-based testing applies only to the pure-domain slice (Correctness Proper
     - _Requirements: 8.7, 8.8_
 
 - [ ] 4. Ticket-type controller: validation, destroy action, and route
-  - [~] 4.1 Update `TicketTypeController` validation for nullable sale bounds and unlimited mode
+  - [x] 4.1 Update `TicketTypeController` validation for nullable sale bounds and unlimited mode
     - Make `sale_starts_at`/`sale_ends_at` `nullable`; apply `after:sale_starts_at` and `before_or_equal:event.starts_at` only when the explicit datetimes are present; map absent datetimes to `null`.
     - Extend `capacity_mode` to `Rule::in(TicketType::MODES)` (incl. `unlimited`); make `capacity` `requiredIf` mode `capped` and null it for `shared_pool`/`unlimited`; persist `description`.
     - _Requirements: 7.2, 7.3, 7.4, 8.3, 8.4, 8.9, 9.1, Design: "Error Handling"_
 
-  - [~] 4.2 Add the `destroy` action and route with the last-type-on-published guard
+  - [-] 4.2 Add the `destroy` action and route with the last-type-on-published guard
     - Add `TicketTypeController@destroy` gated on `ACTION_MANAGE_TICKET_TYPES`, refusing (redirect back with error) to drop the last type of a published event; register `DELETE /events/{event}/ticket-types/{ticketType}` as `events.ticket-types.destroy` in the dashboard group.
     - _Requirements: 6.1, 6.2, Design: "New / changed routes", "Ticket-type destroy"_
 
@@ -96,20 +96,20 @@ Property-based testing applies only to the pure-domain slice (Correctness Proper
     - _Requirements: 3.3, 3.4, Design: "Inline SVG icon system"_
 
 - [ ] 6. Ticket accordion component
-  - [-] 6.1 Build the availability and sales-period controls
+  - [x] 6.1 Build the availability and sales-period controls
     - Create `_availability_control.blade.php` (three `.choice` radios for `capped`/`shared_pool`/`unlimited` + conditional quantity input) and `_sales_period_control.blade.php` (two default-checked checkboxes + conditional, `disabled`-when-checked datetime inputs).
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 8.1, 8.2, 8.3, 8.4, 8.5, 8.6_
 
-  - [~] 6.2 Build the accordion row and list partials with server-derived summaries
+  - [x] 6.2 Build the accordion row and list partials with server-derived summaries
     - Create `_ticket_accordion_row.blade.php` (summary button with name/price/remaining/status pill/chevron + inline edit form reusing the two controls, save/cancel, and delete for existing rows) and `_ticket_accordion.blade.php` (list wrapper, "Add ticket type" control, hidden new-row `<template>`).
     - Derive price ("Free" for £0), remaining/total via `availabilityFor`, and the status pill via `saleStatusLabel`.
     - _Requirements: 6.1, 6.2, 6.3, 6.6, 6.9, 6.10, 7.6, 10.5_
 
-  - [~] 6.3 Add accordion + control JavaScript and CSS
+  - [x] 6.3 Add accordion + control JavaScript and CSS
     - Add the accordion JS (single-open toggle, click-anywhere summary, cancel-resets-and-collapses, add-clones-template-and-focuses) and the small availability/sales JS (show/hide + enable/disable inputs); add accordion/two-column-grid CSS to `app.css` using existing tokens.
     - _Requirements: 6.4, 6.5, 6.8, 6.10, 6.11, 10.2, 10.6_
 
-  - [~] 6.4 Wire the accordion into the Tickets manage screen
+  - [-] 6.4 Wire the accordion into the Tickets manage screen
     - Replace `_ticket_types.blade.php` usage in `events/tickets.blade.php` with `_ticket_accordion`, passing the event, existing types, and store/update/destroy routes.
     - _Requirements: 6.1, 6.7, 6.8, 10.1_
 

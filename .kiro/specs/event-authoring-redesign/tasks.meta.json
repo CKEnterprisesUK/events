@@ -62,6 +62,11 @@
         "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
         "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
         "timestamp": 1788890592063
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788890780969
       }
     ],
     "2.1 Extend `CapacityComparison` with `typesUnbounded` and update `state()`": [
@@ -91,6 +96,11 @@
         "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
         "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
         "timestamp": 1788890593367
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788890781201
       }
     ],
     "3.1 Update `EventPageController::saleState()` and verify the checkout gate": [
@@ -98,6 +108,16 @@
         "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
         "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
         "timestamp": 1788889915664
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788890799232
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788890929117
       }
     ],
     "4.1 Update `TicketTypeController` validation for nullable sale bounds and unlimited mode": [
@@ -105,6 +125,16 @@
         "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
         "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
         "timestamp": 1788889915697
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788890942547
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788891100926
       }
     ],
     "4.2 Add the `destroy` action and route with the last-type-on-published guard": [
@@ -112,6 +142,11 @@
         "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
         "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
         "timestamp": 1788889915731
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788891106350
       }
     ],
     "5.1 Create the `x-icon` anonymous Blade component": [
@@ -141,6 +176,11 @@
         "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
         "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
         "timestamp": 1788890594277
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788890782020
       }
     ],
     "6.2 Build the accordion row and list partials with server-derived summaries": [
@@ -148,6 +188,16 @@
         "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
         "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
         "timestamp": 1788889915822
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788890800228
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788890930125
       }
     ],
     "6.3 Add accordion + control JavaScript and CSS": [
@@ -155,6 +205,16 @@
         "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
         "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
         "timestamp": 1788889915856
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788890943635
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788891101811
       }
     ],
     "6.4 Wire the accordion into the Tickets manage screen": [
@@ -162,6 +222,11 @@
         "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
         "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
         "timestamp": 1788889915890
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788891107282
       }
     ],
     "7.1 Create `EventWizardController` and register wizard routes": [
@@ -239,6 +304,27 @@
         "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
         "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
         "timestamp": 1788890220876
+      }
+    ],
+    "1. Schema additions and `TicketType` domain model": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788890781029
+      }
+    ],
+    "2. Capacity advisory for unbounded types": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788890781236
+      }
+    ],
+    "3. Public sale-state semantics (checkout + event page)": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788890929222
       }
     ]
   }

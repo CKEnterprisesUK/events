@@ -124,14 +124,63 @@ class TicketTypeController extends Controller
     }
 
     /**
+     * Delete a Ticket_Type from the Event, scoped to the Admin's Company.
+     *
+     * A published Event must always keep at least one Ticket_Type — that is the
+     * "≥1 ticket type" precondition for publishing (Requirement 6.2). So when
+     * the Event is published and this is its last remaining Ticket_Type, the
+     * delete is refused with an error and no modification is made; the publish
+     * invariant can never be broken from the accordion. A draft Event may be
+     * emptied freely. Cross-Company rows never match the tenant scope and
+     * surface as 404. (Requirements 6.1, 6.2)
+     */
+    public function destroy(Event $event, TicketType $ticketType): RedirectResponse
+    {
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_TICKET_TYPES);
+
+        $this->ensureBelongsToEvent($event, $ticketType);
+
+        // Refuse to drop the last Ticket_Type of a published Event: doing so
+        // would violate publishing's "≥1 ticket type" blocker. (Requirement 6.2)
+        if ($event->isPublished()
+            && $event->ticketTypes()->count() <= self::MIN_TYPES_PER_EVENT) {
+            return redirect()
+                ->route('dashboard.events.ticket-types.index', $event)
+                ->with('error', __('A published event must keep at least one ticket type. Unpublish the event first, or add another ticket type before removing this one.'));
+        }
+
+        $name = $ticketType->name;
+        $ticketType->delete();
+
+        $this->audit->record(
+            action: AuditLog::TICKET_TYPE_DELETED,
+            auditable: $ticketType,
+            summary: 'Deleted ticket type "'.$name.'" for '.$event->name,
+            context: ['event_id' => (int) $event->getKey()],
+        );
+
+        return redirect()
+            ->route('dashboard.events.ticket-types.index', $event)
+            ->with('status', 'Ticket type deleted.');
+    }
+
+    /**
      * Validate Ticket_Type create/update input and map it to storable columns.
      *
-     * Rules (Requirements 6.1, 6.9):
-     *   - name:     1–100 characters
-     *   - price:    decimal 0.00–999,999.99 (0 = free); stored as price_minor
-     *   - capacity: integer 1–1,000,000
-     *   - sale window: end strictly after start (else a sale-window-invalid
-     *     error keyed on `sale_ends_at`)
+     * Rules (Requirements 6.1, 6.9, 7.2, 7.3, 7.4, 8.3, 8.4, 8.9, 9.1):
+     *   - name:        1–100 characters
+     *   - description: optional, up to 1,000 characters (Requirement 9.1)
+     *   - price:       decimal 0.00–999,999.99 (0 = free); stored as price_minor
+     *   - capacity_mode: one of {@see TicketType::MODES} (capped | shared_pool |
+     *     unlimited)
+     *   - capacity:    integer 1–1,000,000, required only for `capped`; nulled
+     *     for `shared_pool`/`unlimited` (Requirements 7.2, 7.3, 7.4)
+     *   - sale window: both bounds are nullable. The accordion's "use default"
+     *     checkboxes `disable` the datetime inputs, so an unchecked default
+     *     leaves the datetime absent from the request and it persists as `null`
+     *     (Requirements 8.3, 8.4, 8.9). The "end strictly after start" and "end
+     *     before_or_equal event start" checks apply only when the explicit
+     *     datetimes are present.
      *
      * @return array<string, mixed>
      */
@@ -140,25 +189,34 @@ class TicketTypeController extends Controller
         $validated = $request->validate([
             // name 1–100 chars (required => at least 1 char). (Requirement 6.1)
             'name' => ['required', 'string', 'min:1', 'max:100'],
+            // optional free-text description, up to 1,000 chars. (Requirement 9.1)
+            'description' => ['nullable', 'string', 'max:1000'],
             // price 0.00–999,999.99 as a decimal; up to 2 decimal places.
             // (Requirements 6.1, 6.3)
             'price' => ['required', 'numeric', 'min:0', 'max:999999.99', 'decimal:0,2'],
-            // capacity mode: capped (per-type ceiling) or shared_pool (draws
-            // only from the event overall capacity). (Requirements 2.2, 2.3)
+            // capacity mode: capped (per-type ceiling), shared_pool (draws only
+            // from the event overall capacity), or unlimited (never finitely
+            // bound). (Requirements 7.2, 7.3, 7.4)
             'capacity_mode' => ['required', Rule::in(TicketType::MODES)],
-            // capacity required 1–1,000,000 for capped; nullable for
-            // shared_pool (ignored server-side). (Requirements 2.2, 2.3)
+            // capacity required 1–1,000,000 for capped only; nullable for
+            // shared_pool/unlimited (ignored server-side). (Requirements 7.2, 7.3, 7.4)
             'capacity' => [
                 Rule::requiredIf(fn () => $request->input('capacity_mode') === TicketType::MODE_CAPPED),
                 'nullable', 'integer', 'min:1', 'max:'.self::MAX_CAPACITY,
             ],
-            'sale_starts_at' => ['required', 'date'],
-            // end strictly after start (sale-window-invalid). (Requirement 6.9)
-            // When the Event has a start time, sales must also close by then —
-            // selling a ticket for a session that has already begun makes no
-            // sense, so the window end is capped at the Event start.
+            // Both sale bounds are nullable: an absent input (its "use default"
+            // checkbox left checked, disabling the input) persists as null.
+            // (Requirements 8.3, 8.4, 8.9)
+            'sale_starts_at' => ['nullable', 'date'],
+            // end strictly after start (sale-window-invalid) only when start is
+            // present; and when the Event has a start time, sales must also
+            // close by then — selling a ticket for a session that has already
+            // begun makes no sense, so the window end is capped at the Event
+            // start. Both checks apply only when the explicit datetimes are
+            // present. (Requirements 6.9, 8.9)
             'sale_ends_at' => array_filter([
-                'required', 'date', 'after:sale_starts_at',
+                'nullable', 'date',
+                $request->filled('sale_starts_at') ? 'after:sale_starts_at' : null,
                 $event->starts_at ? 'before_or_equal:'.$event->starts_at->format('Y-m-d\TH:i:s') : null,
             ]),
         ], [
@@ -168,16 +226,20 @@ class TicketTypeController extends Controller
 
         return [
             'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
             // Convert the decimal price to integer minor units, e.g. "12.50" =>
             // 1250. round() guards against binary float artefacts on multiply.
             'price_minor' => (int) round(((float) $validated['price']) * 100),
             'capacity_mode' => $validated['capacity_mode'],
-            // shared_pool types carry no per-type capacity. (Requirement 2.6)
-            'capacity' => $validated['capacity_mode'] === TicketType::MODE_SHARED_POOL
-                ? null
-                : (int) $validated['capacity'],
-            'sale_starts_at' => $validated['sale_starts_at'],
-            'sale_ends_at' => $validated['sale_ends_at'],
+            // Only capped types carry a per-type capacity; shared_pool and
+            // unlimited types have no per-type ceiling. (Requirements 7.2, 7.3, 7.4)
+            'capacity' => $validated['capacity_mode'] === TicketType::MODE_CAPPED
+                ? (int) $validated['capacity']
+                : null,
+            // Absent datetimes (default checkbox left checked) persist as null.
+            // (Requirements 8.3, 8.4, 8.9)
+            'sale_starts_at' => $validated['sale_starts_at'] ?? null,
+            'sale_ends_at' => $validated['sale_ends_at'] ?? null,
         ];
     }
 

@@ -278,6 +278,10 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
         Route::post('/events/{event}/ticket-types', [TicketTypeController::class, 'store'])->name('events.ticket-types.store');
         Route::put('/events/{event}/ticket-types/{ticketType}', [TicketTypeController::class, 'update'])->name('events.ticket-types.update');
         Route::patch('/events/{event}/ticket-types/{ticketType}', [TicketTypeController::class, 'update']);
+        // Delete a Ticket_Type. Refuses (redirect back with an error) to drop
+        // the last remaining type of a published Event so the "≥1 ticket type"
+        // publish blocker can never be violated from the accordion. (Req 6.2)
+        Route::delete('/events/{event}/ticket-types/{ticketType}', [TicketTypeController::class, 'destroy'])->name('events.ticket-types.destroy');
 
         // Event sponsors (Admin-gated in the controller), nested under an Event.
         // A repeatable list of sponsor logos with optional store-page details

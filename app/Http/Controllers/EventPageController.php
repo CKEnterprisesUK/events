@@ -145,23 +145,31 @@ class EventPageController extends Controller
 
     /**
      * Classify a Ticket_Type's sale window relative to `$now`, using the
-     * half-open interval `[sale_starts_at, sale_ends_at)`:
-     *   - `not_yet`  — before the window opens (Requirement 6.4);
-     *   - `ended`    — at or after the window closes (Requirement 6.5);
-     *   - `on_sale`  — within the window;
-     *   - `unavailable` — no sale window is defined.
+     * effective half-open interval `[effectiveStart, effectiveEnd)` — matching
+     * {@see TicketType::isOnSaleAt}, where a null bound relaxes rather than
+     * closes the window:
+     *   - `effectiveStart` = `sale_starts_at`, or no lower bound when null
+     *     (the type opens at publication). (Requirement 8.7)
+     *   - `effectiveEnd`   = `sale_ends_at`, else the Event start time, else no
+     *     upper bound (on sale until the event starts). (Requirement 8.8)
+     *
+     * Returns:
+     *   - `not_yet`  — before the effective start (Requirement 6.4);
+     *   - `ended`    — at or after the effective end (Requirement 6.5);
+     *   - `on_sale`  — within the window.
      */
     private function saleState(TicketType $type, Carbon $now): string
     {
-        if ($type->sale_starts_at === null || $type->sale_ends_at === null) {
-            return 'unavailable';
-        }
+        // null => opens at publication (no lower bound here).
+        $start = $type->sale_starts_at;
+        // null => event start, else no upper bound.
+        $end = $type->sale_ends_at ?? $type->event?->starts_at;
 
-        if ($now->lessThan($type->sale_starts_at)) {
+        if ($start !== null && $now->lessThan($start)) {
             return 'not_yet';
         }
 
-        if ($now->greaterThanOrEqualTo($type->sale_ends_at)) {
+        if ($end !== null && $now->greaterThanOrEqualTo($end)) {
             return 'ended';
         }
 
