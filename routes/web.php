@@ -9,10 +9,12 @@ use App\Http\Controllers\BrandingController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EmbedController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\EventPageController;
 use App\Http\Controllers\EventReportController;
 use App\Http\Controllers\EventSponsorController;
+use App\Http\Controllers\EventWizardController;
 use App\Http\Controllers\GdprController;
 use App\Http\Controllers\HelpController;
 use App\Http\Controllers\InvitationController;
@@ -21,6 +23,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ScanController;
+use App\Http\Controllers\SharingController;
 use App\Http\Controllers\StorefrontController;
 use App\Http\Controllers\StripeConnectController;
 use App\Http\Controllers\StripeReturnController;
@@ -221,9 +224,26 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
         // publish are scoped to the authenticated user's Company by the
         // `dashboard.tenant` group. (Requirements 5.1, 5.2, 5.3, 5.4, 5.5)
         Route::get('/events', [EventController::class, 'index'])->name('events.index');
-        // Dedicated create screen. Declared before `/events/{event}` so the
-        // literal `create` segment is not resolved as an Event id.
-        Route::get('/events/create', [EventController::class, 'create'])->name('events.create');
+        // Multi-step create wizard. `events.create` keeps its name so the "New
+        // event" links (events index + main sidebar) keep working — it now
+        // renders the wizard's first step ("basics") instead of the old slim
+        // form. The optional `{step?}` segment mirrors the design's route table;
+        // start() always renders step 1. Declared before `/events/{event}` so
+        // the literal `create` segment is not resolved as an Event id.
+        // (Requirements 4.1, 4.2, 4.13, 4.15)
+        Route::get('/events/create/{step?}', [EventWizardController::class, 'start'])->name('events.create');
+        // Step 1 submit: creates the tenant-scoped draft Event and advances to
+        // the "when" step.
+        Route::post('/events/wizard', [EventWizardController::class, 'store'])->name('events.wizard.store');
+        // Per-step render (GET) and persist-and-advance (POST/PATCH) against the
+        // draft Event. Declared before `/events/{event}` so the tenant-scoped
+        // binding resolves and foreign events 404.
+        Route::get('/events/{event}/setup/{step}', [EventWizardController::class, 'step'])->name('events.wizard.step');
+        Route::match(['post', 'patch'], '/events/{event}/setup/{step}', [EventWizardController::class, 'save'])->name('events.wizard.save');
+
+        // Legacy slim-form create action. Superseded by `events.wizard.store`
+        // but left registered (harmless) to avoid breaking any programmatic
+        // callers; can be removed in a later cleanup. (Design: "New / changed routes")
         Route::post('/events', [EventController::class, 'store'])->name('events.store');
         Route::get('/events/{event}', [EventController::class, 'show'])->name('events.show');
         Route::put('/events/{event}', [EventController::class, 'update'])->name('events.update');
@@ -247,6 +267,15 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
         Route::patch('/events/{event}/capacity', [EventController::class, 'updateCapacity'])->name('events.capacity.update');
         Route::get('/events/{event}/share', [EventController::class, 'share'])->name('events.share');
         Route::get('/events/{event}/orders', [EventController::class, 'orders'])->name('events.orders');
+
+        // Sharing hub (Admin-gated in the controller via ACTION_MANAGE_EVENTS).
+        // A single promotion surface: a downloadable QR pointing at the public
+        // storefront, plus copy-and-paste iframe embed snippets (a booking feed
+        // of all published Events, and a per-event tickets widget). `qr` streams
+        // the storefront QR PNG. Scoped to the authenticated user's Company by
+        // the `dashboard.tenant` group.
+        Route::get('/sharing', [SharingController::class, 'index'])->name('sharing.index');
+        Route::get('/sharing/qr', [SharingController::class, 'storefrontQr'])->name('sharing.qr');
 
         // Per-event activity trail + the "reset check-ins" control. `history`
         // (Admin/Box_Office-gated via ACTION_MANAGE_EVENTS, like the other
@@ -535,6 +564,22 @@ Route::middleware('tenant')->group(function () {
     Route::get('/{companySlug}', [StorefrontController::class, 'index'])
         ->where('companySlug', '[A-Za-z0-9-]+')
         ->name('storefront');
+
+    // Public embeddable widgets at `/{company-slug}/embed/...`. These render
+    // minimal, iframe-friendly pages a Company drops onto its own website: a
+    // booking feed of all its published Events, or a per-event tickets widget.
+    // Both resolve within the active Company (foreign/unpublished Events 404)
+    // and link out to the storefront / event / checkout pages in a new tab.
+    // Declared before `/{companySlug}/{event}` so the literal `embed` segment
+    // is not resolved as an Event id.
+    Route::get('/{companySlug}/embed/booking', [EmbedController::class, 'booking'])
+        ->where('companySlug', '[A-Za-z0-9-]+')
+        ->name('embed.booking');
+
+    Route::get('/{companySlug}/embed/{event}/tickets', [EmbedController::class, 'tickets'])
+        ->where('companySlug', '[A-Za-z0-9-]+')
+        ->where('event', '[0-9]+')
+        ->name('embed.tickets');
 
     // Public Event page at `/{company-slug}/{event-id}/`. The Event is resolved
     // within the active Company by the global tenant scope (foreign Event ids

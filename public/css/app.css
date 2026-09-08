@@ -191,6 +191,39 @@ main.public-main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; min-h
     .wizard-step { justify-content: center; }
 }
 
+/* ---- Create-event wizard: two-column shell (panel + contextual help) ----
+   Reuses the .wizard-steps/.wizard-panel/.wizard-nav tokens above; adds the
+   dashboard-wide layout with a contextual .wizard-help aside (Req 4.12). */
+.wizard-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 20rem;
+    gap: 1.5rem;
+    align-items: start;
+}
+.wizard-main { min-width: 0; }
+.wizard-help {
+    background: #f5f6ff;
+    border: 1px solid #c7cbff;
+    border-radius: var(--radius);
+    padding: 1.1rem 1.2rem;
+    position: sticky;
+    top: 1rem;
+}
+.wizard-help__inner { font-size: 0.9rem; color: var(--muted); }
+.wizard-help__title { font-size: 1rem; font-weight: 700; color: var(--ink); margin: 0 0 0.6rem; }
+.wizard-help p { margin: 0 0 0.7rem; line-height: 1.5; }
+.wizard-help p:last-child { margin-bottom: 0; }
+.wizard-help strong { color: var(--ink); }
+.wizard-skip { margin-left: auto; }
+/* When Skip is present it takes the auto-left margin, so Continue sits flush
+   to its right rather than being pushed away on its own. */
+.wizard-nav .wizard-skip ~ .btn[type="submit"] { margin-left: 0.6rem; }
+
+@media (max-width: 860px) {
+    .wizard-shell { grid-template-columns: 1fr; }
+    .wizard-help { position: static; order: -1; }
+}
+
 /* Landing hero */
 .hero { text-align: center; padding: 3rem 0 2.5rem; }
 .hero h1 { font-size: 2.5rem; max-width: 720px; margin: 0 auto 1rem; }
@@ -298,6 +331,24 @@ main.dashboard-main { flex: 1; padding: 1.75rem; max-width: 1100px; width: 100%;
 
 .page-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.5rem; }
 .page-head h1 { margin: 0; }
+
+/* ---- Manage-event top bar (Req 5) ----
+   The primary action surface for a single event's manage screens. It is the
+   sole child of `.page-head`, so it spans the full row and lays out the title
+   cluster (event name + live/draft pill, inline) on the left and the publish /
+   navigation actions on the right. Uses existing tokens only. */
+.manage-topbar {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem 1rem;
+}
+.manage-topbar__title { display: flex; align-items: center; gap: 0.65rem; min-width: 0; }
+.manage-topbar__title h1 { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.manage-topbar__actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-left: auto; }
+.manage-topbar__actions form { margin: 0; }
 
 /* Sidebar backdrop for mobile */
 .sidebar-backdrop { display: none; }
@@ -1243,7 +1294,9 @@ fieldset.field > legend {
 .store-sponsors__grid--expanded {
     display: grid; grid-template-columns: 1fr; gap: 1rem; align-items: stretch;
 }
-@media (min-width: 620px) {
+/* Only go two-up on wider viewports; inside the event page's primary column a
+   single column keeps each sponsor's bio comfortably readable. */
+@media (min-width: 1100px) {
     .store-sponsors__grid--expanded { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .store-sponsor--expanded {
@@ -1251,13 +1304,27 @@ fieldset.field > legend {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: var(--radius); padding: 1rem 1.1rem;
 }
-.store-sponsor--expanded .store-sponsor__logo { flex: none; }
-.store-sponsor--expanded .store-sponsors__img { margin: 0; max-height: 72px; }
+/* Fixed-width logo column so the info column keeps the rest of the row and the
+   bio reads as normal wrapped text rather than one word per line. */
+.store-sponsor--expanded .store-sponsor__logo {
+    flex: 0 0 auto; width: 140px; display: flex; align-items: center; justify-content: center;
+}
+.store-sponsor--expanded .store-sponsors__img {
+    margin: 0; width: 100%; max-width: 140px; max-height: 72px; object-fit: contain;
+    background: none; border: none; padding: 0;
+}
 .store-sponsor--expanded .store-sponsor__info {
+    /* Take the remaining width and allow the text to shrink/wrap normally. */
+    flex: 1 1 auto; min-width: 0;
     margin: 0; max-width: none; background: none; border: none; padding: 0;
     display: flex; flex-direction: column; gap: 0.35rem;
 }
-.store-sponsor--expanded .store-sponsor__bio { color: var(--body, #454a5a); font-size: 0.9rem; line-height: 1.55; }
+.store-sponsor--expanded .store-sponsor__name { margin: 0; }
+.store-sponsor--expanded .store-sponsor__bio {
+    color: var(--body, #454a5a); font-size: 0.9rem; line-height: 1.55;
+    margin: 0; overflow-wrap: anywhere;
+}
+.store-sponsor--expanded .store-sponsor__link { margin: 0; }
 .store-sponsor__logolink { display: inline-flex; }
 
 /* =============================================================================
@@ -1390,3 +1457,114 @@ fieldset.field > legend {
 .ticket-form__sales [data-sales-start],
 .ticket-form__sales [data-sales-end] { margin-bottom: 0.5rem; }
 .ticket-form__delete { margin-left: auto; }
+
+/* ---- Whole-row navigation (stretched-link) ----
+   A dashboard table row can navigate as a whole while still hosting
+   independently-clickable controls. The row is a positioning context; the
+   primary destination anchor (.row-link) grows a ::after pseudo-element that
+   covers the entire row, so a click anywhere on the row activates it. Any other
+   interactive control in the row (.row-action) is lifted above that layer so it
+   stays clickable. Keyboard users focus the real .row-link anchor and activate
+   it with Enter; :focus-within surfaces the ring on the whole row. */
+.row-nav { position: relative; cursor: pointer; transition: background 0.15s ease; }
+.row-nav:hover { background: #f3f4f6; }
+.row-nav:focus-within { background: #f3f4f6; }
+
+.row-link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+}
+/* Suppress the anchor's own focus ring; the row's :focus-within provides the
+   affordance and the outline would only wrap the text, not the row. */
+.row-nav:focus-within { outline: 2px solid var(--brand); outline-offset: -2px; }
+.row-link:focus-visible { outline: none; box-shadow: none; }
+
+/* Secondary controls sit above the stretched pseudo-element so they remain
+   clickable on their own. */
+.row-nav .row-action { position: relative; z-index: 1; }
+
+/* =============================================================================
+   Collapsible sidebars (Req 2.3–2.7, 10.2, 10.6)
+   Two independent, persisted rail modes:
+     - Main_Sidebar    → `.app-shell--rail` on #appShell   (key ck.sidebar.main)
+     - Section_Nav      → `.event-manage--rail` on #eventManage (key ck.sidebar.section)
+   Both are DESKTOP-ONLY (min-width: 861px). Below that, the existing mobile
+   drawer (`nav-open` + #sidebarBackdrop) is the sole navigation affordance and
+   is left completely untouched; the rail toggle buttons are hidden there.
+   Uses existing tokens (--brand, --dark-*, --border, --radius) and the global
+   :focus-visible ring — no new primitives.
+   ============================================================================= */
+
+/* ---- Toggle buttons + heads (both sidebars) ---- */
+.app-sidebar__head {
+    display: flex; justify-content: flex-end; align-items: center;
+    padding: 0 0.25rem 0.5rem; margin-bottom: 0.25rem;
+}
+.app-sidebar__toggle {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 2rem; height: 2rem; padding: 0;
+    background: transparent; border: 1px solid transparent; border-radius: var(--radius);
+    color: var(--dark-text-dim); cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.app-sidebar__toggle:hover { background: var(--dark-border); color: #fff; }
+
+.section-nav__head {
+    display: flex; justify-content: flex-end; align-items: center;
+    margin-bottom: 0.35rem;
+}
+.section-nav__toggle {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 2rem; height: 2rem; padding: 0;
+    background: transparent; border: 1px solid var(--border); border-radius: 0.55rem;
+    color: var(--muted); cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.section-nav__toggle:hover { background: #f3f4f6; color: var(--ink); }
+
+/* On mobile the drawer is the affordance — hide the rail toggles entirely so
+   they can't put the sidebars into a state the drawer doesn't understand. */
+@media (max-width: 860px) {
+    .app-sidebar__head,
+    .section-nav__head { display: none; }
+}
+
+/* ---- Desktop rail modes (icons-only). Guarded so mobile keeps the drawer. ---- */
+@media (min-width: 861px) {
+    /* Main_Sidebar rail: shrink to a narrow icons-only column. */
+    .app-shell--rail .app-sidebar {
+        width: 64px;
+        padding-left: 0.4rem; padding-right: 0.4rem;
+    }
+    /* Hide link text + section headings; keep the icon, centred. */
+    .app-shell--rail .app-sidebar .nav-section { display: none; }
+    .app-shell--rail .app-sidebar .nav-link {
+        justify-content: center; gap: 0;
+        padding-left: 0; padding-right: 0;
+    }
+    /* Hide everything in the link except the icon (label text is a bare node). */
+    .app-shell--rail .app-sidebar .nav-link { font-size: 0; }
+    .app-shell--rail .app-sidebar .nav-link .nav-ico { font-size: initial; }
+    /* Toggle sits centred above the rail. */
+    .app-shell--rail .app-sidebar__head { justify-content: center; }
+
+    /* Section_Nav rail: narrow the grid's first column and drop link labels. */
+    .event-manage--rail {
+        grid-template-columns: 56px minmax(0, 1fr);
+    }
+    .event-manage--rail .section-nav__link {
+        justify-content: center; gap: 0; padding-left: 0; padding-right: 0;
+    }
+    /* Hide the label text span + the status flag (+ its sr-only text stays for AT). */
+    .event-manage--rail .section-nav__link > span:not(.sr-only) { display: none; }
+    .event-manage--rail .section-nav__flag { display: none; }
+    .event-manage--rail .section-nav__head { justify-content: center; }
+    /* Publish checklist card collapses to a compact summary in the rail:
+       keep the heading + "N/N required" progress line, hide the verbose
+       checklist body and footer hint. */
+    .event-manage--rail .publish-card .checklist,
+    .event-manage--rail .publish-card__foot { display: none; }
+    .event-manage--rail .publish-card__head { border-bottom: 0; }
+}

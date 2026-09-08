@@ -41,7 +41,7 @@
                 <tbody>
                     @foreach ($events as $event)
                         @php $poster = $event->poster_path ?? $event->company->poster_path; @endphp
-                        <tr>
+                        <tr class="row-nav">
                             <td>
                                 <div class="cell-event">
                                     @if ($poster)
@@ -50,7 +50,7 @@
                                              alt="Hero image for {{ $event->name }}">
                                     @endif
                                     <span class="cell-event__meta">
-                                        <a class="cell-strong" href="{{ route('dashboard.events.show', $event) }}">{{ $event->name }}</a>
+                                        <a class="cell-strong row-link" href="{{ route('dashboard.events.show', $event) }}">{{ $event->name }}</a>
                                         @if ($event->venue)
                                             <span class="cell-dim">{{ $event->venue }}</span>
                                         @endif
@@ -63,7 +63,7 @@
                                     {{ $event->isPublished() ? 'Published' : 'Draft' }}
                                 </span>
                             </td>
-                            <td class="num"><a class="panel__link" href="{{ route('dashboard.events.show', $event) }}">Manage</a></td>
+                            <td class="num"><a class="panel__link row-action" href="{{ route('dashboard.events.show', $event) }}">Manage</a></td>
                         </tr>
                     @endforeach
                 </tbody>

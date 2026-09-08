@@ -147,6 +147,11 @@
         "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
         "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
         "timestamp": 1788891106350
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788891260274
       }
     ],
     "5.1 Create the `x-icon` anonymous Blade component": [
@@ -227,6 +232,11 @@
         "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
         "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
         "timestamp": 1788891107282
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788891261113
       }
     ],
     "7.1 Create `EventWizardController` and register wizard routes": [
@@ -234,6 +244,16 @@
         "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
         "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
         "timestamp": 1788889915927
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788891267472
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788891481833
       }
     ],
     "7.2 Build the wizard layout and per-step views with contextual help": [
@@ -241,6 +261,16 @@
         "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
         "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
         "timestamp": 1788889915971
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788891490340
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788891866428
       }
     ],
     "7.3 Implement per-step persistence, progressive validation, and navigation": [
@@ -248,6 +278,16 @@
         "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
         "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
         "timestamp": 1788889916006
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788891874936
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788892111418
       }
     ],
     "8.1 Create `_manage_topbar` and move publish/unpublish out of `_publish_card`": [
@@ -255,6 +295,16 @@
         "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
         "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
         "timestamp": 1788889916039
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788891268904
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788891483256
       }
     ],
     "9.1 Convert `_nav.blade.php` to SVG icons and add the collapse control": [
@@ -262,6 +312,16 @@
         "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
         "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
         "timestamp": 1788889916070
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788891269932
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788891484433
       }
     ],
     "9.2 Convert Main_Sidebar emoji to SVG and add its collapse control": [
@@ -269,6 +329,16 @@
         "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
         "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
         "timestamp": 1788889916104
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788891491308
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788891866478
       }
     ],
     "9.3 Add collapse CSS and the persisted-toggle JS": [
@@ -276,6 +346,16 @@
         "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
         "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
         "timestamp": 1788889916131
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788891875761
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788892112293
       }
     ],
     "10.1 Add stretched-link CSS and apply row markup to events and customers lists": [
@@ -283,6 +363,16 @@
         "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
         "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
         "timestamp": 1788889916164
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788891492598
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788891867617
       }
     ],
     "11.1 Consolidate `app.css` additions and run the full verification pass": [
@@ -290,6 +380,11 @@
         "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
         "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
         "timestamp": 1788889916193
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788892117442
       }
     ],
     "11.3 Checkpoint - Ensure all tests pass": [
@@ -325,6 +420,48 @@
         "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
         "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
         "timestamp": 1788890929222
+      }
+    ],
+    "4. Ticket-type controller: validation, destroy action, and route": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788891260330
+      }
+    ],
+    "6. Ticket accordion component": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788891261140
+      }
+    ],
+    "8. Publish action on the manage top bar": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788891483298
+      }
+    ],
+    "10. Whole-row navigation in dashboard tables": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788891867652
+      }
+    ],
+    "7. Multi-step create wizard": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788892111460
+      }
+    ],
+    "9. Section_Nav SVG icons and collapsible sidebars": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788892112325
       }
     ]
   }

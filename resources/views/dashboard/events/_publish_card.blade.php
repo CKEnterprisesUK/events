@@ -1,11 +1,15 @@
 {{--
     Publish checklist card — the single, at-a-glance source of truth for what's
-    done and what still blocks publishing, plus the Publish/Unpublish control.
-    Pinned in the right column of the manage-event layout.
+    done and what still blocks publishing. Pinned in the right column of the
+    manage-event layout. The Publish/Unpublish control now lives in the manage
+    top bar (`_manage_topbar.blade.php`); this card is the checklist only.
 
     Expects:
-      $event     — the Event being managed.
-      $readiness — App\Services\Events\EventReadinessReport (->items()).
+      $event          — the Event being managed.
+      $readiness      — App\Services\Events\EventReadinessReport (->items()).
+      $allRequiredMet — bool computed once in layouts/event.blade.php from
+                        $readiness->items(); shared with the top bar so the
+                        card's hint text and the Publish button never disagree.
 
     Each ChecklistItem has ->key, ->label, ->satisfied, ->blocking. We map each
     key to the dedicated manage screen that fixes it, so an unmet item links
@@ -26,11 +30,11 @@
     $items = $readiness->items();
 
     // Blocking items decide publishability; count the outstanding ones for the
-    // progress line and to mirror the button's disabled state.
+    // progress line and the hint text. The button's disabled state lives in the
+    // top bar and is driven by the shared $allRequiredMet flag.
     $blockingItems = array_values(array_filter($items, fn ($i) => $i->blocking));
     $blockingTotal = count($blockingItems);
     $blockingDone = count(array_filter($blockingItems, fn ($i) => $i->satisfied));
-    $allRequiredMet = $blockingDone === $blockingTotal;
 @endphp
 
 <div class="publish-card">
@@ -74,21 +78,11 @@
 
     <div class="publish-card__foot">
         @if ($event->isPublished())
-            <form method="POST" action="{{ route('dashboard.events.unpublish', $event) }}">
-                @csrf
-                <button type="submit" class="btn btn-outline">Unpublish</button>
-            </form>
             <p class="publish-card__note">&check; This event is live.</p>
+        @elseif ($allRequiredMet)
+            <p class="publish-card__hint">Everything's ready. Publish from the top of the page when you are.</p>
         @else
-            <form method="POST" action="{{ route('dashboard.events.publish', $event) }}">
-                @csrf
-                <button type="submit" class="btn" @disabled(! $allRequiredMet)>Publish event</button>
-            </form>
-            @if ($allRequiredMet)
-                <p class="publish-card__hint">Everything's ready. Publish when you are.</p>
-            @else
-                <p class="publish-card__hint">Complete the {{ $blockingTotal - $blockingDone }} required {{ \Illuminate\Support\Str::plural('item', $blockingTotal - $blockingDone) }} above to publish.</p>
-            @endif
+            <p class="publish-card__hint">Complete the {{ $blockingTotal - $blockingDone }} required {{ \Illuminate\Support\Str::plural('item', $blockingTotal - $blockingDone) }} above to publish.</p>
         @endif
     </div>
 </div>

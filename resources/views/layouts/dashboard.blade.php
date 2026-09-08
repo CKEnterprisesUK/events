@@ -254,72 +254,88 @@
         <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
         <aside class="app-sidebar" id="appSidebar">
+            {{-- Desktop-only collapse control for the Main_Sidebar. Toggles
+                 `app-shell--rail` on `#appShell` to switch to an icons-only rail;
+                 wired up + persisted (localStorage key ck.sidebar.main) by the
+                 bindCollapse JS in task 9.3. This is SEPARATE from the mobile
+                 hamburger (#navToggle / `nav-open` drawer), which is unchanged. --}}
+            <div class="app-sidebar__head">
+                <button type="button"
+                        id="mainNavToggle"
+                        class="app-sidebar__toggle"
+                        aria-expanded="true"
+                        aria-controls="appShell"
+                        aria-label="Collapse navigation">
+                    <x-icon name="panel-left" />
+                </button>
+            </div>
             <nav aria-label="Primary">
                 @if ($isSuperAdmin && ! $impersonating)
                     {{-- Super Admin platform surface --}}
                     <p class="nav-section">Platform</p>
-                    <a class="nav-link {{ $navActive('admin.home') ? 'active' : '' }}" href="{{ route('admin.home') }}"><span class="nav-ico">&#128200;</span> Dashboard</a>
-                    <a class="nav-link {{ $navActive('admin.clients.*') ? 'active' : '' }}" href="{{ route('admin.clients.index') }}"><span class="nav-ico">&#127970;</span> Clients</a>
-                    <a class="nav-link {{ $navActive('admin.transactions.*') ? 'active' : '' }}" href="{{ route('admin.transactions.index') }}"><span class="nav-ico">&#128202;</span> Transactions</a>
-                    <a class="nav-link {{ $navActive('admin.audit.*') ? 'active' : '' }}" href="{{ route('admin.audit.index') }}"><span class="nav-ico">&#128220;</span> Audit trail</a>
-                    <a class="nav-link {{ $navActive('admin.fees.*') ? 'active' : '' }}" href="{{ route('admin.fees.index') }}"><span class="nav-ico">&#128176;</span> Fees</a>
-                    <a class="nav-link {{ $navActive('admin.legal.*') ? 'active' : '' }}" href="{{ route('admin.legal.index') }}"><span class="nav-ico">&#128220;</span> Trust &amp; Legal</a>
-                    <a class="nav-link {{ $navActive('admin.reserved-slugs.*') ? 'active' : '' }}" href="{{ route('admin.reserved-slugs.index') }}"><span class="nav-ico">&#128683;</span> Reserved slugs</a>
-                    <a class="nav-link {{ $navActive('admin.settings.*') ? 'active' : '' }}" href="{{ route('admin.settings.index') }}"><span class="nav-ico">&#9881;</span> Settings</a>
+                    <a class="nav-link {{ $navActive('admin.home') ? 'active' : '' }}" href="{{ route('admin.home') }}"><x-icon name="dashboard" class="nav-ico" /> Dashboard</a>
+                    <a class="nav-link {{ $navActive('admin.clients.*') ? 'active' : '' }}" href="{{ route('admin.clients.index') }}"><x-icon name="customers" class="nav-ico" /> Clients</a>
+                    <a class="nav-link {{ $navActive('admin.transactions.*') ? 'active' : '' }}" href="{{ route('admin.transactions.index') }}"><x-icon name="payments" class="nav-ico" /> Transactions</a>
+                    <a class="nav-link {{ $navActive('admin.audit.*') ? 'active' : '' }}" href="{{ route('admin.audit.index') }}"><x-icon name="history" class="nav-ico" /> Audit trail</a>
+                    <a class="nav-link {{ $navActive('admin.fees.*') ? 'active' : '' }}" href="{{ route('admin.fees.index') }}"><x-icon name="payments" class="nav-ico" /> Fees</a>
+                    <a class="nav-link {{ $navActive('admin.legal.*') ? 'active' : '' }}" href="{{ route('admin.legal.index') }}"><x-icon name="report" class="nav-ico" /> Trust &amp; Legal</a>
+                    <a class="nav-link {{ $navActive('admin.reserved-slugs.*') ? 'active' : '' }}" href="{{ route('admin.reserved-slugs.index') }}"><x-icon name="cross" class="nav-ico" /> Reserved slugs</a>
+                    <a class="nav-link {{ $navActive('admin.settings.*') ? 'active' : '' }}" href="{{ route('admin.settings.index') }}"><x-icon name="settings" class="nav-ico" /> Settings</a>
                 @else
                     {{-- Company dashboard, adapts to the user's role --}}
                     @if ($impersonating)
                         <p class="nav-section">Super Admin</p>
-                        <a class="nav-link" href="{{ route('admin.home') }}"><span class="nav-ico">&#8592;</span> Back to platform</a>
+                        <a class="nav-link" href="{{ route('admin.home') }}"><x-icon name="chevron" class="nav-ico" /> Back to platform</a>
                     @endif
                     <p class="nav-section">Overview</p>
-                    <a class="nav-link {{ $navActive('dashboard.home') ? 'active' : '' }}" href="{{ route('dashboard.home') }}"><span class="nav-ico">&#127968;</span> Dashboard</a>
+                    <a class="nav-link {{ $navActive('dashboard.home') ? 'active' : '' }}" href="{{ route('dashboard.home') }}"><x-icon name="dashboard" class="nav-ico" /> Dashboard</a>
 
                     @can('events')
                         <p class="nav-section">Manage</p>
-                        <a class="nav-link {{ $navActive('dashboard.events.*') ? 'active' : '' }}" href="{{ route('dashboard.events.index') }}"><span class="nav-ico">&#127903;</span> Events</a>
+                        <a class="nav-link {{ $navActive('dashboard.events.*') ? 'active' : '' }}" href="{{ route('dashboard.events.index') }}"><x-icon name="events" class="nav-ico" /> Events</a>
+                        <a class="nav-link {{ $navActive('dashboard.sharing.*') ? 'active' : '' }}" href="{{ route('dashboard.sharing.index') }}"><x-icon name="share" class="nav-ico" /> Sharing</a>
                     @endcan
 
                     @can('orders')
-                        <a class="nav-link {{ $navActive('dashboard.orders.*') ? 'active' : '' }}" href="{{ route('dashboard.orders.index') }}"><span class="nav-ico">&#129534;</span> Orders</a>
-                        <a class="nav-link {{ $navActive('dashboard.customers.*') ? 'active' : '' }}" href="{{ route('dashboard.customers.index') }}"><span class="nav-ico">&#128100;</span> Customers</a>
+                        <a class="nav-link {{ $navActive('dashboard.orders.*') ? 'active' : '' }}" href="{{ route('dashboard.orders.index') }}"><x-icon name="orders" class="nav-ico" /> Orders</a>
+                        <a class="nav-link {{ $navActive('dashboard.customers.*') ? 'active' : '' }}" href="{{ route('dashboard.customers.index') }}"><x-icon name="customers" class="nav-ico" /> Customers</a>
                     @endcan
 
                     @can('view_reports')
                         <p class="nav-section">Finance</p>
-                        <a class="nav-link {{ $navActive('dashboard.reports.*') ? 'active' : '' }}" href="{{ route('dashboard.reports.index') }}"><span class="nav-ico">&#128200;</span> Reports &amp; Payouts</a>
+                        <a class="nav-link {{ $navActive('dashboard.reports.*') ? 'active' : '' }}" href="{{ route('dashboard.reports.index') }}"><x-icon name="reports" class="nav-ico" /> Reports &amp; Payouts</a>
                     @endcan
 
                     @can('check_in')
                         <p class="nav-section">Door</p>
-                        <a class="nav-link {{ $navActive('dashboard.scan.*') ? 'active' : '' }}" href="{{ route('dashboard.scan.index') }}"><span class="nav-ico">&#128241;</span> Scan tickets</a>
+                        <a class="nav-link {{ $navActive('dashboard.scan.*') ? 'active' : '' }}" href="{{ route('dashboard.scan.index') }}"><x-icon name="scan" class="nav-ico" /> Scan tickets</a>
                     @endcan
 
                     @canany(['settings', 'stripe', 'users'])
                         <p class="nav-section">Company</p>
                         @can('users')
-                            <a class="nav-link {{ $navActive('dashboard.users.*') ? 'active' : '' }}" href="{{ route('dashboard.users.index') }}"><span class="nav-ico">&#128101;</span> Team</a>
+                            <a class="nav-link {{ $navActive('dashboard.users.*') ? 'active' : '' }}" href="{{ route('dashboard.users.index') }}"><x-icon name="team" class="nav-ico" /> Team</a>
                         @endcan
                         @can('settings')
                             {{-- Only light up for COMPANY-level settings/branding.
                                  Per-event branding (dashboard.branding.event.*)
                                  is reached from an Event, so it must not mark
                                  Settings active. --}}
-                            <a class="nav-link {{ $navActive('dashboard.settings.*', 'dashboard.branding.edit', 'dashboard.branding.update') ? 'active' : '' }}" href="{{ route('dashboard.branding.edit') }}"><span class="nav-ico">&#9881;</span> Settings</a>
+                            <a class="nav-link {{ $navActive('dashboard.settings.*', 'dashboard.branding.edit', 'dashboard.branding.update') ? 'active' : '' }}" href="{{ route('dashboard.branding.edit') }}"><x-icon name="settings" class="nav-ico" /> Settings</a>
                         @endcan
                         @can('stripe')
-                            <a class="nav-link {{ $navActive('dashboard.stripe.*') ? 'active' : '' }}" href="{{ route('dashboard.stripe.status') }}"><span class="nav-ico">&#128179;</span> Payments</a>
+                            <a class="nav-link {{ $navActive('dashboard.stripe.*') ? 'active' : '' }}" href="{{ route('dashboard.stripe.status') }}"><x-icon name="payments" class="nav-ico" /> Payments</a>
                         @endcan
                     @endcanany
 
                     @can('view_audit_log')
                         <p class="nav-section">Oversight</p>
-                        <a class="nav-link {{ $navActive('dashboard.activity.*') ? 'active' : '' }}" href="{{ route('dashboard.activity.index') }}"><span class="nav-ico">&#128220;</span> Activity</a>
+                        <a class="nav-link {{ $navActive('dashboard.activity.*') ? 'active' : '' }}" href="{{ route('dashboard.activity.index') }}"><x-icon name="activity" class="nav-ico" /> Activity</a>
                     @endcan
 
                     @if ($company)
                         <p class="nav-section">Public</p>
-                        <a class="nav-link" href="{{ url('/' . $company->slug) }}" target="_blank" rel="noopener"><span class="nav-ico">&#128279;</span> View storefront</a>
+                        <a class="nav-link" href="{{ url('/' . $company->slug) }}" target="_blank" rel="noopener"><x-icon name="storefront" class="nav-ico" /> View storefront</a>
                     @endif
                 @endif
 
@@ -331,13 +347,13 @@
                      is long enough to scroll. No @can gate — Help is generic
                      product guidance for everyone. --}}
                 <p class="nav-section nav-section-help">Support</p>
-                <a class="nav-link {{ $navActive('dashboard.help.*') ? 'active' : '' }}" href="{{ route('dashboard.help.index') }}"><span class="nav-ico">&#10067;</span> Help</a>
+                <a class="nav-link {{ $navActive('dashboard.help.*') ? 'active' : '' }}" href="{{ route('dashboard.help.index') }}"><x-icon name="help" class="nav-ico" /> Help</a>
                 @if ($isSuperAdmin && ! $impersonating)
                     {{-- A non-impersonating Super_Admin IS support, so they get
                          the incoming ticket queue rather than a contact form. --}}
-                    <a class="nav-link {{ $navActive('admin.support.*') ? 'active' : '' }}" href="{{ route('admin.support.index') }}"><span class="nav-ico">&#128172;</span> Support tickets</a>
+                    <a class="nav-link {{ $navActive('admin.support.*') ? 'active' : '' }}" href="{{ route('admin.support.index') }}"><x-icon name="support" class="nav-ico" /> Support tickets</a>
                 @else
-                    <a class="nav-link {{ $navActive('dashboard.support.*') ? 'active' : '' }}" href="{{ route('dashboard.support.create') }}"><span class="nav-ico">&#128172;</span> Contact support</a>
+                    <a class="nav-link {{ $navActive('dashboard.support.*') ? 'active' : '' }}" href="{{ route('dashboard.support.create') }}"><x-icon name="support" class="nav-ico" /> Contact support</a>
                 @endif
             </nav>
         </aside>
@@ -358,6 +374,35 @@
 </div>
 
 <script>
+    // Generic collapse toggle with persistence (Req 2.3–2.7). Toggles a rail
+    // class on the target, persists "rail"|"open" under storeKey, keeps
+    // aria-expanded + aria-label in sync, and nudges a Leaflet map (exposed as
+    // window.__eventMap by _location.blade.php) to recompute its size once the
+    // rail width has settled. Returns early when the button/target aren't on
+    // the page, so it's safe to call for the section nav on every dashboard
+    // page even though it only exists on the manage screen.
+    function bindCollapse(btnId, targetId, cls, storeKey) {
+        var btn = document.getElementById(btnId), target = document.getElementById(targetId);
+        if (!btn || !target) return;
+        if (localStorage.getItem(storeKey) === 'rail') target.classList.add(cls);
+        var sync = function () {
+            var railed = target.classList.contains(cls);
+            btn.setAttribute('aria-expanded', railed ? 'false' : 'true');
+            btn.setAttribute('aria-label', railed ? 'Expand navigation' : 'Collapse navigation');
+        };
+        sync();
+        btn.addEventListener('click', function () {
+            var railed = target.classList.toggle(cls);
+            localStorage.setItem(storeKey, railed ? 'rail' : 'open');
+            sync();
+            if (window.__eventMap) setTimeout(function () { window.__eventMap.invalidateSize(); }, 200);
+        });
+    }
+    // Main_Sidebar (every dashboard page) + Section_Nav (manage screen only;
+    // guarded by existence inside bindCollapse).
+    bindCollapse('mainNavToggle', 'appShell', 'app-shell--rail', 'ck.sidebar.main');
+    bindCollapse('sectionNavToggle', 'eventManage', 'event-manage--rail', 'ck.sidebar.section');
+
     (function () {
         var shell = document.getElementById('appShell');
         var toggle = document.getElementById('navToggle');

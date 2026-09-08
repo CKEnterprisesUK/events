@@ -176,13 +176,16 @@ class TicketTypeManagementTest extends TestCase
 
         $this->assertSame(50, $ticketType->availableQuantity());
 
-        // Ticket-type management lives on the dedicated "Tickets" screen, which
-        // renders each capped type's "{n} remaining" availability. (The index
-        // route redirects there.)
+        // Ticket-type management lives on the dedicated "Tickets" screen, now
+        // rendered by the inline accordion (Req 6). The accordion summary shows
+        // a capped type's availability as "{available} / {capacity}" (remaining
+        // of total, per Req 6.3) rather than the old "{n} remaining" phrasing.
+        // The display format changed intentionally with the accordion redesign;
+        // here available = 100 - 30 - 20 = 50 and capacity = 100 => "50 / 100".
         $this->actingAs($admin)
             ->get(route('dashboard.events.tickets', $event))
             ->assertStatus(200)
-            ->assertSee('50 remaining');
+            ->assertSee('50 / 100');
     }
 
     // ---- Field validation ----------------------------------------------------

@@ -138,15 +138,15 @@
                 <tbody>
                     @foreach ($customers as $customer)
                         @php $token = CustomerController::tokenFor($customer->customer_email); @endphp
-                        <tr>
+                        <tr class="row-nav">
                             <td>
-                                <a class="cell-strong" href="{{ route('dashboard.customers.show', $token) }}">{{ $customer->customer_name }}</a>
+                                <a class="cell-strong row-link" href="{{ route('dashboard.customers.show', $token) }}">{{ $customer->customer_name }}</a>
                                 <span class="cell-dim">{{ $customer->customer_email }}</span>
                             </td>
                             <td class="num">{{ number_format($customer->orders_count) }}</td>
                             <td class="num">{{ $symbol }}{{ number_format($customer->spend_minor / 100, 2) }}</td>
                             <td>{{ $customer->last_order_at ? \Illuminate\Support\Carbon::parse($customer->last_order_at)->format('j M Y, H:i') : '—' }}</td>
-                            <td class="num"><a class="panel__link" href="{{ route('dashboard.customers.show', $token) }}">View</a></td>
+                            <td class="num"><a class="panel__link row-action" href="{{ route('dashboard.customers.show', $token) }}">View</a></td>
                         </tr>
                     @endforeach
                 </tbody>
