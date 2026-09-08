@@ -31,19 +31,30 @@
         <p id="scanner-status" class="scanner-hint">Requesting camera access…</p>
 
         {{--
-            The decoded payload is POSTed here. The client-side decoder sets the
-            hidden field's value and submits; the button also lets an operator
-            submit a manually entered/pasted payload if the camera is
-            unavailable. The server (ScanController@scan) is authoritative.
+            The decoded payload is POSTed here. The client-side decoder writes
+            the scanned value into the hidden field and submits automatically.
+
+            The payload field is a HIDDEN input by default so the on-screen
+            keyboard never pops up over the camera — the camera path needs no
+            typing. Manual entry stays as a fallback for when the camera is
+            unavailable, but it's collapsed behind the "Enter code manually"
+            toggle and only then does a real text field (and the keyboard)
+            appear. The server (ScanController@scan) is authoritative.
         --}}
         <form id="scan-form" method="POST" action="{{ route('dashboard.scan.submit') }}">
             @csrf
-            <div class="field">
-                <label for="scan-payload">Scanned code</label>
-                <input type="text" id="scan-payload" name="payload" autocomplete="off"
-                       value="{{ old('payload') }}" />
+            <input type="hidden" id="scan-payload" name="payload" value="{{ old('payload') }}" />
+
+            <button type="button" id="scan-manual-toggle" class="scanner__manual-toggle">
+                Enter code manually
+            </button>
+
+            <div id="scan-manual" class="field scanner__manual" hidden>
+                <label for="scan-payload-manual">Scanned code</label>
+                <input type="text" id="scan-payload-manual" autocomplete="off"
+                       autocapitalize="off" autocorrect="off" spellcheck="false" />
+                <button type="submit" class="btn">Check in</button>
             </div>
-            <button type="submit" class="btn">Check in</button>
         </form>
 
         @isset($result)
@@ -122,6 +133,17 @@
             text-decoration: none;
         }
         .scanner__back:hover { text-decoration: underline; }
+        .scanner__manual-toggle {
+            background: none;
+            border: none;
+            padding: 0;
+            margin: 0.25rem 0 0;
+            color: #6b7280;
+            font-size: 0.85rem;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        .scanner__manual { margin-top: 0.75rem; }
         .scanner-camera {
             position: relative;
             width: 100%;
@@ -213,7 +235,29 @@
             var cameraEl = document.getElementById('scanner-camera');
             var payloadEl = document.getElementById('scan-payload');
             var formEl = document.getElementById('scan-form');
+            var manualToggleEl = document.getElementById('scan-manual-toggle');
+            var manualEl = document.getElementById('scan-manual');
+            var manualInputEl = document.getElementById('scan-payload-manual');
             var submitted = false;
+
+            // Manual entry is opt-in: the keyboard only appears once the
+            // operator taps "Enter code manually". Until then the payload field
+            // is hidden, so the camera path never raises the on-screen keyboard.
+            if (manualToggleEl && manualEl && manualInputEl) {
+                manualToggleEl.addEventListener('click', function () {
+                    manualEl.hidden = false;
+                    manualToggleEl.hidden = true;
+                    manualInputEl.focus();
+                });
+
+                // Mirror the typed value into the hidden payload the server
+                // reads, so manual submits post exactly like a decoded scan.
+                formEl.addEventListener('submit', function () {
+                    if (!manualEl.hidden) {
+                        payloadEl.value = manualInputEl.value;
+                    }
+                });
+            }
 
             function showPermissionDenied() {
                 // Requirement 16.2 — no camera access: show the message, no scan.
