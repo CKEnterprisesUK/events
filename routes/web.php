@@ -456,6 +456,8 @@ Route::middleware(['auth', 'super.admin', 'session.timeout'])
         Route::post('/settings/test-mail', [SuperAdminSettingsController::class, 'sendTest'])->name('settings.test-mail');
         // Persist the Platform-wide outbound-mail transport (SMTP vs Microsoft Graph).
         Route::post('/settings/mail-transport', [SuperAdminSettingsController::class, 'updateMailTransport'])->name('settings.mail-transport');
+        // Live, read-only Microsoft Graph connectivity probe (auth check; sends no mail).
+        Route::post('/settings/graph-diagnostics', [SuperAdminSettingsController::class, 'runGraphDiagnostics'])->name('settings.graph-diagnostics');
 
         // Support ticket queue: the operator view of every in-dashboard
         // "Contact support" request across the whole Platform. Deliberately
@@ -547,6 +549,18 @@ Route::middleware('tenant')->group(function () {
         ->where('event', '[0-9]+')
         ->middleware('throttle:public')
         ->name('event.tickets.resend');
+
+    // Dedicated checkout step at `/{company-slug}/{event-id}/checkout/review`.
+    // The public Event page handles discovery + ticket selection only, then
+    // POSTs the chosen quantities here; this renders the checkout page where the
+    // Customer enters their details, accepts consents and starts payment.
+    // Resolves within the active Company (foreign/unpublished Events 404); an
+    // empty/invalid selection redirects back to the Event page.
+    Route::post('/{companySlug}/{event}/checkout/review', [CheckoutController::class, 'review'])
+        ->where('companySlug', '[A-Za-z0-9-]+')
+        ->where('event', '[0-9]+')
+        ->middleware('throttle:public')
+        ->name('event.checkout.show');
 
     // Checkout order creation at `/{company-slug}/{event-id}/checkout`. Resolves
     // within the active Company (foreign/unpublished Events 404), validates the

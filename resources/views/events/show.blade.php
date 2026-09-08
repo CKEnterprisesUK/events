@@ -111,7 +111,8 @@
 
                 {{-- Event sponsors: the same logos optionally printed on the
                      e-ticket, surfaced publicly on the event page with each
-                     sponsor's name, bio and website link revealed on click. --}}
+                     sponsor's name, bio and website link shown inline by default
+                     (no click needed) so sponsors get full visibility. --}}
                 @php
                     $eventSponsors = $event->sponsors
                         ->map(fn ($s) => ['path' => $s->image_path, 'name' => $s->name, 'website' => $s->website_url, 'bio' => $s->bio])
@@ -119,11 +120,11 @@
                         ->values();
                 @endphp
                 @if ($eventSponsors->isNotEmpty())
-                    <section class="event-sponsors store-sponsors">
+                    <section class="event-sponsors store-sponsors store-sponsors--expanded">
                         <h2>Our sponsors</h2>
-                        <div class="store-sponsors__grid">
+                        <div class="store-sponsors__grid store-sponsors__grid--expanded">
                             @foreach ($eventSponsors as $sponsor)
-                                @include('storefront.partials.sponsor', ['sponsor' => $sponsor])
+                                @include('storefront.partials.sponsor', ['sponsor' => $sponsor, 'expanded' => true])
                             @endforeach
                         </div>
                     </section>
@@ -140,87 +141,30 @@
                         <span class="event-organiser__name">{{ $company->name }}</span>
                     </section>
                 @endif
-
-                {{-- Support & lost tickets. A customer who has already bought can
-                     ask for their tickets to be resent, and find how to reach the
-                     organiser. The resend form intentionally never reveals whether
-                     an email has an order — it always returns the same neutral
-                     confirmation, so it can't be used to probe who has booked. --}}
-                <section class="event-support" id="support">
-                    <h2>Support &amp; lost tickets</h2>
-
-                    <div class="event-support__grid">
-                        <div class="event-support__resend">
-                            <h3>Lost your tickets?</h3>
-                            <p>
-                                Enter the email address you used when booking and we'll
-                                resend your tickets for this event.
-                            </p>
-
-                            @if (session('resend_status'))
-                                <p class="event-support__notice" role="status">
-                                    {{ session('resend_status') }}
-                                </p>
-                            @endif
-
-                            <form method="POST"
-                                  action="{{ route('event.tickets.resend', ['companySlug' => $company->slug, 'event' => $event->id]) }}"
-                                  class="event-support__form">
-                                @csrf
-
-                                <div class="field">
-                                    <label for="resend_email">Email address</label>
-                                    <input type="email" name="email" id="resend_email"
-                                           value="{{ old('email') }}" maxlength="254" required
-                                           autocomplete="email" inputmode="email">
-                                    @error('email')<p class="error">{{ $message }}</p>@enderror
-                                </div>
-
-                                <button type="submit" class="btn">Resend my tickets</button>
-                            </form>
-
-                            <p class="event-support__hint">
-                                If we don't find anything and you don't receive an email,
-                                please check your spam or junk folder, then contact
-                                {{ $sellerName }} using the details here.
-                            </p>
-                        </div>
-
-                        <div class="event-support__contact">
-                            <h3>Contact {{ $sellerName }}</h3>
-                            @if ($supportEmail || $supportPhone || $supportWebsite)
-                                <ul class="event-support__contacts">
-                                    @if ($supportEmail)
-                                        <li>
-                                            <span class="event-support__ico" aria-hidden="true">✉</span>
-                                            <a href="mailto:{{ $supportEmail }}?subject={{ rawurlencode('Ticket support: '.$event->name) }}">{{ $supportEmail }}</a>
-                                        </li>
-                                    @endif
-                                    @if ($supportPhone)
-                                        <li>
-                                            <span class="event-support__ico" aria-hidden="true">☎</span>
-                                            <a href="tel:{{ preg_replace('/[^0-9+]/', '', $supportPhone) }}">{{ $supportPhone }}</a>
-                                        </li>
-                                    @endif
-                                    @if ($supportWebsite)
-                                        <li>
-                                            <span class="event-support__ico" aria-hidden="true">🌐</span>
-                                            <a href="{{ $supportWebsite }}" target="_blank" rel="noopener">{{ preg_replace('#^https?://#', '', rtrim($supportWebsite, '/')) }}</a>
-                                        </li>
-                                    @endif
-                                </ul>
-                            @else
-                                <p class="muted">Contact the organiser where you first heard about this event.</p>
-                            @endif
-                        </div>
-                    </div>
-                </section>
             </div>
 
-            {{-- Ticket selection + checkout --}}
+            {{-- Ticket selection only. Choosing quantities and pressing
+                 "Continue" carries the selection to the dedicated checkout step,
+                 where the customer enters their details and pays. --}}
             <aside class="event-checkout">
                 <div class="checkout-card">
                     <h2 class="checkout-card__title">Get tickets</h2>
+
+                    @if (session('checkout_error'))
+                        <div class="alert-error" role="alert">
+                            <p>{{ session('checkout_error') }}</p>
+                        </div>
+                    @endif
+
+                    @if ($errors->any())
+                        <div class="alert-error" role="alert">
+                            <ul>
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
 
                     @if ($ticketTypes->isEmpty())
                         <p class="empty">No tickets are available for this event yet.</p>
@@ -233,20 +177,9 @@
                         <p class="checkout-note">Tickets aren't on sale right now. Please check back soon.</p>
                     @else
                         <form method="POST"
-                              action="{{ route('event.checkout', ['companySlug' => $company->slug, 'event' => $event->id]) }}"
-                              class="checkout-form" id="checkout-form">
+                              action="{{ route('event.checkout.show', ['companySlug' => $company->slug, 'event' => $event->id]) }}"
+                              class="ticket-select-form" id="ticket-select-form">
                             @csrf
-
-                            @if ($errors->any())
-                                <div class="alert-error" role="alert">
-                                    <p>We couldn't start your order:</p>
-                                    <ul>
-                                        @foreach ($errors->all() as $error)
-                                            <li>{{ $error }}</li>
-                                        @endforeach
-                                    </ul>
-                                </div>
-                            @endif
 
                             <ul class="ticket-type-list">
                                 @php($index = 0)
@@ -283,97 +216,91 @@
                                 @endif
                             </div>
 
-                            <div class="checkout-fields">
-                                <div class="field">
-                                    <label for="customer_name">Your name</label>
-                                    <input type="text" name="customer_name" id="customer_name"
-                                           value="{{ old('customer_name') }}" maxlength="200" required autocomplete="name">
-                                    @error('customer_name')<p class="error">{{ $message }}</p>@enderror
-                                </div>
-
-                                <div class="field">
-                                    <label for="customer_email">Email address</label>
-                                    <input type="email" name="customer_email" id="customer_email"
-                                           value="{{ old('customer_email') }}" maxlength="254" required autocomplete="email">
-                                    <span class="field-hint">We'll email your tickets here.</span>
-                                    @error('customer_email')<p class="error">{{ $message }}</p>@enderror
-                                </div>
-                            </div>
-
-                            <div class="checkout-consents">
-                                <label class="consent">
-                                    <input type="hidden" name="consents[terms]" value="0">
-                                    <input type="checkbox" name="consents[terms]" value="1" required
-                                           {{ old('consents.terms') ? 'checked' : '' }}>
-                                    <span>
-                                        I accept the
-                                        @if ($branding->hasTerms())
-                                            <button type="button" class="linklike" data-open-terms>terms &amp; conditions</button>.
-                                        @else
-                                            terms &amp; conditions.
-                                        @endif
-                                    </span>
-                                </label>
-                                @error('consents.terms')<p class="error">{{ $message }}</p>@enderror
-
-                                <label class="consent">
-                                    <input type="hidden" name="consents[privacy]" value="0">
-                                    <input type="checkbox" name="consents[privacy]" value="1" required
-                                           {{ old('consents.privacy') ? 'checked' : '' }}>
-                                    <span>
-                                        I agree to the processing of my details to fulfil this order
-                                        @if ($branding->hasPrivacy())
-                                            , as described in the <button type="button" class="linklike" data-open-privacy>privacy notice</button>.
-                                        @else
-                                            .
-                                        @endif
-                                    </span>
-                                </label>
-                                @error('consents.privacy')<p class="error">{{ $message }}</p>@enderror
-
-                                <label class="consent consent--optional">
-                                    <input type="hidden" name="consents[marketing]" value="0">
-                                    <input type="checkbox" name="consents[marketing]" value="1"
-                                           {{ old('consents.marketing') ? 'checked' : '' }}>
-                                    <span>Keep me updated about future events (optional).</span>
-                                </label>
-                            </div>
-
                             <button type="submit" class="btn btn-block checkout-submit" data-checkout-submit disabled>
-                                Continue to payment
+                                Continue
                             </button>
-                            <p class="checkout-note checkout-note--secure">Secure checkout. You won't be charged until the next step.</p>
+                            <p class="checkout-note checkout-note--secure">You'll enter your details and pay on the next step.</p>
                         </form>
-
-                        @if ($branding->hasTerms())
-                            <div class="terms-modal" data-terms-modal hidden>
-                                <div class="terms-modal__backdrop" data-close-terms></div>
-                                <div class="terms-modal__panel" role="dialog" aria-modal="true" aria-label="Terms and conditions">
-                                    <div class="terms-modal__head">
-                                        <h3>Terms &amp; conditions</h3>
-                                        <button type="button" class="terms-modal__close" data-close-terms aria-label="Close">&times;</button>
-                                    </div>
-                                    <div class="terms-modal__body">{{ $branding->termsText }}</div>
-                                </div>
-                            </div>
-                        @endif
-
-                        @if ($branding->hasPrivacy())
-                            <div class="terms-modal" data-privacy-modal hidden>
-                                <div class="terms-modal__backdrop" data-close-privacy></div>
-                                <div class="terms-modal__panel" role="dialog" aria-modal="true" aria-label="Privacy notice">
-                                    <div class="terms-modal__head">
-                                        <h3>Privacy notice</h3>
-                                        <button type="button" class="terms-modal__close" data-close-privacy aria-label="Close">&times;</button>
-                                    </div>
-                                    <div class="terms-modal__body">{{ $branding->privacyText }}</div>
-                                </div>
-                            </div>
-                        @endif
                     @endif
                 </div>
             </aside>
         </div>
+
+        {{-- Support & lost tickets, moved to the bottom of the page under softer
+             wording. A customer who has already bought can ask for their tickets
+             to be resent, and find how to reach the organiser. The resend form
+             intentionally never reveals whether an email has an order — it always
+             returns the same neutral confirmation, so it can't be used to probe
+             who has booked. --}}
+        <section class="event-support" id="support">
+            <h2>Already booked?</h2>
+
+            <div class="event-support__grid">
+                <div class="event-support__resend">
+                    <h3>Retrieve or resend your tickets</h3>
+                    <p>
+                        Enter the email address you used when booking and we'll
+                        resend your tickets for this event.
+                    </p>
+
+                    @if (session('resend_status'))
+                        <p class="event-support__notice" role="status">
+                            {{ session('resend_status') }}
+                        </p>
+                    @endif
+
+                    <form method="POST"
+                          action="{{ route('event.tickets.resend', ['companySlug' => $company->slug, 'event' => $event->id]) }}"
+                          class="event-support__form">
+                        @csrf
+
+                        <div class="field">
+                            <label for="resend_email">Email address</label>
+                            <input type="email" name="email" id="resend_email"
+                                   value="{{ old('email') }}" maxlength="254" required
+                                   autocomplete="email" inputmode="email">
+                            @error('email')<p class="error">{{ $message }}</p>@enderror
+                        </div>
+
+                        <button type="submit" class="btn">Resend my tickets</button>
+                    </form>
+
+                    <p class="event-support__hint">
+                        If we don't find anything and you don't receive an email,
+                        please check your spam or junk folder, then contact
+                        {{ $sellerName }} using the details here.
+                    </p>
+                </div>
+
+                <div class="event-support__contact">
+                    <h3>Contact {{ $sellerName }}</h3>
+                    @if ($supportEmail || $supportPhone || $supportWebsite)
+                        <ul class="event-support__contacts">
+                            @if ($supportEmail)
+                                <li>
+                                    <span class="event-support__ico" aria-hidden="true">✉</span>
+                                    <a href="mailto:{{ $supportEmail }}?subject={{ rawurlencode('Ticket support: '.$event->name) }}">{{ $supportEmail }}</a>
+                                </li>
+                            @endif
+                            @if ($supportPhone)
+                                <li>
+                                    <span class="event-support__ico" aria-hidden="true">☎</span>
+                                    <a href="tel:{{ preg_replace('/[^0-9+]/', '', $supportPhone) }}">{{ $supportPhone }}</a>
+                                </li>
+                            @endif
+                            @if ($supportWebsite)
+                                <li>
+                                    <span class="event-support__ico" aria-hidden="true">🌐</span>
+                                    <a href="{{ $supportWebsite }}" target="_blank" rel="noopener">{{ preg_replace('#^https?://#', '', rtrim($supportWebsite, '/')) }}</a>
+                                </li>
+                            @endif
+                        </ul>
+                    @else
+                        <p class="muted">Contact the organiser where you first heard about this event.</p>
+                    @endif
+                </div>
+            </div>
+        </section>
 
         {{-- Mobile "Book now" bar: a sibling of .event-layout (never inside the
              sticky aside) so it can be fixed to the viewport bottom on small
@@ -398,7 +325,7 @@
 @push('scripts')
 <script>
     (function () {
-        var form = document.getElementById('checkout-form');
+        var form = document.getElementById('ticket-select-form');
         if (!form) return;
 
         var summary = form.querySelector('[data-checkout-summary]');
@@ -409,8 +336,8 @@
         var symbol = @json($symbol);
 
         // Fee context mirrors the server's FeeCalculationService so the total
-        // shown here matches the amount charged at Stripe. In Pass_On mode the
-        // customer pays the booking fee on top of the subtotal.
+        // previewed here matches the amount charged at Stripe. In Pass_On mode
+        // the customer pays the booking fee on top of the subtotal.
         var feeMode = summary ? summary.getAttribute('data-fee-mode') : 'absorb';
         var feePercentHundredths = summary
             ? (parseInt(summary.getAttribute('data-fee-percent-hundredths'), 10) || 0)
@@ -422,7 +349,7 @@
 
         // Application_Fee = round-half-up(subtotal × percentHundredths / 10000),
         // clamped to [0, subtotal] — the same integer arithmetic the server uses
-        // so the displayed total never disagrees with Stripe by a penny.
+        // so the previewed total never disagrees with Stripe by a penny.
         function bookingFee(subtotal) {
             if (feeMode !== 'pass_on' || subtotal <= 0 || feePercentHundredths <= 0) {
                 return 0;
@@ -475,30 +402,11 @@
         });
 
         recalc();
-
-        // Legal modals: Terms & Conditions and Privacy notice, each shown on
-        // request from its checkout consent line.
-        function wireModal(modalSelector, openSelector, closeSelector) {
-            var modal = document.querySelector(modalSelector);
-            if (!modal) return;
-            document.querySelectorAll(openSelector).forEach(function (el) {
-                el.addEventListener('click', function () { modal.hidden = false; });
-            });
-            modal.querySelectorAll(closeSelector).forEach(function (el) {
-                el.addEventListener('click', function () { modal.hidden = true; });
-            });
-            document.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape') { modal.hidden = true; }
-            });
-        }
-
-        wireModal('[data-terms-modal]', '[data-open-terms]', '[data-close-terms]');
-        wireModal('[data-privacy-modal]', '[data-open-privacy]', '[data-close-privacy]');
     })();
 
-    // Mobile "Book now" bar: scrolls/focuses the checkout and hides itself once
-    // the checkout submit control (or the card) is in view. Self-contained so it
-    // does not depend on the checkout-form script above.
+    // Mobile "Book now" bar: scrolls/focuses the ticket selection and hides
+    // itself once the continue control (or the card) is in view. Self-contained
+    // so it does not depend on the ticket-select script above.
     (function () {
         var bar = document.querySelector('[data-book-now-bar]');
         if (!bar) return;                               // suppressed cases: no-op
@@ -506,7 +414,7 @@
         var card = document.querySelector('.checkout-card');
         var submit = document.querySelector('[data-checkout-submit]');
 
-        // (a) Book now → smooth-scroll + move focus to the checkout card.
+        // (a) Book now → smooth-scroll + move focus to the ticket card.
         if (cta && card) {
             cta.addEventListener('click', function () {
                 card.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -516,7 +424,7 @@
             });
         }
 
-        // (b) Hide the bar while the submit control (or card) is in view.
+        // (b) Hide the bar while the continue control (or card) is in view.
         var target = submit || card;
         if (target && 'IntersectionObserver' in window) {
             var io = new IntersectionObserver(function (entries) {

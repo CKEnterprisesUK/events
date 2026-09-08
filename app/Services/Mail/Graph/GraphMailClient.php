@@ -4,7 +4,6 @@ namespace App\Services\Mail\Graph;
 
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Http\Client\Factory as Http;
-use RuntimeException;
 
 /**
  * Thin client over the two Microsoft Graph calls the mail transport needs:
@@ -60,12 +59,33 @@ class GraphMailClient
         // Graph returns 202 Accepted on success. Anything else is an error we
         // must not swallow — bubble up the status and Graph's error body.
         if (! $response->successful()) {
-            throw new RuntimeException(sprintf(
-                'Microsoft Graph sendMail failed (HTTP %d): %s',
-                $response->status(),
-                $this->errorMessage($response->json())
-            ));
+            $body = $response->json();
+
+            throw new GraphMailException(
+                message: sprintf(
+                    'Microsoft Graph sendMail failed (HTTP %d): %s',
+                    $response->status(),
+                    $this->errorMessage($body)
+                ),
+                status: $response->status(),
+                graphCode: $this->errorCode($body),
+                stage: 'send',
+            );
         }
+    }
+
+    /**
+     * Live, read-only probe used by the Super_Admin diagnostics screen: fetch a
+     * fresh application token (bypassing the cache so it is a genuine check) and
+     * return true, or throw a {@see GraphMailException} tagged with the `token`
+     * stage. Proves the tenant/client id + secret and admin consent are in place
+     * without sending any mail.
+     */
+    public function fetchTokenForDiagnostics(): bool
+    {
+        $this->requestToken();
+
+        return true;
     }
 
     /**
@@ -82,6 +102,26 @@ class GraphMailClient
             return $cached;
         }
 
+        [$token, $expiresIn] = $this->requestToken();
+
+        // Cache slightly short of the real expiry (60s safety margin) so a token
+        // never expires mid-flight between the cache read and the API call.
+        $ttl = max(60, $expiresIn - 60);
+        $this->cache->put($cacheKey, $token, $ttl);
+
+        return $token;
+    }
+
+    /**
+     * Perform the client-credentials token request against the tenant endpoint.
+     * Shared by the cached {@see self::accessToken()} path and the uncached
+     * diagnostics probe. Throws a `token`-stage {@see GraphMailException} on any
+     * failure so callers can distinguish an auth problem from a send problem.
+     *
+     * @return array{0: string, 1: int}  the access token and its lifetime (s).
+     */
+    private function requestToken(): array
+    {
         $response = $this->http
             ->asForm()
             ->timeout($this->config->timeout)
@@ -94,26 +134,32 @@ class GraphMailClient
             ]);
 
         if (! $response->successful()) {
-            throw new RuntimeException(sprintf(
-                'Microsoft Graph token request failed (HTTP %d): %s',
-                $response->status(),
-                $this->errorMessage($response->json())
-            ));
+            $body = $response->json();
+
+            throw new GraphMailException(
+                message: sprintf(
+                    'Microsoft Graph token request failed (HTTP %d): %s',
+                    $response->status(),
+                    $this->errorMessage($body)
+                ),
+                status: $response->status(),
+                graphCode: $this->errorCode($body),
+                stage: 'token',
+            );
         }
 
         $token = (string) $response->json('access_token', '');
         $expiresIn = (int) $response->json('expires_in', 3600);
 
         if ($token === '') {
-            throw new RuntimeException('Microsoft Graph token response contained no access_token.');
+            throw new GraphMailException(
+                message: 'Microsoft Graph token response contained no access_token.',
+                status: $response->status(),
+                stage: 'token',
+            );
         }
 
-        // Cache slightly short of the real expiry (60s safety margin) so a token
-        // never expires mid-flight between the cache read and the API call.
-        $ttl = max(60, $expiresIn - 60);
-        $this->cache->put($cacheKey, $token, $ttl);
-
-        return $token;
+        return [$token, $expiresIn];
     }
 
     /**
@@ -140,5 +186,21 @@ class GraphMailClient
         }
 
         return 'unknown error';
+    }
+
+    /**
+     * Pull the machine-readable error code out of a Graph error body
+     * (`{"error":{"code":...}}`) when present, for display/logging alongside
+     * the message. Null when absent.
+     *
+     * @param  mixed  $body
+     */
+    private function errorCode(mixed $body): ?string
+    {
+        if (is_array($body) && isset($body['error']['code']) && is_string($body['error']['code'])) {
+            return $body['error']['code'];
+        }
+
+        return null;
     }
 }

@@ -7,6 +7,8 @@ use App\Mail\TestMail;
 use App\Models\AuditLog;
 use App\Models\PlatformSetting;
 use App\Services\AuditLogger;
+use App\Services\Mail\Graph\GraphMailDiagnostics;
+use App\Services\Mail\Graph\GraphMailException;
 use App\Services\Mail\MailTransportResolver;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -33,11 +35,13 @@ class SettingsController extends Controller
     public function __construct(
         private readonly AuditLogger $audit,
         private readonly MailTransportResolver $transport,
+        private readonly GraphMailDiagnostics $graphDiagnostics,
     ) {}
 
     /**
      * Show the effective mail configuration (read-only diagnostics), the
-     * outbound-transport toggle, and the test-email form.
+     * outbound-transport toggle, the masked Graph configuration, and the
+     * test-email form.
      */
     public function index(Request $request): View
     {
@@ -47,7 +51,37 @@ class SettingsController extends Controller
             'selectedTransport' => $this->transport->selectedTransport(),
             'activeMailer' => $this->transport->activeMailer(),
             'graphConfigured' => $this->transport->graphConfigured(),
+            'graph' => $this->graphDiagnostics->configSummary(),
         ]);
+    }
+
+    /**
+     * Run a live, read-only Microsoft Graph connectivity probe: confirm the
+     * config is complete and attempt to acquire an application token. Reports a
+     * clear success or a stage-specific failure hint, so the Super_Admin can
+     * tell an authentication problem (token stage) apart from a mailbox
+     * send-permission problem (which only shows on an actual send/403). Sends no
+     * mail and changes no state.
+     */
+    public function runGraphDiagnostics(): RedirectResponse
+    {
+        $result = $this->graphDiagnostics->probe();
+
+        $redirect = redirect()->route('admin.settings.index');
+
+        if ($result->ok) {
+            return $redirect->with('status', __('Graph diagnostics: :message', [
+                'message' => $result->message,
+            ]));
+        }
+
+        $message = $result->hint !== null
+            ? $result->message.' — '.$result->hint
+            : $result->message;
+
+        return $redirect->with('error', __('Graph diagnostics failed: :message', [
+            'message' => $message,
+        ]));
     }
 
     /**
@@ -112,7 +146,9 @@ class SettingsController extends Controller
         } catch (Throwable $e) {
             return redirect()
                 ->route('admin.settings.index')
-                ->with('error', __('Test email failed: :message', ['message' => $e->getMessage()]));
+                ->with('error', __('Test email failed: :message', [
+                    'message' => $this->explainFailure($e),
+                ]));
         }
 
         return redirect()
@@ -121,6 +157,26 @@ class SettingsController extends Controller
                 'email' => $validated['email'],
                 'mailer' => $mailerName,
             ]));
+    }
+
+    /**
+     * Turn a send failure into an operator-facing message. For a Graph failure
+     * we append the stage-specific hint (e.g. a 403 points at the Mail.Send
+     * application permission / Application Access Policy) so the Super_Admin
+     * gets the next step inline rather than just the raw Graph text. Laravel may
+     * wrap the transport error in a TransportException, so we unwrap one level.
+     */
+    private function explainFailure(Throwable $e): string
+    {
+        $graph = $e instanceof GraphMailException
+            ? $e
+            : ($e->getPrevious() instanceof GraphMailException ? $e->getPrevious() : null);
+
+        if ($graph !== null && $graph->hint() !== null) {
+            return $graph->getMessage().' — '.$graph->hint();
+        }
+
+        return $e->getMessage();
     }
 
     /**

@@ -9,11 +9,13 @@ use App\Models\Order;
 use App\Models\OrderConsent;
 use App\Models\Ticket;
 use App\Models\TicketType;
+use App\Services\Branding\BrandingResolver;
 use App\Services\CapacityReservationService;
 use App\Services\FeeCalculationService;
 use App\Services\OrderFulfilmentService;
 use App\Services\Stripe\StripePaymentService;
 use App\Services\TenantContext;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -71,6 +73,95 @@ class CheckoutController extends Controller
         private StripePaymentService $stripe,
         private OrderFulfilmentService $fulfilment,
     ) {}
+
+    /**
+     * Render the dedicated checkout step. The public Event page now handles
+     * discovery + ticket selection only; when the Customer has chosen their
+     * quantities it POSTs them here, and this page collects the customer/booking
+     * details, consents and starts payment. Splitting the flow keeps the Event
+     * page focused on the tickets and gives payment its own uncluttered step.
+     *
+     * The posted line items are resolved against this Event's purchasable
+     * Ticket_Types (the same rules {@see store()} enforces) so the summary shown
+     * here is trustworthy; an empty or invalid selection sends the Customer back
+     * to the Event page with a message rather than showing an empty checkout.
+     */
+    public function review(
+        Request $request,
+        string $companySlug,
+        Event $event,
+        TenantContext $tenantContext,
+        BrandingResolver $branding,
+    ): View|RedirectResponse {
+        // Unpublished Events block Customer view/purchase, mirroring the public
+        // Event page and store(). (Requirement 5.5)
+        abort_unless($event->isPublished(), 404);
+
+        $company = $tenantContext->company();
+        abort_unless($company !== null, 404);
+
+        $validated = $request->validate([
+            'items' => ['required', 'array', 'min:1', 'max:50'],
+            'items.*.ticket_type_id' => ['required', 'integer'],
+            'items.*.quantity' => ['required', 'integer', 'min:0'],
+        ]);
+
+        // Drop zero-quantity lines the stepper submits for untouched rows, then
+        // resolve the rest to purchasable Ticket_Types. An empty or unavailable
+        // selection returns to the Event page rather than an empty checkout.
+        $items = array_values(array_filter(
+            $validated['items'],
+            fn (array $item): bool => (int) $item['quantity'] > 0,
+        ));
+
+        $backToEvent = redirect()->route('event.page', [
+            'companySlug' => $companySlug,
+            'event' => $event->id,
+        ]);
+
+        if ($items === []) {
+            return $backToEvent->with('checkout_error', 'Choose at least one ticket to continue.');
+        }
+
+        $now = Carbon::now();
+
+        try {
+            [$quantities, $ticketTypes] = $this->resolveLineItems($event, $items, $now);
+        } catch (ValidationException $e) {
+            return $backToEvent->withErrors($e->errors());
+        }
+
+        // Money snapshot for display only — the authoritative charge is computed
+        // again in store() from the same inputs, so the two always agree.
+        $subtotal = $this->subtotal($quantities, $ticketTypes);
+        $fee = $this->fees->calculateForCompany($company, $subtotal);
+
+        // Build ordered summary lines (Ticket_Type => qty + line total) for the
+        // read-only order summary on the checkout page.
+        $lines = [];
+        foreach ($quantities as $ticketTypeId => $qty) {
+            $type = $ticketTypes[$ticketTypeId];
+            $lines[] = [
+                'ticket_type_id' => $ticketTypeId,
+                'name' => $type->name,
+                'quantity' => $qty,
+                'is_free' => $type->isFree(),
+                'unit_price_minor' => $type->price_minor,
+                'line_total_minor' => $type->price_minor * $qty,
+            ];
+        }
+
+        return view('events.checkout', [
+            'company' => $company,
+            'event' => $event,
+            'branding' => $branding->forEvent($event),
+            'lines' => $lines,
+            'subtotalMinor' => $subtotal,
+            'feeMinor' => $fee->bookingFee,
+            'totalMinor' => $fee->orderTotal,
+            'feeHandlingMode' => $company->fee_handling_mode,
+        ]);
+    }
 
     public function store(
         Request $request,

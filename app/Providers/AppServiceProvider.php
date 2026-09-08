@@ -7,6 +7,7 @@ use App\Services\Branding\BrandingResolver;
 use App\Services\Mail\FakeTicketMailer;
 use App\Services\Mail\Graph\GraphMailClient;
 use App\Services\Mail\Graph\GraphMailConfig;
+use App\Services\Mail\Graph\GraphMailDiagnostics;
 use App\Services\Mail\Graph\GraphTransport;
 use App\Services\Mail\MailTransportResolver;
 use App\Services\Mail\SmtpTicketMailer;
@@ -68,6 +69,19 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(GraphMailConfig::class, function ($app): GraphMailConfig {
             return GraphMailConfig::fromArray((array) $app['config']->get('services.graph', []));
         });
+
+        // The Graph HTTP client and its read-only diagnostics are bound so both
+        // the transport (via the Mail::extend closure) and the Super_Admin
+        // Settings screen resolve the same, correctly-wired instances.
+        $this->app->singleton(GraphMailClient::class, function ($app): GraphMailClient {
+            return new GraphMailClient(
+                $app->make(HttpFactory::class),
+                $app->make(CacheRepository::class),
+                $app->make(GraphMailConfig::class),
+            );
+        });
+
+        $this->app->singleton(GraphMailDiagnostics::class);
 
         $this->app->singleton(MailTransportResolver::class);
     }
@@ -154,15 +168,10 @@ class AppServiceProvider extends ServiceProvider
         }
 
         Mail::extend('graph', function (): GraphTransport {
-            $config = $this->app->make(GraphMailConfig::class);
-
-            $client = new GraphMailClient(
-                $this->app->make(HttpFactory::class),
-                $this->app->make(CacheRepository::class),
-                $config,
+            return new GraphTransport(
+                $this->app->make(GraphMailClient::class),
+                $this->app->make(GraphMailConfig::class),
             );
-
-            return new GraphTransport($client, $config);
         });
     }
 

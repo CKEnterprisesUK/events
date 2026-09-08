@@ -106,6 +106,55 @@
     </div>
 
     <div class="admin-panel">
+        <div class="admin-panel__head"><h2>Microsoft Graph diagnostics</h2></div>
+        <div class="admin-panel__body">
+            <p class="muted">
+                A read-only view of the configured Graph credentials (secrets
+                masked) and a live authentication check. The check acquires an
+                application token but sends no email, so it confirms the app
+                registration and admin consent without touching a mailbox.
+            </p>
+
+            <table class="admin-facts">
+                <tbody>
+                    <tr>
+                        <th scope="row">Configured</th>
+                        <td>
+                            <span class="admin-pill {{ $graph['configured'] === 'yes' ? 'admin-pill--active' : 'admin-pill--suspended' }}">
+                                {{ $graph['configured'] === 'yes' ? 'Yes' : 'No' }}
+                            </span>
+                        </td>
+                    </tr>
+                    <tr><th scope="row">Tenant ID</th><td class="mono">{{ $graph['tenant_id'] }}</td></tr>
+                    <tr><th scope="row">Client ID</th><td class="mono">{{ $graph['client_id'] }}</td></tr>
+                    <tr>
+                        <th scope="row">Client secret</th>
+                        <td>
+                            <span class="admin-pill {{ $graph['client_secret'] === 'set' ? 'admin-pill--active' : 'admin-pill--suspended' }}">
+                                {{ $graph['client_secret'] === 'set' ? 'Set' : 'Not set' }}
+                            </span>
+                        </td>
+                    </tr>
+                    <tr><th scope="row">From mailbox</th><td class="mono">{{ $graph['from'] }}</td></tr>
+                    <tr><th scope="row">Save to Sent Items</th><td>{{ $graph['save_to_sent_items'] === 'yes' ? 'Yes' : 'No' }}</td></tr>
+                    <tr><th scope="row">Token endpoint</th><td class="mono">{{ $graph['token_url'] }}</td></tr>
+                    <tr><th scope="row">sendMail endpoint</th><td class="mono">{{ $graph['send_mail_url'] }}</td></tr>
+                </tbody>
+            </table>
+
+            <form method="POST" action="{{ route('admin.settings.graph-diagnostics') }}">
+                @csrf
+                <button type="submit" class="btn" {{ $graph['configured'] === 'yes' ? '' : 'disabled' }}>
+                    Run Graph diagnostics
+                </button>
+                @if ($graph['configured'] !== 'yes')
+                    <p class="muted">Add the Graph environment credentials to enable the live check.</p>
+                @endif
+            </form>
+        </div>
+    </div>
+
+    <div class="admin-panel">
         <div class="admin-panel__head"><h2>Send a test email</h2></div>
         <div class="admin-panel__body">
             <p class="muted">

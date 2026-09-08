@@ -337,7 +337,9 @@ class StorefrontAndEventPageTest extends TestCase
         $response = $this->get("/{$company->slug}/{$event->id}");
 
         $response->assertOk();
-        $response->assertSee('Lost your tickets?');
+        // Softer, reassuring wording moved to the bottom of the page.
+        $response->assertSee('Already booked?');
+        $response->assertSee('Retrieve or resend your tickets');
         $response->assertSee('help@organiser.test');
     }
 
