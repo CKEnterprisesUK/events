@@ -250,6 +250,15 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
         Route::patch('/events/{event}', [EventController::class, 'update']);
         Route::post('/events/{event}/publish', [EventController::class, 'publish'])->name('events.publish');
         Route::post('/events/{event}/unpublish', [EventController::class, 'unpublish'])->name('events.unpublish');
+        // Cancel vs. delete (both Admin-gated in the controller via
+        // ACTION_MANAGE_EVENTS). An Event with no confirmed bookings can be
+        // deleted outright (destroy); once it has taken bookings it can only be
+        // cancelled (cancel) — its Orders are retained so customers can be
+        // contacted and refunds arranged via support. Each action refuses the
+        // other's precondition, so they never overlap. Scoped to the user's
+        // Company by the `dashboard.tenant` group (foreign Events 404).
+        Route::post('/events/{event}/cancel', [EventController::class, 'cancel'])->name('events.cancel');
+        Route::delete('/events/{event}', [EventController::class, 'destroy'])->name('events.destroy');
 
         // Dedicated per-section manage screens. Each is its own URL (no JS-only
         // tabs) so a section can be linked to and bookmarked directly. The

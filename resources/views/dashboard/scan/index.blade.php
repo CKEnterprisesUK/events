@@ -11,7 +11,8 @@
             Camera surface. The scanner runs entirely in the phone browser — no
             app install (Requirement 16.1). If the browser denies camera
             permission we surface a "camera access required" message and perform
-            no scan (Requirement 16.2).
+            no scan (Requirement 16.2). The surface is kept compact so the
+            check-in result is the focus of the screen, not the viewfinder.
         --}}
         <div id="scanner-camera" class="scanner-camera">
             <video id="scanner-video" playsinline muted></video>
@@ -41,43 +42,62 @@
         </form>
 
         @isset($result)
-            <div class="scan-result scan-result--{{ $result['status'] }}" role="status">
-                <h2 class="scan-result__message">{{ $result['message'] }}</h2>
+            @php
+                // Map every outcome onto one of three door signals so the whole
+                // banner reads as a single colour the operator can act on at a
+                // glance: green = let them in, yellow = already scanned, red =
+                // do not admit.
+                $signal = match ($result['status']) {
+                    'checked_in' => 'good',
+                    'already_scanned' => 'warn',
+                    default => 'bad',
+                };
+
+                // Total tickets on the order, summed from the type breakdown so
+                // the door can confirm how many people this one code admits.
+                $ticketCount = collect($result['breakdown'] ?? [])->sum('quantity');
+            @endphp
+
+            <div class="scan-result scan-result--{{ $signal }}" role="status" aria-live="polite">
+                <p class="scan-result__message">{{ $result['message'] }}</p>
+
+                @if ($result['status'] === 'checked_in')
+                    {{-- Headline: how many tickets this code admits. --}}
+                    <p class="scan-result__count">
+                        <span class="scan-result__count-num">{{ $ticketCount }}</span>
+                        {{ $ticketCount === 1 ? 'ticket' : 'tickets' }}
+                    </p>
+
+                    @isset($result['order'])
+                        <p class="scan-result__ref">
+                            Order {{ $result['order']->order_reference }}
+                            &middot; {{ $result['order']->customer_name }}
+                        </p>
+                    @endisset
+
+                    @if (! empty($result['breakdown']))
+                        {{-- Per-level breakdown: which ticket type(s) and how
+                             many of each, so the door knows the access level. --}}
+                        <ul class="scan-result__levels">
+                            @foreach ($result['breakdown'] as $line)
+                                <li class="scan-result__level">
+                                    <span class="scan-result__level-name">{{ $line['name'] }}</span>
+                                    <span class="scan-result__level-qty">&times;{{ $line['quantity'] }}</span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+
+                    <p class="scan-result__meta">
+                        Checked in at {{ $result['scanned_at']->format('Y-m-d H:i:s') }}.
+                    </p>
+                @endif
 
                 @if ($result['status'] === 'already_scanned' && isset($result['scanned_at']))
                     <p class="scan-result__meta">
                         Previously scanned at
                         {{ $result['scanned_at']->format('Y-m-d H:i:s') }}.
                     </p>
-                @endif
-
-                @if ($result['status'] === 'checked_in')
-                    <p class="scan-result__meta">
-                        Checked in at {{ $result['scanned_at']->format('Y-m-d H:i:s') }}.
-                    </p>
-
-                    @isset($result['order'])
-                        <p class="scan-result__ref">
-                            Order {{ $result['order']->order_reference }}
-                            for {{ $result['order']->customer_name }}.
-                        </p>
-                    @endisset
-
-                    @if (! empty($result['breakdown']))
-                        <table class="scan-result__breakdown">
-                            <thead>
-                                <tr><th>Ticket type</th><th>Quantity</th></tr>
-                            </thead>
-                            <tbody>
-                                @foreach ($result['breakdown'] as $line)
-                                    <tr>
-                                        <td>{{ $line['name'] }}</td>
-                                        <td>{{ $line['quantity'] }}</td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    @endif
                 @endif
             </div>
         @endisset
@@ -89,25 +109,75 @@
         .scanner-camera {
             position: relative;
             width: 100%;
-            max-width: 480px;
+            max-width: 260px;
             margin: 1rem 0;
             background: #000;
             border-radius: 0.5rem;
             overflow: hidden;
-            aspect-ratio: 3 / 4;
+            aspect-ratio: 1 / 1;
         }
         .scanner-camera video { width: 100%; height: 100%; object-fit: cover; }
         .scanner-hint { color: #6b7280; font-size: 0.875rem; }
-        .scan-result { margin-top: 1.5rem; padding: 1rem; border-radius: 0.5rem; border: 1px solid #e5e7eb; }
-        .scan-result--checked_in { border-color: #16a34a; background: #f0fdf4; }
-        .scan-result--already_scanned { border-color: #d97706; background: #fffbeb; }
-        .scan-result--rejected,
-        .scan-result--failed,
-        .scan-result--invalid,
-        .scan-result--unreadable { border-color: #b91c1c; background: #fef2f2; }
-        .scan-result__breakdown { width: 100%; border-collapse: collapse; margin-top: 0.75rem; }
-        .scan-result__breakdown th,
-        .scan-result__breakdown td { text-align: left; padding: 0.25rem 0.5rem; border-bottom: 1px solid #e5e7eb; }
+
+        /* The result banner fills with a single door signal colour so the
+           outcome is unmistakable at arm's length:
+             green = admit, yellow = already scanned, red = do not admit. */
+        .scan-result {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            border: 2px solid transparent;
+            color: #fff;
+        }
+        .scan-result--good { background: #16a34a; border-color: #15803d; }
+        .scan-result--warn { background: #f59e0b; border-color: #d97706; color: #1f2937; }
+        .scan-result--bad  { background: #dc2626; border-color: #b91c1c; }
+
+        .scan-result__message {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        .scan-result__count {
+            margin: 0.75rem 0 0;
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+        .scan-result__count-num {
+            font-size: 2.5rem;
+            font-weight: 800;
+            line-height: 1;
+            vertical-align: -0.15em;
+        }
+        .scan-result__ref {
+            margin: 0.5rem 0 0;
+            opacity: 0.9;
+            font-size: 0.95rem;
+        }
+        .scan-result__levels {
+            list-style: none;
+            margin: 0.75rem 0 0;
+            padding: 0.5rem 0 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.35);
+        }
+        .scan-result--warn .scan-result__levels {
+            border-top-color: rgba(31, 41, 55, 0.25);
+        }
+        .scan-result__level {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.35rem 0;
+            font-size: 1.05rem;
+        }
+        .scan-result__level-name { font-weight: 500; }
+        .scan-result__level-qty { font-weight: 700; }
+        .scan-result__meta {
+            margin: 0.75rem 0 0;
+            opacity: 0.85;
+            font-size: 0.85rem;
+        }
     </style>
 @endpush
 
@@ -159,7 +229,7 @@
                         var scanner = new window.Html5Qrcode('scanner-camera');
                         scanner.start(
                             { facingMode: 'environment' },
-                            { fps: 10, qrbox: 250 },
+                            { fps: 10, qrbox: 180 },
                             onDecoded,
                             function () { /* per-frame decode failures are ignored */ }
                         ).catch(showPermissionDenied);

@@ -93,6 +93,7 @@ class Event extends Model
         'sponsor_bottom_website',
         'sponsor_bottom_bio',
         'sponsor_bottom_on_ticket',
+        'cancelled_at',
     ];
 
     /**
@@ -112,6 +113,7 @@ class Event extends Model
     {
         return [
             'starts_at' => 'datetime',
+            'cancelled_at' => 'datetime',
             'capacity' => 'integer',
             'is_published' => 'boolean',
             'sponsor_top_on_ticket' => 'boolean',
@@ -321,6 +323,51 @@ class Event extends Model
      */
     public function unpublish(): bool
     {
+        $this->is_published = false;
+
+        return $this->save();
+    }
+
+    /**
+     * Whether this Event has any confirmed bookings — Orders that were paid or
+     * free-confirmed (and so had tickets issued). This is the guard that
+     * decides between the two organiser actions: an Event with no bookings can
+     * be deleted outright, while an Event that has taken bookings can only be
+     * cancelled (its customers must be contacted and any refunds arranged with
+     * support). Reserved/expired/voided Orders never issued tickets, so they do
+     * not count. (Deletion vs. cancellation rule.)
+     */
+    public function hasBookings(): bool
+    {
+        return $this->orders()
+            ->whereIn('status', [Order::STATUS_PAID, Order::STATUS_FREE_CONFIRMED])
+            ->exists();
+    }
+
+    /**
+     * Whether this Event has been cancelled. A cancelled Event is retained (its
+     * booking records must survive for refunds/customer contact) but is
+     * unpublished and no longer sells tickets. (Deletion vs. cancellation rule.)
+     */
+    public function isCancelled(): bool
+    {
+        return $this->cancelled_at !== null;
+    }
+
+    /**
+     * Cancel the Event: stamp `cancelled_at` and unpublish it so it drops off
+     * the public storefront and stops taking bookings. Existing bookings are
+     * intentionally left untouched — refunds and customer contact are handled
+     * out of band via support. Idempotent: cancelling an already-cancelled
+     * Event leaves the original timestamp in place. (Deletion vs. cancellation
+     * rule.)
+     */
+    public function cancel(): bool
+    {
+        if ($this->cancelled_at === null) {
+            $this->cancelled_at = now();
+        }
+
         $this->is_published = false;
 
         return $this->save();

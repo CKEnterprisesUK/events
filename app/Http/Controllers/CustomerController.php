@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\Event;
 use App\Models\Order;
+use App\Models\OrderConsent;
 use App\Services\AuditLogger;
 use App\Services\GdprService;
 use App\Services\RoleAuthorization;
@@ -11,6 +13,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -49,15 +52,44 @@ class CustomerController extends Controller
 
         $search = trim((string) $request->query('q', ''));
 
+        // Optional event filter: only customers who ordered for this event. The
+        // dropdown is populated from the Company's own events (tenant-scoped),
+        // and a foreign/unknown id simply matches nothing.
+        $eventId = (int) $request->query('event', 0);
+        $eventId = $eventId > 0 ? $eventId : null;
+
+        // Optional marketing-preference filter, keyed off each customer's LATEST
+        // captured marketing consent: 'in' (opted in), 'out' (opted out or
+        // never opted in). Any other value = no filter.
+        $marketing = (string) $request->query('marketing', '');
+        $marketing = in_array($marketing, ['in', 'out'], true) ? $marketing : '';
+
+        // Correlated subquery: the customer's most recent marketing consent
+        // (accepted 1/0), NULL when they never saw the marketing opt-in. Ordered
+        // by capture time then id so the newest selection wins — this is the
+        // "latest marketing preference". Both tables carry company_id; the outer
+        // Order query is already tenant-scoped, and joining orders o2 back on the
+        // same company_id keeps the subquery scoped to the acting Company too.
+        $latestMarketing = '('
+            .'select oc.accepted from order_consents oc '
+            .'inner join orders o2 on o2.id = oc.order_id '
+            .'where o2.customer_email = orders.customer_email '
+            .'and o2.company_id = orders.company_id '
+            .'and oc.consent_key = ? '
+            .'order by oc.captured_at desc, oc.id desc limit 1'
+            .') as marketing_opt_in';
+
         $customers = Order::query()
             ->selectRaw('customer_email')
             ->selectRaw('MAX(customer_name) as customer_name')
             ->selectRaw('COUNT(*) as orders_count')
+            ->selectRaw('COUNT(DISTINCT event_id) as events_count')
             ->selectRaw('MAX(created_at) as last_order_at')
             ->selectRaw(
                 'SUM(CASE WHEN status IN (?, ?) THEN order_total_minor ELSE 0 END) as spend_minor',
                 [Order::STATUS_PAID, Order::STATUS_FREE_CONFIRMED],
             )
+            ->selectRaw($latestMarketing, [OrderConsent::KEY_MARKETING])
             ->when($search !== '', function ($query) use ($search): void {
                 $like = '%'.$search.'%';
                 $query->where(function ($q) use ($like): void {
@@ -65,14 +97,47 @@ class CustomerController extends Controller
                         ->orWhere('customer_email', 'like', $like);
                 });
             })
-            ->groupBy('customer_email')
+            ->when($eventId !== null, function ($query) use ($eventId): void {
+                // Restrict to customers who have at least one order for the
+                // chosen event. Grouping is by email, so a whereExists keeps the
+                // per-customer aggregates (count/spend across ALL their orders)
+                // intact while still limiting WHO appears.
+                $query->whereExists(function ($sub) use ($eventId): void {
+                    $sub->select(DB::raw(1))
+                        ->from('orders as oe')
+                        ->whereColumn('oe.customer_email', 'orders.customer_email')
+                        ->whereColumn('oe.company_id', 'orders.company_id')
+                        ->where('oe.event_id', $eventId);
+                });
+            })
+            ->when($marketing !== '', function ($query) use ($marketing, $latestMarketing): void {
+                // Filter on the latest marketing preference. 'in' = the newest
+                // marketing consent is accepted; 'out' = it is declined or the
+                // customer never saw/accepted the opt-in (NULL / 0).
+                if ($marketing === 'in') {
+                    $query->having('marketing_opt_in', '=', 1);
+                } else {
+                    $query->havingRaw('marketing_opt_in IS NULL OR marketing_opt_in = 0');
+                }
+            })
+            ->groupBy('customer_email', 'company_id')
             ->orderByDesc('last_order_at')
             ->paginate(25)
             ->withQueryString();
 
+        // The event dropdown: the Company's events, newest first. Tenant-scoped
+        // by the global company scope, so only the acting Company's events show.
+        $events = Event::query()
+            ->orderByDesc('starts_at')
+            ->orderByDesc('id')
+            ->get(['id', 'name']);
+
         return view('dashboard.customers.index', [
             'customers' => $customers,
             'search' => $search,
+            'events' => $events,
+            'eventId' => $eventId,
+            'marketing' => $marketing,
         ]);
     }
 

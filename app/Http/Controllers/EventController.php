@@ -439,6 +439,91 @@ class EventController extends Controller
     }
 
     /**
+     * Cancel an Event that has taken bookings. Cancellation (rather than
+     * deletion) is the only option once confirmed bookings exist: the Order
+     * records must survive so customers can be contacted and refunds arranged
+     * with support. Stamps `cancelled_at`, unpublishes the Event so it leaves
+     * the public storefront and stops selling, and leaves every Order intact.
+     *
+     * The action refuses (redirect back with an error) for an Event with no
+     * bookings — that Event should be deleted via destroy() instead, so the two
+     * actions never overlap. (Deletion vs. cancellation rule.)
+     */
+    public function cancel(Event $event): RedirectResponse
+    {
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+
+        if (! $event->hasBookings()) {
+            return redirect()
+                ->route('dashboard.events.show', $event)
+                ->with('status', 'This event has no bookings — delete it instead of cancelling.');
+        }
+
+        $event->cancel();
+
+        $this->audit->record(
+            action: AuditLog::EVENT_CANCELLED,
+            auditable: $event,
+            summary: 'Cancelled event "'.$event->name.'"',
+        );
+
+        // Cancelling unpublishes the Event, so remove it from the public
+        // storefront listing cache.
+        $this->storefrontListing->forget($event->company);
+
+        return redirect()
+            ->route('dashboard.events.show', $event)
+            ->with('status', 'Event cancelled. Contact your affected customers and arrange any refunds through support — their full list is in Customers.');
+    }
+
+    /**
+     * Delete an Event outright. Permitted ONLY while the Event has taken no
+     * confirmed bookings: with no Orders to preserve, the record can be removed
+     * cleanly (its ticket types, sponsors and reserved/expired Orders cascade
+     * at the database level). Once bookings exist the Event can only be
+     * cancelled via cancel(), so this action refuses (redirect back with an
+     * error) rather than destroying booking history. (Deletion vs. cancellation
+     * rule.)
+     */
+    public function destroy(Event $event): RedirectResponse
+    {
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+
+        if ($event->hasBookings()) {
+            return redirect()
+                ->route('dashboard.events.show', $event)
+                ->with('status', 'This event has bookings and can’t be deleted. Cancel it instead, then contact your customers and arrange refunds through support.');
+        }
+
+        // Capture what we need for the audit + cleanup before the row is gone.
+        $company = $event->company;
+        $name = $event->name;
+        $posterPath = $event->poster_path;
+
+        // Record the deletion against the Event's id (auditable) before it is
+        // removed, mirroring the delete-then-audit shape used elsewhere.
+        $this->audit->record(
+            action: AuditLog::EVENT_DELETED,
+            auditable: $event,
+            summary: 'Deleted event "'.$name.'"',
+        );
+
+        $event->delete();
+
+        // Tidy the per-event hero image so orphaned files don't accumulate; the
+        // company-level hero (a shared fallback) is deliberately left alone.
+        $this->images->delete($posterPath);
+
+        // The Event may have been published, so refresh the storefront listing
+        // cache to drop it from the public listing.
+        $this->storefrontListing->forget($company);
+
+        return redirect()
+            ->route('dashboard.events.index')
+            ->with('status', 'Event "'.$name.'" deleted.');
+    }
+
+    /**
      * Download a PNG QR code that points at the Event's public page. Available
      * for both draft and published Events so an Admin can prepare printed
      * material ahead of go-live — the encoded URL only becomes reachable once

@@ -7,6 +7,7 @@
     .cell-event { display: flex; align-items: center; gap: 0.7rem; }
     .cell-thumb { width: 48px; height: 48px; flex: none; border-radius: 6px; object-fit: cover; background: var(--surface-2, #f2f2f5); }
     .cell-event__meta { min-width: 0; }
+    .pill--cancelled { background: #fef2f2; color: #b91c1c; }
 </style>
 @endpush
 
@@ -59,9 +60,13 @@
                             </td>
                             <td>{!! $event->starts_at ? e($event->starts_at->format('j M Y, H:i')) : '&mdash;' !!}</td>
                             <td>
-                                <span class="pill {{ $event->isPublished() ? 'pill--live' : 'pill--draft' }}">
-                                    {{ $event->isPublished() ? 'Published' : 'Draft' }}
-                                </span>
+                                @if ($event->isCancelled())
+                                    <span class="pill pill--cancelled">Cancelled</span>
+                                @else
+                                    <span class="pill {{ $event->isPublished() ? 'pill--live' : 'pill--draft' }}">
+                                        {{ $event->isPublished() ? 'Published' : 'Draft' }}
+                                    </span>
+                                @endif
                             </td>
                             <td class="num"><a class="panel__link row-action" href="{{ route('dashboard.events.show', $event) }}">Manage</a></td>
                         </tr>

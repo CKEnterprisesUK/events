@@ -130,6 +130,10 @@ class AuditLog extends Model
 
     public const EVENT_UNPUBLISHED = 'event.unpublished';
 
+    public const EVENT_CANCELLED = 'event.cancelled';
+
+    public const EVENT_DELETED = 'event.deleted';
+
     public const TICKET_TYPE_CREATED = 'ticket_type.created';
 
     public const TICKET_TYPE_UPDATED = 'ticket_type.updated';
@@ -191,6 +195,8 @@ class AuditLog extends Model
         self::EVENT_UPDATED => ['category' => self::CATEGORY_EVENTS, 'label' => 'Updated an event'],
         self::EVENT_PUBLISHED => ['category' => self::CATEGORY_EVENTS, 'label' => 'Published an event'],
         self::EVENT_UNPUBLISHED => ['category' => self::CATEGORY_EVENTS, 'label' => 'Unpublished an event'],
+        self::EVENT_CANCELLED => ['category' => self::CATEGORY_EVENTS, 'label' => 'Cancelled an event'],
+        self::EVENT_DELETED => ['category' => self::CATEGORY_EVENTS, 'label' => 'Deleted an event'],
         self::TICKET_TYPE_CREATED => ['category' => self::CATEGORY_EVENTS, 'label' => 'Created a ticket type'],
         self::TICKET_TYPE_UPDATED => ['category' => self::CATEGORY_EVENTS, 'label' => 'Updated a ticket type'],
         self::TICKET_TYPE_DELETED => ['category' => self::CATEGORY_EVENTS, 'label' => 'Deleted a ticket type'],
