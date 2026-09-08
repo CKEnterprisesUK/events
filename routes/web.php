@@ -450,6 +450,7 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
         // atomic single check-in and shows the full Order breakdown.
         // (Requirements 16.1–16.10, 3.6, 3.7)
         Route::get('/scan', [ScanController::class, 'index'])->name('scan.index');
+        Route::get('/scan/live', [ScanController::class, 'live'])->name('scan.live');
         Route::post('/scan', [ScanController::class, 'scan'])->name('scan.submit');
     });
 

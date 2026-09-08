@@ -32,6 +32,18 @@ class OrderConsent extends Model
     use BelongsToCompany, HasFactory;
 
     /**
+     * The consent keys captured at checkout. `terms` and `privacy` are the
+     * required agreements; `marketing` is the optional "keep me updated" opt-in
+     * surfaced on the Customers roster as each customer's latest marketing
+     * preference. These mirror the checkout form's `consents[...]` inputs.
+     */
+    public const KEY_TERMS = 'terms';
+
+    public const KEY_PRIVACY = 'privacy';
+
+    public const KEY_MARKETING = 'marketing';
+
+    /**
      * @var list<string>
      */
     protected $fillable = [

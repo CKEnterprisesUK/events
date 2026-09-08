@@ -9,8 +9,13 @@
     .filter-bar { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: flex-end; margin-bottom: 1.25rem; }
     .filter-bar .field { margin: 0; }
     .filter-bar input { padding: 0.5rem 0.7rem; border: 1px solid var(--border); border-radius: 0.5rem; min-width: 260px; }
+    .filter-bar select { padding: 0.5rem 0.7rem; border: 1px solid var(--border); border-radius: 0.5rem; min-width: 180px; background: #fff; }
     .filter-bar label { display: block; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 0.25rem; }
     .pager { display: flex; justify-content: center; padding: 1rem; }
+    .tag { display: inline-block; padding: 0.12rem 0.55rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+    .tag--in { background: #ecfdf5; color: #047857; }
+    .tag--out { background: #fef2f2; color: #b91c1c; }
+    .tag--muted { background: #f3f4f6; color: #6b7280; }
     .notice { border-radius: 0.6rem; padding: 0.9rem 1.1rem; font-size: 0.9rem; line-height: 1.5; }
     .notice--warning { background: #fef6e7; border: 1px solid #f5d58a; color: #7a5200; }
     .notice--warning strong { display: block; margin-bottom: 0.25rem; }
@@ -115,8 +120,25 @@
             <label for="q">Search</label>
             <input type="search" name="q" id="q" value="{{ $search }}" placeholder="Name or email">
         </div>
-        <button type="submit" class="btn">Search</button>
-        @if ($search !== '')
+        <div class="field">
+            <label for="event">Event</label>
+            <select name="event" id="event">
+                <option value="">All events</option>
+                @foreach ($events as $ev)
+                    <option value="{{ $ev->id }}" @selected($eventId === $ev->id)>{{ $ev->name }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="field">
+            <label for="marketing">Marketing</label>
+            <select name="marketing" id="marketing">
+                <option value="">Any preference</option>
+                <option value="in" @selected($marketing === 'in')>Opted in</option>
+                <option value="out" @selected($marketing === 'out')>Not opted in</option>
+            </select>
+        </div>
+        <button type="submit" class="btn">Filter</button>
+        @if ($search !== '' || $eventId !== null || $marketing !== '')
             <a class="btn btn-outline" href="{{ route('dashboard.customers.index') }}">Clear</a>
         @endif
     </form>
@@ -130,7 +152,9 @@
                     <tr>
                         <th scope="col">Customer</th>
                         <th scope="col" class="num">Orders</th>
+                        <th scope="col" class="num">Events</th>
                         <th scope="col" class="num">Spend</th>
+                        <th scope="col">Marketing</th>
                         <th scope="col">Last order</th>
                         <th scope="col"></th>
                     </tr>
@@ -144,7 +168,17 @@
                                 <span class="cell-dim">{{ $customer->customer_email }}</span>
                             </td>
                             <td class="num">{{ number_format($customer->orders_count) }}</td>
+                            <td class="num">{{ number_format($customer->events_count) }}</td>
                             <td class="num">{{ $symbol }}{{ number_format($customer->spend_minor / 100, 2) }}</td>
+                            <td>
+                                @if ($customer->marketing_opt_in === null)
+                                    <span class="tag tag--muted" title="Never saw or answered the marketing opt-in">No preference</span>
+                                @elseif ((int) $customer->marketing_opt_in === 1)
+                                    <span class="tag tag--in">Opted in</span>
+                                @else
+                                    <span class="tag tag--out">Opted out</span>
+                                @endif
+                            </td>
                             <td>{{ $customer->last_order_at ? \Illuminate\Support\Carbon::parse($customer->last_order_at)->format('j M Y, H:i') : '—' }}</td>
                             <td class="num"><a class="panel__link row-action" href="{{ route('dashboard.customers.show', $token) }}">View</a></td>
                         </tr>

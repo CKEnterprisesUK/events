@@ -47,23 +47,58 @@ use Illuminate\Support\Facades\Gate;
  */
 class ScanController extends Controller
 {
+    /**
+     * The session key under which we keep a short rolling list of the most
+     * recent scans for this operator. This is intentionally session-scoped
+     * (per user, per browser) and capped — it is a convenience recap for the
+     * person on the door, not an audit trail (the AuditLog is authoritative),
+     * so it needs no database table and clears with the session.
+     */
+    private const HISTORY_KEY = 'scan.history';
+
+    /**
+     * How many recent scans to remember. Small on purpose so the recap stays
+     * glanceable and the session payload stays tiny.
+     */
+    private const HISTORY_LIMIT = 5;
+
     public function __construct(private QrService $qr) {}
 
     /**
-     * The scanner page: opens the camera in the browser and POSTs decoded
-     * payloads to {@see scan}. (Requirements 16.1, 16.2)
+     * The scanner start page (intermediary): a calm landing that offers a
+     * "start scanning" action and shows the recent-scan recap, without opening
+     * the camera. Keeping the camera off this page means the live scanner
+     * ({@see live}) can drop its heading/help text and give the result banner
+     * the whole screen. (Requirements 16.1, 16.2)
      */
-    public function index(): View
+    public function index(Request $request): View
     {
         Gate::authorize(RoleAuthorization::ACTION_CHECK_IN);
 
-        return view('dashboard.scan.index');
+        return view('dashboard.scan.start', [
+            'history' => $this->history($request),
+        ]);
+    }
+
+    /**
+     * The live scanner page: opens the camera in the browser and POSTs decoded
+     * payloads to {@see scan}. This is the minimal, chrome-free surface reached
+     * from the start page. (Requirements 16.1, 16.2)
+     */
+    public function live(Request $request): View
+    {
+        Gate::authorize(RoleAuthorization::ACTION_CHECK_IN);
+
+        return view('dashboard.scan.index', [
+            'history' => $this->history($request),
+        ]);
     }
 
     /**
      * Verify a decoded QR payload and, when valid and unscanned, atomically
-     * check the Order in. Renders the scanner page with a structured `result`
-     * describing the outcome. (Requirements 16.3–16.10)
+     * check the Order in. Records the outcome in the session recap and renders
+     * the live scanner page with a structured `result` describing the outcome.
+     * (Requirements 16.3–16.10)
      */
     public function scan(Request $request): View
     {
@@ -71,9 +106,54 @@ class ScanController extends Controller
 
         $payload = (string) $request->input('payload', '');
 
+        $result = $this->resolve($payload);
+
+        $this->remember($request, $result);
+
         return view('dashboard.scan.index', [
-            'result' => $this->resolve($payload),
+            'result' => $result,
+            'history' => $this->history($request),
         ]);
+    }
+
+    /**
+     * The recent-scan recap for this operator, newest first. Returns a plain
+     * array the views can render without touching the session directly.
+     *
+     * @return array<int, array{status: string, message: string, reference: ?string, customer: ?string, tickets: int, at: string}>
+     */
+    private function history(Request $request): array
+    {
+        /** @var array<int, array{status: string, message: string, reference: ?string, customer: ?string, tickets: int, at: string}> $history */
+        $history = $request->session()->get(self::HISTORY_KEY, []);
+
+        return $history;
+    }
+
+    /**
+     * Push one scan outcome onto the front of the session recap and trim it to
+     * {@see HISTORY_LIMIT}. We store only display-safe scalars (no models) so
+     * the session payload stays small and serialisable.
+     */
+    private function remember(Request $request, array $result): void
+    {
+        /** @var \App\Models\Order|null $order */
+        $order = $result['order'] ?? null;
+
+        $entry = [
+            'status' => $result['status'],
+            'message' => $result['message'],
+            'reference' => $order?->order_reference,
+            'customer' => $order?->customer_name,
+            'tickets' => (int) collect($result['breakdown'] ?? [])->sum('quantity'),
+            'at' => now()->format('H:i:s'),
+        ];
+
+        $history = $this->history($request);
+        array_unshift($history, $entry);
+        $history = array_slice($history, 0, self::HISTORY_LIMIT);
+
+        $request->session()->put(self::HISTORY_KEY, $history);
     }
 
     /**
