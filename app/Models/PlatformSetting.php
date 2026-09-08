@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
  *
  * @property int $id
  * @property string $global_fee_percent
+ * @property string $mail_transport
  */
 class PlatformSetting extends Model
 {
@@ -26,10 +27,34 @@ class PlatformSetting extends Model
     public const DEFAULT_GLOBAL_FEE_PERCENT = '5.00';
 
     /**
+     * The supported outbound-mail transports for {@see self::$mail_transport}.
+     * `smtp` is the default cPanel SMTP mailer; `graph` is the Microsoft Graph
+     * API `sendMail` transport (organisation's own domain mailbox).
+     */
+    public const MAIL_TRANSPORT_SMTP = 'smtp';
+
+    public const MAIL_TRANSPORT_GRAPH = 'graph';
+
+    /**
+     * @var list<string>
+     */
+    public const MAIL_TRANSPORTS = [
+        self::MAIL_TRANSPORT_SMTP,
+        self::MAIL_TRANSPORT_GRAPH,
+    ];
+
+    /**
+     * Default outbound-mail transport: the existing SMTP mailer. Switching to
+     * Graph is an explicit Super_Admin action on the Settings page.
+     */
+    public const DEFAULT_MAIL_TRANSPORT = self::MAIL_TRANSPORT_SMTP;
+
+    /**
      * @var list<string>
      */
     protected $fillable = [
         'global_fee_percent',
+        'mail_transport',
     ];
 
     /**
@@ -37,6 +62,7 @@ class PlatformSetting extends Model
      */
     protected $attributes = [
         'global_fee_percent' => self::DEFAULT_GLOBAL_FEE_PERCENT,
+        'mail_transport' => self::DEFAULT_MAIL_TRANSPORT,
     ];
 
     /**

@@ -187,7 +187,7 @@
                                     @if ($supportEmail)
                                         <li>
                                             <span class="event-support__ico" aria-hidden="true">✉</span>
-                                            <a href="mailto:{{ $supportEmail }}?subject={{ rawurlencode('Ticket support — '.$event->name) }}">{{ $supportEmail }}</a>
+                                            <a href="mailto:{{ $supportEmail }}?subject={{ rawurlencode('Ticket support: '.$event->name) }}">{{ $supportEmail }}</a>
                                         </li>
                                     @endif
                                     @if ($supportPhone)
@@ -368,6 +368,34 @@
                 </div>
             </aside>
         </div>
+
+        {{-- Mobile "Book now" bar: a sibling of .event-layout (never inside the
+             sticky aside) so it can be fixed to the viewport bottom on small
+             screens. Suppressed entirely when there are no tickets or nothing
+             is on sale, so it never advertises a price that leads nowhere. --}}
+        @php
+            // Lowest purchasable price across on-sale, non-sold-out ticket
+            // types. Reads the already-loaded $ticketTypes collection; the
+            // 'price_minor' key is confirmed against _ticket_row.blade.php.
+            $bookNowFromMinor = $hasOnSale
+                ? $ticketTypes->filter(fn ($t) => $t['on_sale'] && ! $t['sold_out'])
+                    ->min(fn ($t) => $t['price_minor'])
+                : null;
+        @endphp
+
+        @if ($hasOnSale && $bookNowFromMinor !== null)
+            <div class="book-now-bar" data-book-now-bar>
+                <div class="book-now-bar__price">
+                    <span class="book-now-bar__label">From</span>
+                    <span class="book-now-bar__amount">{{ $money($bookNowFromMinor) }}</span>
+                </div>
+                <button type="button" class="btn book-now-bar__cta"
+                        data-book-now
+                        aria-label="Book now, jump to ticket selection">
+                    Book now
+                </button>
+            </div>
+        @endif
     </article>
 @endsection
 
@@ -470,6 +498,45 @@
 
         wireModal('[data-terms-modal]', '[data-open-terms]', '[data-close-terms]');
         wireModal('[data-privacy-modal]', '[data-open-privacy]', '[data-close-privacy]');
+    })();
+
+    // Mobile "Book now" bar: scrolls/focuses the checkout and hides itself once
+    // the checkout submit control (or the card) is in view. Self-contained so it
+    // does not depend on the checkout-form script above.
+    (function () {
+        var bar = document.querySelector('[data-book-now-bar]');
+        if (!bar) return;                               // suppressed cases: no-op
+        var cta = bar.querySelector('[data-book-now]');
+        var card = document.querySelector('.checkout-card');
+        var submit = document.querySelector('[data-checkout-submit]');
+
+        // (a) Book now → smooth-scroll + move focus to the checkout card.
+        if (cta && card) {
+            cta.addEventListener('click', function () {
+                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Make the card programmatically focusable, then focus for AT/keyboard.
+                if (!card.hasAttribute('tabindex')) card.setAttribute('tabindex', '-1');
+                card.focus({ preventScroll: true });
+            });
+        }
+
+        // (b) Hide the bar while the submit control (or card) is in view.
+        var target = submit || card;
+        if (target && 'IntersectionObserver' in window) {
+            var io = new IntersectionObserver(function (entries) {
+                entries.forEach(function (e) { bar.hidden = e.isIntersecting; });
+            }, { threshold: 0.01 });
+            io.observe(target);
+        } else if (target) {
+            // Scroll fallback for browsers without IntersectionObserver.
+            var onScroll = function () {
+                var r = target.getBoundingClientRect();
+                bar.hidden = r.top < window.innerHeight && r.bottom > 0;
+            };
+            window.addEventListener('scroll', onScroll, { passive: true });
+            window.addEventListener('resize', onScroll);
+            onScroll();
+        }
     })();
 </script>
 @endpush

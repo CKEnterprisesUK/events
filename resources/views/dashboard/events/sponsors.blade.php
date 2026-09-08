@@ -102,7 +102,7 @@
                                            @disabled($atOnTicketCap && ! $sponsor->on_ticket)>
                                     Show on ticket
                                     @if ($atOnTicketCap && ! $sponsor->on_ticket)
-                                        <span class="field-hint">Limit of {{ $maxOnTicket }} reached — turn one off first.</span>
+                                        <span class="field-hint">Limit of {{ $maxOnTicket }} reached. Turn one off first.</span>
                                     @endif
                                 </label>
 
@@ -183,7 +183,7 @@
                     <input type="checkbox" name="on_ticket" value="1" @checked(old('on_ticket')) @disabled($atOnTicketCap)>
                     Show on ticket
                     @if ($atOnTicketCap)
-                        <span class="field-hint">Limit of {{ $maxOnTicket }} reached — turn one off first.</span>
+                        <span class="field-hint">Limit of {{ $maxOnTicket }} reached. Turn one off first.</span>
                     @endif
                 </label>
                 @error('on_ticket')<p class="error">{{ $message }}</p>@enderror

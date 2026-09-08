@@ -5,6 +5,10 @@ namespace App\Providers;
 use App\Models\User;
 use App\Services\Branding\BrandingResolver;
 use App\Services\Mail\FakeTicketMailer;
+use App\Services\Mail\Graph\GraphMailClient;
+use App\Services\Mail\Graph\GraphMailConfig;
+use App\Services\Mail\Graph\GraphTransport;
+use App\Services\Mail\MailTransportResolver;
 use App\Services\Mail\SmtpTicketMailer;
 use App\Services\Mail\TicketMailer;
 use App\Services\AuditLogger;
@@ -15,9 +19,12 @@ use App\Services\Stripe\StripePaymentService;
 use App\Services\Stripe\StripePaymentServiceStripeSdk;
 use App\Services\TenantContext;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Mail\Mailer;
+use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -45,6 +52,24 @@ class AppServiceProvider extends ServiceProvider
 
         $this->bindStripePaymentService();
         $this->bindTicketMailer();
+        $this->bindGraphMail();
+    }
+
+    /**
+     * Bind the Microsoft Graph mail collaborators. {@see GraphMailConfig} is the
+     * validated snapshot of `services.graph`; the {@see MailTransportResolver}
+     * decides whether Graph or SMTP is the effective mailer. Both are shared so
+     * the provider and the admin screen observe the same state. This only wires
+     * up the objects — nothing sends via Graph until a Super_Admin selects it
+     * AND the environment is configured (see {@see self::applyMailTransport()}).
+     */
+    private function bindGraphMail(): void
+    {
+        $this->app->singleton(GraphMailConfig::class, function ($app): GraphMailConfig {
+            return GraphMailConfig::fromArray((array) $app['config']->get('services.graph', []));
+        });
+
+        $this->app->singleton(MailTransportResolver::class);
     }
 
     /**
@@ -110,6 +135,53 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->registerRoleGates();
         $this->registerRateLimiters();
+        $this->registerGraphMailTransport();
+        $this->applyMailTransport();
+    }
+
+    /**
+     * Register the `graph` mail transport with Laravel's mail manager so the
+     * `graph` mailer in `config/mail.php` resolves to our
+     * {@see \App\Services\Mail\Graph\GraphTransport}. This only *teaches* the
+     * mailer how to build the transport; whether it is used is decided by
+     * {@see self::applyMailTransport()}. Skipped under `testing` so no test can
+     * reach the live Graph API.
+     */
+    private function registerGraphMailTransport(): void
+    {
+        if ($this->app->environment('testing')) {
+            return;
+        }
+
+        Mail::extend('graph', function (): GraphTransport {
+            $config = $this->app->make(GraphMailConfig::class);
+
+            $client = new GraphMailClient(
+                $this->app->make(HttpFactory::class),
+                $this->app->make(CacheRepository::class),
+                $config,
+            );
+
+            return new GraphTransport($client, $config);
+        });
+    }
+
+    /**
+     * Set the effective default mailer from the Super_Admin's persisted choice.
+     * When Graph is selected AND configured the default becomes `graph`;
+     * otherwise it stays on the existing SMTP mailer. Reading through the
+     * resolver keeps this decision in one place and safe before the migration
+     * is applied. Skipped under `testing`, which keeps the array/fake transport.
+     */
+    private function applyMailTransport(): void
+    {
+        if ($this->app->environment('testing')) {
+            return;
+        }
+
+        $active = $this->app->make(MailTransportResolver::class)->activeMailer();
+
+        $this->app['config']->set('mail.default', $active);
     }
 
     /**

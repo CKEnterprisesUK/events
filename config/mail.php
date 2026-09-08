@@ -70,6 +70,16 @@ return [
             'path' => env('MAIL_SENDMAIL_PATH', '/usr/sbin/sendmail -bs -i'),
         ],
 
+        // Microsoft Graph API sendMail transport (organisation's own domain
+        // mailbox). Registered at runtime via Mail::extend('graph', ...) in
+        // AppServiceProvider; credentials live under services.graph. Selected
+        // by a Super_Admin on the platform Settings page (PlatformSetting
+        // `mail_transport`), which sets mail.default to this mailer when Graph
+        // is both chosen AND configured — otherwise the app stays on 'smtp'.
+        'graph' => [
+            'transport' => 'graph',
+        ],
+
         'log' => [
             'transport' => 'log',
             'channel' => env('MAIL_LOG_CHANNEL'),

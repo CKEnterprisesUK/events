@@ -12,7 +12,7 @@
     <div class="page-head">
         <div>
             <h1 style="margin:0;">New event</h1>
-            <p class="muted" style="margin:.35rem 0 0;">Start with the basics — you can flesh it out next.</p>
+            <p class="muted" style="margin:.35rem 0 0;">Start with the basics. You can flesh it out next.</p>
         </div>
         <div class="page-head__actions">
             <a class="btn btn-outline btn-sm" href="{{ route('dashboard.events.index') }}">Cancel</a>

@@ -35,7 +35,7 @@
                             <td class="num">{{ number_format($order->order_total_minor / 100, 2) }}</td>
                             <td class="num">
                                 @if ($terminal)
-                                    <span class="cell-dim">—</span>
+                                    <span class="cell-dim">&mdash;</span>
                                 @else
                                     <div class="row-actions">
                                         @can('refund_order')

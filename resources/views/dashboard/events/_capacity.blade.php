@@ -29,7 +29,7 @@
             @break
 
         @case(\App\Services\Events\CapacityComparison::UNLIMITED)
-            <p class="hint muted">No overall ceiling set — capacity is unlimited.</p>
+            <p class="hint muted">No overall ceiling set, so capacity is unlimited.</p>
             @break
 
         @default

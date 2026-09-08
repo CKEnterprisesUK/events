@@ -19,6 +19,8 @@
         :root {
             /* --brand is overridden per-company via @@yield('brand-style') */
             --brand: #674df3;
+            --radius: 0;
+            --radius-chip: 999px;
             --navy: #0f1425;
             --purple: #674df3;
             --purple-dark: #5238d6;
@@ -81,7 +83,7 @@
         }
         .store-header--poster .store-logo {
             position: relative; background: var(--surface);
-            padding: .6rem .9rem; border-radius: 14px;
+            padding: .6rem .9rem; border-radius: var(--radius);
             box-shadow: 0 10px 30px rgba(15,20,37,.18); max-height: 108px;
         }
 
@@ -93,7 +95,7 @@
 
         /* About-the-company blurb */
         .store-about__text {
-            background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+            background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
             padding: 1.35rem 1.5rem; margin: 0; color: var(--body);
         }
 
@@ -104,7 +106,7 @@
         .store-sponsors__img {
             max-width: 100%; max-height: 90px; width: auto; height: auto;
             background: var(--surface); border: 1px solid var(--line);
-            border-radius: 12px; padding: .6rem 1rem;
+            border-radius: var(--radius); padding: .6rem 1rem;
         }
         /* Click-to-reveal sponsor (name / bio / website link) */
         .store-sponsor { display: inline-block; }
@@ -120,7 +122,7 @@
         .store-sponsor__info {
             margin-top: .5rem; max-width: 22rem;
             background: var(--surface); border: 1px solid var(--line);
-            border-radius: 12px; padding: .75rem 1rem;
+            border-radius: var(--radius); padding: .75rem 1rem;
         }
         .store-sponsor__name { font-weight: 600; margin: 0 0 .35rem; }
         .store-sponsor__bio { margin: 0 0 .5rem; }
@@ -134,7 +136,7 @@
         }
         .store-links__list a {
             display: inline-flex; align-items: center;
-            padding: .45rem .9rem; border-radius: 999px;
+            padding: .45rem .9rem; border-radius: var(--radius-chip);
             border: 1px solid var(--line); background: var(--surface);
             font-size: .9rem; font-weight: 600; color: var(--ink);
             transition: border-color .15s ease, color .15s ease;
@@ -144,12 +146,12 @@
         .store-links__legal a { color: var(--muted); }
         .store-links__legal a:hover { color: var(--brand); }
         .empty {
-            background: var(--surface); border: 1px dashed var(--line); border-radius: 10px;
+            background: var(--surface); border: 1px dashed var(--line); border-radius: var(--radius);
             padding: 2.5rem 1.5rem; text-align: center; color: var(--muted); margin: 0;
         }
         .event-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 1rem; }
         .event-list-item {
-            background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+            background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
             overflow: hidden; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
         }
         .event-list-item:hover { border-color: var(--brand); box-shadow: 0 12px 30px rgba(27,31,46,.1); transform: translateY(-2px); }
@@ -185,7 +187,7 @@
         .store-footer__tagline { font-size: .88rem; color: #9aa0b5; margin: 0; }
         .store-footer .cta {
             display: inline-flex; align-items: center; gap: .5rem; white-space: nowrap;
-            padding: .7rem 1.35rem; border-radius: 6px; font-weight: 600; font-size: .95rem;
+            padding: .7rem 1.35rem; border-radius: var(--radius); font-weight: 600; font-size: .95rem;
             background: var(--purple); color: #fff; transition: background .15s ease;
         }
         .store-footer .cta:hover { background: var(--purple-dark); color: #fff; }

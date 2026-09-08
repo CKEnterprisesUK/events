@@ -45,7 +45,7 @@
 
         @if ($event->isOnline())
             <p class="checkout-online-notice">
-                This is an online event — joining information will be sent to
+                This is an online event. Joining information will be sent to
                 <strong>{{ $order->customer_email }}</strong> by email.
             </p>
         @endif
@@ -90,7 +90,7 @@
                     @if ($supportEmail)
                         <li>
                             <span class="checkout-help__ico" aria-hidden="true">✉</span>
-                            <a href="mailto:{{ $supportEmail }}?subject={{ rawurlencode('Missing tickets — order '.$order->order_reference) }}">{{ $supportEmail }}</a>
+                            <a href="mailto:{{ $supportEmail }}?subject={{ rawurlencode('Missing tickets: order '.$order->order_reference) }}">{{ $supportEmail }}</a>
                         </li>
                     @endif
                     @if ($supportPhone)

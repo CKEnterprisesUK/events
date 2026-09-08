@@ -603,7 +603,7 @@
         }
 
         .plain-list li::before {
-            content: "—";
+            content: "\2014";
             color: var(--purple);
             font-weight: 800;
         }
@@ -1241,7 +1241,7 @@
                     <div class="photo-caption">
                         <strong>Designed for real-world community fundraising</strong>
                         <p>
-                            A good event platform should help organisers sell tickets simply, keep queues moving
+                            A good event platform helps organisers sell tickets, keep queues moving
                             and leave more money with the organisation.
                         </p>
                     </div>

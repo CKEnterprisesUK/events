@@ -57,7 +57,7 @@
                                     </span>
                                 </div>
                             </td>
-                            <td>{{ $event->starts_at ? $event->starts_at->format('j M Y, H:i') : '—' }}</td>
+                            <td>{!! $event->starts_at ? e($event->starts_at->format('j M Y, H:i')) : '&mdash;' !!}</td>
                             <td>
                                 <span class="pill {{ $event->isPublished() ? 'pill--live' : 'pill--draft' }}">
                                     {{ $event->isPublished() ? 'Published' : 'Draft' }}

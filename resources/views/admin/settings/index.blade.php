@@ -42,6 +42,70 @@
     </div>
 
     <div class="admin-panel">
+        <div class="admin-panel__head"><h2>Sending transport</h2></div>
+        <div class="admin-panel__body">
+            <p class="muted">
+                Choose how the platform delivers all outgoing email — ticket
+                emails, support notifications and the test email below. SMTP uses
+                the mail server configured above. Microsoft Graph sends from your
+                own domain mailbox via the Graph API.
+            </p>
+
+            <p>
+                Currently sending via
+                <span class="admin-pill admin-pill--active">{{ strtoupper($activeMailer) }}</span>
+                @if ($selectedTransport === \App\Models\PlatformSetting::MAIL_TRANSPORT_GRAPH && ! $graphConfigured)
+                    <span class="admin-pill admin-pill--suspended">Graph selected but not configured</span>
+                @endif
+            </p>
+
+            @if (! $graphConfigured)
+                <p class="muted">
+                    Microsoft Graph is not configured yet. Add the
+                    <code>GRAPH_MAIL_TENANT_ID</code>, <code>GRAPH_MAIL_CLIENT_ID</code>,
+                    <code>GRAPH_MAIL_CLIENT_SECRET</code> and <code>GRAPH_MAIL_FROM</code>
+                    values to the environment (the Azure AD app registration needs
+                    the <code>Mail.Send</code> application permission with admin
+                    consent). Until then, selecting Graph is safe — mail keeps
+                    sending via SMTP.
+                </p>
+            @endif
+
+            <form method="POST" action="{{ route('admin.settings.mail-transport') }}">
+                @csrf
+                <fieldset class="field">
+                    <legend>Outbound mail transport</legend>
+
+                    <label class="choice">
+                        <input
+                            type="radio"
+                            name="mail_transport"
+                            value="{{ \App\Models\PlatformSetting::MAIL_TRANSPORT_SMTP }}"
+                            @checked($selectedTransport === \App\Models\PlatformSetting::MAIL_TRANSPORT_SMTP)
+                        >
+                        <span>SMTP (configured mail server)</span>
+                    </label>
+
+                    <label class="choice">
+                        <input
+                            type="radio"
+                            name="mail_transport"
+                            value="{{ \App\Models\PlatformSetting::MAIL_TRANSPORT_GRAPH }}"
+                            @checked($selectedTransport === \App\Models\PlatformSetting::MAIL_TRANSPORT_GRAPH)
+                        >
+                        <span>Microsoft Graph (your domain mailbox){{ $graphConfigured ? '' : ' — not configured yet' }}</span>
+                    </label>
+
+                    @error('mail_transport')
+                        <p class="error">{{ $message }}</p>
+                    @enderror
+                </fieldset>
+                <button type="submit" class="btn">Save transport</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="admin-panel">
         <div class="admin-panel__head"><h2>Send a test email</h2></div>
         <div class="admin-panel__body">
             <p class="muted">

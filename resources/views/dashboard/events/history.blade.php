@@ -36,7 +36,7 @@
                 <p class="muted">
                     Clears every check-in for this event so the door can scan
                     tickets again from a clean slate. Tickets and orders are not
-                    affected — only their scanned status is cleared. This is
+                    affected, only their scanned status is cleared. This is
                     recorded in the history below.
                 </p>
                 @if ($scannedCount === 0)

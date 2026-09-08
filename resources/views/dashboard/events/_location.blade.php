@@ -79,7 +79,7 @@
                data-pinned="{{ $hasPin ? 'true' : 'false' }}">
                 @if ($hasPin)
                     <span class="pill pill--live">Pinned</span>
-                    <span data-location-coords>Located at {{ number_format((float) $latitude, 5) }}, {{ number_format((float) $longitude, 5) }} — this map will appear on your event page.</span>
+                    <span data-location-coords>Located at {{ number_format((float) $latitude, 5) }}, {{ number_format((float) $longitude, 5) }}. This map will appear on your event page.</span>
                 @else
                     <span class="pill pill--draft">Not pinned yet</span>
                     <span data-location-coords>No location is set, so the map won't appear on your event page. Enter an address and save, or drag the marker below to place it manually.</span>
@@ -89,9 +89,9 @@
 
         <div class="field">
             <div id="event-map" role="application" tabindex="0"
-                 aria-label="Map — drag the pin to set the event location"
+                 aria-label="Map, drag the pin to set the event location"
                  style="height:320px"></div>
-            <p class="hint">Can't find your address automatically? Drag the marker to the exact spot — that sets the location manually.</p>
+            <p class="hint">Can't find your address automatically? Drag the marker to the exact spot to set the location manually.</p>
         </div>
 
         {{-- The mini-map writes coordinates into these hidden inputs, which POST
@@ -183,7 +183,7 @@
             if (pillEl) { pillEl.className = 'pill pill--live'; pillEl.textContent = 'Pinned'; }
             if (coordsEl) {
                 coordsEl.textContent = 'Located at ' + lat.toFixed(5) + ', ' + lng.toFixed(5) +
-                    ' — this map will appear on your event page once you save.';
+                    '. This map will appear on your event page once you save.';
             }
         };
 

@@ -4,10 +4,15 @@ namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
 use App\Mail\TestMail;
+use App\Models\AuditLog;
+use App\Models\PlatformSetting;
+use App\Services\AuditLogger;
+use App\Services\Mail\MailTransportResolver;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\Rule;
 use Throwable;
 
 /**
@@ -17,22 +22,74 @@ use Throwable;
  * configured transport actually delivers.
  *
  * This surface is not tenant-scoped — a Super_Admin operates across the whole
- * Platform. Nothing here is persisted; mail configuration lives in the
- * environment / config, and the test send is dispatched synchronously so the
- * admin sees an immediate success or the failure reason.
+ * Platform. The mail *credentials* still live in the environment / config, but
+ * the choice of outbound transport (SMTP vs Microsoft Graph) is persisted on
+ * the single `platform_settings` row and toggled here. The test send is
+ * dispatched synchronously so the admin sees an immediate success or the
+ * failure reason.
  */
 class SettingsController extends Controller
 {
+    public function __construct(
+        private readonly AuditLogger $audit,
+        private readonly MailTransportResolver $transport,
+    ) {}
+
     /**
-     * Show the effective mail configuration (read-only diagnostics) and the
-     * test-email form.
+     * Show the effective mail configuration (read-only diagnostics), the
+     * outbound-transport toggle, and the test-email form.
      */
     public function index(Request $request): View
     {
         return view('admin.settings.index', [
             'mail' => $this->mailDiagnostics(),
             'defaultTestEmail' => $request->user()?->email,
+            'selectedTransport' => $this->transport->selectedTransport(),
+            'activeMailer' => $this->transport->activeMailer(),
+            'graphConfigured' => $this->transport->graphConfigured(),
         ]);
+    }
+
+    /**
+     * Persist the Platform-wide outbound-mail transport (SMTP or Microsoft
+     * Graph). Graph only actually takes effect once its environment credentials
+     * are present — otherwise the app keeps sending via SMTP even after this is
+     * set to `graph` — so switching is always safe. Records an audit entry on
+     * the platform trail and clears the resolver cache so the change is picked
+     * up on the next send.
+     */
+    public function updateMailTransport(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'mail_transport' => ['required', Rule::in(PlatformSetting::MAIL_TRANSPORTS)],
+        ]);
+
+        $setting = PlatformSetting::current();
+        $previous = $setting->mail_transport;
+        $setting->mail_transport = $validated['mail_transport'];
+        $setting->save();
+
+        // Refresh the short-lived cache so the new choice is observed at once.
+        $this->transport->forget();
+
+        // Platform-level change (no tenant): recorded with a null company_id so
+        // it appears only on the super-admin trail.
+        $this->audit->record(
+            action: AuditLog::MAIL_TRANSPORT_CHANGED,
+            summary: 'Changed the mail transport to '.$validated['mail_transport'],
+            context: [
+                'from' => $previous,
+                'to' => $validated['mail_transport'],
+            ],
+        );
+
+        $message = $validated['mail_transport'] === PlatformSetting::MAIL_TRANSPORT_GRAPH && ! $this->transport->graphConfigured()
+            ? __('Mail transport set to Microsoft Graph, but Graph is not configured yet — mail will keep sending via SMTP until the Graph credentials are added to the environment.')
+            : __('Mail transport updated.');
+
+        return redirect()
+            ->route('admin.settings.index')
+            ->with('status', $message);
     }
 
     /**

@@ -25,7 +25,7 @@
                 <label for="capacity">Total tickets across the whole event <span class="muted">(optional)</span></label>
                 <input id="capacity" type="number" name="capacity" min="1" placeholder="Unlimited"
                        value="{{ old('capacity', $event->capacity) }}">
-                <p class="hint">A ceiling for the whole event. Leave blank for unlimited. When set, it binds alongside each ticket type's own capacity — whichever is smaller applies first.</p>
+                <p class="hint">A ceiling for the whole event. Leave blank for unlimited. When set, it binds alongside each ticket type's own capacity, and whichever is smaller applies first.</p>
                 @error('capacity') <p class="error">{{ $message }}</p> @enderror
             </div>
             <div class="form-actions">

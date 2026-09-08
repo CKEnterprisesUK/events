@@ -454,6 +454,8 @@ Route::middleware(['auth', 'super.admin', 'session.timeout'])
         // diagnostic test email through the configured mailer. (20.7)
         Route::get('/settings', [SuperAdminSettingsController::class, 'index'])->name('settings.index');
         Route::post('/settings/test-mail', [SuperAdminSettingsController::class, 'sendTest'])->name('settings.test-mail');
+        // Persist the Platform-wide outbound-mail transport (SMTP vs Microsoft Graph).
+        Route::post('/settings/mail-transport', [SuperAdminSettingsController::class, 'updateMailTransport'])->name('settings.mail-transport');
 
         // Support ticket queue: the operator view of every in-dashboard
         // "Contact support" request across the whole Platform. Deliberately

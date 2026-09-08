@@ -85,7 +85,7 @@
                 <button type="submit" class="btn" @disabled(! $allRequiredMet)>Publish event</button>
             </form>
             @if ($allRequiredMet)
-                <p class="publish-card__hint">Everything's ready — publish when you are.</p>
+                <p class="publish-card__hint">Everything's ready. Publish when you are.</p>
             @else
                 <p class="publish-card__hint">Complete the {{ $blockingTotal - $blockingDone }} required {{ \Illuminate\Support\Str::plural('item', $blockingTotal - $blockingDone) }} above to publish.</p>
             @endif

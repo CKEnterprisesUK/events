@@ -1,6 +1,6 @@
 @extends('layouts.dashboard')
 
-@section('title', $event->name.' — Ticket Types')
+@section('title', $event->name.': Ticket Types')
 
 @section('content')
     <div class="page-head">
@@ -59,7 +59,7 @@
                                 @if ($ticketType->sale_starts_at && $ticketType->sale_ends_at)
                                     <span class="cell-dim">{{ $ticketType->sale_starts_at->format('j M H:i') }} &ndash; {{ $ticketType->sale_ends_at->format('j M H:i') }}</span>
                                 @else
-                                    <span class="cell-dim">—</span>
+                                    <span class="cell-dim">&mdash;</span>
                                 @endif
                             </td>
                             <td class="num"><button type="button" class="panel__link" data-toggle="edit-type-{{ $ticketType->id }}">Edit</button></td>

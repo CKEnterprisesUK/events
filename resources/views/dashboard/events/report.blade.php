@@ -1,6 +1,6 @@
 @extends('layouts.dashboard')
 
-@section('title', $event->name.' — Report')
+@section('title', $event->name.': Report')
 
 @section('content')
     <div class="page-head">
