@@ -63,7 +63,7 @@ class GraphMailDiagnostics
         }
 
         try {
-            $this->client->fetchTokenForDiagnostics();
+            $roles = $this->client->tokenRolesForDiagnostics();
         } catch (GraphMailException $e) {
             return GraphDiagnosticResult::failure(
                 stage: $e->stage,
@@ -81,11 +81,29 @@ class GraphMailDiagnostics
             );
         }
 
+        // Authenticated. The decisive check for a 403-on-send: does the token
+        // actually carry the Mail.Send application role? If not, admin consent
+        // is not effective and no mailbox will accept the send.
+        $rolesLabel = $roles === [] ? '(none)' : implode(', ', $roles);
+
+        if (! in_array('Mail.Send', $roles, true)) {
+            return GraphDiagnosticResult::failure(
+                stage: 'token',
+                message: 'Authenticated, but the access token does NOT include the Mail.Send application '
+                    .'role. Granted roles on the token: '.$rolesLabel.'.',
+                hint: 'In the app registration, add the Mail.Send APPLICATION permission (not Delegated) '
+                    .'under API permissions, then click "Grant admin consent". A 403 on send is expected '
+                    .'until Mail.Send appears here.',
+            );
+        }
+
         return GraphDiagnosticResult::ok(
             stage: 'token',
-            message: 'Authenticated to Microsoft Graph successfully. The app registration and admin '
-                .'consent are in place. If a test email still returns 403, the issue is mailbox '
-                .'send permission (Application Access Policy) rather than authentication.',
+            message: 'Authenticated to Microsoft Graph and the token carries the Mail.Send application '
+                .'role (granted roles: '.$rolesLabel.'). Authentication and consent are correct. If a '
+                .'test email still returns 403, the cause is mailbox-level: an Application Access Policy '
+                .'that excludes '.($this->config->from ?? 'the sending mailbox').', or that address not '
+                .'being a real licensed Exchange Online mailbox.',
         );
     }
 

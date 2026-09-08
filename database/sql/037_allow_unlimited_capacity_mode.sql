@@ -1,0 +1,49 @@
+-- =============================================================================
+-- 037_allow_unlimited_capacity_mode.sql
+-- Event Ticketing Platform — versioned raw schema SQL for phpMyAdmin (no SSH on prod)
+-- =============================================================================
+--
+-- Purpose (DOCUMENTATION ONLY — no schema change):
+--   The event-authoring redesign introduces a third availability option,
+--   `unlimited`, alongside the existing `capped` and `shared_pool` values of
+--   `ticket_types.capacity_mode`. This file records that the application now
+--   writes `'unlimited'` into that column.
+--
+--   NO DDL IS REQUIRED. The `capacity_mode` column is already a plain
+--   `varchar(20)` (introduced in 020_add_capacity_mode_to_ticket_types.sql), not
+--   a MySQL ENUM, so it already accepts `'unlimited'` without any alteration.
+--   The set of permitted values is enforced in application code via
+--   `Rule::in(TicketType::MODES)` (where `TicketType::MODES` now includes
+--   `MODE_UNLIMITED = 'unlimited'`), not by a database constraint.
+--
+--   This file exists purely to keep the numbered raw-SQL trail complete and
+--   auditable for the phpMyAdmin deployment path (Req 9.4): every logical
+--   schema-affecting change in the feature has a corresponding numbered entry,
+--   even when — as here — the change is a no-op at the database level.
+--
+-- Covers changes:
+--   * ticket_types.capacity_mode  (semantic-only: now also accepts 'unlimited';
+--                                  column type unchanged, still varchar(20))
+--
+-- Provenance:
+--   No migration adds DDL here. The value-set extension is delivered in the
+--   application layer (App\Models\TicketType::MODES). There is intentionally no
+--   `migrations` ledger insert in this file because no Laravel migration backs
+--   it — the ledger row for the accompanying schema change lives in
+--   036_add_description_to_ticket_types.sql.
+--
+-- Applying on prod:
+--   Nothing to run. This file is informational. Optionally, the defensive no-op
+--   below re-asserts the existing column width so pasting it in phpMyAdmin (in
+--   filename order, after 036) is harmless and idempotent.
+--
+-- Changelog:
+--   037 (initial) — document that capacity_mode now also accepts 'unlimited'
+--                   (no DDL; column already varchar(20)).
+-- =============================================================================
+
+-- Defensive no-op: re-assert the existing column definition. This does not
+-- change the schema (the column is already varchar(20) NOT NULL DEFAULT
+-- 'capped'); it is included only so the file is safe to paste in phpMyAdmin.
+ALTER TABLE `ticket_types`
+  MODIFY COLUMN `capacity_mode` varchar(20) NOT NULL DEFAULT 'capped';

@@ -89,6 +89,53 @@ class GraphMailClient
     }
 
     /**
+     * Live, read-only probe that fetches a fresh token and decodes its `roles`
+     * claim — the application permissions Azure actually put on the token. This
+     * is the decisive check for a 403-after-successful-auth: if `Mail.Send` is
+     * absent here, admin consent is not effective no matter what the portal
+     * appears to show. Returns the granted role list (may be empty). Throws a
+     * `token`-stage {@see GraphMailException} if authentication itself fails.
+     *
+     * @return list<string>
+     */
+    public function tokenRolesForDiagnostics(): array
+    {
+        [$token] = $this->requestToken();
+
+        return $this->decodeTokenRoles($token);
+    }
+
+    /**
+     * Decode the `roles` claim from a JWT access token without verifying its
+     * signature (we only trust it for display — Graph itself enforces the token
+     * on every call). Safe against malformed tokens: returns an empty list.
+     *
+     * @return list<string>
+     */
+    private function decodeTokenRoles(string $token): array
+    {
+        $parts = explode('.', $token);
+
+        if (count($parts) !== 3) {
+            return [];
+        }
+
+        $payload = base64_decode(strtr($parts[1], '-_', '+/'), true);
+
+        if ($payload === false) {
+            return [];
+        }
+
+        $claims = json_decode($payload, true);
+
+        if (! is_array($claims) || ! isset($claims['roles']) || ! is_array($claims['roles'])) {
+            return [];
+        }
+
+        return array_values(array_filter($claims['roles'], 'is_string'));
+    }
+
+    /**
      * Return a valid application access token, fetching and caching a new one
      * when the cache is empty or the previous token is near expiry.
      */

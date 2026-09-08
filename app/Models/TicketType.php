@@ -54,8 +54,10 @@ class TicketType extends Model
 
     public const MODE_SHARED_POOL = 'shared_pool';
 
+    public const MODE_UNLIMITED = 'unlimited';
+
     /** @var list<string> */
-    public const MODES = [self::MODE_CAPPED, self::MODE_SHARED_POOL];
+    public const MODES = [self::MODE_CAPPED, self::MODE_SHARED_POOL, self::MODE_UNLIMITED];
 
     /**
      * @var list<string>
@@ -64,6 +66,7 @@ class TicketType extends Model
         'company_id',
         'event_id',
         'name',
+        'description',
         'price_minor',
         'capacity',
         'capacity_mode',
@@ -132,6 +135,16 @@ class TicketType extends Model
     public function isSharedPool(): bool
     {
         return $this->capacity_mode === self::MODE_SHARED_POOL;
+    }
+
+    /**
+     * Whether this Ticket_Type is unbounded: it draws neither a per-type ceiling
+     * nor from the Event's overall capacity, so it is never finitely bound.
+     * (Requirements 7.4, 7.6)
+     */
+    public function isUnlimited(): bool
+    {
+        return $this->capacity_mode === self::MODE_UNLIMITED;
     }
 
     /**

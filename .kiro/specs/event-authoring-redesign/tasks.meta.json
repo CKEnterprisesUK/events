@@ -1,0 +1,205 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Add the `description` migration and raw SQL files": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788889915439
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788889926888
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788890220699
+      }
+    ],
+    "1.2 Extend `TicketType` constants, fillable, and availability helpers": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788889915480
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788890224925
+      }
+    ],
+    "1.3 Redefine `isOnSaleAt` and add `saleStatusLabel`": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788889915513
+      }
+    ],
+    "1.7 REGRESSION: rewrite existing `isOnSaleAt` tests to the new semantics": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788889915545
+      }
+    ],
+    "2.1 Extend `CapacityComparison` with `typesUnbounded` and update `state()`": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788889915573
+      }
+    ],
+    "2.2 Update `EventReadiness::capacity()` to detect unbounded types": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788889915635
+      }
+    ],
+    "3.1 Update `EventPageController::saleState()` and verify the checkout gate": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788889915664
+      }
+    ],
+    "4.1 Update `TicketTypeController` validation for nullable sale bounds and unlimited mode": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788889915697
+      }
+    ],
+    "4.2 Add the `destroy` action and route with the last-type-on-published guard": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788889915731
+      }
+    ],
+    "5.1 Create the `x-icon` anonymous Blade component": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788889915762
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788889930480
+      },
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788890220849
+      }
+    ],
+    "6.1 Build the availability and sales-period controls": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788889915793
+      }
+    ],
+    "6.2 Build the accordion row and list partials with server-derived summaries": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788889915822
+      }
+    ],
+    "6.3 Add accordion + control JavaScript and CSS": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788889915856
+      }
+    ],
+    "6.4 Wire the accordion into the Tickets manage screen": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788889915890
+      }
+    ],
+    "7.1 Create `EventWizardController` and register wizard routes": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788889915927
+      }
+    ],
+    "7.2 Build the wizard layout and per-step views with contextual help": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788889915971
+      }
+    ],
+    "7.3 Implement per-step persistence, progressive validation, and navigation": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788889916006
+      }
+    ],
+    "8.1 Create `_manage_topbar` and move publish/unpublish out of `_publish_card`": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788889916039
+      }
+    ],
+    "9.1 Convert `_nav.blade.php` to SVG icons and add the collapse control": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788889916070
+      }
+    ],
+    "9.2 Convert Main_Sidebar emoji to SVG and add its collapse control": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788889916104
+      }
+    ],
+    "9.3 Add collapse CSS and the persisted-toggle JS": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788889916131
+      }
+    ],
+    "10.1 Add stretched-link CSS and apply row markup to events and customers lists": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788889916164
+      }
+    ],
+    "11.1 Consolidate `app.css` additions and run the full verification pass": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788889916193
+      }
+    ],
+    "11.3 Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788889916223
+      }
+    ],
+    "5. Inline SVG icon component": [
+      {
+        "executionId": "6620b2a8-dbb4-4d90-85ed-8abb2d425133",
+        "chatSessionId": "sess_1db9d4ac-2bd3-4eea-b627-46e89817881e",
+        "timestamp": 1788890220876
+      }
+    ]
+  }
+}
