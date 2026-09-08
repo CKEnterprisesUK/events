@@ -458,6 +458,8 @@ Route::middleware(['auth', 'super.admin', 'session.timeout'])
         Route::post('/settings/mail-transport', [SuperAdminSettingsController::class, 'updateMailTransport'])->name('settings.mail-transport');
         // Live, read-only Microsoft Graph connectivity probe (auth check; sends no mail).
         Route::post('/settings/graph-diagnostics', [SuperAdminSettingsController::class, 'runGraphDiagnostics'])->name('settings.graph-diagnostics');
+        // Flush the cached Graph application token (e.g. after granting admin consent).
+        Route::post('/settings/graph-clear-token', [SuperAdminSettingsController::class, 'clearGraphToken'])->name('settings.graph-clear-token');
 
         // Support ticket queue: the operator view of every in-dashboard
         // "Contact support" request across the whole Platform. Deliberately

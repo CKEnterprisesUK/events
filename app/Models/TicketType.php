@@ -27,11 +27,12 @@ use Illuminate\Support\Carbon;
  * checkouts serialize and never oversell. (Requirements 6.6, 6.7, 6.8, 5.6,
  * 10.6, 10.7)
  *
- * Each Ticket_Type has a `capacity_mode` of either `capped` (the default) or
- * `shared_pool`. A capped type keeps its own per-type ceiling in `capacity`;
- * a shared-pool type has no per-type ceiling and draws only from the Event's
- * overall capacity, so `capacity` is nullable at the DB level and may be
- * omitted for shared-pool types. (Requirements 2.5, 2.6, 7.2)
+ * Each Ticket_Type has a `capacity_mode` of `capped` (the default),
+ * `shared_pool`, or `unlimited`. A capped type keeps its own per-type ceiling
+ * in `capacity`; a shared-pool type has no per-type ceiling and draws only from
+ * the Event's overall capacity; an unlimited type is never finitely bound. In
+ * the latter two cases `capacity` is nullable at the DB level and may be
+ * omitted. (Requirements 2.5, 2.6, 7.2, 7.4)
  *
  * @property int $id
  * @property int $company_id
@@ -39,7 +40,7 @@ use Illuminate\Support\Carbon;
  * @property string $name
  * @property int $price_minor
  * @property int|null $capacity nullable when capacity_mode is shared_pool
- * @property string $capacity_mode one of self::MODES (capped|shared_pool)
+ * @property string $capacity_mode one of self::MODES (capped|shared_pool|unlimited)
  * @property int $sold_count
  * @property int $reserved_count
  * @property Carbon|null $sale_starts_at
@@ -154,12 +155,18 @@ class TicketType extends Model
      *                 with the event's overall remaining. Returns the event
      *                 remaining if resolvable, else PHP_INT_MAX as a non-binding
      *                 sentinel.
-     * (Requirements 2.5, 2.6, 6.6, 7.2, 10.6)
+     *  - unlimited:   never finitely bound; returns PHP_INT_MAX as a non-binding
+     *                 sentinel.
+     * (Requirements 2.5, 2.6, 6.6, 7.2, 7.4, 10.6)
      */
     public function availableQuantity(): int
     {
         if ($this->isCapped()) {
             return (int) $this->capacity - $this->sold_count - $this->reserved_count;
+        }
+
+        if ($this->isUnlimited()) {
+            return PHP_INT_MAX;
         }
 
         // shared_pool: governed by event overall remaining.
@@ -171,12 +178,17 @@ class TicketType extends Model
     /**
      * Availability given a precomputed event overall remaining (null = unlimited).
      * Views/report pass the event remaining once to avoid N+1.
+     *  - unlimited:   null (never finitely bound, for any eventRemaining)
      *  - capped:      min(per-type remaining, eventRemaining ?? per-type remaining)
      *  - shared_pool: eventRemaining  (null => unlimited => return null)
-     * (Requirements 2.5, 2.6)
+     * (Requirements 2.5, 2.6, 7.4)
      */
     public function availabilityFor(?int $eventRemaining): ?int
     {
+        if ($this->isUnlimited()) {
+            return null;
+        }
+
         if ($this->isCapped()) {
             $perType = (int) $this->capacity - $this->sold_count - $this->reserved_count;
 
@@ -187,37 +199,92 @@ class TicketType extends Model
     }
 
     /**
-     * Whether `$now` falls within this Ticket_Type's sale window, treated as
-     * the half-open interval `[sale_starts_at, sale_ends_at)`.
+     * Whether `$now` falls within this Ticket_Type's effective sale window,
+     * treated as the half-open interval `[effectiveStart, effectiveEnd)`.
      *
-     * The sale is open iff the current time is at or after the sale window
-     * start and strictly before the sale window end. Consequently:
-     *   - before the start → sale has not started (Requirement 6.4);
-     *   - at or after the end → sale has ended (Requirement 6.5).
+     * Unlike the earlier "both bounds required" rule, a null bound no longer
+     * closes the window; it relaxes it:
+     *   - `effectiveStart` = `sale_starts_at`, or no lower bound when null.
+     *     Publication is the true effective start (enforced by
+     *     {@see isPurchasableAt}), so a null start means "on sale from
+     *     publication". (Requirement 8.7)
+     *   - `effectiveEnd`   = `sale_ends_at`, else the Event start time, else no
+     *     upper bound. A null end means "on sale until the event starts".
+     *     (Requirement 8.8)
      *
-     * This is a pure function of the Ticket_Type's window and the supplied
-     * time; it does not consider Event publication (see {@see isPurchasableAt}).
+     * The interval is half-open: `$now` at or after the effective end is
+     * treated as ended.
+     *
+     * This is a pure function of the Ticket_Type's window, the Event start,
+     * and the supplied time; it does not consider Event publication (see
+     * {@see isPurchasableAt}).
      */
     public function isOnSaleAt(Carbon $now): bool
     {
-        // A missing bound never opens the sale — the window is undefined.
-        if ($this->sale_starts_at === null || $this->sale_ends_at === null) {
+        // Lower bound: explicit start, else no lower bound (publication is the
+        // effective start, enforced by isPurchasableAt()). (Requirement 8.7)
+        if ($this->sale_starts_at !== null && $now->lessThan($this->sale_starts_at)) {
             return false;
         }
 
-        return $now->greaterThanOrEqualTo($this->sale_starts_at)
-            && $now->lessThan($this->sale_ends_at);
+        // Upper bound: explicit end, else the event start time, else no upper
+        // bound. (Requirement 8.8)
+        $end = $this->sale_ends_at ?? $this->event?->starts_at;
+        if ($end !== null && $now->greaterThanOrEqualTo($end)) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
      * Whether a Customer may view/purchase this Ticket_Type at `$now`.
      *
      * A Ticket_Type is purchasable if and only if its Event is published and
-     * `$now` lies within the half-open sale window `[start, end)`.
-     * (Requirements 5.5, 6.4, 6.5)
+     * `$now` lies within the effective half-open sale window. Publication
+     * remains the true lower gate, so a null `sale_starts_at` correctly means
+     * "on sale from publication". (Requirements 5.5, 6.4, 6.5, 8.7)
      */
     public function isPurchasableAt(Carbon $now): bool
     {
         return $this->event->isPublished() && $this->isOnSaleAt($now);
+    }
+
+    /**
+     * The sales-status summary for the accordion status pill: a label and its
+     * matching pill CSS class. Computed from the same bounds as
+     * {@see isOnSaleAt} plus Event publication.
+     *
+     *   - `On sale`     (`pill--live`)  — event published and on sale now.
+     *   - `Scheduled`   (`pill--draft`) — a lower bound is in the future, or
+     *                                     the event is not yet published.
+     *   - `Ended`       (`pill--draft`) — the effective upper bound
+     *                                     (`sale_ends_at`, else event start)
+     *                                     is in the past.
+     *   - `Not on sale` (`pill--draft`) — fallback (e.g. draft with no dates).
+     *
+     * @return array{label: string, pill: string}
+     */
+    public function saleStatusLabel(Carbon $now): array
+    {
+        $published = $this->event?->isPublished() ?? false;
+
+        if ($published && $this->isOnSaleAt($now)) {
+            return ['label' => 'On sale', 'pill' => 'pill--live'];
+        }
+
+        // A lower bound in the future, or an unpublished event, means the sale
+        // is scheduled to open later.
+        if (($this->sale_starts_at !== null && $now->lessThan($this->sale_starts_at)) || ! $published) {
+            return ['label' => 'Scheduled', 'pill' => 'pill--draft'];
+        }
+
+        // An effective upper bound in the past means the sale has ended.
+        $end = $this->sale_ends_at ?? $this->event?->starts_at;
+        if ($end !== null && $now->greaterThanOrEqualTo($end)) {
+            return ['label' => 'Ended', 'pill' => 'pill--draft'];
+        }
+
+        return ['label' => 'Not on sale', 'pill' => 'pill--draft'];
     }
 }

@@ -25,18 +25,25 @@ final class CapacityComparison
     /**
      * @param  ?int  $eventCapacity  the Event's optional overall capacity
      *   ceiling; null means unlimited.
-     * @param  int  $typesSum  the sum of the Event's ticket-type capacities.
+     * @param  int  $typesSum  the sum of the Event's capped ticket-type
+     *   capacities.
+     * @param  bool  $typesUnbounded  whether the types side is unbounded (an
+     *   `unlimited` or `shared_pool` type is present), so no finite types sum
+     *   can exceed the event ceiling. (Requirement 7.6)
      */
     public function __construct(
         public readonly ?int $eventCapacity,
         public readonly int $typesSum,
+        public readonly bool $typesUnbounded = false,
     ) {}
 
     /**
-     * Classify which ceiling binds. (Requirements 3.2, 3.3)
+     * Classify which ceiling binds. (Requirements 3.2, 3.3, 7.6)
      *
      * - {@see UNLIMITED} when there is no overall capacity ceiling.
-     * - {@see EVENT_BINDS} when the overall ceiling is below the ticket-type sum.
+     * - {@see EVENT_BINDS} when the types side is unbounded (a finite event
+     *   ceiling can only ever bind against an unbounded types side), or when
+     *   the overall ceiling is below the ticket-type sum.
      * - {@see TYPES_BIND} when the overall ceiling exceeds the ticket-type sum.
      * - {@see BALANCED} when the two are equal.
      */
@@ -44,6 +51,10 @@ final class CapacityComparison
     {
         if ($this->eventCapacity === null) {
             return self::UNLIMITED;
+        }
+
+        if ($this->typesUnbounded) {
+            return self::EVENT_BINDS;
         }
 
         if ($this->eventCapacity < $this->typesSum) {

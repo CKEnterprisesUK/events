@@ -47,6 +47,17 @@ class GraphMailDiagnostics
     }
 
     /**
+     * Flush any cached application token so the next probe/send re-authenticates
+     * from scratch. Used after an Azure change (admin consent, secret rotation)
+     * to clear a token that was issued before the change and would otherwise
+     * linger in cache for up to ~an hour.
+     */
+    public function forgetCachedToken(): void
+    {
+        $this->client->forgetCachedToken();
+    }
+
+    /**
      * Run the live probe: verify config completeness, then attempt to acquire an
      * application token. Returns a structured result (never throws) so the
      * controller can flash a clear success/failure with a targeted hint.

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Event;
+use App\Models\TicketType;
 use App\Services\Events\CapacityComparison;
 use App\Services\Events\ChecklistItem;
 use App\Services\Events\EventReadinessReport;
@@ -81,13 +82,26 @@ class EventReadiness
 
     /**
      * Compare the Event's optional overall capacity ceiling against the sum of
-     * its ticket-type capacities. (Requirements 3.2, 3.3)
+     * its ticket-type capacities. (Requirements 3.2, 3.3, 7.6)
+     *
+     * Only capped types contribute to `typesSum`; an `unlimited` or
+     * `shared_pool` type makes the types side unbounded, so a finite event
+     * ceiling can only ever bind against it rather than be exceeded by a
+     * misleadingly understated finite sum. (Requirement 7.6)
      */
     public function capacity(Event $event): CapacityComparison
     {
+        $types = $event->ticketTypes()->get(['capacity_mode', 'capacity']);
+
+        $hasUnbounded = $types->contains(
+            fn (TicketType $t): bool => $t->capacity_mode === TicketType::MODE_UNLIMITED
+                || $t->capacity_mode === TicketType::MODE_SHARED_POOL
+        );
+
         return new CapacityComparison(
             eventCapacity: $event->capacity,
-            typesSum: (int) $event->ticketTypes()->sum('capacity'),
+            typesSum: (int) $types->where('capacity_mode', TicketType::MODE_CAPPED)->sum('capacity'),
+            typesUnbounded: $hasUnbounded,
         );
     }
 

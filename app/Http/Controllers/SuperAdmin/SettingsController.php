@@ -85,6 +85,23 @@ class SettingsController extends Controller
     }
 
     /**
+     * Clear the cached Microsoft Graph application token so the next send/probe
+     * re-authenticates. Useful right after granting admin consent or rotating
+     * the client secret in Azure — a token issued before that change can sit in
+     * cache for up to ~an hour and keep reflecting the old state. Gives the
+     * Super_Admin a shell-free way to flush it (the app runs on cPanel, no SSH).
+     */
+    public function clearGraphToken(): RedirectResponse
+    {
+        $this->graphDiagnostics->forgetCachedToken();
+
+        return redirect()
+            ->route('admin.settings.index')
+            ->with('status', __('Cleared the cached Microsoft Graph token. The next test email or '
+                .'diagnostics run will fetch a fresh token from Microsoft.'));
+    }
+
+    /**
      * Persist the Platform-wide outbound-mail transport (SMTP or Microsoft
      * Graph). Graph only actually takes effect once its environment credentials
      * are present — otherwise the app keeps sending via SMTP even after this is

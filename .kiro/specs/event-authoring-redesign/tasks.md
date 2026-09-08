@@ -19,12 +19,12 @@ Property-based testing applies only to the pure-domain slice (Correctness Proper
     - Create documentation-only `database/sql/037_allow_unlimited_capacity_mode.sql` recording that `capacity_mode` (already `varchar(20)`) now accepts `unlimited`, with no DDL beyond a comment block / no-op.
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5_
 
-  - [-] 1.2 Extend `TicketType` constants, fillable, and availability helpers
+  - [x] 1.2 Extend `TicketType` constants, fillable, and availability helpers
     - Add `MODE_UNLIMITED = 'unlimited'` and extend `MODES` to include it; add `'description'` to `$fillable`.
     - Add `isUnlimited(): bool`; add the unlimited branch to `availabilityFor(?int $eventRemaining): ?int` (returns `null`); update `availableQuantity()` so unlimited returns the non-binding sentinel (`PHP_INT_MAX`).
     - _Requirements: 7.4, 7.6, 9.1, 9.2, Design: "TicketType model changes"_
 
-  - [~] 1.3 Redefine `isOnSaleAt` and add `saleStatusLabel`
+  - [x] 1.3 Redefine `isOnSaleAt` and add `saleStatusLabel`
     - Rewrite `isOnSaleAt(Carbon $now)` to the effective-interval semantics: null `sale_starts_at` = no lower bound; effective end = `sale_ends_at ?? event?->starts_at`; half-open `[start, end)`.
     - Confirm `isPurchasableAt()` keeps its shape (`event->isPublished() && isOnSaleAt($now)`).
     - Add `saleStatusLabel(Carbon $now): array` returning `['label', 'pill']` for `On sale` / `Scheduled` / `Ended` / `Not on sale`.
@@ -44,16 +44,16 @@ Property-based testing applies only to the pure-domain slice (Correctness Proper
     - Cover `isUnlimited()`, and `saleStatusLabel()` across published/draft × window states.
     - _Requirements: 7.4, 8.7, 8.8_
 
-  - [~] 1.7 REGRESSION: rewrite existing `isOnSaleAt` tests to the new semantics
+  - [-] 1.7 REGRESSION: rewrite existing `isOnSaleAt` tests to the new semantics
     - Locate the existing tests that assume a null bound means "never on sale" and rewrite them to the new effective-interval semantics, documenting that the behaviour change is intentional.
     - _Requirements: 8.7, 8.8, Design: "Regression for the semantic change"_
 
 - [ ] 2. Capacity advisory for unbounded types
-  - [~] 2.1 Extend `CapacityComparison` with `typesUnbounded` and update `state()`
+  - [x] 2.1 Extend `CapacityComparison` with `typesUnbounded` and update `state()`
     - Add a `bool $typesUnbounded` constructor arg (default `false`); update `state()` so a null event capacity → `UNLIMITED`, `typesUnbounded` → `EVENT_BINDS`, else the three-way capped-sum comparison; keep `isSane()` true only for `UNLIMITED`/`BALANCED`.
     - _Requirements: 7.6, Design: "CapacityComparison + EventReadiness::capacity()"_
 
-  - [~] 2.2 Update `EventReadiness::capacity()` to detect unbounded types
+  - [-] 2.2 Update `EventReadiness::capacity()` to detect unbounded types
     - Compute `typesSum` from capped types only and set `typesUnbounded` when any `unlimited` or `shared_pool` type is present.
     - _Requirements: 7.6_
 
@@ -96,7 +96,7 @@ Property-based testing applies only to the pure-domain slice (Correctness Proper
     - _Requirements: 3.3, 3.4, Design: "Inline SVG icon system"_
 
 - [ ] 6. Ticket accordion component
-  - [~] 6.1 Build the availability and sales-period controls
+  - [-] 6.1 Build the availability and sales-period controls
     - Create `_availability_control.blade.php` (three `.choice` radios for `capped`/`shared_pool`/`unlimited` + conditional quantity input) and `_sales_period_control.blade.php` (two default-checked checkboxes + conditional, `disabled`-when-checked datetime inputs).
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 8.1, 8.2, 8.3, 8.4, 8.5, 8.6_
 

@@ -141,7 +141,7 @@ class GraphMailClient
      */
     private function accessToken(): string
     {
-        $cacheKey = self::TOKEN_CACHE_PREFIX.md5($this->config->tenantId.'|'.$this->config->clientId);
+        $cacheKey = $this->tokenCacheKey();
 
         $cached = $this->cache->get($cacheKey);
 
@@ -157,6 +157,28 @@ class GraphMailClient
         $this->cache->put($cacheKey, $token, $ttl);
 
         return $token;
+    }
+
+    /**
+     * Discard any cached application token so the next send/probe fetches a
+     * fresh one. Needed after an Azure change (e.g. granting admin consent or
+     * rotating the secret): a token issued *before* the change stays valid in
+     * cache for up to ~an hour and would keep reflecting the old state. Exposed
+     * so a Super_Admin can flush it from the Settings screen without shell
+     * access (the app runs on cPanel with no SSH).
+     */
+    public function forgetCachedToken(): void
+    {
+        $this->cache->forget($this->tokenCacheKey());
+    }
+
+    /**
+     * The cache key for the shared application token, keyed by tenant+client so
+     * rotating credentials or switching tenants never reuses a stale token.
+     */
+    private function tokenCacheKey(): string
+    {
+        return self::TOKEN_CACHE_PREFIX.md5($this->config->tenantId.'|'.$this->config->clientId);
     }
 
     /**
