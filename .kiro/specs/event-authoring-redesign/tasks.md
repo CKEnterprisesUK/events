@@ -169,7 +169,7 @@ Property-based testing applies only to the pure-domain slice (Correctness Proper
     - Assert each events/customers row exposes the correct primary-destination anchor.
     - _Requirements: 1.1, 1.2_
 
-- [ ] 11. Final checkpoint and verification
+- [x] 11. Final checkpoint and verification
   - [x] 11.1 Consolidate `app.css` additions and run the full verification pass
     - Ensure all new CSS lives in `app.css` using existing tokens with no duplication; run the migration and the full Pest/PHPUnit suite (including the property tests) and fix any failures.
     - _Requirements: 3.3, 10.2, 10.6_
@@ -178,7 +178,7 @@ Property-based testing applies only to the pure-domain slice (Correctness Proper
     - Verify keyboard operability of the accordion (Enter/Space, single-open, Cancel focus return) and wizard nav; sidebar collapse persistence across reloads and the desktop icon-only rail; mobile drawer; whole-row hover/focus-visible with nested links still clickable; Leaflet renders/resizes in the venue step and after a sidebar collapse.
     - _Requirements: 2.5, 2.6, 6.11, 10.6_
 
-  - [-] 11.3 Checkpoint - Ensure all tests pass
+  - [x] 11.3 Checkpoint - Ensure all tests pass
     - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

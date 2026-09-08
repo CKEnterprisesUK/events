@@ -32,7 +32,7 @@ class StorefrontListing
     private const CACHE_TTL_SECONDS = 300;
 
     /**
-     * The published Events to show on the Company's Storefront, newest first.
+     * The published Events to show on the Company's Storefront, soonest first.
      * Served from cache when warm; otherwise built from the database and cached.
      *
      * @return Collection<int, array{id:int, name:string, venue:?string, starts_at:?string, poster_path:?string, sponsors:list<array{path:string, name:?string, website:?string, bio:?string}>}>
@@ -59,7 +59,7 @@ class StorefrontListing
 
     /**
      * Build the listing payload from the database: the Company's published
-     * Events only, newest first, as plain arrays. (Requirements 5.4, 8.2)
+     * Events only, soonest first, as plain arrays. (Requirements 5.4, 8.2)
      *
      * @return list<array{id:int, name:string, venue:?string, starts_at:?string, poster_path:?string, sponsors:list<array{path:string, name:?string, website:?string, bio:?string}>}>
      */
@@ -81,8 +81,8 @@ class StorefrontListing
             ->with(['sponsors' => fn ($q) => $q->withoutGlobalScopes()])
             ->where('company_id', $company->getKey())
             ->where('is_published', true)
-            ->orderByDesc('starts_at')
-            ->orderByDesc('id')
+            ->orderBy('starts_at')
+            ->orderBy('id')
             ->get()
             ->map(fn (Event $event): array => [
                 'id' => $event->getKey(),
