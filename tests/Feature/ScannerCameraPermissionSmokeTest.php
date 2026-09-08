@@ -43,7 +43,9 @@ class ScannerCameraPermissionSmokeTest extends TestCase
     {
         $scanner = User::factory()->scanner()->create();
 
-        $response = $this->actingAs($scanner)->get('/dashboard/scan');
+        // The camera lives on the live scanner page, reached from the start
+        // page's "start scanning" action.
+        $response = $this->actingAs($scanner)->get('/dashboard/scan/live');
 
         $response->assertStatus(200);
 
@@ -65,7 +67,7 @@ class ScannerCameraPermissionSmokeTest extends TestCase
     {
         $scanner = User::factory()->scanner()->create();
 
-        $response = $this->actingAs($scanner)->get('/dashboard/scan');
+        $response = $this->actingAs($scanner)->get('/dashboard/scan/live');
 
         $response->assertStatus(200);
 
@@ -92,20 +94,23 @@ class ScannerCameraPermissionSmokeTest extends TestCase
      */
     public function test_scanner_page_is_check_in_gated(): void
     {
-        // Roles that hold the check-in permission are served the page.
-        foreach ([
-            User::factory()->scanner()->create(),
-            User::factory()->owner()->create(),
-        ] as $user) {
-            $this->actingAs($user)->get('/dashboard/scan')->assertStatus(200);
-        }
+        // Both the start page and the live scanner are gated identically.
+        foreach (['/dashboard/scan', '/dashboard/scan/live'] as $url) {
+            // Roles that hold the check-in permission are served the page.
+            foreach ([
+                User::factory()->scanner()->create(),
+                User::factory()->owner()->create(),
+            ] as $user) {
+                $this->actingAs($user)->get($url)->assertStatus(200);
+            }
 
-        // Roles without check-in are forbidden.
-        foreach ([
-            User::factory()->admin()->create(),
-            User::factory()->accountant()->create(),
-        ] as $user) {
-            $this->actingAs($user)->get('/dashboard/scan')->assertForbidden();
+            // Roles without check-in are forbidden.
+            foreach ([
+                User::factory()->admin()->create(),
+                User::factory()->accountant()->create(),
+            ] as $user) {
+                $this->actingAs($user)->get($url)->assertForbidden();
+            }
         }
     }
 

@@ -75,7 +75,9 @@ class ScanCheckInTest extends TestCase
     {
         $scanner = User::factory()->scanner()->create();
 
-        $response = $this->actingAs($scanner)->get('/dashboard/scan');
+        // The camera lives on the live scanner page (reached from the start
+        // page). The start page itself is a camera-free intermediary.
+        $response = $this->actingAs($scanner)->get('/dashboard/scan/live');
 
         $response->assertStatus(200);
         // 16.1 — a phone-browser camera surface (no app install).

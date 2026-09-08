@@ -110,7 +110,7 @@ class CustomerController extends Controller
                         ->where('oe.event_id', $eventId);
                 });
             })
-            ->when($marketing !== '', function ($query) use ($marketing, $latestMarketing): void {
+            ->when($marketing !== '', function ($query) use ($marketing): void {
                 // Filter on the latest marketing preference. 'in' = the newest
                 // marketing consent is accepted; 'out' = it is declined or the
                 // customer never saw/accepted the opt-in (NULL / 0).

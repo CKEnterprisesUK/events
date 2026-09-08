@@ -3,9 +3,14 @@
 @section('title', 'Scanner')
 
 @section('content')
+    {{--
+        The live scanner. Reached from the intermediary start page
+        (dashboard.scan.index), so it drops the heading and helper text and
+        gives the camera + result banner the whole screen. A compact "Done"
+        link returns to the start page and its recent-scan recap.
+    --}}
     <section class="scanner">
-        <h1>Ticket Scanner</h1>
-        <p>Point your phone camera at a ticket QR code to check the attendee in.</p>
+        <a class="scanner__back" href="{{ route('dashboard.scan.index') }}">&larr; Done</a>
 
         {{--
             Camera surface. The scanner runs entirely in the phone browser — no
@@ -101,11 +106,22 @@
                 @endif
             </div>
         @endisset
+
+        {{-- Recent-scan recap (session-backed, last few scans). --}}
+        @include('dashboard.scan._history', ['history' => $history ?? []])
     </section>
 @endsection
 
 @push('head')
     <style>
+        .scanner__back {
+            display: inline-block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: #6b7280;
+            text-decoration: none;
+        }
+        .scanner__back:hover { text-decoration: underline; }
         .scanner-camera {
             position: relative;
             width: 100%;
