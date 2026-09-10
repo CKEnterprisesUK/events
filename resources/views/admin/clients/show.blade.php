@@ -94,6 +94,39 @@
     </div>
 
     <div class="admin-panel">
+        <div class="admin-panel__head"><h2>Payments (Stripe Connect)</h2></div>
+        <table class="admin-facts">
+            <tbody>
+                <tr>
+                    <th scope="row">Payment ready</th>
+                    <td>
+                        <span class="admin-pill {{ $company->canAcceptPayments() ? 'admin-pill--active' : 'admin-pill--suspended' }}">
+                            {{ $company->canAcceptPayments() ? 'Yes' : 'No' }}
+                        </span>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">Connected account</th>
+                    <td class="mono">{{ $company->stripe_account_id ?? '— (onboarding not started)' }}</td>
+                </tr>
+                <tr>
+                    <th scope="row">Charges enabled</th>
+                    <td>
+                        <span class="admin-pill {{ $company->stripe_charges_enabled ? 'admin-pill--active' : 'admin-pill--suspended' }}">
+                            {{ $company->stripe_charges_enabled ? 'Yes' : 'No' }}
+                        </span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        @if ($company->stripe_account_id !== null && ! $company->canAcceptPayments())
+            <p class="muted" style="padding: 0 1rem 1rem;">
+                Onboarding has started but charges are not enabled. This company cannot sell paid tickets until Stripe finishes verifying the account.
+            </p>
+        @endif
+    </div>
+
+    <div class="admin-panel">
         <div class="admin-panel__head"><h2>Recent events</h2></div>
         @if ($recentEvents->isEmpty())
             <div class="admin-empty">No events yet.</div>

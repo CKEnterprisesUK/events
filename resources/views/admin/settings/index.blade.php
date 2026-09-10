@@ -155,6 +155,64 @@
     </div>
 
     <div class="admin-panel">
+        <div class="admin-panel__head"><h2>Stripe credentials</h2></div>
+        <div class="admin-panel__body">
+            <p class="muted">
+                A read-only view of the configured Stripe API credentials (secret
+                masked) and a live authentication check. The check retrieves the
+                platform account but makes no charge, so it confirms the secret
+                key is valid before a customer ever reaches checkout.
+            </p>
+
+            <table class="admin-facts">
+                <tbody>
+                    <tr>
+                        <th scope="row">Secret key</th>
+                        <td>
+                            <span class="admin-pill {{ $stripe['secret'] === 'set' ? 'admin-pill--active' : 'admin-pill--suspended' }}">
+                                {{ $stripe['secret'] === 'set' ? 'Set' : 'Not set' }}
+                            </span>
+                        </td>
+                    </tr>
+                    <tr><th scope="row">Secret fingerprint</th><td class="mono">{{ $stripe['secret_fingerprint'] }}</td></tr>
+                    <tr>
+                        <th scope="row">Mode</th>
+                        <td>
+                            <span class="admin-pill {{ $stripe['mode'] === 'live' ? 'admin-pill--active' : 'admin-pill--suspended' }}">
+                                {{ strtoupper($stripe['mode']) }}
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Webhook signing secret</th>
+                        <td>
+                            <span class="admin-pill {{ $stripe['webhook_secret'] === 'set' ? 'admin-pill--active' : 'admin-pill--suspended' }}">
+                                {{ $stripe['webhook_secret'] === 'set' ? 'Set' : 'Not set' }}
+                            </span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <form method="POST" action="{{ route('admin.settings.stripe-diagnostics') }}">
+                @csrf
+                <button type="submit" class="btn" {{ $stripeConfigured ? '' : 'disabled' }}>
+                    Run Stripe diagnostics
+                </button>
+                @if (! $stripeConfigured)
+                    <p class="muted">Add <code>STRIPE_SECRET</code> to the environment to enable the live check.</p>
+                @elseif ($stripe['webhook_secret'] !== 'set')
+                    <p class="muted">
+                        <code>STRIPE_WEBHOOK_SECRET</code> is not set — incoming Stripe
+                        webhooks (payment confirmations, refunds) will be rejected until
+                        it is configured.
+                    </p>
+                @endif
+            </form>
+        </div>
+    </div>
+
+    <div class="admin-panel">
         <div class="admin-panel__head"><h2>Send a test email</h2></div>
         <div class="admin-panel__body">
             <p class="muted">

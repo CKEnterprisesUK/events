@@ -10,6 +10,7 @@ use App\Services\AuditLogger;
 use App\Services\Mail\Graph\GraphMailDiagnostics;
 use App\Services\Mail\Graph\GraphMailException;
 use App\Services\Mail\MailTransportResolver;
+use App\Services\Stripe\StripeDiagnostics;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,6 +37,7 @@ class SettingsController extends Controller
         private readonly AuditLogger $audit,
         private readonly MailTransportResolver $transport,
         private readonly GraphMailDiagnostics $graphDiagnostics,
+        private readonly StripeDiagnostics $stripeDiagnostics,
     ) {}
 
     /**
@@ -52,7 +54,49 @@ class SettingsController extends Controller
             'activeMailer' => $this->transport->activeMailer(),
             'graphConfigured' => $this->transport->graphConfigured(),
             'graph' => $this->graphDiagnostics->configSummary(),
+            'stripe' => $this->stripeDiagnostics->configSummary(),
+            'stripeConfigured' => $this->stripeDiagnostics->isConfigured(),
         ]);
+    }
+
+    /**
+     * Run a live, read-only Stripe credential probe: confirm the Platform's own
+     * secret key authenticates against the Stripe API. Reports a clear success
+     * (with the account id) or a targeted failure hint, so an invalid or missing
+     * STRIPE_SECRET is caught here rather than when a Customer hits checkout.
+     * Makes no charge and changes no Stripe state. The outcome is recorded on
+     * the platform audit trail (no key material, just pass/fail).
+     */
+    public function runStripeDiagnostics(): RedirectResponse
+    {
+        $result = $this->stripeDiagnostics->probe();
+
+        $this->audit->record(
+            action: AuditLog::STRIPE_CREDENTIALS_CHECKED,
+            summary: $result->ok
+                ? 'Verified the Stripe API credentials'
+                : 'Stripe credential check failed',
+            context: [
+                'ok' => $result->ok,
+                'stage' => $result->stage,
+            ],
+        );
+
+        $redirect = redirect()->route('admin.settings.index');
+
+        if ($result->ok) {
+            return $redirect->with('status', __('Stripe diagnostics: :message', [
+                'message' => $result->message,
+            ]));
+        }
+
+        $message = $result->hint !== null
+            ? $result->message.' — '.$result->hint
+            : $result->message;
+
+        return $redirect->with('error', __('Stripe diagnostics failed: :message', [
+            'message' => $message,
+        ]));
     }
 
     /**

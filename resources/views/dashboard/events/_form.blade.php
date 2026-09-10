@@ -18,20 +18,7 @@
     @error('name') <p class="error">{{ $message }}</p> @enderror
 </div>
 
-<div class="field">
-    <label for="starts_at">Starts at <span class="muted">(optional)</span></label>
-    @php
-        // Don't let the browser block re-saving an already-past start date, so
-        // floor `min` at the stored value when it is earlier than now.
-        $nowLocal = now()->format('Y-m-d\TH:i');
-        $storedLocal = $event?->starts_at?->format('Y-m-d\TH:i');
-        $startMin = ($storedLocal !== null && $storedLocal < $nowLocal) ? $storedLocal : $nowLocal;
-    @endphp
-    <input id="starts_at" type="datetime-local" name="starts_at" min="{{ $startMin }}"
-           value="{{ old('starts_at', $storedLocal) }}">
-    <span class="field-hint">The event can’t start in the past.</span>
-    @error('starts_at') <p class="error">{{ $message }}</p> @enderror
-</div>
+@include('dashboard.events._starts_at_field', ['event' => $event, 'required' => false])
 
 <div class="field">
     <label for="description">Description <span class="muted">(optional)</span></label>

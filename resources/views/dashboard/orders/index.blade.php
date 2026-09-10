@@ -18,9 +18,14 @@
 </style>
 @endpush
 
+@section('page_title', 'Orders')
+
 @section('content')
-    <div class="page-head">
-        <h1>Orders</h1>
+    <div class="page-header">
+        <div class="page-header__text">
+            <h1>Orders</h1>
+            <p class="page-header__desc">Every order across your events. Search or filter to narrow the list.</p>
+        </div>
     </div>
 
     @if (session('status'))
@@ -51,7 +56,8 @@
         @if ($orders->isEmpty())
             <div class="empty"><p>No orders match your filters.</p></div>
         @else
-            <table class="data-table">
+            {{-- Desktop: full table. --}}
+            <table class="data-table only-desktop">
                 <thead>
                     <tr>
                         <th scope="col">Reference</th>
@@ -60,7 +66,7 @@
                         <th scope="col">Placed</th>
                         <th scope="col">Status</th>
                         <th scope="col" class="num">Total</th>
-                        <th scope="col"></th>
+                        <th scope="col"><span class="sr-only">Actions</span></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -74,12 +80,31 @@
                             <td>{{ $order->event?->name ?? '—' }}</td>
                             <td>{{ $order->created_at?->format('j M Y, H:i') ?? '—' }}</td>
                             <td><span class="pill pill--{{ $order->status }}">{{ ucfirst(str_replace('_', ' ', $order->status)) }}</span></td>
-                            <td class="num">{{ number_format($order->order_total_minor / 100, 2) }}</td>
+                            <td class="num">£{{ number_format($order->order_total_minor / 100, 2) }}</td>
                             <td class="num"><a class="panel__link" href="{{ route('dashboard.orders.show', $order) }}">View</a></td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
+
+            {{-- Mobile: stacked order records. --}}
+            <div class="only-mobile record-list" style="padding: 1rem 1.25rem;">
+                @foreach ($orders as $order)
+                    <div class="record-card">
+                        <div class="record-card__body">
+                            <a class="record-card__title cell-strong" href="{{ route('dashboard.orders.show', $order) }}">{{ $order->order_reference }}</a>
+                            <span class="record-card__meta record-card__meta--strong">{{ $order->customer_name }}</span>
+                            <span class="record-card__meta">{{ $order->customer_email }}</span>
+                            <span class="record-card__meta">{{ $order->event?->name ?? '—' }} · {{ $order->created_at?->format('j M Y, H:i') ?? '—' }}</span>
+                            <span class="record-card__meta">
+                                <span class="pill pill--{{ $order->status }}">{{ ucfirst(str_replace('_', ' ', $order->status)) }}</span>
+                                · £{{ number_format($order->order_total_minor / 100, 2) }}
+                            </span>
+                        </div>
+                        <a class="btn btn-outline btn-sm record-card__action" href="{{ route('dashboard.orders.show', $order) }}">View</a>
+                    </div>
+                @endforeach
+            </div>
             <div class="pager">{{ $orders->links() }}</div>
         @endif
     </div>

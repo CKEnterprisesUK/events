@@ -146,13 +146,23 @@
                     @endif
                 </div>
                 <div class="sales-chart">
+                    <p class="sr-only">
+                        Gross sales over the last 30 days totalled {{ $money($chart['current_total_minor']) }}
+                        (from {{ $points[0]['label'] }} to {{ $points[$count - 1]['label'] }}),
+                        @if ($delta !== null)
+                            {{ $delta >= 0 ? 'up' : 'down' }} {{ number_format(abs($delta), 1) }}%
+                            versus {{ $money($chart['previous_total_minor']) }} in the previous 30 days.
+                        @else
+                            with no sales in the previous 30 days to compare against.
+                        @endif
+                    </p>
                     <svg viewBox="0 0 {{ $w }} {{ $h }}" preserveAspectRatio="none" role="img"
-                         aria-label="Gross sales for each of the last 30 days.">
+                         aria-label="Gross sales for each of the last 30 days, {{ $points[0]['label'] }} to {{ $points[$count - 1]['label'] }}.">
                         <polyline fill="none" stroke="var(--brand)" stroke-width="1.2"
                                   stroke-linejoin="round" stroke-linecap="round"
                                   points="{{ $polyline }}" />
                     </svg>
-                    <div class="sales-chart__axis">
+                    <div class="sales-chart__axis" aria-hidden="true">
                         <span>{{ $points[0]['label'] }}</span>
                         <span>{{ $points[$count - 1]['label'] }}</span>
                     </div>
@@ -169,7 +179,7 @@
                     <h2>Upcoming events</h2>
                     <a class="panel__link" href="{{ route('dashboard.events.index') }}">View all</a>
                 </div>
-                <table class="data-table">
+                <table class="data-table only-desktop">
                     <thead>
                         <tr>
                             <th scope="col">Event</th>
@@ -177,7 +187,7 @@
                             <th scope="col">Status</th>
                             <th scope="col">Sold</th>
                             <th scope="col" class="num">Orders</th>
-                            <th scope="col"></th>
+                            <th scope="col"><span class="sr-only">Actions</span></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -207,6 +217,11 @@
                         @endforeach
                     </tbody>
                 </table>
+                <div class="only-mobile record-list" style="padding: 1rem 1.25rem;">
+                    @foreach ($upcomingEvents as $event)
+                        @include('dashboard.partials.event-card', ['event' => $event])
+                    @endforeach
+                </div>
             </div>
         @endif
     @endcan
@@ -224,7 +239,7 @@
                     <a class="btn btn-sm" href="{{ route('dashboard.events.index') }}">Create your first event</a>
                 </div>
             @else
-                <table class="data-table">
+                <table class="data-table only-desktop">
                     <thead>
                         <tr>
                             <th scope="col">Event</th>
@@ -232,7 +247,7 @@
                             <th scope="col">Status</th>
                             <th scope="col">Sold</th>
                             <th scope="col" class="num">Orders</th>
-                            <th scope="col"></th>
+                            <th scope="col"><span class="sr-only">Actions</span></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -259,6 +274,11 @@
                         @endforeach
                     </tbody>
                 </table>
+                <div class="only-mobile record-list" style="padding: 1rem 1.25rem;">
+                    @foreach ($recentEvents as $event)
+                        @include('dashboard.partials.event-card', ['event' => $event])
+                    @endforeach
+                </div>
             @endif
         </div>
     @endcan
@@ -308,17 +328,7 @@
     .dash-head .muted { margin: 0; }
     .dash-eyebrow { text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.72rem; color: var(--muted); margin: 0; }
 
-    .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.75rem; }
-    .stat {
-        background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem;
-        padding: 1.1rem 1.25rem; display: flex; flex-direction: column; gap: 0.15rem;
-        border-top: 3px solid var(--brand);
-    }
-    .stat__label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
-    .stat__value { font-size: 1.75rem; font-weight: 700; color: var(--ink); line-height: 1.1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-    .stat__sub { font-size: 0.8rem; color: var(--muted); }
-
-    .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem; overflow: hidden; margin-bottom: 1.5rem; }
+    .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); overflow: hidden; margin-bottom: 1.5rem; }
     .panel__head { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); }
     .panel__head h2 { margin: 0; font-size: 1.05rem; }
     .panel__link { font-size: 0.9rem; font-weight: 600; text-decoration: none; }
@@ -335,6 +345,7 @@
     .pill { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
     .pill--live { background: #ecfdf5; color: #047857; }
     .pill--draft { background: #f3f4f6; color: #6b7280; }
+    .pill--cancelled { background: #fef2f2; color: #b91c1c; }
 
     .empty { padding: 2rem 1.25rem; text-align: center; color: var(--muted); }
     .empty p { margin: 0 0 0.75rem; }

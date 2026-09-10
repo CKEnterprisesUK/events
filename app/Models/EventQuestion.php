@@ -97,6 +97,17 @@ class EventQuestion extends Model
     }
 
     /**
+     * The answers collected against this question at checkout. Used to warn
+     * before deleting a question that already holds responses.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<OrderQuestionAnswer, $this>
+     */
+    public function answers(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(OrderQuestionAnswer::class);
+    }
+
+    /**
      * Whether this is a single-choice (radio) question, i.e. it carries a list
      * of options the Customer picks from.
      */

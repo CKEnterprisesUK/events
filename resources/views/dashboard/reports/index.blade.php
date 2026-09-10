@@ -2,11 +2,7 @@
 
 @section('title', 'Reports & Payouts')
 
-@push('head')
-<style>
-    .report-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
-</style>
-@endpush
+@section('page_title', 'Reports & Payouts')
 
 @section('content')
     @php
@@ -16,91 +12,135 @@
     @endphp
 
     <section>
-        <div class="report-head">
-            <div>
+        <div class="page-header">
+            <div class="page-header__text">
                 <h1>Reports &amp; Payouts</h1>
-                <p class="muted">
-                    Read-only view of your Company's realised sales from paid and
-                    confirmed orders.
+                <p class="page-header__desc">
+                    Read-only view of your organisation's realised sales from paid and confirmed orders,
+                    shown in {{ $currency }} ({{ $symbol !== '' ? $symbol : $currency }}).
                 </p>
             </div>
-            <a class="btn btn-outline" href="{{ route('dashboard.reports.export') }}" download>
-                Export CSV
-            </a>
+            <div class="page-header__actions">
+                {{-- Export is a secondary action — styled as outline, not the primary blue. --}}
+                <a class="btn btn-outline" href="{{ route('dashboard.reports.export') }}" download>Export CSV</a>
+            </div>
         </div>
 
-        <h2>Company totals</h2>
-        <table>
-            <tbody>
-                <tr>
-                    <th scope="row">Confirmed orders</th>
-                    <td data-metric="orders">{{ number_format($totals['orders']) }}</td>
-                </tr>
-                <tr>
-                    <th scope="row">Tickets sold</th>
-                    <td data-metric="tickets_sold">{{ number_format($totals['tickets_sold']) }}</td>
-                </tr>
-                <tr>
-                    <th scope="row">Gross sales</th>
-                    <td data-metric="gross_sales_minor">{{ $money($totals['gross_sales_minor']) }}</td>
-                </tr>
-                <tr>
-                    <th scope="row">Booking fees collected</th>
-                    <td data-metric="booking_fees_minor">{{ $money($totals['booking_fees_minor']) }}</td>
-                </tr>
-                <tr>
-                    <th scope="row">Platform fees</th>
-                    <td data-metric="application_fees_minor">{{ $money($totals['application_fees_minor']) }}</td>
-                </tr>
-                <tr>
-                    <th scope="row">Total collected</th>
-                    <td data-metric="order_total_minor">{{ $money($totals['order_total_minor']) }}</td>
-                </tr>
-                <tr>
-                    <th scope="row">Net to company (payout)</th>
-                    <td data-metric="net_to_company_minor">{{ $money($totals['net_to_company_minor']) }}</td>
-                </tr>
-            </tbody>
-        </table>
+        {{-- Small summary row for the headline figures. Not oversized cards. --}}
+        <div class="summary-row">
+            <div class="metric-card">
+                <span class="metric-card__label">Confirmed orders</span>
+                <span class="metric-card__value">{{ number_format($totals['orders']) }}</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-card__label">Tickets sold</span>
+                <span class="metric-card__value">{{ number_format($totals['tickets_sold']) }}</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-card__label">Gross sales</span>
+                <span class="metric-card__value">{{ $money($totals['gross_sales_minor']) }}</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-card__label">Net to company</span>
+                <span class="metric-card__value">{{ $money($totals['net_to_company_minor']) }}</span>
+            </div>
+        </div>
 
-        <p class="muted">
-            Funds settle directly to your connected Stripe account. The platform
-            fee is deducted at the point of sale, so the net-to-company figure is
-            what reaches your account.
-        </p>
-
-        <h2>Per-event breakdown</h2>
-        @if (empty($perEvent))
-            <p>No confirmed sales yet.</p>
-        @else
-            <table>
-                <thead>
-                    <tr>
-                        <th scope="col">Event</th>
-                        <th scope="col">Orders</th>
-                        <th scope="col">Tickets sold</th>
-                        <th scope="col">Gross sales</th>
-                        <th scope="col">Booking fees</th>
-                        <th scope="col">Platform fees</th>
-                        <th scope="col">Total collected</th>
-                        <th scope="col">Net to company</th>
-                    </tr>
-                </thead>
+        {{-- Full financial reconciliation — the detail matters, so it stays a
+             table (with the fee/collected breakdown), not a wall of cards. --}}
+        <div class="panel">
+            <div class="panel__head"><h2>Company reconciliation</h2></div>
+            <table class="data-table">
                 <tbody>
-                    @foreach ($perEvent as $row)
-                        <tr data-event-id="{{ $row['event_id'] }}">
-                            <td>{{ $row['event_name'] }}</td>
-                            <td data-metric="orders">{{ number_format($row['orders']) }}</td>
-                            <td data-metric="tickets_sold">{{ number_format($row['tickets_sold']) }}</td>
-                            <td data-metric="gross_sales_minor">{{ $money($row['gross_sales_minor']) }}</td>
-                            <td data-metric="booking_fees_minor">{{ $money($row['booking_fees_minor']) }}</td>
-                            <td data-metric="application_fees_minor">{{ $money($row['application_fees_minor']) }}</td>
-                            <td data-metric="order_total_minor">{{ $money($row['order_total_minor']) }}</td>
-                            <td data-metric="net_to_company_minor">{{ $money($row['net_to_company_minor']) }}</td>
-                        </tr>
-                    @endforeach
+                    <tr>
+                        <th scope="row">Gross sales</th>
+                        <td class="num" data-metric="gross_sales_minor">{{ $money($totals['gross_sales_minor']) }}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Booking fees</th>
+                        <td class="num" data-metric="booking_fees_minor">{{ $money($totals['booking_fees_minor']) }}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Platform fees</th>
+                        <td class="num" data-metric="application_fees_minor">{{ $money($totals['application_fees_minor']) }}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Total collected</th>
+                        <td class="num" data-metric="order_total_minor">{{ $money($totals['order_total_minor']) }}</td>
+                    </tr>
+                    <tr class="data-table__total">
+                        <th scope="row">Net to company</th>
+                        <td class="num" data-metric="net_to_company_minor">{{ $money($totals['net_to_company_minor']) }}</td>
+                    </tr>
                 </tbody>
             </table>
-        @endif
+            <p class="panel__note">
+                Funds settle directly to your connected Stripe account. The platform fee is deducted at
+                the point of sale, so the net-to-company figure is what reaches your account.
+            </p>
+        </div>
+
+        <div class="panel">
+            <div class="panel__head"><h2>Per-event breakdown</h2></div>
+
+            @if (empty($perEvent))
+                <p class="table-empty-filter">No confirmed sales yet.</p>
+            @else
+                {{-- Desktop: the full financial table, horizontally scrollable
+                     within its panel if the viewport is narrow, with the event
+                     name column readable. --}}
+                <div class="table-scroll only-desktop">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Event</th>
+                                <th scope="col" class="num">Orders</th>
+                                <th scope="col" class="num">Tickets sold</th>
+                                <th scope="col" class="num">Gross sales</th>
+                                <th scope="col" class="num">Booking fees</th>
+                                <th scope="col" class="num">Platform fees</th>
+                                <th scope="col" class="num">Total collected</th>
+                                <th scope="col" class="num">Net to company</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($perEvent as $row)
+                                <tr data-event-id="{{ $row['event_id'] }}">
+                                    <td class="cell-strong">{{ $row['event_name'] }}</td>
+                                    <td class="num" data-metric="orders">{{ number_format($row['orders']) }}</td>
+                                    <td class="num" data-metric="tickets_sold">{{ number_format($row['tickets_sold']) }}</td>
+                                    <td class="num" data-metric="gross_sales_minor">{{ $money($row['gross_sales_minor']) }}</td>
+                                    <td class="num" data-metric="booking_fees_minor">{{ $money($row['booking_fees_minor']) }}</td>
+                                    <td class="num" data-metric="application_fees_minor">{{ $money($row['application_fees_minor']) }}</td>
+                                    <td class="num" data-metric="order_total_minor">{{ $money($row['order_total_minor']) }}</td>
+                                    <td class="num" data-metric="net_to_company_minor">{{ $money($row['net_to_company_minor']) }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+
+                {{-- Mobile: each event as a structured record instead of a
+                     horizontally-scrolling financial table. --}}
+                <div class="only-mobile record-list" style="padding: 1rem 1.25rem;">
+                    @foreach ($perEvent as $row)
+                        <div class="record-card record-card--facts" data-event-id="{{ $row['event_id'] }}">
+                            <div class="record-card__body" style="width:100%;">
+                                <span class="record-card__title">{{ $row['event_name'] }}</span>
+                                <dl class="record-facts">
+                                    <dt>Orders</dt><dd>{{ number_format($row['orders']) }}</dd>
+                                    <dt>Tickets sold</dt><dd>{{ number_format($row['tickets_sold']) }}</dd>
+                                    <dt>Gross sales</dt><dd>{{ $money($row['gross_sales_minor']) }}</dd>
+                                    <dt>Booking fees</dt><dd>{{ $money($row['booking_fees_minor']) }}</dd>
+                                    <dt>Platform fees</dt><dd>{{ $money($row['application_fees_minor']) }}</dd>
+                                    <dt>Total collected</dt><dd>{{ $money($row['order_total_minor']) }}</dd>
+                                    <dt>Net to company</dt><dd>{{ $money($row['net_to_company_minor']) }}</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
     </section>
 @endsection

@@ -44,13 +44,17 @@ class EventQuestionController extends Controller
     {
         Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
 
+        // Load the questions with a count of answers already collected against
+        // each, so the editor can warn before deleting one that holds data.
+        $questions = $event->questions()->withCount('answers')->get();
+
         return view('dashboard.events.questions', [
             'event' => $event,
             // The event-management layout renders the setup checklist + nav from
             // the readiness report; every screen using layouts.event must supply
             // it. (Mirrors EventController::sharedViewData().)
             'readiness' => $this->readiness->checklist($event),
-            'questions' => $event->questions()->get(),
+            'questions' => $questions,
             'maxQuestions' => EventQuestion::MAX_PER_EVENT,
         ]);
     }

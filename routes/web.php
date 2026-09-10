@@ -32,13 +32,16 @@ use App\Http\Controllers\SupportController;
 use App\Http\Controllers\SuperAdmin\AuditController as SuperAdminAuditController;
 use App\Http\Controllers\SuperAdmin\ClientController as SuperAdminClientController;
 use App\Http\Controllers\SuperAdmin\CompanyController as SuperAdminCompanyController;
+use App\Http\Controllers\SuperAdmin\CompanyUserController as SuperAdminCompanyUserController;
 use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboardController;
 use App\Http\Controllers\SuperAdmin\FeeController as SuperAdminFeeController;
 use App\Http\Controllers\SuperAdmin\ImpersonationController as SuperAdminImpersonationController;
 use App\Http\Controllers\SuperAdmin\LegalDocumentController as SuperAdminLegalDocumentController;
 use App\Http\Controllers\SuperAdmin\ReservedSlugController as SuperAdminReservedSlugController;
 use App\Http\Controllers\SuperAdmin\SettingsController as SuperAdminSettingsController;
+use App\Http\Controllers\SuperAdmin\StripeAccountController as SuperAdminStripeAccountController;
 use App\Http\Controllers\SuperAdmin\SupportRequestController as SuperAdminSupportRequestController;
+use App\Http\Controllers\SuperAdmin\SystemHealthController as SuperAdminSystemHealthController;
 use App\Http\Controllers\SuperAdmin\TransactionController as SuperAdminTransactionController;
 use App\Http\Controllers\TicketTypeController;
 use App\Http\Controllers\TrustController;
@@ -504,6 +507,11 @@ Route::middleware(['auth', 'super.admin', 'session.timeout'])
         Route::get('/clients', [SuperAdminClientController::class, 'index'])->name('clients.index');
         Route::get('/clients/{company}', [SuperAdminClientController::class, 'show'])->name('clients.show');
 
+        // Connected accounts: which Companies have completed Stripe Connect
+        // onboarding (charges enabled), which are stuck part-way, and which have
+        // never started. The operational answer to "a client isn't getting paid".
+        Route::get('/payments', [SuperAdminStripeAccountController::class, 'index'])->name('payments.index');
+
         // Platform settings, including a mail-troubleshooting tool that sends a
         // diagnostic test email through the configured mailer. (20.7)
         Route::get('/settings', [SuperAdminSettingsController::class, 'index'])->name('settings.index');
@@ -514,6 +522,14 @@ Route::middleware(['auth', 'super.admin', 'session.timeout'])
         Route::post('/settings/graph-diagnostics', [SuperAdminSettingsController::class, 'runGraphDiagnostics'])->name('settings.graph-diagnostics');
         // Flush the cached Graph application token (e.g. after granting admin consent).
         Route::post('/settings/graph-clear-token', [SuperAdminSettingsController::class, 'clearGraphToken'])->name('settings.graph-clear-token');
+        // Live, read-only Stripe credential probe: verifies STRIPE_SECRET against
+        // the Stripe API (retrieves the Platform account). Makes no charge.
+        Route::post('/settings/stripe-diagnostics', [SuperAdminSettingsController::class, 'runStripeDiagnostics'])->name('settings.stripe-diagnostics');
+
+        // System health: read-only status of the database, queue backlog, failed
+        // jobs and cache — so a stalled worker or broken dependency is visible
+        // rather than silently backing up ticket emails / webhook processing.
+        Route::get('/system', [SuperAdminSystemHealthController::class, 'index'])->name('system.index');
 
         // Support ticket queue: the operator view of every in-dashboard
         // "Contact support" request across the whole Platform. Deliberately
@@ -549,6 +565,13 @@ Route::middleware(['auth', 'super.admin', 'session.timeout'])
         Route::get('/reserved-slugs', [SuperAdminReservedSlugController::class, 'index'])->name('reserved-slugs.index');
         Route::post('/reserved-slugs', [SuperAdminReservedSlugController::class, 'store'])->name('reserved-slugs.store');
         Route::delete('/reserved-slugs/{reservedSlug}', [SuperAdminReservedSlugController::class, 'destroy'])->name('reserved-slugs.destroy');
+
+        // Owner / user recovery for a specific Company (from the client detail
+        // page): email the Owner a password reset, re-send their verification, or
+        // transfer the single Owner role to another user in the Company.
+        Route::post('/companies/{company}/owner/password-reset', [SuperAdminCompanyUserController::class, 'sendPasswordReset'])->name('companies.owner.password-reset');
+        Route::post('/companies/{company}/owner/resend-verification', [SuperAdminCompanyUserController::class, 'resendVerification'])->name('companies.owner.resend-verification');
+        Route::post('/companies/{company}/owner/transfer', [SuperAdminCompanyUserController::class, 'transferOwnership'])->name('companies.owner.transfer');
 
         // Suspend / unsuspend a Company. The company list + detail live on the
         // Clients surface; these actions redirect back to that client page.

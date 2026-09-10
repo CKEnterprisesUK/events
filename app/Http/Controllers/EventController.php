@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\Event;
+use App\Models\Order;
+use App\Models\TicketType;
 use App\Rules\SafeUpload;
 use App\Services\AuditLogger;
 use App\Services\BrandingImageStore;
@@ -66,6 +68,13 @@ class EventController extends Controller
         // to the company poster (`$event->poster_path ?? $event->company->poster_path`)
         // without an N+1 query per row. (Requirements 5.4, 5.5, 5.6)
         $events = Event::query()->with('company')->latest()->get();
+
+        // Attach per-event confirmed-order counts and sell-through aggregates
+        // for the listing's "Tickets sold" / "Orders" columns. Display only —
+        // computed with two grouped queries (no N+1, no behaviour change),
+        // mirroring the dashboard's counts. Tenant-scoped like every Event
+        // query on this surface, so it only ever sums the Company's own rows.
+        $this->attachListingCounts($events);
 
         return view('dashboard.events.index', ['events' => $events]);
     }
@@ -262,6 +271,47 @@ class EventController extends Controller
             ->with('status', $cleared === 1
                 ? '1 check-in was reset.'
                 : $cleared.' check-ins were reset.');
+    }
+
+    /**
+     * Attach display-only per-event confirmed-order counts and sell-through
+     * aggregates to a collection of Events for the listing page. Two grouped
+     * queries (no N+1). Read-only and tenant-scoped — no behaviour change.
+     *
+     * @param  \Illuminate\Support\Collection<int, Event>  $events
+     */
+    private function attachListingCounts($events): void
+    {
+        if ($events->isEmpty()) {
+            return;
+        }
+
+        $ids = $events->pluck('id');
+
+        // Confirmed-order counts per event.
+        $confirmedByEvent = Order::query()
+            ->whereIn('event_id', $ids)
+            ->whereIn('status', [Order::STATUS_PAID, Order::STATUS_FREE_CONFIRMED])
+            ->selectRaw('event_id, count(*) as aggregate')
+            ->groupBy('event_id')
+            ->pluck('aggregate', 'event_id');
+
+        // Sold + capped-capacity per event, for the sell-through summary.
+        $soldByEvent = TicketType::query()
+            ->whereIn('event_id', $ids)
+            ->selectRaw('event_id, SUM(sold_count) as sold, SUM(CASE WHEN capacity_mode = ? THEN capacity ELSE 0 END) as capped_capacity', [TicketType::MODE_CAPPED])
+            ->groupBy('event_id')
+            ->get()
+            ->keyBy('event_id');
+
+        foreach ($events as $event) {
+            $event->confirmed_orders_count = (int) ($confirmedByEvent[$event->id] ?? 0);
+            $agg = $soldByEvent->get($event->id);
+            $event->sell_through = $event->sellThrough(
+                (int) ($agg->sold ?? 0),
+                (int) ($agg->capped_capacity ?? 0),
+            );
+        }
     }
 
     /**

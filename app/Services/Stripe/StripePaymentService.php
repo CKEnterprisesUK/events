@@ -19,6 +19,7 @@ namespace App\Services\Stripe;
  *     (used by the checkout flow in task 15). (Requirement 12.1)
  *   - Issue refunds on the connected account (used by refunds in task 20).
  *     (Requirement 17.2)
+ *   - Verify the Platform's own API credentials for Super_Admin diagnostics.
  */
 interface StripePaymentService
 {
@@ -100,4 +101,16 @@ interface StripePaymentService
         string $payload,
         ?string $signatureHeader,
     ): StripeWebhookEvent;
+
+    /**
+     * Verify that the Platform's own Stripe API credentials are valid by making
+     * a lightweight, read-only, authenticated call to Stripe (retrieving the
+     * Platform account). Used by the Super_Admin Settings diagnostics so an
+     * invalid or missing `STRIPE_SECRET` is surfaced proactively rather than
+     * only when a Customer hits checkout. Never mutates any Stripe state.
+     *
+     * Returns a structured result (never throws) so the caller can render a
+     * clear success/failure with a targeted hint.
+     */
+    public function verifyPlatformCredentials(): StripeDiagnosticResult;
 }

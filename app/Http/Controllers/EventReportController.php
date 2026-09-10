@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Event;
+use App\Services\EventReadiness;
 use App\Services\EventReportService;
 use App\Services\RoleAuthorization;
 use Illuminate\Contracts\View\View;
@@ -33,7 +34,10 @@ use Illuminate\Support\Facades\Gate;
  */
 class EventReportController extends Controller
 {
-    public function __construct(private readonly EventReportService $reports) {}
+    public function __construct(
+        private readonly EventReportService $reports,
+        private readonly EventReadiness $readiness,
+    ) {}
 
     /**
      * The per-Event financial report, scoped to the authenticated user's own
@@ -46,6 +50,9 @@ class EventReportController extends Controller
         return view('dashboard.events.report', [
             'event' => $event,
             'report' => $this->reports->for($event),
+            // Supplied so the report renders inside the event-context layout
+            // (single sidebar) rather than as a standalone dashboard page.
+            'readiness' => $this->readiness->checklist($event),
         ]);
     }
 }

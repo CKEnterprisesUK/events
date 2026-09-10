@@ -26,34 +26,22 @@
 
 @section('content')
     <section>
-        <div class="page-head">
-            <h1>Settings</h1>
-            <p class="muted" style="margin:.25rem 0 0;">Your branding, organisation details and contact info.</p>
+        <div class="page-header">
+            <div class="page-header__text">
+                <h1>Settings</h1>
+                <p class="page-header__desc">Your branding, organisation details and contact info.</p>
+            </div>
         </div>
 
         @if (session('status'))
             <p class="status" data-status="saved">{{ session('status') }}</p>
         @endif
 
-        {{-- Effective Company branding preview: logo (7.1), primary colour (7.2). --}}
-        <div class="branding-preview" @if ($branding->hasPrimaryColour()) style="--brand: {{ $branding->primaryColour }}" @endif>
-            @if ($branding->hasPoster())
-                <img class="brand-poster" src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($branding->posterPath) }}" alt="Storefront poster">
-            @endif
-
-            @if ($branding->hasLogo())
-                <img class="brand-logo" src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($branding->logoPath) }}" alt="Company logo">
-            @else
-                <p>No logo uploaded.</p>
-            @endif
-
-            @if ($branding->hasPrimaryColour())
-                <p data-primary-colour="{{ $branding->primaryColour }}">Primary colour: {{ $branding->primaryColour }}</p>
-            @endif
-        </div>
-
+        {{-- Two columns on desktop: the settings form on the left, a deliberate
+             storefront preview on the right (stacks below on tablet/mobile). --}}
+        <div class="settings-grid">
         <form method="POST" action="{{ route('dashboard.branding.update') }}" enctype="multipart/form-data"
-              class="tabs" id="branding-form" data-error-tab="{{ $errorTab }}">
+              class="tabs settings-grid__form" id="branding-form" data-error-tab="{{ $errorTab }}">
             @csrf
             @method('PUT')
 
@@ -83,16 +71,28 @@
                     @error('poster')<p class="error">{{ $message }}</p>@enderror
                 </div>
 
-                {{-- Primary brand colour applied to the Storefront. (7.2) --}}
+                {{-- Primary brand colour applied to the Storefront (7.2). Hex
+                     text entry stays authoritative; the native colour input is
+                     a convenience picker kept in sync with it. --}}
+                @php $primaryColour = old('primary_colour', $company->primary_colour); @endphp
                 <div class="field">
                     <label for="primary_colour">Primary colour</label>
-                    <input type="text" name="primary_colour" id="primary_colour"
-                           value="{{ old('primary_colour', $company->primary_colour) }}" placeholder="#2563eb">
+                    <div class="colour-field">
+                        <input type="text" name="primary_colour" id="primary_colour"
+                               value="{{ $primaryColour }}" placeholder="#2563eb"
+                               inputmode="text" autocomplete="off"
+                               pattern="#[0-9A-Fa-f]{6}" aria-describedby="primary_colour_hint"
+                               data-colour-hex>
+                        <input type="color" aria-label="Pick primary colour"
+                               value="{{ $primaryColour && preg_match('/^#[0-9A-Fa-f]{6}$/', $primaryColour) ? $primaryColour : '#2563eb' }}"
+                               data-colour-picker>
+                    </div>
+                    <span class="field-hint" id="primary_colour_hint">A six-digit hex value, e.g. #2563eb. Leave blank to use the default brand colour.</span>
                     @error('primary_colour')<p class="error">{{ $message }}</p>@enderror
                 </div>
 
                 {{-- Terms & Conditions shown to the customer on request at checkout. (7.3) --}}
-                <div class="field">
+                <div class="field field--wide">
                     <label for="terms_text">Terms &amp; Conditions</label>
                     <textarea name="terms_text" id="terms_text" rows="6">{{ old('terms_text', $company->terms_text) }}</textarea>
                     <span class="field-hint">Shown to the customer on request at checkout, when they accept the terms.</span>
@@ -100,7 +100,7 @@
                 </div>
 
                 {{-- Privacy Notice shown to the customer on request at checkout. --}}
-                <div class="field">
+                <div class="field field--wide">
                     <label for="privacy_text">Privacy notice</label>
                     <textarea name="privacy_text" id="privacy_text" rows="6">{{ old('privacy_text', $company->privacy_text) }}</textarea>
                     <span class="field-hint">Shown to the customer on request at checkout, when they agree to their details being processed.</span>
@@ -294,6 +294,32 @@
                 <button type="submit" class="btn">Save changes</button>
             </div>
         </form>
+
+        {{-- Deliberate storefront preview: logo (7.1), poster and primary
+             colour (7.2). Kept in the right column on desktop, stacked below on
+             tablet/mobile. --}}
+        <aside class="settings-grid__preview" aria-label="Storefront preview">
+            <div class="panel">
+                <div class="panel__head"><h2>Preview</h2></div>
+                <div class="branding-preview" data-preview
+                     style="margin:0;border:none;border-radius:0;@if ($branding->hasPrimaryColour())--brand: {{ $branding->primaryColour }};@endif">
+                    @if ($branding->hasPoster())
+                        <img class="brand-poster" data-preview-poster src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($branding->posterPath) }}" alt="Storefront poster">
+                    @endif
+
+                    @if ($branding->hasLogo())
+                        <img class="brand-logo" data-preview-logo src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($branding->logoPath) }}" alt="Company logo">
+                    @else
+                        <p data-preview-logo-empty>No logo uploaded.</p>
+                    @endif
+
+                    <p data-primary-colour="{{ $branding->primaryColour }}" data-preview-swatch>
+                        Primary colour: <span data-preview-swatch-value>{{ $branding->hasPrimaryColour() ? $branding->primaryColour : 'default' }}</span>
+                    </p>
+                </div>
+            </div>
+        </aside>
+        </div>{{-- /.settings-grid --}}
     </section>
 @endsection
 
@@ -348,6 +374,37 @@
         if (orgType) {
             orgType.addEventListener('change', syncConditionalFields);
             syncConditionalFields();
+        }
+
+        // ---- Primary colour: keep hex text + native picker in sync, and
+        //      live-update the preview swatch. Hex text stays authoritative. ----
+        var hex = form.querySelector('[data-colour-hex]');
+        var picker = form.querySelector('[data-colour-picker]');
+        var swatch = document.querySelector('[data-preview-swatch]');
+        var swatchValue = document.querySelector('[data-preview-swatch-value]');
+        var previewRoot = document.querySelector('[data-preview]');
+
+        function isHex(v) { return /^#[0-9A-Fa-f]{6}$/.test(v); }
+
+        function applyPreview(v) {
+            if (swatch) swatch.setAttribute('data-primary-colour', v || '');
+            if (swatchValue) swatchValue.textContent = v ? v : 'default';
+            if (previewRoot) {
+                if (isHex(v)) { previewRoot.style.setProperty('--brand', v); }
+                else { previewRoot.style.removeProperty('--brand'); }
+            }
+        }
+
+        if (hex && picker) {
+            hex.addEventListener('input', function () {
+                var v = hex.value.trim();
+                if (isHex(v)) { picker.value = v; }
+                applyPreview(v);
+            });
+            picker.addEventListener('input', function () {
+                hex.value = picker.value;
+                applyPreview(picker.value);
+            });
         }
 
         // Open the tab flagged by the server (first error), else the first tab.

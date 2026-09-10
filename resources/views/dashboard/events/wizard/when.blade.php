@@ -15,20 +15,7 @@
 @endsection
 
 @section('wizard_panel')
-    @php
-        // Floor the browser `min` at the stored value if it is already in the
-        // past, so an existing draft date can still be re-saved.
-        $nowLocal = now()->format('Y-m-d\TH:i');
-        $storedLocal = $event?->starts_at?->format('Y-m-d\TH:i');
-        $startMin = ($storedLocal !== null && $storedLocal < $nowLocal) ? $storedLocal : $nowLocal;
-    @endphp
-    <div class="field">
-        <label for="starts_at">Starts at</label>
-        <input id="starts_at" type="datetime-local" name="starts_at" min="{{ $startMin }}"
-               value="{{ old('starts_at', $storedLocal) }}">
-        <span class="field-hint">The event can’t start in the past.</span>
-        @error('starts_at') <p class="error">{{ $message }}</p> @enderror
-    </div>
+    @include('dashboard.events._starts_at_field', ['event' => $event, 'required' => false, 'label' => 'Start date and time'])
 @endsection
 
 @section('wizard_help')

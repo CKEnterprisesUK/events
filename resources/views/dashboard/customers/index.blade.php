@@ -147,7 +147,13 @@
         @if ($customers->isEmpty())
             <div class="empty"><p>No customers yet.</p></div>
         @else
-            <table class="data-table">
+            @php
+                $marketingLabel = function ($v) {
+                    if ($v === null) return ['No preference', 'tag--muted'];
+                    return ((int) $v === 1) ? ['Opted in', 'tag--in'] : ['Opted out', 'tag--out'];
+                };
+            @endphp
+            <table class="data-table only-desktop">
                 <thead>
                     <tr>
                         <th scope="col">Customer</th>
@@ -156,12 +162,12 @@
                         <th scope="col" class="num">Spend</th>
                         <th scope="col">Marketing</th>
                         <th scope="col">Last order</th>
-                        <th scope="col"></th>
+                        <th scope="col"><span class="sr-only">Actions</span></th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($customers as $customer)
-                        @php $token = CustomerController::tokenFor($customer->customer_email); @endphp
+                        @php [$mLabel, $mClass] = $marketingLabel($customer->marketing_opt_in); $token = CustomerController::tokenFor($customer->customer_email); @endphp
                         <tr class="row-nav">
                             <td>
                                 <a class="cell-strong row-link" href="{{ route('dashboard.customers.show', $token) }}">{{ $customer->customer_name }}</a>
@@ -170,21 +176,32 @@
                             <td class="num">{{ number_format($customer->orders_count) }}</td>
                             <td class="num">{{ number_format($customer->events_count) }}</td>
                             <td class="num">{{ $symbol }}{{ number_format($customer->spend_minor / 100, 2) }}</td>
-                            <td>
-                                @if ($customer->marketing_opt_in === null)
-                                    <span class="tag tag--muted" title="Never saw or answered the marketing opt-in">No preference</span>
-                                @elseif ((int) $customer->marketing_opt_in === 1)
-                                    <span class="tag tag--in">Opted in</span>
-                                @else
-                                    <span class="tag tag--out">Opted out</span>
-                                @endif
-                            </td>
+                            <td><span class="tag {{ $mClass }}">{{ $mLabel }}</span></td>
                             <td>{{ $customer->last_order_at ? \Illuminate\Support\Carbon::parse($customer->last_order_at)->format('j M Y, H:i') : '—' }}</td>
                             <td class="num"><a class="panel__link row-action" href="{{ route('dashboard.customers.show', $token) }}">View</a></td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
+
+            {{-- Mobile: stacked customer records. --}}
+            <div class="only-mobile record-list" style="padding: 1rem 1.25rem;">
+                @foreach ($customers as $customer)
+                    @php [$mLabel, $mClass] = $marketingLabel($customer->marketing_opt_in); $token = CustomerController::tokenFor($customer->customer_email); @endphp
+                    <div class="record-card">
+                        <div class="record-card__body">
+                            <a class="record-card__title cell-strong" href="{{ route('dashboard.customers.show', $token) }}">{{ $customer->customer_name }}</a>
+                            <span class="record-card__meta">{{ $customer->customer_email }}</span>
+                            <span class="record-card__meta record-card__meta--strong">
+                                {{ number_format($customer->orders_count) }} {{ \Illuminate\Support\Str::plural('order', $customer->orders_count) }}
+                                · {{ $symbol }}{{ number_format($customer->spend_minor / 100, 2) }} spend
+                            </span>
+                            <span class="record-card__meta"><span class="tag {{ $mClass }}">{{ $mLabel }}</span></span>
+                        </div>
+                        <a class="btn btn-outline btn-sm record-card__action" href="{{ route('dashboard.customers.show', $token) }}">View</a>
+                    </div>
+                @endforeach
+            </div>
             <div class="pager">{{ $customers->links() }}</div>
         @endif
     </div>

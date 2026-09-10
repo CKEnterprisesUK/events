@@ -2,9 +2,12 @@
 
 namespace App\Services\Stripe;
 
+use Stripe\Exception\ApiErrorException;
+use Stripe\Exception\AuthenticationException;
 use Stripe\Exception\SignatureVerificationException;
 use Stripe\StripeClient;
 use Stripe\Webhook;
+use Throwable;
 use UnexpectedValueException;
 
 /**
@@ -176,6 +179,56 @@ class StripePaymentServiceStripeSdk implements StripePaymentService
             type: (string) $event->type,
             data: $object !== null ? $object->toArray() : [],
         );
+    }
+
+    public function verifyPlatformCredentials(): StripeDiagnosticResult
+    {
+        // A read-only, authenticated call: retrieving the Platform's own account
+        // is the cheapest way to prove STRIPE_SECRET is present and valid. It
+        // mutates nothing. Wrapped so the advisory Accounts-v2 notice can't
+        // escalate a successful call into a 500 (mirrors every other SDK call).
+        return $this->withoutStripeNoticeEscalation(function (): StripeDiagnosticResult {
+            try {
+                $account = $this->client->accounts->retrieve();
+            } catch (AuthenticationException $e) {
+                // The key was rejected by Stripe (missing, malformed, revoked,
+                // or the wrong mode). This is the decisive credential failure.
+                return StripeDiagnosticResult::failure(
+                    stage: 'auth',
+                    message: 'Stripe rejected the API secret key: '.$e->getMessage(),
+                    hint: 'Check STRIPE_SECRET in the environment. It must be the Platform '
+                        .'secret key (starts with "sk_live_" in production or "sk_test_" in test '
+                        .'mode) and must not be revoked.',
+                );
+            } catch (ApiErrorException $e) {
+                // Authenticated far enough to reach the API but Stripe returned
+                // another error (rate limit, transient, permissions). Report it
+                // plainly rather than as a flat credential failure.
+                return StripeDiagnosticResult::failure(
+                    stage: 'auth',
+                    message: 'Stripe returned an error while verifying the account: '.$e->getMessage(),
+                    hint: 'The secret key authenticated but the request did not complete. This is '
+                        .'usually transient — try again shortly.',
+                );
+            } catch (Throwable $e) {
+                // Network/DNS/TLS never reached Stripe — not an auth problem.
+                return StripeDiagnosticResult::failure(
+                    stage: 'auth',
+                    message: 'Could not reach Stripe: '.$e->getMessage(),
+                    hint: 'Check outbound network access to api.stripe.com.',
+                );
+            }
+
+            $mode = str_contains((string) config('stripe.secret'), 'sk_test_')
+                ? 'test'
+                : 'live';
+
+            return StripeDiagnosticResult::ok(
+                message: 'Authenticated to Stripe as account '.$account->id.' ('.$mode.' mode). '
+                    .'The Platform secret key is valid.',
+                accountId: (string) $account->id,
+            );
+        });
     }
 
     /**

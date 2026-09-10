@@ -202,6 +202,35 @@ class FakeStripePaymentService implements StripePaymentService
     }
 
     /**
+     * The result the next {@see verifyPlatformCredentials()} call returns. Tests
+     * steer this with {@see setPlatformCredentialsResult()}; defaults to a
+     * healthy, valid-credentials result so the happy path needs no arrangement.
+     */
+    private ?StripeDiagnosticResult $platformCredentialsResult = null;
+
+    /**
+     * Arrange the result the next platform-credential probe reports, so tests
+     * can exercise both the valid and invalid-key branches without a live API.
+     * Returns $this for fluent test setup.
+     */
+    public function setPlatformCredentialsResult(StripeDiagnosticResult $result): static
+    {
+        $this->platformCredentialsResult = $result;
+
+        return $this;
+    }
+
+    public function verifyPlatformCredentials(): StripeDiagnosticResult
+    {
+        return $this->platformCredentialsResult
+            ?? StripeDiagnosticResult::ok(
+                message: 'Authenticated to Stripe as account acct_fake (test mode). '
+                    .'The Platform secret key is valid.',
+                accountId: 'acct_fake',
+            );
+    }
+
+    /**
      * Verify a webhook the same way the real SDK does, but deterministically and
      * without any Stripe dependency: the fake signature is
      * `HMAC-SHA256(payload, webhook_secret)`. A request is accepted iff the

@@ -134,11 +134,25 @@ class ClientController extends Controller
             ->limit(10)
             ->get();
 
+        // The Company's users, for owner management: the current Owner and the
+        // other (non-super-admin) users who are eligible to receive ownership.
+        $companyUsers = User::query()
+            ->withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->where('is_super_admin', false)
+            ->orderBy('name')
+            ->get();
+
+        $owner = $companyUsers->firstWhere('role', User::ROLE_OWNER);
+        $transferCandidates = $companyUsers->reject(fn (User $u): bool => $u->isOwner())->values();
+
         return view('admin.clients.show', [
             'company' => $company,
             'stats' => $stats,
             'recentEvents' => $recentEvents,
             'recentSupportRequests' => $recentSupportRequests,
+            'owner' => $owner,
+            'transferCandidates' => $transferCandidates,
         ]);
     }
 }

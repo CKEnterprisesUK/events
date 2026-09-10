@@ -18,11 +18,13 @@
     <a class="nav-link {{ $navActive('admin.home') ? 'active' : '' }}" @if($navActive('admin.home')) aria-current="page" @endif href="{{ route('admin.home') }}"><x-icon name="dashboard" class="nav-ico" /> Dashboard</a>
     <a class="nav-link {{ $navActive('admin.clients.*') ? 'active' : '' }}" @if($navActive('admin.clients.*')) aria-current="page" @endif href="{{ route('admin.clients.index') }}"><x-icon name="customers" class="nav-ico" /> Clients</a>
     <a class="nav-link {{ $navActive('admin.transactions.*') ? 'active' : '' }}" @if($navActive('admin.transactions.*')) aria-current="page" @endif href="{{ route('admin.transactions.index') }}"><x-icon name="payments" class="nav-ico" /> Transactions</a>
+    <a class="nav-link {{ $navActive('admin.payments.*') ? 'active' : '' }}" @if($navActive('admin.payments.*')) aria-current="page" @endif href="{{ route('admin.payments.index') }}"><x-icon name="payments" class="nav-ico" /> Connected accounts</a>
     <a class="nav-link {{ $navActive('admin.audit.*') ? 'active' : '' }}" @if($navActive('admin.audit.*')) aria-current="page" @endif href="{{ route('admin.audit.index') }}"><x-icon name="history" class="nav-ico" /> Audit trail</a>
     <a class="nav-link {{ $navActive('admin.fees.*') ? 'active' : '' }}" @if($navActive('admin.fees.*')) aria-current="page" @endif href="{{ route('admin.fees.index') }}"><x-icon name="payments" class="nav-ico" /> Fees</a>
     <a class="nav-link {{ $navActive('admin.legal.*') ? 'active' : '' }}" @if($navActive('admin.legal.*')) aria-current="page" @endif href="{{ route('admin.legal.index') }}"><x-icon name="report" class="nav-ico" /> Trust &amp; Legal</a>
     <a class="nav-link {{ $navActive('admin.reserved-slugs.*') ? 'active' : '' }}" @if($navActive('admin.reserved-slugs.*')) aria-current="page" @endif href="{{ route('admin.reserved-slugs.index') }}"><x-icon name="cross" class="nav-ico" /> Reserved slugs</a>
     <a class="nav-link {{ $navActive('admin.settings.*') ? 'active' : '' }}" @if($navActive('admin.settings.*')) aria-current="page" @endif href="{{ route('admin.settings.index') }}"><x-icon name="settings" class="nav-ico" /> Settings</a>
+    <a class="nav-link {{ $navActive('admin.system.*') ? 'active' : '' }}" @if($navActive('admin.system.*')) aria-current="page" @endif href="{{ route('admin.system.index') }}"><x-icon name="activity" class="nav-ico" /> System health</a>
 @else
     {{-- Company dashboard, adapts to the user's role --}}
     @if ($impersonating)

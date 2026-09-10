@@ -100,6 +100,12 @@ class AuditLog extends Model
 
     public const RESERVED_SLUG_REMOVED = 'reserved_slug.removed';
 
+    public const OWNER_TRANSFERRED = 'owner.transferred';
+
+    public const OWNER_PASSWORD_RESET_SENT = 'owner.password_reset_sent';
+
+    public const USER_VERIFICATION_RESENT = 'user.verification_resent';
+
     // Money
     public const ORDER_CANCELLED = 'order.cancelled';
 
@@ -116,6 +122,8 @@ class AuditLog extends Model
     public const FEE_COMPANY_CHANGED = 'fee.company_changed';
 
     public const MAIL_TRANSPORT_CHANGED = 'mail.transport_changed';
+
+    public const STRIPE_CREDENTIALS_CHECKED = 'stripe.credentials_checked';
 
     public const STRIPE_ONBOARDING_STARTED = 'stripe.onboarding_started';
 
@@ -181,6 +189,9 @@ class AuditLog extends Model
         self::COMPANY_UNSUSPENDED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Unsuspended a company'],
         self::RESERVED_SLUG_ADDED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Added a reserved slug'],
         self::RESERVED_SLUG_REMOVED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Removed a reserved slug'],
+        self::OWNER_TRANSFERRED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Transferred company ownership'],
+        self::OWNER_PASSWORD_RESET_SENT => ['category' => self::CATEGORY_ACCESS, 'label' => 'Sent an owner password reset'],
+        self::USER_VERIFICATION_RESENT => ['category' => self::CATEGORY_ACCESS, 'label' => 'Re-sent an email verification'],
 
         self::ORDER_CANCELLED => ['category' => self::CATEGORY_MONEY, 'label' => 'Cancelled an order'],
         self::ORDER_REFUNDED => ['category' => self::CATEGORY_MONEY, 'label' => 'Refunded an order'],
@@ -190,6 +201,7 @@ class AuditLog extends Model
         self::FEE_GLOBAL_CHANGED => ['category' => self::CATEGORY_MONEY, 'label' => 'Changed the global fee'],
         self::FEE_COMPANY_CHANGED => ['category' => self::CATEGORY_MONEY, 'label' => 'Changed a company fee'],
         self::MAIL_TRANSPORT_CHANGED => ['category' => self::CATEGORY_SYSTEM, 'label' => 'Changed the mail transport'],
+        self::STRIPE_CREDENTIALS_CHECKED => ['category' => self::CATEGORY_SYSTEM, 'label' => 'Checked Stripe credentials'],
         self::STRIPE_ONBOARDING_STARTED => ['category' => self::CATEGORY_MONEY, 'label' => 'Started Stripe onboarding'],
         self::STRIPE_CHARGES_ENABLED_CHANGED => ['category' => self::CATEGORY_MONEY, 'label' => 'Stripe charges status changed'],
 
