@@ -55,6 +55,10 @@ interface StripePaymentService
      * later task (task 15). (Requirement 12.1)
      *
      * @param  array<string, mixed>  $metadata  Order metadata (e.g. order reference).
+     * @param  string|null  $customerEmail  The Customer's email, pre-filled on
+     *                                       the hosted Checkout page so they do
+     *                                       not have to type it again. Passing
+     *                                       null leaves the email field blank.
      */
     public function createCheckoutSession(
         string $connectedAccountId,
@@ -64,6 +68,7 @@ interface StripePaymentService
         string $successUrl,
         string $cancelUrl,
         array $metadata = [],
+        ?string $customerEmail = null,
     ): StripeCheckoutSession;
 
     /**

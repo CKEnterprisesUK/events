@@ -144,6 +144,17 @@ class Event extends Model
     }
 
     /**
+     * The custom questions asked of the Customer at checkout for this Event,
+     * in display order (at most {@see EventQuestion::MAX_PER_EVENT}).
+     *
+     * @return HasMany<EventQuestion, $this>
+     */
+    public function questions(): HasMany
+    {
+        return $this->hasMany(EventQuestion::class)->orderBy('position');
+    }
+
+    /**
      * The sponsors shown for this Event, in display order. A sponsor carries a
      * logo plus optional store-page details and an `on_ticket` flag. (Sponsors
      * management)

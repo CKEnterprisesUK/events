@@ -67,6 +67,7 @@
         ['key' => 'overview', 'label' => 'Overview', 'icon' => 'overview', 'url' => route('dashboard.events.show', $event)],
         ['key' => 'location', 'label' => 'Where',    'icon' => 'location', 'url' => route('dashboard.events.location', $event)],
         ['key' => 'tickets',  'label' => 'Tickets',  'icon' => 'tickets',  'url' => route('dashboard.events.tickets', $event)],
+        ['key' => 'questions', 'label' => 'Questions', 'icon' => 'tickets', 'url' => route('dashboard.events.questions', $event)],
         // Branding + Sponsors manage the event's presentation, gated on the
         // settings permission (matching the old top-right Branding action).
         ...(auth()->user()?->can('settings') ? [

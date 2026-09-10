@@ -140,6 +140,8 @@ class AuditLog extends Model
 
     public const TICKET_TYPE_DELETED = 'ticket_type.deleted';
 
+    public const EVENT_QUESTIONS_UPDATED = 'event.questions_updated';
+
     public const ORDER_TICKET_RESENT = 'order.ticket_resent';
 
     public const EVENT_SCANS_RESET = 'event.scans_reset';
@@ -200,6 +202,7 @@ class AuditLog extends Model
         self::TICKET_TYPE_CREATED => ['category' => self::CATEGORY_EVENTS, 'label' => 'Created a ticket type'],
         self::TICKET_TYPE_UPDATED => ['category' => self::CATEGORY_EVENTS, 'label' => 'Updated a ticket type'],
         self::TICKET_TYPE_DELETED => ['category' => self::CATEGORY_EVENTS, 'label' => 'Deleted a ticket type'],
+        self::EVENT_QUESTIONS_UPDATED => ['category' => self::CATEGORY_EVENTS, 'label' => 'Updated attendee questions'],
         self::ORDER_TICKET_RESENT => ['category' => self::CATEGORY_EVENTS, 'label' => 'Re-sent a ticket email'],
         self::EVENT_SCANS_RESET => ['category' => self::CATEGORY_EVENTS, 'label' => 'Reset event check-ins'],
 

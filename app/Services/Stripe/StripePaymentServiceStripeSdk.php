@@ -77,6 +77,7 @@ class StripePaymentServiceStripeSdk implements StripePaymentService
         string $successUrl,
         string $cancelUrl,
         array $metadata = [],
+        ?string $customerEmail = null,
     ): StripeCheckoutSession {
         // Direct charge on the connected account: the request is made on the
         // connected account (Stripe-Account header) and the Platform takes its
@@ -89,8 +90,9 @@ class StripePaymentServiceStripeSdk implements StripePaymentService
             $successUrl,
             $cancelUrl,
             $metadata,
+            $customerEmail,
         ): StripeCheckoutSession {
-            $session = $this->client->checkout->sessions->create([
+            $params = [
                 'mode' => 'payment',
                 'success_url' => $successUrl,
                 'cancel_url' => $cancelUrl,
@@ -108,7 +110,16 @@ class StripePaymentServiceStripeSdk implements StripePaymentService
                 'payment_intent_data' => [
                     'application_fee_amount' => $applicationFeeMinor,
                 ],
-            ], [
+            ];
+
+            // Pre-fill the email on the hosted Checkout page so the Customer
+            // doesn't have to re-enter the address they already gave us. Only
+            // set it when present — Stripe rejects a null/empty `customer_email`.
+            if ($customerEmail !== null && $customerEmail !== '') {
+                $params['customer_email'] = $customerEmail;
+            }
+
+            $session = $this->client->checkout->sessions->create($params, [
                 'stripe_account' => $connectedAccountId,
             ]);
 

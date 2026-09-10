@@ -123,6 +123,57 @@
                         </div>
                     </section>
 
+                    {{-- Organiser's custom questions (0–3), asked once per order.
+                         Rendered by type: free text, single-choice radios, or a
+                         number field. Answers are keyed by question id so the
+                         controller can match them back to each question. --}}
+                    @if ($questions->isNotEmpty())
+                        <section class="checkout-section">
+                            <h2 class="checkout-section__title">A few questions</h2>
+                            @foreach ($questions as $question)
+                                @php $qKey = 'questions.' . $question->id; @endphp
+                                <div class="field">
+                                    <label for="question_{{ $question->id }}">
+                                        {{ $question->label }}
+                                        @unless ($question->required)
+                                            <span class="muted">(optional)</span>
+                                        @endunless
+                                    </label>
+
+                                    @if ($question->isSelect())
+                                        <div class="checkout-choices" role="group" aria-label="{{ $question->label }}">
+                                            @foreach ($question->choices() as $choiceIndex => $choice)
+                                                <label class="consent">
+                                                    <input type="radio"
+                                                           name="questions[{{ $question->id }}]"
+                                                           id="question_{{ $question->id }}{{ $choiceIndex === 0 ? '' : '_' . $choiceIndex }}"
+                                                           value="{{ $choice }}"
+                                                           {{ old($qKey) === $choice ? 'checked' : '' }}
+                                                           {{ $question->required ? 'required' : '' }}>
+                                                    <span>{{ $choice }}</span>
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                    @elseif ($question->isNumber())
+                                        <input type="number" step="any"
+                                               name="questions[{{ $question->id }}]"
+                                               id="question_{{ $question->id }}"
+                                               value="{{ old($qKey) }}"
+                                               {{ $question->required ? 'required' : '' }}>
+                                    @else
+                                        <input type="text" maxlength="1000"
+                                               name="questions[{{ $question->id }}]"
+                                               id="question_{{ $question->id }}"
+                                               value="{{ old($qKey) }}"
+                                               {{ $question->required ? 'required' : '' }}>
+                                    @endif
+
+                                    @error($qKey)<p class="error">{{ $message }}</p>@enderror
+                                </div>
+                            @endforeach
+                        </section>
+                    @endif
+
                     <section class="checkout-section">
                         <div class="checkout-consents">
                             <label class="consent">

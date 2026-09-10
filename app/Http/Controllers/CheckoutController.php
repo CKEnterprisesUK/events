@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Exceptions\InsufficientCapacityException;
 use App\Models\Company;
 use App\Models\Event;
+use App\Models\EventQuestion;
 use App\Models\Order;
 use App\Models\OrderConsent;
+use App\Models\OrderQuestionAnswer;
 use App\Models\Ticket;
 use App\Models\TicketType;
 use App\Services\Branding\BrandingResolver;
@@ -160,6 +162,9 @@ class CheckoutController extends Controller
             'feeMinor' => $fee->bookingFee,
             'totalMinor' => $fee->orderTotal,
             'feeHandlingMode' => $company->fee_handling_mode,
+            // The organiser's custom questions (0–3), asked once per order below
+            // the customer details. (Attendee questions feature)
+            'questions' => $event->questions()->get(),
         ]);
     }
 
@@ -190,6 +195,13 @@ class CheckoutController extends Controller
         $consents = $this->normalizeConsents($data['consents'] ?? []);
         $this->assertRequiredConsentsAccepted($consents);
 
+        // Resolve the organiser's custom questions and validate the submitted
+        // answers against them (required-answer gating + per-type checks). The
+        // result is a list of {question, answer} pairs ready to persist. No
+        // Order is created if a required question is unanswered. (Attendee
+        // questions feature)
+        $answers = $this->resolveAnswers($event, (array) $request->input('questions', []));
+
         // Money snapshot for the Order, computed from the Company's effective
         // fee percent and Fee_Handling_Mode. (Requirements 10.10, 12.x, 13.x)
         $subtotal = $this->subtotal($quantities, $ticketTypes);
@@ -218,7 +230,7 @@ class CheckoutController extends Controller
         // Persist the Order + Tickets + consents atomically. If any part fails,
         // release the just-made reservation so capacity is not stranded.
         try {
-            $order = DB::transaction(function () use ($event, $data, $fee, $reservedUntil, $quantities, $consents): Order {
+            $order = DB::transaction(function () use ($event, $data, $fee, $reservedUntil, $quantities, $consents, $answers): Order {
                 $order = Order::create([
                     'event_id' => $event->id,
                     'order_reference' => $this->uniqueOrderReference(),
@@ -247,6 +259,22 @@ class CheckoutController extends Controller
                         'order_id' => $order->id,
                         'consent_key' => $key,
                         'accepted' => $accepted,
+                        'captured_at' => now(),
+                    ]);
+                }
+
+                // Snapshot the custom-question answers, one row per question,
+                // with the question label captured so reports survive later
+                // edits/deletes of the question. (Attendee questions feature)
+                foreach ($answers as $answer) {
+                    /** @var EventQuestion $question */
+                    $question = $answer['question'];
+
+                    OrderQuestionAnswer::create([
+                        'order_id' => $order->id,
+                        'event_question_id' => $question->id,
+                        'question_label' => $question->label,
+                        'answer' => $answer['answer'],
                         'captured_at' => now(),
                     ]);
                 }
@@ -304,6 +332,9 @@ class CheckoutController extends Controller
                 'order' => $order->order_reference,
             ]),
             metadata: ['order_reference' => $order->order_reference],
+            // Pre-fill the email the Customer just entered so Stripe's hosted
+            // page doesn't ask them for it a second time.
+            customerEmail: $order->customer_email,
         );
 
         $order->stripe_session_id = $session->id;
@@ -329,6 +360,72 @@ class CheckoutController extends Controller
             'items.*.quantity' => ['required', 'integer', 'min:1'],
             'consents' => ['nullable', 'array'],
         ]);
+    }
+
+    /**
+     * Resolve and validate the Customer's answers to the Event's custom
+     * questions against the questions actually configured for the Event.
+     *
+     * For each question:
+     *   - a required question must have a non-empty answer, else a validation
+     *     error keyed `questions.{id}` is raised and no Order is created;
+     *   - a `number` question's answer must be numeric;
+     *   - a `select` question's answer must be one of the configured choices.
+     *
+     * Submitted answers for unknown question ids (not belonging to this Event)
+     * are ignored. The result is a list of {question, answer} pairs to persist;
+     * a question left blank (and optional) is skipped rather than stored empty.
+     *
+     * @param  array<int|string, mixed>  $submitted  The raw `questions[id] => value` map.
+     * @return array<int, array{question: EventQuestion, answer: string}>
+     */
+    private function resolveAnswers(Event $event, array $submitted): array
+    {
+        $questions = $event->questions()->get();
+
+        if ($questions->isEmpty()) {
+            return [];
+        }
+
+        $errors = [];
+        $resolved = [];
+
+        foreach ($questions as $question) {
+            $raw = $submitted[$question->id] ?? null;
+            $value = is_string($raw) ? trim($raw) : (is_scalar($raw) ? (string) $raw : '');
+
+            if ($value === '') {
+                if ($question->required) {
+                    $errors["questions.{$question->id}"] = __('Please answer: :question', ['question' => $question->label]);
+                }
+
+                // Optional + unanswered: nothing to store.
+                continue;
+            }
+
+            if ($question->isNumber() && ! is_numeric($value)) {
+                $errors["questions.{$question->id}"] = __('Please enter a number for: :question', ['question' => $question->label]);
+
+                continue;
+            }
+
+            if ($question->isSelect() && ! in_array($value, $question->choices(), true)) {
+                $errors["questions.{$question->id}"] = __('Please choose one of the options for: :question', ['question' => $question->label]);
+
+                continue;
+            }
+
+            $resolved[] = [
+                'question' => $question,
+                'answer' => $value,
+            ];
+        }
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
+        }
+
+        return $resolved;
     }
 
     /**

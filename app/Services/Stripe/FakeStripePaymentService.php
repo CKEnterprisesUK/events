@@ -148,6 +148,7 @@ class FakeStripePaymentService implements StripePaymentService
         string $successUrl,
         string $cancelUrl,
         array $metadata = [],
+        ?string $customerEmail = null,
     ): StripeCheckoutSession {
         // Simulate a failed direct charge: the session is never created, so no
         // charge is made and no funds move. The failure fires once, then the
@@ -169,6 +170,7 @@ class FakeStripePaymentService implements StripePaymentService
             'success_url' => $successUrl,
             'cancel_url' => $cancelUrl,
             'metadata' => $metadata,
+            'customer_email' => $customerEmail,
             'id' => $id,
         ];
 

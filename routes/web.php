@@ -12,6 +12,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmbedController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\EventPageController;
+use App\Http\Controllers\EventQuestionController;
 use App\Http\Controllers\EventReportController;
 use App\Http\Controllers\EventSponsorController;
 use App\Http\Controllers\EventWizardController;
@@ -320,6 +321,16 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
         // the last remaining type of a published Event so the "≥1 ticket type"
         // publish blocker can never be violated from the accordion. (Req 6.2)
         Route::delete('/events/{event}/ticket-types/{ticketType}', [TicketTypeController::class, 'destroy'])->name('events.ticket-types.destroy');
+
+        // Attendee questions (Admin-gated in the controller), nested under an
+        // Event. Up to three custom questions (free text / single choice /
+        // number) asked of the Customer at checkout. `save` replaces the whole
+        // set atomically. A per-event answers report + CSV export live on the
+        // same controller, gated on ACTION_VIEW_REPORTS.
+        Route::get('/events/{event}/questions', [EventQuestionController::class, 'index'])->name('events.questions');
+        Route::put('/events/{event}/questions', [EventQuestionController::class, 'save'])->name('events.questions.save');
+        Route::get('/events/{event}/questions/report', [EventQuestionController::class, 'report'])->name('events.questions.report');
+        Route::get('/events/{event}/questions/export', [EventQuestionController::class, 'export'])->name('events.questions.export');
 
         // Event sponsors (Admin-gated in the controller), nested under an Event.
         // A repeatable list of sponsor logos with optional store-page details

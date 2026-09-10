@@ -154,6 +154,17 @@ class Order extends Model
     }
 
     /**
+     * The answers the Customer gave to this Event's custom questions at
+     * checkout.
+     *
+     * @return HasMany<OrderQuestionAnswer, $this>
+     */
+    public function questionAnswers(): HasMany
+    {
+        return $this->hasMany(OrderQuestionAnswer::class);
+    }
+
+    /**
      * Whether this Order consists solely of free tickets (zero total).
      * (Requirements 10.9, 13.7)
      */
