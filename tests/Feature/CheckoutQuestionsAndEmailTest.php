@@ -184,6 +184,30 @@ class CheckoutQuestionsAndEmailTest extends TestCase
         $this->assertSame(0, Order::withoutGlobalScopes()->where('event_id', $event->id)->count());
     }
 
+    public function test_questions_screen_renders(): void
+    {
+        $company = Company::factory()->create();
+        $admin = \App\Models\User::factory()->admin()->create(['company_id' => $company->id]);
+        $event = Event::factory()->for($company)->create();
+
+        $this->actingAs($admin)
+            ->get(route('dashboard.events.questions', $event))
+            ->assertOk()
+            ->assertSee('Attendee questions');
+    }
+
+    public function test_answers_report_screen_renders(): void
+    {
+        $company = Company::factory()->create();
+        $admin = \App\Models\User::factory()->owner()->create(['company_id' => $company->id]);
+        $event = Event::factory()->for($company)->create();
+
+        $this->actingAs($admin)
+            ->get(route('dashboard.events.questions.report', $event))
+            ->assertOk()
+            ->assertSee('Attendee answers');
+    }
+
     public function test_admin_can_configure_questions_and_ceiling_is_enforced(): void
     {
         $company = Company::factory()->create();

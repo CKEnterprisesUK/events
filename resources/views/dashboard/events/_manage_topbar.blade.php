@@ -101,21 +101,23 @@
             @else
                 <button type="button" class="btn btn-danger-outline" data-open-event-delete>Delete event</button>
             @endif
-
-            <a class="btn btn-outline" href="{{ route('dashboard.events.index') }}">All events</a>
         </div>
     </div>
 
     {{-- A cancelled event keeps its bookings; remind the organiser of the
-         out-of-band follow-up (customer contact + refunds via support). --}}
+         out-of-band follow-up (customer contact + refunds via support). Kept
+         compact: one line of guidance plus two direct actions, not a tall
+         alarm banner. (UI: cancelled event state) --}}
     @if ($isCancelled)
-        <div class="notice notice--warning" role="note" style="margin-top: 1rem;">
-            <strong>This event is cancelled.</strong>
-            Its bookings are kept so you can follow up. Please contact your
-            affected customers and arrange any refunds through
-            <a href="{{ route('dashboard.support.create') }}">support</a>. The full,
-            up-to-date list of everyone who booked is in
-            <a href="{{ route('dashboard.customers.index', ['event' => $event->id]) }}">Customers</a>.
+        <div class="event-cancelled" role="note">
+            <div class="event-cancelled__text">
+                <strong>Event cancelled</strong>
+                <span>Bookings have been retained. Review affected customers and arrange any refunds.</span>
+            </div>
+            <div class="event-cancelled__actions">
+                <a class="btn btn-outline btn-sm" href="{{ route('dashboard.customers.index', ['event' => $event->id]) }}">View customers</a>
+                <a class="btn btn-outline btn-sm" href="{{ route('dashboard.support.create') }}">Refund guidance</a>
+            </div>
         </div>
     @endif
 

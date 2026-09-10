@@ -143,7 +143,9 @@
 @endphp
 <div class="app-shell" id="appShell">
     <header class="app-header">
-        <button type="button" class="nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-controls="appSidebar" aria-expanded="false">&#9776;</button>
+        <button type="button" class="nav-toggle" id="navToggle" aria-label="Open navigation menu" aria-controls="appSidebar" aria-expanded="false">
+            <x-icon name="menu" aria-hidden="true" />
+        </button>
 
         <a href="{{ $isSuperAdmin && ! $impersonating ? url('/admin') : url('/dashboard') }}" class="brand" aria-label="Events by CK Enterprises">
             <span class="logo">
@@ -152,6 +154,18 @@
                 <span class="ck">CK Enterprises</span>
             </span>
         </a>
+
+        {{-- Mobile-only current context label. Shows the event name inside an
+             event, otherwise the current page title, so a user always knows
+             where they are without the sidebar visible. --}}
+        @php
+            $mobileContext = (isset($event) && $event instanceof \App\Models\Event)
+                ? $event->name
+                : trim($__env->yieldContent('page_title', ''));
+        @endphp
+        @if ($mobileContext !== '')
+            <span class="app-header__context" aria-hidden="true">{{ $mobileContext }}</span>
+        @endif
 
         <div class="header-spacer"></div>
 
@@ -269,91 +283,33 @@
                     <x-icon name="panel-left" />
                 </button>
             </div>
-            <nav aria-label="Primary">
-                @if ($isSuperAdmin && ! $impersonating)
-                    {{-- Super Admin platform surface --}}
-                    <p class="nav-section">Platform</p>
-                    <a class="nav-link {{ $navActive('admin.home') ? 'active' : '' }}" href="{{ route('admin.home') }}"><x-icon name="dashboard" class="nav-ico" /> Dashboard</a>
-                    <a class="nav-link {{ $navActive('admin.clients.*') ? 'active' : '' }}" href="{{ route('admin.clients.index') }}"><x-icon name="customers" class="nav-ico" /> Clients</a>
-                    <a class="nav-link {{ $navActive('admin.transactions.*') ? 'active' : '' }}" href="{{ route('admin.transactions.index') }}"><x-icon name="payments" class="nav-ico" /> Transactions</a>
-                    <a class="nav-link {{ $navActive('admin.audit.*') ? 'active' : '' }}" href="{{ route('admin.audit.index') }}"><x-icon name="history" class="nav-ico" /> Audit trail</a>
-                    <a class="nav-link {{ $navActive('admin.fees.*') ? 'active' : '' }}" href="{{ route('admin.fees.index') }}"><x-icon name="payments" class="nav-ico" /> Fees</a>
-                    <a class="nav-link {{ $navActive('admin.legal.*') ? 'active' : '' }}" href="{{ route('admin.legal.index') }}"><x-icon name="report" class="nav-ico" /> Trust &amp; Legal</a>
-                    <a class="nav-link {{ $navActive('admin.reserved-slugs.*') ? 'active' : '' }}" href="{{ route('admin.reserved-slugs.index') }}"><x-icon name="cross" class="nav-ico" /> Reserved slugs</a>
-                    <a class="nav-link {{ $navActive('admin.settings.*') ? 'active' : '' }}" href="{{ route('admin.settings.index') }}"><x-icon name="settings" class="nav-ico" /> Settings</a>
+            @php
+                // Event context: layouts/event.blade.php (and other per-event
+                // screens) pass an $event into the view, and set the
+                // `event_nav` section so the main sidebar swaps its
+                // organisation nav for the event-context nav. This is the single
+                // navigation system while inside an event — there is never a
+                // second floating event menu.
+                $eventNav = isset($event) && $event instanceof \App\Models\Event
+                    && trim($__env->yieldContent('event_nav', '')) === '1';
+                $activeSection = trim($__env->yieldContent('active_section', 'overview'));
+            @endphp
+            <nav aria-label="{{ $eventNav ? 'Event' : 'Primary' }}" class="{{ $eventNav ? 'nav--event' : '' }}">
+                @if ($eventNav)
+                    @include('layouts.partials.sidebar-event-nav', [
+                        'event' => $event,
+                        'readiness' => $readiness ?? null,
+                        'activeSection' => $activeSection,
+                        'company' => $company,
+                        'navActive' => $navActive,
+                    ])
                 @else
-                    {{-- Company dashboard, adapts to the user's role --}}
-                    @if ($impersonating)
-                        <p class="nav-section">Super Admin</p>
-                        <a class="nav-link" href="{{ route('admin.home') }}"><x-icon name="chevron" class="nav-ico" /> Back to platform</a>
-                    @endif
-                    <p class="nav-section">Overview</p>
-                    <a class="nav-link {{ $navActive('dashboard.home') ? 'active' : '' }}" href="{{ route('dashboard.home') }}"><x-icon name="dashboard" class="nav-ico" /> Dashboard</a>
-
-                    @can('events')
-                        <p class="nav-section">Manage</p>
-                        <a class="nav-link {{ $navActive('dashboard.events.*') ? 'active' : '' }}" href="{{ route('dashboard.events.index') }}"><x-icon name="events" class="nav-ico" /> Events</a>
-                        <a class="nav-link {{ $navActive('dashboard.sharing.*') ? 'active' : '' }}" href="{{ route('dashboard.sharing.index') }}"><x-icon name="share" class="nav-ico" /> Sharing</a>
-                    @endcan
-
-                    @can('orders')
-                        <a class="nav-link {{ $navActive('dashboard.orders.*') ? 'active' : '' }}" href="{{ route('dashboard.orders.index') }}"><x-icon name="orders" class="nav-ico" /> Orders</a>
-                        <a class="nav-link {{ $navActive('dashboard.customers.*') ? 'active' : '' }}" href="{{ route('dashboard.customers.index') }}"><x-icon name="customers" class="nav-ico" /> Customers</a>
-                    @endcan
-
-                    @can('view_reports')
-                        <p class="nav-section">Finance</p>
-                        <a class="nav-link {{ $navActive('dashboard.reports.*') ? 'active' : '' }}" href="{{ route('dashboard.reports.index') }}"><x-icon name="reports" class="nav-ico" /> Reports &amp; Payouts</a>
-                    @endcan
-
-                    @can('check_in')
-                        <p class="nav-section">Door</p>
-                        <a class="nav-link {{ $navActive('dashboard.scan.*') ? 'active' : '' }}" href="{{ route('dashboard.scan.index') }}"><x-icon name="scan" class="nav-ico" /> Scan tickets</a>
-                    @endcan
-
-                    @canany(['settings', 'stripe', 'users'])
-                        <p class="nav-section">Company</p>
-                        @can('users')
-                            <a class="nav-link {{ $navActive('dashboard.users.*') ? 'active' : '' }}" href="{{ route('dashboard.users.index') }}"><x-icon name="team" class="nav-ico" /> Team</a>
-                        @endcan
-                        @can('settings')
-                            {{-- Only light up for COMPANY-level settings/branding.
-                                 Per-event branding (dashboard.branding.event.*)
-                                 is reached from an Event, so it must not mark
-                                 Settings active. --}}
-                            <a class="nav-link {{ $navActive('dashboard.settings.*', 'dashboard.branding.edit', 'dashboard.branding.update') ? 'active' : '' }}" href="{{ route('dashboard.branding.edit') }}"><x-icon name="settings" class="nav-ico" /> Settings</a>
-                        @endcan
-                        @can('stripe')
-                            <a class="nav-link {{ $navActive('dashboard.stripe.*') ? 'active' : '' }}" href="{{ route('dashboard.stripe.status') }}"><x-icon name="payments" class="nav-ico" /> Payments</a>
-                        @endcan
-                    @endcanany
-
-                    @can('view_audit_log')
-                        <p class="nav-section">Oversight</p>
-                        <a class="nav-link {{ $navActive('dashboard.activity.*') ? 'active' : '' }}" href="{{ route('dashboard.activity.index') }}"><x-icon name="activity" class="nav-ico" /> Activity</a>
-                    @endcan
-
-                    @if ($company)
-                        <p class="nav-section">Public</p>
-                        <a class="nav-link" href="{{ url('/' . $company->slug) }}" target="_blank" rel="noopener"><x-icon name="storefront" class="nav-ico" /> View storefront</a>
-                    @endif
-                @endif
-
-                {{-- Help & support. Rendered for BOTH the Super Admin platform
-                     surface and every Company dashboard, so it is always
-                     available. Pinned to the bottom of the sidebar via
-                     `nav-section-help` (margin-top:auto): it sits at the bottom
-                     on short pages and simply follows the last item when the nav
-                     is long enough to scroll. No @can gate — Help is generic
-                     product guidance for everyone. --}}
-                <p class="nav-section nav-section-help">Support</p>
-                <a class="nav-link {{ $navActive('dashboard.help.*') ? 'active' : '' }}" href="{{ route('dashboard.help.index') }}"><x-icon name="help" class="nav-ico" /> Help</a>
-                @if ($isSuperAdmin && ! $impersonating)
-                    {{-- A non-impersonating Super_Admin IS support, so they get
-                         the incoming ticket queue rather than a contact form. --}}
-                    <a class="nav-link {{ $navActive('admin.support.*') ? 'active' : '' }}" href="{{ route('admin.support.index') }}"><x-icon name="support" class="nav-ico" /> Support tickets</a>
-                @else
-                    <a class="nav-link {{ $navActive('dashboard.support.*') ? 'active' : '' }}" href="{{ route('dashboard.support.create') }}"><x-icon name="support" class="nav-ico" /> Contact support</a>
+                    @include('layouts.partials.sidebar-org-nav', [
+                        'isSuperAdmin' => $isSuperAdmin,
+                        'impersonating' => $impersonating,
+                        'company' => $company,
+                        'navActive' => $navActive,
+                    ])
                 @endif
             </nav>
         </aside>
@@ -398,31 +354,66 @@
             if (window.__eventMap) setTimeout(function () { window.__eventMap.invalidateSize(); }, 200);
         });
     }
-    // Main_Sidebar (every dashboard page) + Section_Nav (manage screen only;
-    // guarded by existence inside bindCollapse).
+    // Main_Sidebar desktop rail collapse (every dashboard page). The old
+    // per-event Section_Nav rail is gone — event navigation now lives in this
+    // same sidebar — so only the main toggle is wired.
     bindCollapse('mainNavToggle', 'appShell', 'app-shell--rail', 'ck.sidebar.main');
-    bindCollapse('sectionNavToggle', 'eventManage', 'event-manage--rail', 'ck.sidebar.section');
 
     (function () {
         var shell = document.getElementById('appShell');
         var toggle = document.getElementById('navToggle');
         var backdrop = document.getElementById('sidebarBackdrop');
-        if (!shell || !toggle) return;
+        var sidebar = document.getElementById('appSidebar');
+        if (!shell || !toggle || !sidebar) return;
 
-        function close() {
+        var isOpen = false;
+
+        function focusable() {
+            return Array.prototype.slice.call(sidebar.querySelectorAll(
+                'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])'
+            )).filter(function (el) { return el.offsetParent !== null; });
+        }
+
+        function open() {
+            isOpen = true;
+            shell.classList.add('nav-open');
+            toggle.setAttribute('aria-expanded', 'true');
+            document.body.classList.add('nav-locked');
+            var f = focusable();
+            if (f.length) f[0].focus();
+        }
+        function close(returnFocus) {
+            isOpen = false;
             shell.classList.remove('nav-open');
             toggle.setAttribute('aria-expanded', 'false');
+            document.body.classList.remove('nav-locked');
+            if (returnFocus) toggle.focus();
         }
         toggle.addEventListener('click', function () {
-            var open = shell.classList.toggle('nav-open');
-            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            if (isOpen) { close(true); } else { open(); }
         });
-        if (backdrop) backdrop.addEventListener('click', close);
-        // Close on navigation (mobile) and on Escape.
-        document.querySelectorAll('#appSidebar a').forEach(function (a) {
-            a.addEventListener('click', close);
+        if (backdrop) backdrop.addEventListener('click', function () { close(false); });
+
+        // Close the drawer when a navigation link is followed (route change).
+        sidebar.querySelectorAll('a').forEach(function (a) {
+            a.addEventListener('click', function () { close(false); });
         });
-        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && isOpen) { close(true); return; }
+            // Focus trap: only while the drawer is the modal surface (mobile,
+            // where the hamburger is visible). On desktop it's a static column.
+            if (e.key !== 'Tab' || !isOpen) return;
+            if (getComputedStyle(toggle).display === 'none') return;
+            var f = focusable();
+            if (!f.length) return;
+            var first = f[0], last = f[f.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault(); last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault(); first.focus();
+            }
+        });
     })();
 
     // User chip dropdown menu.

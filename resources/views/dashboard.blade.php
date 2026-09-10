@@ -72,31 +72,33 @@
     @endif
 
     @if ($stats)
-        <div class="stat-row">
-            <div class="stat">
-                <span class="stat__label">Events</span>
-                <span class="stat__value">{{ number_format($stats['total_events']) }}</span>
-                <span class="stat__sub">{{ number_format($stats['published_events']) }} published</span>
+        {{-- Headline metrics. Restrained bordered cards; money terms match the
+             Reports page (Gross sales / Net to company). --}}
+        <div class="metric-row">
+            <div class="metric-card">
+                <span class="metric-card__label">Events</span>
+                <span class="metric-card__value">{{ number_format($stats['total_events']) }}</span>
+                <span class="metric-card__sub">{{ number_format($stats['published_events']) }} published</span>
             </div>
-            <div class="stat">
-                <span class="stat__label">Tickets sold</span>
-                <span class="stat__value">{{ number_format($stats['tickets_sold']) }}</span>
-                <span class="stat__sub">Valid, confirmed orders</span>
+            <div class="metric-card">
+                <span class="metric-card__label">Tickets sold</span>
+                <span class="metric-card__value">{{ number_format($stats['tickets_sold']) }}</span>
+                <span class="metric-card__sub">Valid, confirmed orders</span>
             </div>
-            <div class="stat">
-                <span class="stat__label">Confirmed orders</span>
-                <span class="stat__value">{{ number_format($stats['confirmed_orders']) }}</span>
-                <span class="stat__sub">Paid &amp; free-confirmed</span>
+            <div class="metric-card">
+                <span class="metric-card__label">Confirmed orders</span>
+                <span class="metric-card__value">{{ number_format($stats['confirmed_orders']) }}</span>
+                <span class="metric-card__sub">Paid &amp; free-confirmed</span>
             </div>
-            <div class="stat">
-                <span class="stat__label">Gross sales</span>
-                <span class="stat__value">{{ $money($stats['gross_sales_minor']) }}</span>
-                <span class="stat__sub">Ticket subtotal</span>
+            <div class="metric-card">
+                <span class="metric-card__label">Gross sales</span>
+                <span class="metric-card__value">{{ $money($stats['gross_sales_minor']) }}</span>
+                <span class="metric-card__sub">Ticket subtotal</span>
             </div>
-            <div class="stat">
-                <span class="stat__label">Net payout</span>
-                <span class="stat__value">{{ $money($stats['net_to_company_minor']) }}</span>
-                <span class="stat__sub">After platform fees</span>
+            <div class="metric-card">
+                <span class="metric-card__label">Net to company</span>
+                <span class="metric-card__value">{{ $money($stats['net_to_company_minor']) }}</span>
+                <span class="metric-card__sub">After platform fees</span>
             </div>
         </div>
     @endif

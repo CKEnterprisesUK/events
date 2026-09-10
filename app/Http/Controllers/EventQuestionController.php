@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\EventQuestion;
 use App\Models\Order;
 use App\Services\AuditLogger;
+use App\Services\EventReadiness;
 use App\Services\EventReportService;
 use App\Services\RoleAuthorization;
 use Illuminate\Contracts\View\View;
@@ -32,6 +33,7 @@ class EventQuestionController extends Controller
 {
     public function __construct(
         private readonly AuditLogger $audit,
+        private readonly EventReadiness $readiness,
     ) {}
 
     /**
@@ -44,6 +46,10 @@ class EventQuestionController extends Controller
 
         return view('dashboard.events.questions', [
             'event' => $event,
+            // The event-management layout renders the setup checklist + nav from
+            // the readiness report; every screen using layouts.event must supply
+            // it. (Mirrors EventController::sharedViewData().)
+            'readiness' => $this->readiness->checklist($event),
             'questions' => $event->questions()->get(),
             'maxQuestions' => EventQuestion::MAX_PER_EVENT,
         ]);
@@ -107,6 +113,7 @@ class EventQuestionController extends Controller
 
         return view('dashboard.events.questions_report', [
             'event' => $event,
+            'readiness' => $this->readiness->checklist($event),
             'questions' => $questions,
             'stats' => $this->buildStats($questions, $orders),
             'responseCount' => $orders->count(),
