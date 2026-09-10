@@ -24,6 +24,7 @@ use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Mail\Mailer;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
@@ -147,6 +148,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Use the app's own on-brand pagination view for every `->links()` call.
+        // The framework default is Tailwind-based and renders oversized inline
+        // SVG chevrons in this (non-Tailwind) app; our view matches app.css.
+        Paginator::defaultView('vendor.pagination.default');
+
         $this->registerRoleGates();
         $this->registerRateLimiters();
         $this->registerGraphMailTransport();
