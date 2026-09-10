@@ -49,8 +49,11 @@
         </p>
     @endif
 
-    {{-- Hero banner (per-event poster, falling back to company poster). --}}
-    @include('dashboard.events._hero', ['event' => $event])
+    {{-- Hero banner (per-event poster, falling back to company poster).
+         Screens can suppress it by emitting @section('hide_hero', '1'). --}}
+    @unless (trim($__env->yieldContent('hide_hero')) === '1')
+        @include('dashboard.events._hero', ['event' => $event])
+    @endunless
 
     <div class="event-section">
         @yield('section')

@@ -200,7 +200,7 @@ class EventController extends Controller
         Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
 
         return view('dashboard.events.orders', $this->sharedViewData($event) + [
-            'recentOrders' => $event->orders()->latest()->limit(20)->get(),
+            'recentOrders' => $event->orders()->latest()->limit(25)->get(),
         ]);
     }
 
