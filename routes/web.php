@@ -273,6 +273,10 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
         // address, pin) so the section form no longer piggy-backs on the full
         // event-details update via a hidden name input. (Requirements 4.1–4.5)
         Route::patch('/events/{event}/location', [EventController::class, 'updateLocation'])->name('events.location.update');
+        // Live address→coordinates lookup for the "Where" screen. Resolves an
+        // address to a pin on demand (no save) so the manager can confirm the
+        // location while editing. Reuses GeocodingService. (Requirements 4.2, 4.5)
+        Route::post('/events/{event}/geocode', [EventController::class, 'geocode'])->name('events.geocode');
         Route::get('/events/{event}/tickets', [EventController::class, 'tickets'])->name('events.tickets');
         // Overall event capacity (the shared-pool ceiling) is edited on the
         // Tickets screen, next to the ticket types it governs. Its own tiny

@@ -66,7 +66,8 @@
             <label for="address">Address</label>
             <textarea id="address" name="address" rows="3"
                       placeholder="Venue address">{{ old('address', $event->address) }}</textarea>
-            <p class="hint">We'll try to locate this address on the map when you save. Then drag the pin to fine-tune the exact spot.</p>
+            <p class="hint">Type the address and we'll try to place the pin on the map automatically. Then drag the pin to fine-tune the exact spot.</p>
+            <p class="hint" data-geocode-status role="status" hidden></p>
             @error('address') <p class="error">{{ $message }}</p> @enderror
         </div>
 
@@ -90,6 +91,7 @@
         <div class="field">
             <div id="event-map" role="application" tabindex="0"
                  aria-label="Map, drag the pin to set the event location"
+                 data-geocode-url="{{ route('dashboard.events.geocode', $event) }}"
                  style="height:320px"></div>
             <p class="hint">Can't find your address automatically? Drag the marker to the exact spot to set the location manually.</p>
         </div>
@@ -193,6 +195,97 @@
             if (lngInput) lngInput.value = pos.lng.toFixed(7);
             reflectPin(pos.lat, pos.lng);
         });
+
+        // Live address lookup: as the manager finishes typing the address, ask
+        // the server (which reuses the same GeocodingService as on-save) to
+        // resolve it, then move the pin so they can confirm/fine-tune it before
+        // saving. Fires on blur and debounced while typing. Any miss or error
+        // leaves the pin where it is and shows a gentle note — the manager can
+        // still drag the marker manually. (Requirements 4.2, 4.5)
+        var addressInput = document.getElementById('address');
+        var geocodeUrl = mapEl.getAttribute('data-geocode-url');
+        var geocodeStatus = document.querySelector('[data-geocode-status]');
+        var tokenEl = document.querySelector('meta[name="csrf-token"]');
+        var csrfToken = tokenEl ? tokenEl.getAttribute('content') : null;
+
+        if (addressInput && geocodeUrl) {
+            var lastQueried = null;
+            var debounceTimer = null;
+            var inFlight = null;
+
+            var setStatus = function (message) {
+                if (!geocodeStatus) return;
+                if (message) {
+                    geocodeStatus.textContent = message;
+                    geocodeStatus.hidden = false;
+                } else {
+                    geocodeStatus.textContent = '';
+                    geocodeStatus.hidden = true;
+                }
+            };
+
+            var placePin = function (lat, lng) {
+                var pos = [lat, lng];
+                marker.setLatLng(pos);
+                map.setView(pos, 15);
+                if (latInput) latInput.value = lat.toFixed(7);
+                if (lngInput) lngInput.value = lng.toFixed(7);
+                reflectPin(lat, lng);
+            };
+
+            var runLookup = function () {
+                var address = addressInput.value.trim();
+
+                // Nothing to do for an empty or unchanged address.
+                if (address === '' || address === lastQueried) return;
+                lastQueried = address;
+
+                // Abort a previous in-flight request so results can't arrive out
+                // of order and overwrite a newer lookup.
+                if (inFlight && typeof inFlight.abort === 'function') {
+                    inFlight.abort();
+                }
+
+                var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+                inFlight = controller;
+
+                setStatus('Locating address…');
+
+                var headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+                if (csrfToken) headers['X-CSRF-TOKEN'] = csrfToken;
+
+                fetch(geocodeUrl, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ address: address }),
+                    credentials: 'same-origin',
+                    signal: controller ? controller.signal : undefined
+                }).then(function (response) {
+                    return response.ok ? response.json() : null;
+                }).then(function (data) {
+                    inFlight = null;
+                    if (data && data.result) {
+                        placePin(data.result.latitude, data.result.longitude);
+                        setStatus('Found it. Drag the pin if you need to fine-tune the exact spot.');
+                    } else {
+                        setStatus("We couldn't locate that address. Drag the marker to set the location manually.");
+                    }
+                }).catch(function (err) {
+                    if (err && err.name === 'AbortError') return;
+                    inFlight = null;
+                    setStatus("We couldn't locate that address. Drag the marker to set the location manually.");
+                });
+            };
+
+            addressInput.addEventListener('input', function () {
+                if (debounceTimer) window.clearTimeout(debounceTimer);
+                debounceTimer = window.setTimeout(runLookup, 900);
+            });
+            addressInput.addEventListener('blur', function () {
+                if (debounceTimer) window.clearTimeout(debounceTimer);
+                runLookup();
+            });
+        }
 
         // Keep the map sized correctly once it becomes visible.
         window.setTimeout(function () { map.invalidateSize(); }, 0);

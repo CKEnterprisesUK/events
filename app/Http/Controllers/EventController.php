@@ -16,6 +16,7 @@ use App\Services\QrService;
 use App\Services\RoleAuthorization;
 use App\Services\StorefrontListing;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -403,6 +404,40 @@ class EventController extends Controller
         return redirect()
             ->route('dashboard.events.location', $event)
             ->with('status', 'Location updated.');
+    }
+
+    /**
+     * Resolve a free-text address to coordinates on demand, without saving.
+     *
+     * Backs the "Where" screen's live address lookup: as the manager finishes
+     * typing an address, the client posts it here and moves the map pin to the
+     * returned coordinates so they can confirm/fine-tune it before saving. It
+     * reuses {@see GeocodingService} (same cache, same Nominatim policy) so a
+     * live lookup and the on-save lookup never disagree. Returns 200 with a
+     * null result on any miss/misconfiguration so the client degrades to manual
+     * pin-dragging rather than surfacing an error. (Requirements 4.2, 4.5)
+     */
+    public function geocode(Request $request, Event $event): JsonResponse
+    {
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+
+        $data = $request->validate([
+            'address' => ['required', 'string', 'max:500'],
+        ]);
+
+        $result = $this->geocoder->geocode(trim($data['address']));
+
+        if ($result === null) {
+            return response()->json(['result' => null]);
+        }
+
+        return response()->json([
+            'result' => [
+                'latitude' => $result->latitude,
+                'longitude' => $result->longitude,
+                'displayName' => $result->displayName,
+            ],
+        ]);
     }
 
     /**
