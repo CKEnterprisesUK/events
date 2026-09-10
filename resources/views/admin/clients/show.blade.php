@@ -127,6 +127,83 @@
     </div>
 
     <div class="admin-panel">
+        <div class="admin-panel__head"><h2>Owner &amp; access</h2></div>
+        <div class="admin-panel__body">
+            @if ($owner)
+                <table class="admin-facts">
+                    <tbody>
+                        <tr><th scope="row">Owner</th><td>{{ $owner->name }}</td></tr>
+                        <tr><th scope="row">Owner email</th><td class="mono">{{ $owner->email }}</td></tr>
+                        <tr>
+                            <th scope="row">Email verified</th>
+                            <td>
+                                <span class="admin-pill {{ $owner->hasVerifiedEmail() ? 'admin-pill--active' : 'admin-pill--suspended' }}">
+                                    {{ $owner->hasVerifiedEmail() ? 'Verified' : 'Not verified' }}
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="admin-head__actions" style="margin-top: 1rem;">
+                    <form method="POST" action="{{ route('admin.companies.owner.password-reset', $company) }}">
+                        @csrf
+                        <button type="submit" class="btn btn-outline">Email password reset</button>
+                    </form>
+                    @unless ($owner->hasVerifiedEmail())
+                        <form method="POST" action="{{ route('admin.companies.owner.resend-verification', $company) }}">
+                            @csrf
+                            <button type="submit" class="btn btn-outline">Resend verification</button>
+                        </form>
+                    @endunless
+                </div>
+
+                <p class="muted" style="margin-top: 0.75rem;">
+                    Password reset recovers a locked-out or forgotten-password owner. Login lockouts are temporary (they clear within a minute on their own), so a reset link is the reliable way back in.
+                </p>
+            @else
+                <p class="muted">This company has no owner on record.</p>
+            @endif
+        </div>
+    </div>
+
+    <div class="admin-panel">
+        <div class="admin-panel__head"><h2>Transfer ownership</h2></div>
+        <div class="admin-panel__body">
+            @error('user_id')
+                <p class="status status--error" role="alert">{{ $message }}</p>
+            @enderror
+
+            @if ($transferCandidates->isEmpty())
+                <p class="muted">
+                    There are no other users in this company to transfer ownership to. Invite another user first (from the company’s Team page), then transfer.
+                </p>
+            @else
+                <p class="muted">
+                    Move the owner role to another user in this company. The current owner is demoted to Admin. Use this when the owner has left the organisation.
+                </p>
+                <form method="POST" action="{{ route('admin.companies.owner.transfer', $company) }}">
+                    @csrf
+                    <div class="field">
+                        <label for="transfer-user">New owner</label>
+                        <select id="transfer-user" name="user_id" required>
+                            <option value="">Select a user…</option>
+                            @foreach ($transferCandidates as $candidate)
+                                <option value="{{ $candidate->id }}">
+                                    {{ $candidate->name }} ({{ $candidate->email }}) — {{ \App\Models\User::roleLabel($candidate->role) }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('Transfer ownership of {{ addslashes($company->name) }} to the selected user? The current owner will be demoted to Admin.');">
+                        Transfer ownership
+                    </button>
+                </form>
+            @endif
+        </div>
+    </div>
+
+    <div class="admin-panel">
         <div class="admin-panel__head"><h2>Recent events</h2></div>
         @if ($recentEvents->isEmpty())
             <div class="admin-empty">No events yet.</div>

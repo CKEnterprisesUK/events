@@ -2006,3 +2006,52 @@ body.nav-locked { overflow: hidden; }
 .money-table td { padding: 0.6rem 1.25rem; border-bottom: 1px solid var(--border); }
 .money-table tr:last-child td { border-bottom: none; }
 .money-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* =============================================================================
+   Attendee questions editor (add/manage pattern)
+   Compact bordered cards matching the app's restrained section style. One card
+   per question, toggling between a summary row and an inline editor. Works
+   edge-to-edge on mobile.
+   ============================================================================= */
+.q-list { display: grid; gap: 0.75rem; margin: 0.5rem 0 0; }
+
+.q-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card, 0);
+    background: var(--surface);
+}
+.q-card.is-editing { border-color: color-mix(in srgb, var(--brand) 35%, var(--border)); }
+
+/* Summary row: number + label + type/required meta on the left, actions on
+   the right. Wraps gracefully and stacks the actions under the text on narrow
+   screens. */
+.q-card__summary {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 0.75rem; padding: 0.85rem 1rem;
+}
+.q-card__summary-main { display: grid; gap: 0.15rem; min-width: 0; }
+.q-card__num { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: var(--muted); }
+.q-card__label { font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+.q-card__meta { font-size: 0.85rem; color: var(--muted); }
+.q-card__actions { display: flex; gap: 0.4rem; flex: none; }
+.q-card__delete { color: #b91c1c; }
+.q-card__delete:hover { background: #fef2f2; color: #991b1b; }
+
+/* Editor view: normal .field controls inside a padded card body. */
+.q-card__editor { padding: 0.85rem 1rem 1rem; }
+.q-card__editor-head { margin-bottom: 0.65rem; }
+.q-card__editor .field:last-of-type { margin-bottom: 0; }
+.q-card__editor .consent { margin: 0.75rem 0 0; }
+.q-card__editor-actions {
+    display: flex; gap: 0.5rem; margin-top: 1rem;
+    padding-top: 0.85rem; border-top: 1px solid var(--border); flex-wrap: wrap;
+}
+
+.q-actions { display: flex; align-items: center; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap; }
+.q-max-note { font-size: 0.875rem; color: var(--muted); }
+.q-empty { color: var(--muted); margin: 0.75rem 0 0; }
+
+@media (max-width: 560px) {
+    .q-card__summary { flex-direction: column; align-items: stretch; }
+    .q-card__actions { justify-content: flex-start; }
+}
