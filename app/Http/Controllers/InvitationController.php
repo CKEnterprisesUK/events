@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\RoleAssignmentException;
+use App\Mail\InvitationMail;
 use App\Models\AuditLog;
+use App\Models\Company;
 use App\Models\Invitation;
 use App\Models\User;
 use App\Services\AuditLogger;
@@ -15,6 +17,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -96,6 +100,34 @@ class InvitationController extends Controller
             summary: 'Invited '.$data['email'].' as '.User::roleLabel($data['role']),
             context: ['email' => $data['email'], 'role' => $data['role']],
         );
+
+        // Deliver the invitation email so the recipient can actually accept.
+        // Sent synchronously (like the diagnostic test email) so any transport
+        // failure surfaces immediately rather than silently disappearing — the
+        // record and audit entry already exist, so a delivery failure must not
+        // roll them back, only warn the Owner to retry/resend.
+        $companyName = Company::query()
+            ->whereKey($invitation->company_id)
+            ->value('name') ?? config('app.name');
+
+        try {
+            Mail::to($invitation->email)->send(new InvitationMail(
+                invitation: $invitation,
+                acceptUrl: route('invitations.accept.show', ['token' => $invitation->token]),
+                roleLabel: User::roleLabel($data['role']),
+                companyName: $companyName,
+            ));
+        } catch (\Throwable $e) {
+            Log::error('Failed to send invitation email', [
+                'invitation_id' => $invitation->getKey(),
+                'email' => $invitation->email,
+                'error' => $e->getMessage(),
+            ]);
+
+            return redirect()
+                ->route('dashboard.users.index')
+                ->with('error', 'Invitation created, but the email could not be sent: '.$e->getMessage());
+        }
 
         return redirect()
             ->route('dashboard.users.index')
