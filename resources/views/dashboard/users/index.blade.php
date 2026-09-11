@@ -13,6 +13,9 @@
     @if (session('status'))
         <p class="status">{{ session('status') }}</p>
     @endif
+    @if (session('error'))
+        <p class="alert-error">{{ session('error') }}</p>
+    @endif
     @error('role') <p class="alert-error">{{ $message }}</p> @enderror
     @error('user') <p class="alert-error">{{ $message }}</p> @enderror
 
@@ -139,12 +142,18 @@
             <div class="empty"><p>No pending invitations.</p></div>
         @else
             <table class="data-table">
-                <thead><tr><th>Email</th><th>Role</th></tr></thead>
+                <thead><tr><th>Email</th><th>Role</th><th class="num">Actions</th></tr></thead>
                 <tbody>
                     @foreach ($invitations as $invitation)
                         <tr>
                             <td>{{ $invitation->email }}</td>
                             <td><span class="pill pill--draft">{{ \App\Models\User::roleLabel($invitation->role) }}</span></td>
+                            <td class="num">
+                                <form method="POST" action="{{ route('dashboard.users.invitations.resend', $invitation) }}" class="inline-form">
+                                    @csrf
+                                    <button type="submit" class="btn btn-outline btn-sm">Resend</button>
+                                </form>
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>

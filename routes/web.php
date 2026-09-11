@@ -407,6 +407,7 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
         // invariant governs Owner demotion/removal. (Requirements 4.1, 4.3, 4.4, 4.5)
         Route::get('/users', [InvitationController::class, 'index'])->name('users.index');
         Route::post('/users/invitations', [InvitationController::class, 'invite'])->name('users.invite');
+        Route::post('/users/invitations/{invitation}/resend', [InvitationController::class, 'resend'])->name('users.invitations.resend');
         Route::put('/users/{user}/role', [InvitationController::class, 'updateRole'])->name('users.role');
         Route::patch('/users/{user}/role', [InvitationController::class, 'updateRole']);
         Route::delete('/users/{user}', [InvitationController::class, 'destroy'])->name('users.destroy');

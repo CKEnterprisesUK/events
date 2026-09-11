@@ -102,10 +102,68 @@ class InvitationController extends Controller
         );
 
         // Deliver the invitation email so the recipient can actually accept.
-        // Sent synchronously (like the diagnostic test email) so any transport
-        // failure surfaces immediately rather than silently disappearing — the
-        // record and audit entry already exist, so a delivery failure must not
-        // roll them back, only warn the Owner to retry/resend.
+        // The record and audit entry already exist, so a delivery failure must
+        // not roll them back — only warn the Owner, who can then resend.
+        if (! $this->sendInvitationEmail($invitation)) {
+            return redirect()
+                ->route('dashboard.users.index')
+                ->with('error', 'Invitation created, but the email could not be sent. Use “Resend” to try again.');
+        }
+
+        return redirect()
+            ->route('dashboard.users.index')
+            ->with('status', 'Invitation sent.');
+    }
+
+    /**
+     * Re-send a pending invitation's email, refreshing its token and expiry so
+     * the previous link is invalidated and the recipient gets a fresh 7-day
+     * window. (Owner-gated.)
+     *
+     * The invitation is resolved via route-model binding under the tenant
+     * scope, so an invitation belonging to another Company 404s. Already-
+     * accepted invitations cannot be resent.
+     */
+    public function resend(Request $request, Invitation $invitation): RedirectResponse
+    {
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_USERS);
+
+        // Nothing to resend once accepted — the user already has an account.
+        abort_if($invitation->isAccepted(), 404);
+
+        // Roll the opaque token and extend the window so a lost/expired link is
+        // replaced rather than reused.
+        $invitation->forceFill([
+            'token' => Str::random(40),
+            'expires_at' => now()->addDays(7),
+        ])->save();
+
+        $this->audit->record(
+            action: AuditLog::USER_INVITED,
+            auditable: $invitation,
+            summary: 'Resent invitation to '.$invitation->email.' as '.User::roleLabel($invitation->role),
+            context: ['email' => $invitation->email, 'role' => $invitation->role, 'resend' => true],
+        );
+
+        if (! $this->sendInvitationEmail($invitation)) {
+            return redirect()
+                ->route('dashboard.users.index')
+                ->with('error', 'Could not resend the invitation email. Please try again shortly.');
+        }
+
+        return redirect()
+            ->route('dashboard.users.index')
+            ->with('status', 'Invitation resent to '.$invitation->email.'.');
+    }
+
+    /**
+     * Send the invitation email synchronously (like the diagnostic test email)
+     * so any transport failure surfaces immediately rather than silently
+     * disappearing into a queue. Returns false on failure after logging it, so
+     * the caller can warn the Owner without rolling back the invitation.
+     */
+    private function sendInvitationEmail(Invitation $invitation): bool
+    {
         $companyName = Company::query()
             ->whereKey($invitation->company_id)
             ->value('name') ?? config('app.name');
@@ -114,7 +172,7 @@ class InvitationController extends Controller
             Mail::to($invitation->email)->send(new InvitationMail(
                 invitation: $invitation,
                 acceptUrl: route('invitations.accept.show', ['token' => $invitation->token]),
-                roleLabel: User::roleLabel($data['role']),
+                roleLabel: User::roleLabel($invitation->role),
                 companyName: $companyName,
             ));
         } catch (\Throwable $e) {
@@ -124,14 +182,10 @@ class InvitationController extends Controller
                 'error' => $e->getMessage(),
             ]);
 
-            return redirect()
-                ->route('dashboard.users.index')
-                ->with('error', 'Invitation created, but the email could not be sent: '.$e->getMessage());
+            return false;
         }
 
-        return redirect()
-            ->route('dashboard.users.index')
-            ->with('status', 'Invitation sent.');
+        return true;
     }
 
     /**
