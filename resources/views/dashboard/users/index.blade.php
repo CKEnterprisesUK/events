@@ -148,10 +148,16 @@
                         <tr>
                             <td>{{ $invitation->email }}</td>
                             <td><span class="pill pill--draft">{{ \App\Models\User::roleLabel($invitation->role) }}</span></td>
-                            <td class="num">
+                            <td class="num invite-actions">
                                 <form method="POST" action="{{ route('dashboard.users.invitations.resend', $invitation) }}" class="inline-form">
                                     @csrf
                                     <button type="submit" class="btn btn-outline btn-sm">Resend</button>
+                                </form>
+                                <form method="POST" action="{{ route('dashboard.users.invitations.cancel', $invitation) }}" class="inline-form"
+                                      onsubmit="return confirm('Cancel the invitation to {{ $invitation->email }}? Their invite link will stop working.');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-outline btn-sm">Cancel</button>
                                 </form>
                             </td>
                         </tr>
@@ -170,6 +176,7 @@
     .role-matrix thead th { font-size: 0.85rem; }
     .role-matrix__yes { color: #047857; font-weight: 700; }
     .role-matrix__no { color: var(--border); }
+    .invite-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
 </style>
 @endpush
 

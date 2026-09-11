@@ -157,6 +157,39 @@ class InvitationController extends Controller
     }
 
     /**
+     * Cancel a pending invitation, deleting it so its accept link stops
+     * working. (Owner-gated.)
+     *
+     * The invitation is resolved via route-model binding under the tenant
+     * scope, so an invitation belonging to another Company 404s. Already-
+     * accepted invitations cannot be cancelled — the user already has an
+     * account; remove them from the Members list instead.
+     */
+    public function cancelInvite(Request $request, Invitation $invitation): RedirectResponse
+    {
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_USERS);
+
+        abort_if($invitation->isAccepted(), 404);
+
+        // Snapshot identity before deletion so the trail names the cancelled
+        // invitation even though the row is gone.
+        $email = $invitation->email;
+        $role = $invitation->role;
+
+        $invitation->delete();
+
+        $this->audit->record(
+            action: AuditLog::USER_INVITE_CANCELLED,
+            summary: 'Cancelled invitation to '.$email.' ('.User::roleLabel($role).')',
+            context: ['email' => $email, 'role' => $role],
+        );
+
+        return redirect()
+            ->route('dashboard.users.index')
+            ->with('status', 'Invitation to '.$email.' cancelled.');
+    }
+
+    /**
      * Send the invitation email synchronously (like the diagnostic test email)
      * so any transport failure surfaces immediately rather than silently
      * disappearing into a queue. Returns false on failure after logging it, so

@@ -408,6 +408,7 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
         Route::get('/users', [InvitationController::class, 'index'])->name('users.index');
         Route::post('/users/invitations', [InvitationController::class, 'invite'])->name('users.invite');
         Route::post('/users/invitations/{invitation}/resend', [InvitationController::class, 'resend'])->name('users.invitations.resend');
+        Route::delete('/users/invitations/{invitation}', [InvitationController::class, 'cancelInvite'])->name('users.invitations.cancel');
         Route::put('/users/{user}/role', [InvitationController::class, 'updateRole'])->name('users.role');
         Route::patch('/users/{user}/role', [InvitationController::class, 'updateRole']);
         Route::delete('/users/{user}', [InvitationController::class, 'destroy'])->name('users.destroy');

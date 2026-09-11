@@ -92,6 +92,8 @@ class AuditLog extends Model
 
     public const USER_REMOVED = 'user.removed';
 
+    public const USER_INVITE_CANCELLED = 'user.invite_cancelled';
+
     public const COMPANY_SUSPENDED = 'company.suspended';
 
     public const COMPANY_UNSUSPENDED = 'company.unsuspended';
@@ -185,6 +187,7 @@ class AuditLog extends Model
         self::USER_INVITED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Invited a user'],
         self::USER_ROLE_CHANGED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Changed a user role'],
         self::USER_REMOVED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Removed a user'],
+        self::USER_INVITE_CANCELLED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Cancelled an invitation'],
         self::COMPANY_SUSPENDED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Suspended a company'],
         self::COMPANY_UNSUSPENDED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Unsuspended a company'],
         self::RESERVED_SLUG_ADDED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Added a reserved slug'],
