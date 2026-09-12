@@ -640,6 +640,11 @@ Route::middleware(['auth', 'super.admin', 'session.timeout'])
             Route::get('/ops', [SuperAdminOpsController::class, 'index'])->name('ops.index');
             Route::post('/ops/migrate', [SuperAdminOpsController::class, 'migrate'])->name('ops.migrate');
             Route::post('/ops/reseed', [SuperAdminOpsController::class, 'reseed'])->name('ops.reseed');
+            // Clear the compiled route/config/view caches after a code pull.
+            // Non-destructive, so safe to run any time — this is what makes a
+            // newly-pulled route (which "Update from Remote" doesn't cache-bust)
+            // resolvable without a terminal.
+            Route::post('/ops/rebuild-caches', [SuperAdminOpsController::class, 'rebuildCaches'])->name('ops.rebuild-caches');
         }
 
         // Support ticket queue: the operator view of every in-dashboard

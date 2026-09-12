@@ -109,6 +109,39 @@ class OpsController extends Controller
     }
 
     /**
+     * Clear the compiled route / config / view / event caches, in-process.
+     *
+     * This is the fix for the deploy model where "Update from Remote" pulls new
+     * code but runs NO deploy tasks (see .cpanel.yml): a stale compiled route
+     * cache would otherwise keep the app on the OLD route table, so a route
+     * added in the pulled code resolves as "Route [...] not defined" until the
+     * cache is dropped. Click this after every code pull.
+     *
+     * Clearing caches is NON-DESTRUCTIVE (it never touches data or schema), so —
+     * unlike migrate/reseed — it is intentionally NOT gated behind the
+     * non-production guard and is safe to run in any environment. After
+     * clearing, routes/config/views are resolved from source on each request
+     * (correct, marginally slower) until something re-caches them.
+     */
+    public function rebuildCaches(): RedirectResponse
+    {
+        $messages = [];
+
+        // Order matters a little: clear config first so subsequent commands see
+        // fresh config. Each is wrapped so one failure doesn't abort the rest.
+        foreach (['config:clear', 'route:clear', 'view:clear', 'event:clear'] as $command) {
+            try {
+                Artisan::call($command);
+                $messages[] = $command.': '.(trim(Artisan::output()) ?: 'done');
+            } catch (\Throwable $e) {
+                $messages[] = $command.': FAILED — '.$e->getMessage();
+            }
+        }
+
+        return back()->with('ops_status', "Caches cleared.\n".implode("\n", $messages));
+    }
+
+    /**
      * Returns a refusal message unless we are in a known-safe non-production
      * environment, or null when the operations are allowed.
      *

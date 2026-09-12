@@ -75,6 +75,18 @@
                     </label>
                     <button type="submit" class="btn btn--primary">Rebuild sample data</button>
                 </form>
+
+                <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--border)">
+
+                <p>
+                    <strong>Clear caches</strong> — drops the compiled route / config / view caches.
+                    Run this after every <em>Update from Remote</em> so newly pulled routes and
+                    config are picked up. Non-destructive (never touches data).
+                </p>
+                <form method="POST" action="{{ route('admin.ops.rebuild-caches') }}">
+                    @csrf
+                    <button type="submit" class="btn btn--primary">Clear caches</button>
+                </form>
             </div>
         </div>
 
