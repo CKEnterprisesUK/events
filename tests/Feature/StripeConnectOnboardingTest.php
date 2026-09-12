@@ -12,10 +12,12 @@ use Tests\TestCase;
 /**
  * Feature: event-ticketing-platform
  *
- * Covers Owner-initiated Stripe Connect Standard onboarding through
- * StripeConnectController and the StripePaymentService boundary. Stripe is
- * always mocked via the container-bound FakeStripePaymentService; no live call
- * and no card data are involved. (Requirements 11.1, 11.2, 11.3, 11.5)
+ * Covers Stripe Connect Standard onboarding through StripeConnectController and
+ * the StripePaymentService boundary. Setup (status/onboarding) is open to the
+ * Owner and the Admin (ACTION_SETUP_STRIPE); ongoing fee management stays
+ * Owner-only (ACTION_MANAGE_STRIPE). Stripe is always mocked via the
+ * container-bound FakeStripePaymentService; no live call and no card data are
+ * involved. (Requirements 11.1, 11.2, 11.3, 11.5)
  */
 class StripeConnectOnboardingTest extends TestCase
 {

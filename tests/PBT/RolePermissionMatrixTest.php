@@ -57,6 +57,9 @@ class RolePermissionMatrixTest extends PbtTestCase
                 RoleAuthorization::ACTION_MANAGE_GDPR,
                 RoleAuthorization::ACTION_VIEW_AUDIT_LOG,
                 RoleAuthorization::ACTION_RESET_SCANS,
+                // The Admin can set up (connect) Stripe, but managing an already
+                // connected account (fee handling) stays Owner-only.
+                RoleAuthorization::ACTION_SETUP_STRIPE,
             ],
             // Box_Office is a cut-down Admin: the operational set with no
             // company-settings/GDPR access.
