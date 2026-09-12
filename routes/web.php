@@ -571,6 +571,9 @@ Route::middleware(['auth', 'super.admin', 'session.timeout'])
         // All Companies' transactions + total Application_Fees earned across the
         // whole Platform (cross-Company, bypasses the tenant scope). (20.1, 20.2)
         Route::get('/transactions', [SuperAdminTransactionController::class, 'index'])->name('transactions.index');
+        // CSV export of the same Platform-wide transactions + total fees earned,
+        // for the Platform operator's own accounting. (20.1, 20.2)
+        Route::get('/transactions/export', [SuperAdminTransactionController::class, 'export'])->name('transactions.export');
 
         // Platform-wide, cross-tenant audit trail (forensics/compliance). Adds a
         // Company filter and an impersonated-only toggle over the shared filters

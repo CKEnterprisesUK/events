@@ -21,10 +21,48 @@
                 </p>
             </div>
             <div class="page-header__actions">
-                {{-- Export is a secondary action — styled as outline, not the primary blue. --}}
-                <a class="btn btn-outline" href="{{ route('dashboard.reports.export') }}" download>Export CSV</a>
+                {{-- Export carries the current date range through so the file
+                     matches what's on screen. Secondary actions — outline, not
+                     the primary blue. --}}
+                @php $exportQuery = array_filter(['from' => $from ?? null, 'to' => $to ?? null]); @endphp
+                <a class="btn btn-outline" href="{{ route('dashboard.reports.export', $exportQuery) }}" download>Export CSV</a>
+                <a class="btn btn-outline" href="{{ route('dashboard.reports.export-pdf', $exportQuery) }}">Export PDF</a>
             </div>
         </div>
+
+        {{-- Date-range filter. Both bounds are optional and inclusive; leaving
+             them blank shows all realised sales. Submitting reloads the report,
+             the totals, the per-event breakdown and the export links for the
+             chosen period. --}}
+        <form method="GET" action="{{ route('dashboard.reports.index') }}" class="report-filter">
+            <div class="field">
+                <label for="from">From</label>
+                <input type="date" id="from" name="from" value="{{ $from ?? '' }}">
+            </div>
+            <div class="field">
+                <label for="to">To</label>
+                <input type="date" id="to" name="to" value="{{ $to ?? '' }}">
+            </div>
+            <div class="report-filter__actions">
+                <button type="submit" class="btn btn-sm">Apply</button>
+                @if (! empty($from) || ! empty($to))
+                    <a class="btn btn-sm btn-outline" href="{{ route('dashboard.reports.index') }}">Clear</a>
+                @endif
+            </div>
+        </form>
+
+        @if (! empty($from) || ! empty($to))
+            <p class="panel__note" data-report-period>
+                Showing
+                @if (! empty($from) && ! empty($to))
+                    {{ \Illuminate\Support\Carbon::parse($from)->format('j M Y') }} – {{ \Illuminate\Support\Carbon::parse($to)->format('j M Y') }}
+                @elseif (! empty($from))
+                    from {{ \Illuminate\Support\Carbon::parse($from)->format('j M Y') }}
+                @else
+                    up to {{ \Illuminate\Support\Carbon::parse($to)->format('j M Y') }}
+                @endif
+            </p>
+        @endif
 
         {{-- Small summary row for the headline figures. Not oversized cards. --}}
         <div class="summary-row">

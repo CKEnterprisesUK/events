@@ -8,6 +8,9 @@
             <h1>Platform transactions</h1>
             <p>Every company's transactions across the whole platform. All amounts are in GBP.</p>
         </div>
+        <div class="admin-head__actions">
+            <a class="btn btn-outline" href="{{ route('admin.transactions.export') }}" download>Export CSV</a>
+        </div>
     </div>
 
     @if (session('status'))
