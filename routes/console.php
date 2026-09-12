@@ -5,6 +5,8 @@ use App\Jobs\PruneAuditLogsJob;
 use App\Jobs\ReleaseExpiredReservationsJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -70,3 +72,61 @@ Artisan::command('stripe:backfill-fees', function () {
 //       artisan reservations:release-expired >> /dev/null 2>&1
 //
 // (Requirements 15.2, 15.3 — Design: Hosting and Deployment Notes)
+
+// Seed the pre-prod / staging database with realistic sample data (companies,
+// events, orders, and the known test logins). Designed to be run from the
+// cPanel Git deploy (no SSH, no terminal) or by hand in a non-prod environment.
+//
+// HARD GUARDS — this command refuses to do anything dangerous:
+//   * Never runs when APP_ENV=production.
+//   * Never runs unless the resolved DB connection is really mysql/mariadb —
+//     this blocks the sqlite-fallback trap where a wrong/partial .env silently
+//     points Laravel at database/database.sqlite instead of the real DB.
+//   * By default only seeds when the DB is EMPTY (no companies yet), so
+//     repeated deploys do not clobber data. Pass --fresh to wipe and rebuild.
+//
+// Known logins created by Database\Seeders\PreprodSeeder (password: "password"):
+//   super@preprod.test   (Super_Admin)   owner@preprod.test   (company Owner)
+//
+//   php artisan preprod:seed            # seed only if empty
+//   php artisan preprod:seed --fresh    # migrate:fresh + seed (DESTRUCTIVE)
+Artisan::command('preprod:seed {--fresh : Wipe the database and rebuild before seeding}', function () {
+    if (app()->environment('production')) {
+        $this->error('Refusing to seed: APP_ENV is production.');
+
+        return 1;
+    }
+
+    $connection = config('database.default');
+    $driver = config("database.connections.{$connection}.driver");
+
+    if (! in_array($driver, ['mysql', 'mariadb'], true)) {
+        $this->error("Refusing to seed: resolved DB connection is '{$connection}' (driver '{$driver}'), not mysql/mariadb.");
+        $this->error('Check your .env — a wrong/partial .env falls back to sqlite. NOT proceeding.');
+
+        return 1;
+    }
+
+    if ($this->option('fresh')) {
+        $this->warn('Wiping the database and rebuilding (migrate:fresh --seed)…');
+        $this->call('migrate:fresh', ['--seed' => true, '--force' => true]);
+        $this->info('Pre-prod database wiped, migrated, and seeded.');
+
+        return 0;
+    }
+
+    // Non-destructive path: only seed a fresh/empty database so repeated
+    // deploys are safe. "Empty" = the companies table has no rows yet.
+    $alreadySeeded = Schema::hasTable('companies') && DB::table('companies')->exists();
+
+    if ($alreadySeeded) {
+        $this->info('Database already has data — skipping seed (use --fresh to rebuild).');
+
+        return 0;
+    }
+
+    $this->call('db:seed', ['--force' => true]);
+    $this->info('Pre-prod database seeded. Logins: super@preprod.test / owner@preprod.test (password: password).');
+
+    return 0;
+})->purpose('Seed the pre-prod/staging database with sample data (non-production only)');

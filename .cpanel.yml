@@ -70,6 +70,14 @@ deployment:
     # wedging the deploy; the reason is captured above in this log.
     - $PHP -d default_socket_timeout=10 "$APPPATH"/artisan migrate --force >> "$LOG" 2>&1 || echo "MIGRATE FAILED — check the 'resolved DB config' line above and your .env" >> "$LOG"
 
+    # Seed sample data + the known test logins on a FRESH (empty) database.
+    # `preprod:seed` self-guards: it refuses on production and refuses unless
+    # the resolved connection is really mysql/mariadb (not the sqlite
+    # fallback), and it skips silently once the DB already has data — so it is
+    # safe to leave here across repeated deploys. To force a full rebuild,
+    # deploy once with `--fresh` appended, then revert.
+    - $PHP "$APPPATH"/artisan preprod:seed >> "$LOG" 2>&1 || echo "SEED SKIPPED/FAILED — see resolved DB config above" >> "$LOG"
+
     # Cache config/routes/views LAST — only after migrate has run against the
     # live .env — so we never pin a bad config before the DB is confirmed.
     - $PHP "$APPPATH"/artisan config:cache    >> "$LOG" 2>&1 || true
