@@ -52,17 +52,26 @@ deployment:
     # Timestamp this deploy run in a log we can read from File Manager (no SSH).
     - echo "=== deploy $(date) commit ${CPANEL_GIT_HEAD:-unknown} ===" >> "$LOG" 2>&1 || true
 
-    # Refresh caches FIRST. These do not need the database, so a bad DB
-    # connection can never block them — the app still boots with fresh config.
+    # Clear any stale cached config FIRST, then migrate against the LIVE .env
+    # (do NOT cache config before migrate — a wrong/partial .env at cache time
+    # gets baked in and migrate then runs on the wrong connection, e.g. the
+    # sqlite fallback instead of mysql).
     - $PHP "$APPPATH"/artisan config:clear   >> "$LOG" 2>&1 || true
+
+    # Show EXACTLY what DB config Laravel resolves from .env, so the log proves
+    # whether it is really pointing at mysql + your prefixed database. If this
+    # prints "sqlite", the .env is not being read as expected — fix .env, do
+    # NOT proceed.
+    - echo "--- resolved DB config ---" >> "$LOG" 2>&1
+    - $PHP "$APPPATH"/artisan tinker --execute='echo "connection=".config("database.default")." host=".config("database.connections.".config("database.default").".host")." database=".config("database.connections.".config("database.default").".database").PHP_EOL;' >> "$LOG" 2>&1 || true
+
+    # Migrate against the live .env. Short socket timeout so a bad DB fails fast
+    # instead of hanging the deploy. `|| echo` keeps a failed migrate from
+    # wedging the deploy; the reason is captured above in this log.
+    - $PHP -d default_socket_timeout=10 "$APPPATH"/artisan migrate --force >> "$LOG" 2>&1 || echo "MIGRATE FAILED — check the 'resolved DB config' line above and your .env" >> "$LOG"
+
+    # Cache config/routes/views LAST — only after migrate has run against the
+    # live .env — so we never pin a bad config before the DB is confirmed.
     - $PHP "$APPPATH"/artisan config:cache    >> "$LOG" 2>&1 || true
     - $PHP "$APPPATH"/artisan route:cache      >> "$LOG" 2>&1 || true
     - $PHP "$APPPATH"/artisan view:cache       >> "$LOG" 2>&1 || true
-
-    # Migrate LAST, and never let it hang the whole deploy. The PDO connect
-    # timeout (config/database.php reads DB_CONNECT_TIMEOUT) plus the capped
-    # socket timeout mean a wrong/unreachable DB fails FAST (seconds) instead of
-    # blocking cPanel at "in progress". The `|| echo` keeps a failed migrate
-    # from wedging the deploy; the reason is captured in deploy.log, which you
-    # can open from File Manager (storage/logs/deploy.log).
-    - $PHP -d default_socket_timeout=10 "$APPPATH"/artisan migrate --force >> "$LOG" 2>&1 || echo "MIGRATE FAILED — check DB creds in .env (see log above)" >> "$LOG"

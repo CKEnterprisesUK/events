@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\Company;
 use App\Models\PlatformSetting;
 use App\Services\AuditLogger;
+use App\Services\FeeCalculationService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,7 +17,7 @@ use Illuminate\Validation\Rule;
  * Super-admin controller for Platform fee configuration. (Requirements 20.5,
  * 20.6)
  *
- * Two knobs, both consumed by {@see \App\Services\FeeCalculationService}:
+ * Two knobs, both consumed by {@see FeeCalculationService}:
  *   - the Global_Fee_Percent (`platform_settings.global_fee_percent`) applied
  *     to any Company that has no per-Company override, and
  *   - a per-Company override (`companies.company_fee_percent`) plus its

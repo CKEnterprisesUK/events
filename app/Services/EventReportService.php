@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Http\Controllers\ReportController;
 use App\Models\Event;
 use App\Models\Order;
 use App\Models\Ticket;
@@ -15,7 +16,7 @@ use Illuminate\Support\Collection;
  * The single accounting source of truth for a single Event's figures.
  *
  * This service extracts the accounting definitions that previously lived only
- * in {@see \App\Http\Controllers\ReportController} — the CONFIRMED_STATUSES set,
+ * in {@see ReportController} — the CONFIRMED_STATUSES set,
  * tickets-sold, net-to-company, and gross-revenue — so the company-wide report
  * and the per-event report can never diverge. Every figure here is computed
  * with EXACTLY the same rules the controller uses (Requirement 6.6):
@@ -49,8 +50,8 @@ class EventReportService
      * Produce the full accounting report for a single Event.
      *
      * @return EventReport the immutable value object carrying every figure
-     *                      surfaced by the inline summary (Req 5) and the
-     *                      dedicated report page (Req 6).
+     *                     surfaced by the inline summary (Req 5) and the
+     *                     dedicated report page (Req 6).
      */
     public function for(Event $event): EventReport
     {

@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\Company;
 use App\Models\Order;
 use App\Services\Stripe\StripePaymentService;
+use App\Services\WebhookProcessor;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -20,7 +21,7 @@ use Illuminate\Support\Facades\Schema;
  * ## Why this job exists
  *
  * The fee is captured opportunistically the moment a payment is confirmed (see
- * {@see \App\Services\WebhookProcessor::captureStripeFee()}). But Stripe does
+ * {@see WebhookProcessor::captureStripeFee()}). But Stripe does
  * not always have the charge's balance transaction ready at the instant the
  * `checkout.session.completed` webhook fires — the fee "might not be available"
  * until the charge has settled. When that first read comes back null the Order
