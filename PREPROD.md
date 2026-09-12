@@ -107,7 +107,12 @@ and from prod are called out.
 
 ```dotenv
 APP_NAME="Event Ticketing (Pre-prod)"
-APP_ENV=production          # so migrate --force runs non-interactively and debug is off
+APP_ENV=staging             # MUST be 'staging' (NOT 'production'). This is what
+                            # distinguishes pre-prod from prod: the /admin/ops
+                            # migrate + reseed tools are enabled ONLY when
+                            # APP_ENV is staging/preprod/local/development, and
+                            # refuse when it is 'production'. Production keeps
+                            # APP_ENV=production, so it never gets those tools.
 APP_DEBUG=false             # keep false; use logs, not on-screen stack traces
 APP_URL=https://preprod.yourdomain.tld
 APP_KEY=                    # generate once: php artisan key:generate (or paste a base64 key)

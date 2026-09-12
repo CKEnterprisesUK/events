@@ -109,12 +109,23 @@ class OpsController extends Controller
     }
 
     /**
-     * Returns a refusal message when running in production, or null otherwise.
+     * Returns a refusal message unless we are in a known-safe non-production
+     * environment, or null when the operations are allowed.
+     *
+     * This is an ALLOW-LIST, not a deny-list: ops are permitted ONLY when
+     * APP_ENV is one of the explicit pre-prod/dev names below. Anything else —
+     * including `production` OR a missing/misconfigured APP_ENV — fails SAFE and
+     * refuses. The guard is based on APP_ENV (the app's environment), never the
+     * domain name: the pre-prod host must set APP_ENV=staging (see PREPROD.md),
+     * while the production host keeps APP_ENV=production.
      */
     private function productionGuardMessage(): ?string
     {
-        return app()->environment('production')
-            ? 'Refused: these operations are disabled in production.'
-            : null;
+        $allowed = ['local', 'staging', 'preprod', 'development'];
+
+        return app()->environment($allowed)
+            ? null
+            : 'Refused: pre-prod operations are only available when APP_ENV is one of: '
+                .implode(', ', $allowed).' (current: '.app()->environment().').';
     }
 }

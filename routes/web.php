@@ -629,12 +629,14 @@ Route::middleware(['auth', 'super.admin', 'session.timeout'])
         Route::get('/system', [SuperAdminSystemHealthController::class, 'index'])->name('system.index');
 
         // Pre-prod database operations (migrate / reseed) run IN-PROCESS from an
-        // authenticated Super_Admin request. Exists ONLY off-production: the
-        // host has no terminal and disables proc_open/shell_exec, and cPanel
-        // "Deploy" keeps dirtying the git checkout, so this is the reliable,
-        // no-terminal way to apply schema and rebuild sample data. Each action
-        // also refuses in production defensively. (Pre-prod tooling)
-        if (! app()->environment('production')) {
+        // authenticated Super_Admin request. Registered ONLY in known-safe
+        // non-production environments (APP_ENV allow-list — the pre-prod host
+        // uses APP_ENV=staging; production stays APP_ENV=production and never
+        // gets these routes). The host has no terminal and disables
+        // proc_open/shell_exec, and cPanel "Deploy" keeps dirtying the git
+        // checkout, so this is the reliable, no-terminal way to apply schema and
+        // rebuild sample data. Each action also re-checks the guard defensively.
+        if (app()->environment(['local', 'staging', 'preprod', 'development'])) {
             Route::get('/ops', [SuperAdminOpsController::class, 'index'])->name('ops.index');
             Route::post('/ops/migrate', [SuperAdminOpsController::class, 'migrate'])->name('ops.migrate');
             Route::post('/ops/reseed', [SuperAdminOpsController::class, 'reseed'])->name('ops.reseed');
