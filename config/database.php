@@ -61,7 +61,11 @@ return [
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 Mysql::ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
-            ]) : [],
+                // Fail fast on an unreachable/misconfigured DB host instead of
+                // hanging until PHP's default socket timeout. Keeps a bad .env
+                // from wedging cPanel Git deploys at "in progress".
+                \PDO::ATTR_TIMEOUT => (int) env('DB_CONNECT_TIMEOUT', 5),
+            ], fn ($v) => $v !== null) : [],
         ],
 
         'mariadb' => [
@@ -81,7 +85,11 @@ return [
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 Mysql::ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
-            ]) : [],
+                // Fail fast on an unreachable/misconfigured DB host instead of
+                // hanging until PHP's default socket timeout. Keeps a bad .env
+                // from wedging cPanel Git deploys at "in progress".
+                \PDO::ATTR_TIMEOUT => (int) env('DB_CONNECT_TIMEOUT', 5),
+            ], fn ($v) => $v !== null) : [],
         ],
 
         'pgsql' => [
