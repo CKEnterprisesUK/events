@@ -88,18 +88,25 @@ class ReportController extends Controller
 
     /**
      * The Company's sales/revenue report plus payout information, scoped to the
-     * Accountant's own Company. (Requirements 21.1, 21.3)
+     * Accountant's own Company. An optional `from`/`to` date range (inclusive,
+     * on the Order's `created_at` day) narrows the figures so an Accountant can
+     * pull a specific month/quarter for reconciliation; with no range the report
+     * covers all realised sales as before. (Requirements 21.1, 21.3)
      */
-    public function index(): View
+    public function index(Request $request): View
     {
         Gate::authorize(RoleAuthorization::ACTION_VIEW_REPORTS);
 
-        $confirmedOrders = $this->confirmedOrders();
+        [$from, $to] = $this->dateRange($request);
+        $ranged = $from !== null || $to !== null;
+        $confirmedOrders = $this->confirmedOrders($from, $to);
 
         return view('dashboard.reports.index', [
             'totals' => $this->companyTotals($confirmedOrders),
-            'perEvent' => $this->perEventBreakdown($confirmedOrders),
+            'perEvent' => $this->perEventBreakdown($confirmedOrders, $ranged),
             'currency' => $this->currency(),
+            'from' => $from?->toDateString(),
+            'to' => $to?->toDateString(),
         ]);
     }
 
@@ -112,19 +119,26 @@ class ReportController extends Controller
      * ever exports their own Company's realised figures. Read-only: it performs
      * no mutation. (Requirements 21.1, 21.3)
      */
-    public function export(): StreamedResponse
+    public function export(Request $request): StreamedResponse
     {
         Gate::authorize(RoleAuthorization::ACTION_VIEW_REPORTS);
 
-        $confirmedOrders = $this->confirmedOrders();
+        [$from, $to] = $this->dateRange($request);
+        $ranged = $from !== null || $to !== null;
+        $confirmedOrders = $this->confirmedOrders($from, $to);
         $totals = $this->companyTotals($confirmedOrders);
-        $perEvent = $this->perEventBreakdown($confirmedOrders);
+        $perEvent = $this->perEventBreakdown($confirmedOrders, $ranged);
         $currency = $this->currency();
+        $rangeLabel = $this->rangeLabel($from, $to);
 
-        $filename = 'sales-report-'.now()->format('Y-m-d').'.csv';
+        $filename = 'sales-report-'.$this->filenameRange($from, $to).'.csv';
 
-        return response()->streamDownload(function () use ($totals, $perEvent, $currency): void {
+        return response()->streamDownload(function () use ($totals, $perEvent, $currency, $rangeLabel): void {
             $out = fopen('php://output', 'wb');
+
+            // Period the figures cover, so the exported file is self-describing.
+            fputcsv($out, ['Period', $rangeLabel]);
+            fputcsv($out, []);
 
             // Company totals block. Money columns are written in major units.
             fputcsv($out, ['Company totals', 'Value ('.$currency.')']);
@@ -168,16 +182,126 @@ class ReportController extends Controller
     }
 
     /**
-     * The Company's confirmed Orders — the single query both the HTML report
-     * and the CSV export build their figures from, kept identical so the two
-     * surfaces can never diverge. Tenant-scoped via the global company scope.
+     * Render the same company report as a formatted PDF payout statement —
+     * something an Accountant can file or hand to a bookkeeper, with the full
+     * fee/net-payout reconciliation and per-Event breakdown. Same gate, tenant
+     * scope, figures and optional `from`/`to` range as {@see index()} and
+     * {@see export()}, built from the identical confirmed-Orders query so the
+     * three surfaces never diverge. Read-only. (Requirements 21.1, 21.3)
+     */
+    public function exportPdf(Request $request): Response
+    {
+        Gate::authorize(RoleAuthorization::ACTION_VIEW_REPORTS);
+
+        [$from, $to] = $this->dateRange($request);
+        $ranged = $from !== null || $to !== null;
+        $confirmedOrders = $this->confirmedOrders($from, $to);
+
+        $company = $this->tenantContext->company() ?? Auth::user()?->company;
+
+        $pdf = Pdf::loadView('dashboard.reports.pdf', [
+            'totals' => $this->companyTotals($confirmedOrders),
+            'perEvent' => $this->perEventBreakdown($confirmedOrders, $ranged),
+            'currency' => $this->currency(),
+            'companyName' => (string) ($company?->name ?? 'Your organisation'),
+            'rangeLabel' => $this->rangeLabel($from, $to),
+            'generatedAt' => now()->format('j M Y, H:i'),
+        ]);
+
+        return $pdf->download('sales-report-'.$this->filenameRange($from, $to).'.pdf');
+    }
+
+    /**
+     * Resolve an optional inclusive `from`/`to` date range from the request.
+     * Each is a `Y-m-d` date; an invalid or absent value becomes null (no
+     * bound). If both are present and reversed, they are swapped so the range is
+     * always well-ordered. Returned as start-of-day `from` and end-of-day `to`
+     * Carbon instances (or null) ready to bound `created_at`.
+     *
+     * @return array{0: ?Carbon, 1: ?Carbon}
+     */
+    private function dateRange(Request $request): array
+    {
+        $from = $this->parseDate($request->query('from'));
+        $to = $this->parseDate($request->query('to'));
+
+        if ($from !== null && $to !== null && $from->greaterThan($to)) {
+            [$from, $to] = [$to, $from];
+        }
+
+        return [
+            $from?->startOfDay(),
+            $to?->endOfDay(),
+        ];
+    }
+
+    /**
+     * Parse a `Y-m-d` query value into a Carbon date, or null when absent or
+     * malformed (so a bad param simply widens the range rather than erroring).
+     */
+    private function parseDate(mixed $value): ?Carbon
+    {
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::createFromFormat('Y-m-d', trim($value));
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * A human-readable label for the covered period, for report headers/exports.
+     */
+    private function rangeLabel(?Carbon $from, ?Carbon $to): string
+    {
+        if ($from === null && $to === null) {
+            return 'All time';
+        }
+
+        $fmt = fn (?Carbon $d): string => $d?->format('j M Y') ?? '…';
+
+        if ($from !== null && $to === null) {
+            return 'From '.$fmt($from);
+        }
+
+        if ($from === null && $to !== null) {
+            return 'Up to '.$fmt($to);
+        }
+
+        return $fmt($from).' – '.$fmt($to);
+    }
+
+    /**
+     * A filename-safe slug for the covered period, e.g. `2026-01-01_to_2026-01-31`
+     * or the current date when the range is open (all time).
+     */
+    private function filenameRange(?Carbon $from, ?Carbon $to): string
+    {
+        if ($from === null && $to === null) {
+            return now()->format('Y-m-d');
+        }
+
+        return ($from?->format('Y-m-d') ?? 'start').'_to_'.($to?->format('Y-m-d') ?? now()->format('Y-m-d'));
+    }
+
+    /**
+     * The Company's confirmed Orders — the single query the HTML report, the CSV
+     * export and the PDF export all build their figures from, kept identical so
+     * the surfaces can never diverge. Tenant-scoped via the global company
+     * scope. An optional inclusive `from`/`to` range bounds the Order
+     * `created_at`. (Requirements 21.1, 21.3)
      *
      * @return Collection<int, Order>
      */
-    private function confirmedOrders()
+    private function confirmedOrders(?Carbon $from = null, ?Carbon $to = null)
     {
         return Order::query()
             ->whereIn('status', self::CONFIRMED_STATUSES)
+            ->when($from !== null, fn ($q) => $q->where('created_at', '>=', $from))
+            ->when($to !== null, fn ($q) => $q->where('created_at', '<=', $to))
             ->get();
     }
 
@@ -260,10 +384,18 @@ class ReportController extends Controller
      * this row's `order_total_minor`, and `application_fees_minor` is recovered
      * as `order_total − net`, which is the service's own definition of net.
      *
+     * When a date range is active (`$ranged`), the shared figures are computed
+     * from the already-range-filtered `$confirmedOrders` group directly, using
+     * the SAME definitions the service applies, so the per-Event rows respect the
+     * range and still sum to the company totals. With no range they are taken
+     * from {@see EventReportService} unchanged, preserving the parity guarantee
+     * (Property 12) that the whole-history per-Event report and the company
+     * report agree. Both paths yield the identical row shape.
+     *
      * @param  Collection<int, Order>  $confirmedOrders
      * @return list<array<string, int|string>>
      */
-    private function perEventBreakdown($confirmedOrders): array
+    private function perEventBreakdown($confirmedOrders, bool $ranged = false): array
     {
         if ($confirmedOrders->isEmpty()) {
             return [];
@@ -280,36 +412,90 @@ class ReportController extends Controller
             $eventId = (int) $eventId;
             $event = $events->get($eventId);
 
-            // Delegate to the single accounting source of truth for the shared
-            // figures. The service re-queries the same confirmed Orders under
-            // the active tenant scope, so its numbers match the ones this
-            // report groups by Event. (Requirement 6.6)
-            $report = $this->reports->for($event);
-
-            $rows[] = [
-                'event_id' => $eventId,
-                'event_name' => (string) ($event->name ?? 'Unknown event'),
-                'orders' => $report->confirmedOrders,
-                // Service does not own these two columns — sum locally.
-                'gross_sales_minor' => (int) $orders->sum('ticket_subtotal_minor'),
-                'booking_fees_minor' => (int) $orders->sum('booking_fee_minor'),
-                // Recover the platform fee from the service's own net definition
-                // (net = order_total − application_fee) to keep it derived from
-                // the shared source rather than recomputed.
-                'application_fees_minor' => $report->grossRevenueMinor - $report->netToCompanyMinor,
-                'order_total_minor' => $report->grossRevenueMinor,
-                'net_to_company_minor' => $report->netToCompanyMinor,
-                // Actual Stripe fees + truthful net payout, taken from the same
-                // shared source so per-event and company totals never diverge.
-                'stripe_fees_minor' => $report->stripeFeesMinor,
-                'net_payout_minor' => $report->netPayoutMinor,
-                'tickets_sold' => $report->ticketsSold,
-            ];
+            $rows[] = $ranged
+                ? $this->rangedEventRow($eventId, $event, $orders)
+                : $this->wholeHistoryEventRow($eventId, $event, $orders);
         }
 
         // Stable, deterministic ordering by event name.
         usort($rows, fn (array $a, array $b) => strcmp((string) $a['event_name'], (string) $b['event_name']));
 
         return $rows;
+    }
+
+    /**
+     * A per-Event row for the whole-history report: shared accounting figures
+     * are taken from {@see EventReportService} (the single source of truth) so
+     * the per-Event and company reports can never diverge. (Requirement 6.6)
+     *
+     * @param  Collection<int, Order>  $orders  this Event's confirmed Orders.
+     * @return array<string, int|string>
+     */
+    private function wholeHistoryEventRow(int $eventId, ?Event $event, $orders): array
+    {
+        // The service re-queries this Event's confirmed Orders under the active
+        // tenant scope, so its numbers match the ones grouped here.
+        $report = $this->reports->for($event);
+
+        return [
+            'event_id' => $eventId,
+            'event_name' => (string) ($event->name ?? 'Unknown event'),
+            'orders' => $report->confirmedOrders,
+            // Service does not own these two columns — sum locally.
+            'gross_sales_minor' => (int) $orders->sum('ticket_subtotal_minor'),
+            'booking_fees_minor' => (int) $orders->sum('booking_fee_minor'),
+            // Recover the platform fee from the service's own net definition
+            // (net = order_total − application_fee) to keep it derived from the
+            // shared source rather than recomputed.
+            'application_fees_minor' => $report->grossRevenueMinor - $report->netToCompanyMinor,
+            'order_total_minor' => $report->grossRevenueMinor,
+            'net_to_company_minor' => $report->netToCompanyMinor,
+            'stripe_fees_minor' => $report->stripeFeesMinor,
+            'net_payout_minor' => $report->netPayoutMinor,
+            'tickets_sold' => $report->ticketsSold,
+        ];
+    }
+
+    /**
+     * A per-Event row for a DATE-RANGED report: every figure is derived from the
+     * already-range-filtered `$orders` for this Event, applying the same
+     * accounting definitions the service uses (gross = Σ order_total; net-to-
+     * company = gross − Σ application_fee; Stripe fees = Σ stripe_fee; net payout
+     * = net-to-company − Stripe fees; tickets sold = valid tickets on these
+     * Orders). This keeps the per-Event rows consistent with the ranged company
+     * totals, which are summed from the same filtered collection.
+     *
+     * @param  Collection<int, Order>  $orders  this Event's range-filtered confirmed Orders.
+     * @return array<string, int|string>
+     */
+    private function rangedEventRow(int $eventId, ?Event $event, $orders): array
+    {
+        $orderIds = $orders->pluck('id')->all();
+
+        $ticketsSold = $orderIds === []
+            ? 0
+            : Ticket::query()
+                ->whereIn('order_id', $orderIds)
+                ->where('status', Ticket::STATUS_VALID)
+                ->count();
+
+        $orderTotalMinor = (int) $orders->sum('order_total_minor');
+        $applicationFeesMinor = (int) $orders->sum('application_fee_minor');
+        $stripeFeesMinor = (int) $orders->sum(fn (Order $o): int => (int) $o->stripe_fee_minor);
+        $netToCompanyMinor = $orderTotalMinor - $applicationFeesMinor;
+
+        return [
+            'event_id' => $eventId,
+            'event_name' => (string) ($event->name ?? 'Unknown event'),
+            'orders' => $orders->count(),
+            'gross_sales_minor' => (int) $orders->sum('ticket_subtotal_minor'),
+            'booking_fees_minor' => (int) $orders->sum('booking_fee_minor'),
+            'application_fees_minor' => $applicationFeesMinor,
+            'order_total_minor' => $orderTotalMinor,
+            'net_to_company_minor' => $netToCompanyMinor,
+            'stripe_fees_minor' => $stripeFeesMinor,
+            'net_payout_minor' => $netToCompanyMinor - $stripeFeesMinor,
+            'tickets_sold' => $ticketsSold,
+        ];
     }
 }

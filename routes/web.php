@@ -503,6 +503,9 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
         // 21.1, 21.2, 21.3, 3.5, 3.7)
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
+        // PDF payout statement — the same figures/range as the CSV, formatted for
+        // filing or handing to a bookkeeper. (Report export types)
+        Route::get('/reports/export/pdf', [ReportController::class, 'exportPdf'])->name('reports.export-pdf');
 
         // Company activity trail (Owner/Admin-gated in the controller via
         // ACTION_VIEW_AUDIT_LOG). READ-ONLY: a single GET renders the Company's
