@@ -5,27 +5,32 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Services\AuditLogger;
+use App\Services\QrService;
 use App\Services\TwoFactorAuthenticationService;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Self-service two-factor (TOTP) management for the authenticated Company_User,
- * living alongside the profile page. Handles the enrolment lifecycle:
+ * Self-service two-factor (TOTP) management for the authenticated Company_User.
+ * The enrolment flow lives on its OWN dedicated screen (not the profile page):
  *
- *   - `enable`    : begin enrolment (generate secret + recovery codes) and show
- *                   the QR/secret + a code field to confirm.
- *   - `confirm`   : verify the first code and activate MFA.
- *   - `disable`   : turn MFA off (password-confirmed).
- *   - `recovery`  : regenerate recovery codes (password-confirmed).
+ *   - `enable`  : begin enrolment (generate a pending secret + recovery codes),
+ *                 then redirect to the setup screen. Password-confirmed.
+ *   - `setup`   : the standalone setup screen — shows the scannable QR image,
+ *                 the manual key, the recovery codes and the confirm form.
+ *   - `qr`      : streams the QR as a real PNG (via {@see QrService}) so the
+ *                 image loads reliably, matching the app's other QR codes.
+ *   - `confirm` : verify the first code and activate MFA.
+ *   - `disable` : turn MFA off (password-confirmed).
+ *   - `recovery`: regenerate recovery codes (password-confirmed).
  *
  * Like {@see \App\Http\Controllers\ProfileController}, this only ever acts on
  * the acting user's OWN record, so no Company role gate applies. Sensitive
  * actions (enable/disable/regenerate) require the current password so a walk-up
- * on an unlocked session cannot silently change MFA. The freshly generated
- * secret and recovery codes are surfaced to the view via one-shot flash data,
- * never persisted in the session beyond the redirect.
+ * on an unlocked session cannot silently change MFA.
  */
 class TwoFactorController extends Controller
 {
@@ -36,9 +41,8 @@ class TwoFactorController extends Controller
 
     /**
      * Begin (or restart) enrolment. Requires the current password. Generates a
-     * new pending secret + recovery codes and returns to the profile page with
-     * the QR/secret and codes flashed so the user can scan and confirm. MFA is
-     * NOT active until confirm() succeeds.
+     * new pending secret + recovery codes, then sends the user to the dedicated
+     * setup screen. MFA is NOT active until confirm() succeeds.
      */
     public function enable(Request $request): RedirectResponse
     {
@@ -46,25 +50,63 @@ class TwoFactorController extends Controller
             'current_password' => ['required', 'string', 'current_password'],
         ]);
 
+        $this->twoFactor->startEnrolment($request->user());
+
+        return redirect()->route('dashboard.profile.two-factor.setup');
+    }
+
+    /**
+     * The standalone MFA setup screen. Requires a pending (unconfirmed) secret;
+     * if the user has no enrolment in progress they are sent back to the
+     * profile page to start one. If MFA is already fully enabled, likewise
+     * bounce to the profile page (nothing to set up).
+     */
+    public function setup(Request $request): View|RedirectResponse
+    {
         $user = $request->user();
 
-        $this->twoFactor->startEnrolment($user);
+        if ($user->two_factor_secret === null || $user->hasTwoFactorEnabled()) {
+            return redirect()->route('dashboard.profile.edit')->withFragment('two-factor');
+        }
 
-        return redirect()
-            ->route('dashboard.profile.edit')
-            ->with('mfa_setup', [
-                'qr' => $this->twoFactor->qrCodeInline($user),
-                'secret' => $this->twoFactor->secretForDisplay($user),
-                'recovery_codes' => $user->two_factor_recovery_codes,
-            ])
-            ->withFragment('two-factor');
+        return view('dashboard.profile.two-factor-setup', [
+            'secret' => $this->twoFactor->secretForDisplay($user),
+            'recoveryCodes' => $user->two_factor_recovery_codes ?? [],
+        ]);
+    }
+
+    /**
+     * Stream the pending enrolment's provisioning URI as a PNG QR image.
+     * Rendered with the app's {@see QrService} (endroid/qr-code + GD), so it
+     * behaves exactly like the storefront/event QR codes and loads reliably in
+     * an <img> tag. 404s when there is no pending secret to encode.
+     */
+    public function qr(Request $request, QrService $qr): Response
+    {
+        $user = $request->user();
+
+        $uri = $this->twoFactor->otpauthUri($user);
+
+        abort_if($uri === null, 404);
+
+        try {
+            $png = $qr->png($uri, 400);
+        } catch (\Throwable $e) {
+            abort(500, 'QR code generation is unavailable on this server.');
+        }
+
+        return response($png, 200, [
+            'Content-Type' => 'image/png',
+            // Sensitive + per-session: never cache the secret-bearing QR.
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+        ]);
     }
 
     /**
      * Confirm enrolment with the first TOTP code. On success MFA is active and
-     * the login challenge will fire from now on; on a bad code we bounce back
-     * to the setup panel with an error and the pending secret intact so the
-     * user can retry without restarting.
+     * the login challenge fires from now on; on a bad code we bounce back to
+     * the setup screen with an error and the pending secret intact so the user
+     * can retry without restarting.
      */
     public function confirm(Request $request): RedirectResponse
     {
@@ -75,11 +117,9 @@ class TwoFactorController extends Controller
         $user = $request->user();
 
         if (! $this->twoFactor->confirm($user, $data['code'])) {
-            // Re-surface the setup panel so the user can try the code again
-            // against the same pending secret.
             throw ValidationException::withMessages([
                 'code' => __('That code is not valid. Check your authenticator app and try again.'),
-            ])->redirectTo(route('dashboard.profile.edit').'#two-factor');
+            ])->redirectTo(route('dashboard.profile.two-factor.setup'));
         }
 
         $this->audit->record(

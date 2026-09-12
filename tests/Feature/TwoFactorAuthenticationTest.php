@@ -28,15 +28,22 @@ class TwoFactorAuthenticationTest extends TestCase
     {
         $user = User::factory()->create(['password' => Hash::make('secret-password')]);
 
-        // Begin enrolment (requires current password).
+        // Begin enrolment (requires current password) → dedicated setup screen.
         $this->actingAs($user)
             ->post('/dashboard/profile/two-factor', ['current_password' => 'secret-password'])
-            ->assertRedirect();
+            ->assertRedirect('/dashboard/profile/two-factor/setup');
 
         $user->refresh();
         $this->assertNotNull($user->two_factor_secret);
         $this->assertFalse($user->hasTwoFactorEnabled(), 'MFA must not be active before confirmation');
         $this->assertCount(8, $user->two_factor_recovery_codes);
+
+        // The setup screen renders while enrolment is pending, and the QR route
+        // streams a real PNG image.
+        $this->actingAs($user)->get('/dashboard/profile/two-factor/setup')->assertOk();
+        $qr = $this->actingAs($user)->get('/dashboard/profile/two-factor/qr');
+        $qr->assertOk();
+        $qr->assertHeader('Content-Type', 'image/png');
 
         // Confirm with a valid code → MFA active.
         $this->actingAs($user)
@@ -136,6 +143,18 @@ class TwoFactorAuthenticationTest extends TestCase
     public function test_challenge_page_redirects_to_login_without_a_pending_user(): void
     {
         $this->get('/two-factor-challenge')->assertRedirect('/login');
+    }
+
+    public function test_setup_screen_and_qr_require_a_pending_enrolment(): void
+    {
+        $user = User::factory()->create();
+
+        // No enrolment in progress: the setup screen bounces to the profile
+        // page and the QR route has nothing to encode (404).
+        $this->actingAs($user)->get('/dashboard/profile/two-factor/setup')
+            ->assertRedirect();
+        $this->actingAs($user)->get('/dashboard/profile/two-factor/qr')
+            ->assertNotFound();
     }
 
     /**

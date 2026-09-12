@@ -146,17 +146,23 @@ class TwoFactorAuthenticationService
     }
 
     /**
-     * The inline SVG (data-URI) QR code the user scans into their authenticator
-     * app, encoding an otpauth:// URI labelled with the app name and the user's
-     * email. Returns null if there is no pending secret.
+     * The standard `otpauth://totp/...` provisioning URI for the user's pending
+     * secret, labelled with the app name (issuer) and the user's email. This is
+     * the exact string the QR image encodes; an authenticator app scanning it
+     * adds the account. Returns null when there is no pending secret.
+     *
+     * Rendered to an actual PNG by {@see \App\Services\QrService::png()} (via
+     * the dedicated QR route) rather than an inline SVG data-URI, so the image
+     * loads reliably across browsers and matches the rest of the app's QR
+     * codes.
      */
-    public function qrCodeInline(User $user): ?string
+    public function otpauthUri(User $user): ?string
     {
         if ($user->two_factor_secret === null) {
             return null;
         }
 
-        return $this->engine->getQRCodeInline(
+        return $this->engine->getQRCodeUrl(
             config('app.name'),
             $user->email,
             $user->two_factor_secret,

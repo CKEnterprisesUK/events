@@ -88,9 +88,7 @@
                 <p class="status" data-status="saved" style="margin: 1rem 1.25rem 0;">{{ session('mfa_status') }}</p>
             @endif
 
-            @php($mfaSetup = session('mfa_setup'))
-
-            @if ($user->hasTwoFactorEnabled() && ! $mfaSetup)
+            @if ($user->hasTwoFactorEnabled())
                 {{-- ENABLED --}}
                 <div class="profile-form">
                     <p class="mfa-on">
@@ -133,50 +131,21 @@
                     <button type="submit" class="btn btn-outline btn-danger">Turn off two-factor</button>
                 </form>
 
-            @elseif ($mfaSetup)
-                {{-- PENDING CONFIRMATION: secret generated, awaiting first code --}}
+            @elseif ($user->two_factor_secret !== null)
+                {{-- PENDING: enrolment started but not yet confirmed. The QR,
+                     recovery codes and confirm step live on the dedicated setup
+                     screen. --}}
                 <div class="profile-form">
                     <p class="muted" style="margin-top:0;">
-                        Scan this QR code with an authenticator app (Google Authenticator,
-                        Authy, 1Password, etc.), then enter the 6-digit code it shows to
-                        turn on two-factor authentication.
+                        You've started setting up two-factor authentication but haven't
+                        confirmed it yet. Continue where you left off to finish.
                     </p>
-
-                    @if (! empty($mfaSetup['qr']))
-                        <div class="mfa-qr">
-                            <img src="{{ $mfaSetup['qr'] }}" alt="Two-factor authentication QR code" width="200" height="200">
-                        </div>
-                    @endif
-
-                    @if (! empty($mfaSetup['secret']))
-                        <p class="muted">Can't scan? Enter this key manually:</p>
-                        <p class="mfa-secret">{{ $mfaSetup['secret'] }}</p>
-                    @endif
-
-                    @if (! empty($mfaSetup['recovery_codes']))
-                        <div class="mfa-codes-box">
-                            <p class="muted" style="margin-top:0;"><strong>Save your recovery codes.</strong> Each can be used once to log in if you lose your device.</p>
-                            <ul class="mfa-codes">
-                                @foreach ($mfaSetup['recovery_codes'] as $rc)
-                                    <li>{{ $rc }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    @endif
+                    <a href="{{ route('dashboard.profile.two-factor.setup') }}" class="btn">Continue setup</a>
                 </div>
 
-                <form method="POST" action="{{ route('dashboard.profile.two-factor.confirm') }}" class="profile-form" style="border-top: 1px solid var(--border);">
-                    @csrf
-                    <div class="field">
-                        <label for="mfa_code">Enter the 6-digit code</label>
-                        <input type="text" name="code" id="mfa_code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]*" placeholder="123456" required>
-                        @error('code')<p class="error">{{ $message }}</p>@enderror
-                    </div>
-                    <button type="submit" class="btn">Confirm &amp; turn on</button>
-                </form>
-
             @else
-                {{-- OFF: offer to enable --}}
+                {{-- OFF: offer to enable. Confirming the password starts enrolment
+                     and takes the user to the dedicated setup screen. --}}
                 <form method="POST" action="{{ route('dashboard.profile.two-factor.enable') }}" class="profile-form">
                     @csrf
                     <p class="muted" style="margin-top:0;">
