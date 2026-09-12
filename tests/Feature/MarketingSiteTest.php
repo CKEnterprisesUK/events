@@ -24,12 +24,14 @@ class MarketingSiteTest extends TestCase
         $response->assertOk();
         $response->assertSee('Sign in', false);
         $response->assertSee('Get started', false);
-        // The primary destinations are present.
+        // The primary nav destinations are present in the header.
         $response->assertSee('Features', false);
         $response->assertSee('Pricing', false);
         $response->assertSee('How it works', false);
         $response->assertSee('For charities', false);
-        $response->assertSee('Trust', false);
+        // Trust lives in the footer only (not a primary-nav destination), but is
+        // still reachable from the page.
+        $response->assertSee(route('trust.index'), false);
         // "Why us" has been removed from the primary navigation.
         $response->assertDontSee('Why us', false);
     }

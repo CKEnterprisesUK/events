@@ -275,8 +275,9 @@ faker emails; query the `users` table to find them if needed.
   `! app()->environment('production')`, so **it never runs on production** even
   if `db:seed` is invoked there by accident.
 - `migrate:fresh` is destructive by design — it wipes the database. Only ever
-  point it at the pre-prod database. It has no place in the production process,
-  which applies schema by hand via phpMyAdmin (`DEPLOYMENT.md`).
+  point it at the pre-prod database. It has no place in production, where the
+  action is permanently blocked (`DEPLOYMENT.md` section 4). Production applies
+  schema with forward-only `migrate` from the same build page.
 
 ### Running it on shared hosting (no SSH)
 

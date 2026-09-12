@@ -49,7 +49,14 @@ class SeoTest extends TestCase
 
     public function test_event_page_emits_event_jsonld_with_offer_and_canonical(): void
     {
-        $company = Company::factory()->create(['currency' => 'GBP']);
+        // Absorb mode so the Offer price is unambiguously the ticket price. In
+        // Pass_On mode the surfaced (customer-facing) price would instead be the
+        // mandatory total including the buyer-paid platform fee — covered by
+        // PublicPageRenderingTest.
+        $company = Company::factory()->create([
+            'currency' => 'GBP',
+            'fee_handling_mode' => Company::FEE_MODE_ABSORB,
+        ]);
         $event = Event::factory()->for($company)->published()->create([
             'name' => 'Summer Concert',
             'description' => 'An evening of live music.',
