@@ -58,7 +58,7 @@
                         <span class="mkt-preview__dot"></span>
                         <span class="mkt-preview__dot"></span>
                         <span class="mkt-preview__dot"></span>
-                        <span class="mkt-preview__url">yourorganisation.events</span>
+                        <span class="mkt-preview__url">events.ckent.uk/your-org</span>
                     </div>
                     <div class="mkt-preview__body" aria-hidden="true">
                         <div class="mkt-preview__eyebrow">Your organisation</div>
