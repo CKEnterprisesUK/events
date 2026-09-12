@@ -7,11 +7,15 @@ use App\Http\Middleware\ResolveDashboardTenant;
 use App\Http\Middleware\ResolveTenant;
 use App\Http\Middleware\SessionTimeout;
 use App\Http\Middleware\VerifyStripeSignature;
+use App\Services\ErrorReporter;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Routing\Middleware\SubstituteBindings;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Throwable;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -92,4 +96,36 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        // Production error capture. With APP_DEBUG=false an uncaught 500 would
+        // otherwise render a generic framework page and vanish into the log.
+        // Instead we persist the raw exception to `error_reports`, mint a short
+        // customer-facing reference (ERR-XXXXXXXX), and show a branded page that
+        // tells the visitor to quote that reference to support — where a
+        // Super_Admin can look up the full trace at /admin/errors.
+        //
+        // Gated on: NOT debug (dev keeps Laravel's rich trace page), the
+        // exception is a genuine server fault (not an HttpException such as
+        // 404/403/419/422 which have their own friendly handling), and the
+        // client is expecting HTML (JSON/API clients keep the default JSON
+        // error shape via shouldRenderJsonWhen above).
+        $exceptions->render(function (Throwable $e, Request $request) {
+            if (config('app.debug')) {
+                return null; // dev: fall through to the detailed trace page.
+            }
+
+            if ($e instanceof HttpExceptionInterface) {
+                return null; // 404/403/419/... keep their own error views.
+            }
+
+            if ($request->is('api/*') || $request->expectsJson()) {
+                return null; // API clients keep the JSON error contract.
+            }
+
+            $report = app(ErrorReporter::class)->capture($e, $request, 500);
+
+            return response()->view('errors.500', [
+                'reference' => $report?->reference,
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        });
     })->create();

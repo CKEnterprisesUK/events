@@ -34,6 +34,7 @@ use App\Http\Controllers\SuperAdmin\ClientController as SuperAdminClientControll
 use App\Http\Controllers\SuperAdmin\CompanyController as SuperAdminCompanyController;
 use App\Http\Controllers\SuperAdmin\CompanyUserController as SuperAdminCompanyUserController;
 use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboardController;
+use App\Http\Controllers\SuperAdmin\ErrorReportController as SuperAdminErrorReportController;
 use App\Http\Controllers\SuperAdmin\FeeController as SuperAdminFeeController;
 use App\Http\Controllers\SuperAdmin\ImpersonationController as SuperAdminImpersonationController;
 use App\Http\Controllers\SuperAdmin\LegalDocumentController as SuperAdminLegalDocumentController;
@@ -507,6 +508,19 @@ Route::middleware(['auth', 'super.admin', 'session.timeout'])
         // so staff can review exactly what was done while jumped into tenants.
         // Read-only. (Security — accountability / audit trail)
         Route::get('/audit', [SuperAdminAuditController::class, 'index'])->name('audit.index');
+
+        // Production error reports (uncaught 500s). In production the exception
+        // handler stores every uncaught server error in `error_reports` with a
+        // short customer-facing reference and shows the visitor a branded page.
+        // This is the lookup surface: paste the reference a customer quoted to
+        // see the full exception, request context and stack trace. Cross-tenant
+        // (the table carries no global scope); the only mutation is toggling a
+        // report's resolved flag. (Production error handling)
+        Route::get('/errors', [SuperAdminErrorReportController::class, 'index'])->name('errors.index');
+        Route::get('/errors/{errorReport}', [SuperAdminErrorReportController::class, 'show'])
+            ->where('errorReport', '[0-9]+')->name('errors.show');
+        Route::put('/errors/{errorReport}/status', [SuperAdminErrorReportController::class, 'updateStatus'])
+            ->where('errorReport', '[0-9]+')->name('errors.status');
 
         // Clients (Companies) with per-Company stats, and a per-Company
         // drill-down. A business view of each tenant's activity. (20.1)
