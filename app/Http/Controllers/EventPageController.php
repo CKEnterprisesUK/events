@@ -60,16 +60,38 @@ class EventPageController extends Controller
 
         $now = Carbon::now();
 
+        $company = $tenantContext->company();
+
+        // In Pass_On mode the customer pays a mandatory platform fee on top of
+        // the ticket price. To avoid drip pricing, the storefront shows the full
+        // mandatory price (ticket + fee) as the headline price from the first
+        // display, with an optional breakdown — never revealing the fee only
+        // later at checkout. The fee comes from the shared FeeCalculationService
+        // (the same source the checkout total uses) so the displayed price and
+        // the charged amount always agree. In Absorb mode there is no add-on, so
+        // the display price is simply the ticket price.
+        $passOn = $company->fee_handling_mode === \App\Models\Company::FEE_MODE_PASS_ON;
+
         $ticketTypes = $event->ticketTypes()
             ->orderBy('id')
             ->get()
-            ->map(function (TicketType $type) use ($now): array {
+            ->map(function (TicketType $type) use ($now, $fees, $company, $passOn): array {
                 $available = max(0, $type->availableQuantity());
+
+                // Mandatory buyer fee per ticket (0 for free tickets or Absorb).
+                $feeEachMinor = ($passOn && ! $type->isFree())
+                    ? $fees->calculateForCompany($company, $type->price_minor)->bookingFee
+                    : 0;
 
                 return [
                     'id' => $type->getKey(),
                     'name' => $type->name,
                     'price_minor' => $type->price_minor,
+                    // The full mandatory price a buyer pays for this ticket, and
+                    // the fee portion, so the row can show a transparent total.
+                    'display_price_minor' => $type->price_minor + $feeEachMinor,
+                    'fee_each_minor' => $feeEachMinor,
+                    'includes_fee' => $feeEachMinor > 0,
                     'is_free' => $type->isFree(),
                     // Kept for the quantity stepper's `max` bound so the form
                     // can't request more than remain — never rendered as a count.
@@ -80,8 +102,6 @@ class EventPageController extends Controller
                     'on_sale' => $type->isOnSaleAt($now),
                 ];
             });
-
-        $company = $tenantContext->company();
 
         return view('events.show', [
             'company' => $company,

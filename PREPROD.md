@@ -179,10 +179,24 @@ Cautions specific to pre-prod:
 4. Verify: load the subdomain, and check `storage/logs/laravel.log` if anything
    looks off. Migration output goes to the cPanel deployment log.
 
-### After a deploy runs `migrate`
-`config:cache`, `route:cache`, and `view:cache` are refreshed automatically by
-`.cpanel.yml`. If you change `.env` by hand on the host, re-run
-`php artisan config:cache` (or trigger a fresh deploy).
+### After every "Update from Remote" — clear the caches
+`.cpanel.yml` is intentionally a no-op (`/bin/true`) — pulling code runs NO
+deploy tasks, so it does **not** rebuild any caches. If the app is running with
+a compiled **route** cache, a route added in the pulled code will not resolve
+and you'll get `Route [...] not defined` (and likewise stale config/views).
+
+So after each **Update from Remote**, clear the caches:
+
+- Log in as Super_Admin → open **`/admin/ops`** → click **"Clear caches"**.
+  This runs `config:clear`, `route:clear`, `view:clear`, `event:clear`
+  in-process (no terminal needed). It is non-destructive — it never touches the
+  database or schema — so it is always safe to run.
+
+If you change `.env` by hand on the host, click "Clear caches" too (or, where a
+terminal is available, run `php artisan config:clear`).
+
+> Migrations are separate: run them from the same `/admin/ops` page ("Run
+> migrations"). Clearing caches does not apply schema changes.
 
 ---
 

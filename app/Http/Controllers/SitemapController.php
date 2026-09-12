@@ -60,6 +60,15 @@ class SitemapController extends Controller
             'priority' => '1.0',
         ];
 
+        // Public marketing pages + Trust Centre — stable, indexable content.
+        foreach (['features', 'pricing', 'how-it-works', 'for-charities', 'trust.index'] as $name) {
+            $urls[] = [
+                'loc' => route($name),
+                'changefreq' => 'weekly',
+                'priority' => '0.6',
+            ];
+        }
+
         // One entry per active storefront.
         foreach ($companies as $company) {
             $urls[] = [

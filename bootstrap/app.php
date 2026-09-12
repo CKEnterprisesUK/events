@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnforceTenantScope;
 use App\Http\Middleware\EnsureCompanyActive;
 use App\Http\Middleware\EnsureSuperAdmin;
+use App\Http\Middleware\RedirectToBuildPageWhenMigrationsPending;
 use App\Http\Middleware\ResolveDashboardTenant;
 use App\Http\Middleware\ResolveTenant;
 use App\Http\Middleware\SessionTimeout;
@@ -61,6 +62,10 @@ return Application::configure(basePath: dirname(__DIR__))
             // Guards the separate super-admin surface on `is_super_admin`, not
             // the Company role matrix. (Requirements 20.1, 20.7)
             'super.admin' => EnsureSuperAdmin::class,
+            // Routes a Super_Admin to the build page (/admin/ops) when there are
+            // un-run migrations, so a code pull's schema change is applied
+            // without a terminal. Applied on the /admin group only.
+            'migrations.pending' => RedirectToBuildPageWhenMigrationsPending::class,
             'session.timeout' => SessionTimeout::class,
             'stripe.webhook' => VerifyStripeSignature::class,
         ]);

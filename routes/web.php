@@ -25,6 +25,7 @@ use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PublicPagesController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ScanController;
 use App\Http\Controllers\SharingController;
@@ -62,6 +63,32 @@ use Illuminate\Support\Facades\Route;
 | resolution only runs on `/{company-slug}/...` paths). (Requirement 8.1)
 */
 Route::get('/', [LandingController::class, 'index'])->name('landing');
+
+/*
+|--------------------------------------------------------------------------
+| Public marketing pages (reserved prefixes, no tenant / auth)
+|--------------------------------------------------------------------------
+| The homepage summarises the product and links through to these focused
+| pages. Each is a reserved prefix declared before the `/{company-slug}/`
+| storefront catch-all so it renders the marketing page rather than being
+| treated as a storefront slug. They establish no active Company.
+*/
+Route::get('/features', [PublicPagesController::class, 'features'])->name('features');
+Route::get('/pricing', [PublicPagesController::class, 'pricing'])->name('pricing');
+Route::get('/how-it-works', [PublicPagesController::class, 'howItWorks'])->name('how-it-works');
+Route::get('/for-charities', [PublicPagesController::class, 'forCharities'])->name('for-charities');
+
+/*
+|--------------------------------------------------------------------------
+| Legacy marketing redirects
+|--------------------------------------------------------------------------
+| The old single-page homepage carried "Why us" / "How it works" / "Pricing"
+| as in-page anchors (/#why, /#how, /#pricing). Those concerns now have their
+| own pages, so redirect the anchor URLs (and any bookmarked `/why-us`) to the
+| closest dedicated destination. 301 so search engines follow the move.
+*/
+Route::permanentRedirect('/why-us', '/for-charities');
+
 
 /*
 |--------------------------------------------------------------------------
@@ -628,23 +655,33 @@ Route::middleware(['auth', 'super.admin', 'session.timeout'])
         // rather than silently backing up ticket emails / webhook processing.
         Route::get('/system', [SuperAdminSystemHealthController::class, 'index'])->name('system.index');
 
-        // Pre-prod database operations (migrate / reseed) run IN-PROCESS from an
-        // authenticated Super_Admin request. Registered ONLY in known-safe
-        // non-production environments (APP_ENV allow-list — the pre-prod host
-        // uses APP_ENV=staging; production stays APP_ENV=production and never
-        // gets these routes). The host has no terminal and disables
+        // Database "build" operations run IN-PROCESS from an authenticated
+        // Super_Admin request. The host has no terminal and disables
         // proc_open/shell_exec, and cPanel "Deploy" keeps dirtying the git
-        // checkout, so this is the reliable, no-terminal way to apply schema and
-        // rebuild sample data. Each action also re-checks the guard defensively.
+        // checkout, so this is the reliable, no-terminal way to apply schema
+        // after an "Update from Remote".
+        //
+        // These routes exist in EVERY environment (production included) so the
+        // same UI-driven flow works on prod and pre-prod. Safety is enforced in
+        // OpsController, not by hiding routes:
+        //   * migrate + rebuild-caches are forward-only / non-destructive and
+        //     run anywhere (the view gates the prod migrate behind a typed
+        //     confirmation + backup reminder).
+        //   * reseed (migrate:fresh --seed) is DESTRUCTIVE, so its route is
+        //     still registered ONLY in non-production, and the controller
+        //     re-checks the APP_ENV allow-list defensively on top of that.
+        Route::get('/ops', [SuperAdminOpsController::class, 'index'])->name('ops.index');
+        Route::post('/ops/migrate', [SuperAdminOpsController::class, 'migrate'])->name('ops.migrate');
+        // Clear the compiled route/config/view caches after a code pull.
+        // Non-destructive, so safe to run any time — this is what makes a
+        // newly-pulled route (which "Update from Remote" doesn't cache-bust)
+        // resolvable without a terminal.
+        Route::post('/ops/rebuild-caches', [SuperAdminOpsController::class, 'rebuildCaches'])->name('ops.rebuild-caches');
+
+        // Destructive sample-data rebuild: non-production only (defence in depth
+        // with the controller's own production guard).
         if (app()->environment(['local', 'staging', 'preprod', 'development'])) {
-            Route::get('/ops', [SuperAdminOpsController::class, 'index'])->name('ops.index');
-            Route::post('/ops/migrate', [SuperAdminOpsController::class, 'migrate'])->name('ops.migrate');
             Route::post('/ops/reseed', [SuperAdminOpsController::class, 'reseed'])->name('ops.reseed');
-            // Clear the compiled route/config/view caches after a code pull.
-            // Non-destructive, so safe to run any time — this is what makes a
-            // newly-pulled route (which "Update from Remote" doesn't cache-bust)
-            // resolvable without a terminal.
-            Route::post('/ops/rebuild-caches', [SuperAdminOpsController::class, 'rebuildCaches'])->name('ops.rebuild-caches');
         }
 
         // Support ticket queue: the operator view of every in-dashboard
