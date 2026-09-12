@@ -1,19 +1,22 @@
 # Pre-production environment (cPanel Git, auto-migrate on deploy)
 
 A staging/testing copy of the app on a **subdomain** with its **own fresh
-database**, deployed straight from git. Pushing to git and triggering a cPanel
-deployment runs Laravel migrations automatically — no phpMyAdmin, no manual SQL.
+database**. You deploy by pushing to git, pulling in cPanel ("Update from
+Remote"), then applying migrations from the in-app build page (`/admin/ops`) —
+no phpMyAdmin, no manual SQL, no terminal.
 
-This is the key difference from production:
+Pre-prod and production now follow the **same** deploy flow. The differences:
 
 | | Production | Pre-prod (this doc) |
 | --- | --- | --- |
-| Schema source of truth | Hand-pasted `database/sql/*.sql` via phpMyAdmin | **Laravel migrations** (`php artisan migrate`) run on deploy |
-| Deploy | Manual pull, schema by hand | `git push` → cPanel deploy → `.cpanel.yml` runs migrate |
+| Schema source of truth | **Laravel migrations** | **Laravel migrations** |
+| Apply schema | `/admin/ops` → Run migrations (backup + confirm first) | `/admin/ops` → Run migrations |
 | Database | Live prod DB | Separate, disposable DB — safe to wipe and re-migrate |
+| Rebuild sample data | ❌ blocked | ✅ available |
 
-Because pre-prod uses migrations directly, it is also the place that proves the
-migrations are correct **before** you generate the prod `database/sql/` file.
+Pre-prod is where you prove a migration is correct **before** running the same
+migration on production. Both environments apply schema the same way — from the
+`/admin/ops` build page — so there is no separate raw-SQL path to keep in sync.
 
 ---
 
@@ -43,19 +46,16 @@ cPanel → **Git™ Version Control** → **Create**:
 - Check out the branch you want pre-prod to track (see section 4 — a dedicated
   `preprod` branch is recommended).
 
-### 1d. Point the two paths in `.cpanel.yml`
-Edit `.cpanel.yml` (committed at the repo root) and set:
-- `DEPLOYPATH` = the Repository Path from 1c.
-- `APPPATH`    = the app root for the subdomain (the parent of its `public/`,
-  i.e. the directory that holds `.env`, `artisan`, `vendor/`).
+### 1d. `.cpanel.yml` runs no deploy tasks (by design)
+`.cpanel.yml` is intentionally a no-op (`/bin/true`). It does **not** copy files
+or run migrations on deploy. Earlier versions ran `migrate`/`cache` on
+"Deploy HEAD Commit", but those tasks wrote into the checkout and the shared
+host disables `proc_open`/`shell_exec`, so the tree ended up "dirty" and blocked
+the next deploy. Migrations now run **in-process from the browser** via the
+build page — see section 4.
 
-The deploy copies the checkout into `APPPATH`, then runs `migrate --force` and
-refreshes caches there. It never touches `.env`, the `public/storage` symlink,
-or the writable `storage/` runtime dirs (rsync excludes them).
-
-> **PHP binary:** `.cpanel.yml` calls `/opt/cpanel/ea-php85/root/usr/bin/php`.
-> If the subdomain runs a different PHP version (cPanel → **MultiPHP Manager**),
-> update that path in `.cpanel.yml` to match.
+You only need to point the cPanel subdomain's document root at the checkout's
+`public/` directory; there is nothing to configure inside `.cpanel.yml`.
 
 ### 1e. Create `.env` on the host (once)
 `.env` is never committed. Create it by hand in cPanel **File Manager** inside
@@ -164,20 +164,25 @@ Cautions specific to pre-prod:
 
 ## 4. The workflow (day to day)
 
+This is the **same** flow as production (`DEPLOYMENT.md` section 4) — the only
+difference is that pre-prod also lets you rebuild sample data (section 7).
+
 1. Do work locally, add a **Laravel migration** for any schema change (the
    normal `php artisan make:migration ...`). Migrations are the source of truth
-   here — you do NOT hand-write `database/sql/` for pre-prod.
+   on **both** environments now — there is no hand-written `database/sql/`.
 2. Commit and push. A dedicated branch keeps staging separate from prod:
    ```
    git push origin preprod
    ```
-3. In cPanel → **Git Version Control** → **Manage** → **Pull or Deploy**:
-   - **Update from Remote** pulls the latest commit into the checkout.
-   - **Deploy HEAD Commit** runs `.cpanel.yml` (this is the step that applies
-     migrations). Some hosts can auto-deploy on push; if yours does, this button
-     press isn't needed.
-4. Verify: load the subdomain, and check `storage/logs/laravel.log` if anything
-   looks off. Migration output goes to the cPanel deployment log.
+3. In cPanel → **Git Version Control** → **Manage** → click **Update from
+   Remote**. This pulls the latest commit into the checkout and runs **no**
+   deploy tasks (so it can't dirty the tree).
+4. Log in as a **Super_Admin**. If the pulled code added a migration you are
+   **routed automatically to the build page** (`/admin/ops`) with a banner
+   "There are pending database migrations." Click **Run migrations**, then
+   **Clear caches**. (You can also open **`/admin/ops`** manually any time.)
+5. Verify: load the subdomain, and check `storage/logs/laravel.log` if anything
+   looks off.
 
 ### After every "Update from Remote" — clear the caches
 `.cpanel.yml` is intentionally a no-op (`/bin/true`) — pulling code runs NO
@@ -202,26 +207,31 @@ terminal is available, run `php artisan config:clear`).
 
 ## 5. If deployment tasks don't run on your host (fallback)
 
-cPanel Git runs `.cpanel.yml` tasks via its deployment queue. On the rare host
-where that queue is disabled, migrations won't apply on deploy. Two fallbacks:
+Migrations run in-process from the browser (`/admin/ops` → "Run migrations"), so
+they do **not** depend on cPanel's deploy queue at all — the build page uses the
+normal web request. If that page is ever unreachable and cPanel **Terminal** is
+available, the manual fallback is the same command it runs:
 
-- **Cron marker:** have your deploy (or a manual touch) write
-  `storage/deploy.flag`, and add a cron that applies migrations when it sees it:
-  ```
-  * * * * * cd /home/CPANELUSER/preprod.yourdomain.tld && [ -f storage/deploy.flag ] && (/opt/cpanel/ea-php85/root/usr/bin/php artisan migrate --force && /opt/cpanel/ea-php85/root/usr/bin/php artisan config:cache && rm storage/deploy.flag) >> storage/logs/deploy.log 2>&1
-  ```
-- **Manual once per deploy:** if cPanel Terminal is available, run
-  `php artisan migrate --force` yourself after each pull.
+```
+php artisan migrate --force
+```
 
 ---
 
 ## 6. Promoting a change to production
 
-Pre-prod proves the migration works. To ship the same schema change to
-production (which is phpMyAdmin-only), generate the matching numbered raw SQL
-file under `database/sql/` from the migrated schema and follow
-`database/sql/CHANGELOG.md` + `DEPLOYMENT.md` section 4. Keep the two in sync so
-they never drift.
+Pre-prod proves the migration works. Production now uses the **same** migrations
+and the **same** build page — there is no separate raw-SQL step. To ship a
+tested change:
+
+1. Merge `preprod` → `main` and push.
+2. cPanel Git (prod repo) → **Update from Remote**.
+3. Log in as Super_Admin on production. If migrations are pending you are routed
+   to `/admin/ops`. **Take a database backup first** (cPanel → Backup, or
+   phpMyAdmin → Export), tick the confirmation, then **Run migrations** and
+   **Clear caches**.
+
+See `DEPLOYMENT.md` section 4 for the production specifics (backup, confirmation).
 
 ---
 

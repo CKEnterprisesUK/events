@@ -25,6 +25,17 @@
 # HEAD Commit", the empty task list is a safe no-op.
 # =============================================================================
 
+# -----------------------------------------------------------------------------
+# UPDATED WORKFLOW (identical on pre-prod AND production):
+#   1. git push (pre-prod) / merge to main + push (prod)
+#   2. cPanel Git -> "Update from Remote"   (pulls code, runs NO tasks)
+#   3. Log in as Super_Admin. If there are pending migrations you are routed
+#      automatically to /admin/ops. Click "Run migrations", then "Clear caches".
+#      Migrations run IN-PROCESS from the web request (no shell, no deploy), so
+#      they work on this host and never dirty the checkout. See DEPLOYMENT.md
+#      and PREPROD.md.
+# -----------------------------------------------------------------------------
+
 deployment:
   tasks:
     - /bin/true

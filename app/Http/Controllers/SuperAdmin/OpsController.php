@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\View\View;
 
 /**
  * Database "build" operations, run from the browser (no SSH/terminal).
@@ -48,15 +49,13 @@ use Illuminate\Support\Facades\Schema;
  */
 class OpsController extends Controller
 {
-    public function __construct(private readonly PendingMigrations $pendingMigrations)
-    {
-    }
+    public function __construct(private readonly PendingMigrations $pendingMigrations) {}
 
     /**
      * Build/status page: current migration state + row counts, with the action
      * buttons. Read-only.
      */
-    public function index(): \Illuminate\View\View
+    public function index(): View
     {
         // Capture `migrate:status` output for display. This is the accurate,
         // detailed view; the cheap PendingMigrations check drives the redirect.

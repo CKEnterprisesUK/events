@@ -47,9 +47,7 @@ class RedirectToBuildPageWhenMigrationsPending
         'admin.ops.rebuild-caches',
     ];
 
-    public function __construct(private readonly PendingMigrations $pendingMigrations)
-    {
-    }
+    public function __construct(private readonly PendingMigrations $pendingMigrations) {}
 
     public function handle(Request $request, Closure $next): Response
     {

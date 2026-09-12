@@ -3,7 +3,8 @@
 Production runs on shared cPanel hosting: **no SSH access, no persistent
 process**. There is no long-running queue worker and no artisan-over-SSH deploy
 step. All background work is drained by a single per-minute cron, and the
-database schema is applied by pasting SQL into phpMyAdmin. This document is the
+database schema is applied from the in-app build page (Laravel migrations run
+in-process by a Super_Admin — see section 4). This document is the
 operational checklist for standing the app up and keeping it healthy.
 
 Referenced by task 26.1 (Design → *Hosting and Deployment Notes*).
@@ -47,8 +48,8 @@ Because `queue:work` is invoked by the scheduler rather than run as a daemon,
 the cron line above is the only thing that must be configured on the host.
 
 **Queue configuration.** `QUEUE_CONNECTION=database`. The `jobs`, `job_batches`,
-and `failed_jobs` tables are created by `database/sql/001_create_queue_tables.sql`
-(see section 4). Failed jobs are inspected and retried later with
+and `failed_jobs` tables are created by the Laravel migrations applied via the
+build page (see section 4). Failed jobs are inspected and retried later with
 `queue:retry` — failures are retryable, not lost. (Requirements 15.1–15.4)
 
 ---
@@ -99,29 +100,48 @@ enqueues heavy work, returning 2xx quickly. (Requirements 19.1–19.5)
 
 ---
 
-## 4. Database schema via phpMyAdmin (no SSH)
+## 4. Database schema via the in-app build page (no SSH, no phpMyAdmin)
 
-Migrations remain the single source of truth and run locally/CI. For prod, the
-equivalent DDL is committed as ordered raw SQL under `database/sql/`.
+Laravel migrations are the single source of truth in **every** environment,
+production included. Because the host has no terminal and disables
+`proc_open`/`shell_exec`, migrations are applied **in-process from the browser**
+by a Super_Admin — the same PHP process that serves the app runs
+`migrate --force`. There is no raw-SQL paste step and no `database/sql/` file to
+keep in sync.
 
-**To apply on a fresh prod database:**
+### Deploying a change to production
 
-1. Open phpMyAdmin → select the target database → *Import* (or the *SQL* tab).
-2. Paste/import the files from `database/sql/` **in filename order**
-   (`001_...` first, `013_...` last). Order matters — later files reference
-   tables created by earlier ones.
-3. The set includes the Laravel-managed tables (`migrations`, `jobs`,
-   `job_batches`, `failed_jobs`) and the webhook-idempotency table
-   (`processed_webhooks`), plus the seed row for `platform_settings`
-   (`004_seed_platform_settings.sql`, default `global_fee_percent`).
+1. Merge the tested branch into `main` and push.
+2. cPanel → **Git Version Control** → **Update from Remote** (pulls code, runs
+   no deploy tasks — see `.cpanel.yml`).
+3. Log in as a **Super_Admin**. When the pulled code contains an un-run
+   migration you are **routed automatically to the build page** (`/admin/ops`),
+   which shows the pending migrations and full `migrate:status`.
+4. **Take a database backup first** — cPanel → *Backup* (or phpMyAdmin →
+   *Export*). Migrations run against the live DB and have no automatic undo.
+5. Tick the confirmation checkbox and click **Run migrations**, then click
+   **Clear caches** so newly pulled routes/config/views are picked up.
 
-Applied files are tracked manually via the checklist in
-`database/sql/CHANGELOG.md`; each SQL file carries a comment header naming the
-migration it was generated from. Whenever a migration changes, regenerate the
-matching `.sql` file so the two never drift.
+### Safety model
 
-There is **no** web/SSH deploy route for schema — it is applied purely by
-pasting SQL.
+- **`migrate --force`** and **Clear caches** are available in every environment.
+  The production migrate button is gated behind a typed confirmation + backup
+  reminder in the UI.
+- **Rebuild sample data** (`migrate:fresh --seed`, destructive) is **permanently
+  refused in production** — its route isn't registered there and `OpsController`
+  re-checks the `APP_ENV` allow-list. It exists only for pre-prod (`PREPROD.md`).
+- A Super_Admin is only redirected to the build page when migrations are
+  genuinely pending; the check fails safe (never traps you) and is cached
+  briefly. See `App\Services\PendingMigrations` and the
+  `migrations.pending` middleware.
+
+### Fresh production database
+
+On a brand-new prod DB, the same **Run migrations** action builds the entire
+schema (including the Laravel-managed `migrations`, `jobs`, `job_batches`,
+`failed_jobs` tables and `processed_webhooks`). Seed the one required
+`platform_settings` row via the normal `PlatformSettingSeeder` (run locally
+against the prod DB during setup, or insert the single row by hand once).
 
 ---
 
@@ -163,7 +183,7 @@ stable. (Requirements 14.2, 16.4, 19.1; Property 23)
 
 - [ ] `.env` present outside web root with all vars from section 5.
 - [ ] `QR_HMAC_SECRET` set to a fixed value (not regenerated).
-- [ ] Schema applied via phpMyAdmin in `database/sql/` filename order.
+- [ ] Database backup taken, then schema applied via `/admin/ops` → Run migrations.
 - [ ] Storage symlink created (`public/storage` → `storage/app/public`).
 - [ ] Cron entry added (`* * * * * ... php artisan schedule:run`).
 - [ ] Stripe webhook registered at `POST /stripe/webhook` with signing secret.

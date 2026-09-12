@@ -57,7 +57,7 @@
                         <h2 style="font-size: 1.08rem;">Privacy &amp; data protection</h2>
                         <p>
                             We keep customer data focused on the event, with no advertising trackers. See our
-                            <a href="{{ route('privacy') }}">Privacy Notice</a> for how data is handled and retained.
+                            <a href="{{ route('privacy') }}">privacy policy</a> for how data is handled and retained.
                         </p>
                     </div>
                     <div class="mkt-cell">

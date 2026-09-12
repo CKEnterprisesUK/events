@@ -48,7 +48,9 @@ use App\Http\Controllers\SuperAdmin\SettingsController as SuperAdminSettingsCont
 use App\Http\Controllers\SuperAdmin\StripeAccountController as SuperAdminStripeAccountController;
 use App\Http\Controllers\SuperAdmin\SupportRequestController as SuperAdminSupportRequestController;
 use App\Http\Controllers\SuperAdmin\OpsController as SuperAdminOpsController;
+use App\Http\Controllers\SuperAdmin\ProfileController as SuperAdminProfileController;
 use App\Http\Controllers\SuperAdmin\SystemHealthController as SuperAdminSystemHealthController;
+use App\Http\Controllers\SuperAdmin\TwoFactorController as SuperAdminTwoFactorController;
 use App\Http\Controllers\SuperAdmin\TransactionController as SuperAdminTransactionController;
 use App\Http\Controllers\TicketTypeController;
 use App\Http\Controllers\TrustController;
@@ -591,7 +593,7 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
 | of the authenticated surface. (Requirements 20.1, 20.2, 20.3, 20.4, 20.5,
 | 20.6, 20.7)
 */
-Route::middleware(['auth', 'super.admin', 'session.timeout'])
+Route::middleware(['auth', 'super.admin', 'session.timeout', 'migrations.pending'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
@@ -599,6 +601,23 @@ Route::middleware(['auth', 'super.admin', 'session.timeout'])
         // users, events, confirmed orders, gross sales, platform fees earned).
         // This is the super-admin landing page. (20.1, 20.2)
         Route::get('/', [SuperAdminDashboardController::class, 'index'])->name('home');
+
+        // Super_Admin account security: change password + self-service two-factor
+        // (TOTP) management. Acts only on the acting Super_Admin's OWN record, so
+        // no per-action Gate is needed beyond the group's `super.admin` guard.
+        // Mirrors the Company-side `dashboard.profile.two-factor.*` surface,
+        // reusing the same role-agnostic TwoFactorAuthenticationService — once a
+        // Super_Admin confirms enrolment here they are challenged for a code at
+        // their next login with no further wiring. Sensitive actions require the
+        // current password.
+        Route::get('/profile', [SuperAdminProfileController::class, 'edit'])->name('profile.edit');
+        Route::put('/profile/password', [SuperAdminProfileController::class, 'updatePassword'])->name('profile.password');
+        Route::post('/profile/two-factor', [SuperAdminTwoFactorController::class, 'enable'])->name('profile.two-factor.enable');
+        Route::get('/profile/two-factor/setup', [SuperAdminTwoFactorController::class, 'setup'])->name('profile.two-factor.setup');
+        Route::get('/profile/two-factor/qr', [SuperAdminTwoFactorController::class, 'qr'])->name('profile.two-factor.qr');
+        Route::post('/profile/two-factor/confirm', [SuperAdminTwoFactorController::class, 'confirm'])->name('profile.two-factor.confirm');
+        Route::delete('/profile/two-factor', [SuperAdminTwoFactorController::class, 'disable'])->name('profile.two-factor.disable');
+        Route::post('/profile/two-factor/recovery-codes', [SuperAdminTwoFactorController::class, 'regenerateRecoveryCodes'])->name('profile.two-factor.recovery-codes');
 
         // All Companies' transactions + total Application_Fees earned across the
         // whole Platform (cross-Company, bypasses the tenant scope). (20.1, 20.2)

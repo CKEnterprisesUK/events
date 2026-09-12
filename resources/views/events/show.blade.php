@@ -18,8 +18,11 @@
 
     // Lowest purchasable price across on-sale, non-sold-out ticket types,
     // for the mobile "Book now" bar. Null when nothing is on sale.
+    // Uses the full mandatory price (ticket + any buyer-paid platform fee) so
+    // the "From" figure matches the transparent per-ticket price shown in the
+    // list rather than a lower pre-fee number.
     $bookNowFromMinor = $hasOnSale
-        ? $ticketTypes->filter(fn ($t) => $t['on_sale'] && ! $t['sold_out'])->min(fn ($t) => $t['price_minor'])
+        ? $ticketTypes->filter(fn ($t) => $t['on_sale'] && ! $t['sold_out'])->min(fn ($t) => $t['display_price_minor'] ?? $t['price_minor'])
         : null;
 
     // Organiser identity + best contact route for a customer who needs help,
