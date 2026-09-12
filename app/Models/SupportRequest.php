@@ -52,6 +52,8 @@ class SupportRequest extends Model
 
     public const CATEGORY_TECHNICAL = 'technical';
 
+    public const CATEGORY_ABUSE = 'abuse';
+
     public const CATEGORY_OTHER = 'other';
 
     /**
@@ -67,6 +69,7 @@ class SupportRequest extends Model
         self::CATEGORY_PAYMENTS => 'Payments & Stripe payouts',
         self::CATEGORY_BILLING => 'Billing & platform fees',
         self::CATEGORY_TECHNICAL => 'A technical problem or bug',
+        self::CATEGORY_ABUSE => 'Report an event (abuse/misuse)',
         self::CATEGORY_OTHER => 'Something else',
     ];
 

@@ -300,6 +300,65 @@
                     @endif
                 </div>
             </div>
+
+            {{-- Report abuse: an unobtrusive disclosure at the very bottom of
+                 every event page. Filing a report creates an abuse-category
+                 support ticket for the platform operators (Events by CK
+                 Enterprises), separate from contacting the organiser above. The
+                 response is deliberately neutral — we never confirm what action,
+                 if any, a specific report triggered. --}}
+            <details class="event-support__report" id="report" {{ ($errors->any() && old('_report')) ? 'open' : '' }}>
+                <summary>Report this event</summary>
+
+                <p class="event-support__report-intro">
+                    Think this event is fraudulent, misleading or breaks the rules?
+                    Let the Events by CK Enterprises team know and we'll look into it.
+                    This goes to us, not the organiser.
+                </p>
+
+                @if (session('report_status'))
+                    <p class="event-support__notice" role="status">
+                        {{ session('report_status') }}
+                    </p>
+                @endif
+
+                <form method="POST"
+                      action="{{ route('event.report-abuse', ['companySlug' => $company->slug, 'event' => $event->id]) }}"
+                      class="event-support__form">
+                    @csrf
+                    <input type="hidden" name="_report" value="1">
+
+                    <div class="field">
+                        <label for="report_reason">What's wrong?</label>
+                        <select name="reason" id="report_reason" required>
+                            <option value="" disabled @selected(! old('reason'))>Choose a reason…</option>
+                            @foreach (['Fraud or a scam', 'Misleading or fake event', 'Impersonation of a person or brand', 'Offensive or prohibited content', 'Something else'] as $reasonOption)
+                                <option value="{{ $reasonOption }}" @selected(old('reason') === $reasonOption)>{{ $reasonOption }}</option>
+                            @endforeach
+                        </select>
+                        @error('reason')<p class="error">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div class="field">
+                        <label for="report_details">Tell us more</label>
+                        <textarea name="details" id="report_details" rows="4"
+                                  minlength="10" maxlength="5000" required
+                                  placeholder="What made you report this event?">{{ old('details') }}</textarea>
+                        @error('details')<p class="error">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div class="field">
+                        <label for="report_email">Your email (optional)</label>
+                        <input type="email" name="reporter_email" id="report_email"
+                               value="{{ old('reporter_email') }}" maxlength="254"
+                               autocomplete="email" inputmode="email"
+                               placeholder="So we can follow up if needed">
+                        @error('reporter_email')<p class="error">{{ $message }}</p>@enderror
+                    </div>
+
+                    <button type="submit" class="btn btn--secondary">Submit report</button>
+                </form>
+            </details>
         </section>
 
         {{-- Mobile "Book now" bar: a sibling of .event-layout (never inside the

@@ -66,7 +66,7 @@
                 @unless ($item->satisfied)
                     <span class="setup-list__action">
                         @if ($item->key === 'payments')
-                            @can('stripe')<a href="{{ route('dashboard.stripe.status') }}">Set up payments →</a>@endcan
+                            @can('stripe_setup')<a href="{{ route('dashboard.stripe.status') }}">Set up payments →</a>@endcan
                         @elseif ($fix)
                             <a href="{{ route($fix['route'], $event) }}">{{ $fix['label'] }} →</a>
                         @endif

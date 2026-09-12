@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\SendTicketEmailJob;
+use App\Mail\SupportRequestReceivedMail;
 use App\Models\Event;
 use App\Models\Order;
+use App\Models\SupportRequest;
 use App\Models\TicketType;
 use App\Services\Branding\BrandingResolver;
 use App\Services\FeeCalculationService;
@@ -14,6 +16,9 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Throwable;
 
 /**
  * Public Event page under `/{company-slug}/{event-id}/`.
@@ -141,6 +146,105 @@ class EventPageController extends Controller
             'If that email address matches a booking for this event, we\'ll send the tickets to it shortly. '
             .'If nothing arrives, please check your spam or junk folder, then contact the organiser using the details below.'
         )->withFragment('support');
+    }
+
+    /**
+     * Public "Report this event" from the Event page.
+     *
+     * Lets any visitor flag an Event for abuse or misuse (fraud, prohibited
+     * content, impersonation, etc.). The report is filed as a {@see
+     * SupportRequest} in the `abuse` category so it lands in the Super_Admin
+     * support queue for triage, and the platform support inbox is notified by
+     * email (best-effort — a mail failure never fails the request, the ticket
+     * is authoritative).
+     *
+     * The report belongs to the reported Event's Company (the active tenant on
+     * this route), but is raised by an anonymous visitor, so `user_id` is null.
+     * The reporter's email is optional and, when given, recorded in the message
+     * so an operator can follow up. The Event is scoped to the active Company by
+     * the global tenant scope (foreign/unpublished Events 404).
+     */
+    public function reportAbuse(
+        string $companySlug,
+        Event $event,
+        Request $request,
+        TenantContext $tenantContext,
+    ): RedirectResponse {
+        abort_unless($event->isPublished(), 404);
+
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'max:100'],
+            'details' => ['required', 'string', 'min:10', 'max:5000'],
+            'reporter_email' => ['nullable', 'string', 'email:rfc', 'max:254'],
+        ]);
+
+        $company = $tenantContext->company();
+
+        $reporterEmail = isset($validated['reporter_email']) && $validated['reporter_email'] !== ''
+            ? strtolower(trim($validated['reporter_email']))
+            : null;
+
+        // Build the ticket body from the reporter's input plus the exact Event
+        // it concerns, so an operator can act without cross-referencing.
+        $eventUrl = route('event.page', ['companySlug' => $company->slug, 'event' => $event->getKey()]);
+
+        $message = "A visitor reported this event via the public event page.\n\n"
+            ."Event: {$event->name} (ID {$event->getKey()})\n"
+            ."Organiser: {$company->name}\n"
+            ."Event URL: {$eventUrl}\n"
+            ."Reason: {$validated['reason']}\n"
+            .'Reporter email: '.($reporterEmail ?? 'not provided')."\n\n"
+            ."Details:\n{$validated['details']}";
+
+        $ticket = SupportRequest::withoutGlobalScopes()->create([
+            'company_id' => $company->getKey(),
+            'user_id' => null,
+            'category' => SupportRequest::CATEGORY_ABUSE,
+            'subject' => 'Abuse report: '.$event->name,
+            'message' => $message,
+            'status' => SupportRequest::STATUS_OPEN,
+            'access_consent' => false,
+            'access_consent_at' => null,
+        ]);
+
+        $this->notifyAbuseInbox($ticket, $company->name, $reporterEmail);
+
+        return back()->with(
+            'report_status',
+            'Thanks for letting us know. Our team will review this event. '
+            .'We don\'t reply to every report individually, but we look into each one.'
+        )->withFragment('support');
+    }
+
+    /**
+     * Email the CK Enterprises support inbox about a newly filed abuse report.
+     * Mirrors {@see SupportController::notifySupportInbox}:
+     * sent synchronously, but any transport error is caught and logged rather
+     * than surfaced — the ticket is already saved and visible in the admin
+     * queue, so email is best-effort. Reuses {@see SupportRequestReceivedMail};
+     * the reporter's email (when given) becomes the reply-to.
+     */
+    private function notifyAbuseInbox(SupportRequest $ticket, string $companyName, ?string $reporterEmail): void
+    {
+        $inbox = (string) config('mail.support.address');
+
+        if ($inbox === '') {
+            return;
+        }
+
+        try {
+            Mail::to($inbox)->send(new SupportRequestReceivedMail(
+                supportRequest: $ticket,
+                companyName: $companyName,
+                raiserName: null,
+                raiserEmail: $reporterEmail,
+            ));
+        } catch (Throwable $e) {
+            Log::warning('Failed to send abuse-report notification email.', [
+                'support_request_id' => $ticket->getKey(),
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

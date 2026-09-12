@@ -14,7 +14,7 @@ use Tests\TestCase;
  * Pins the role permission matrix (RoleAuthorization) and the registered gates.
  * (Requirements 3.1, 3.3–3.7, 20.7) Universal (role, action) coverage is added
  * by the Property 6 property-based test (task 4.4); this file checks the matrix
- * contents, the four-role set, and Super_Admin bypass.
+ * contents, the five-role set, and Super_Admin bypass.
  */
 class RoleAuthorizationTest extends TestCase
 {
@@ -63,6 +63,8 @@ class RoleAuthorizationTest extends TestCase
             RoleAuthorization::ACTION_MANAGE_GDPR,
             // Admins can view the Company activity/audit trail.
             RoleAuthorization::ACTION_VIEW_AUDIT_LOG,
+            // Admins can connect the Company's Stripe account (onboarding).
+            RoleAuthorization::ACTION_SETUP_STRIPE,
         ] as $action) {
             $this->assertTrue($this->matrix->roleCan(User::ROLE_ADMIN, $action));
         }
@@ -70,6 +72,28 @@ class RoleAuthorizationTest extends TestCase
         $this->assertFalse($this->matrix->roleCan(User::ROLE_ADMIN, RoleAuthorization::ACTION_MANAGE_BILLING));
         $this->assertFalse($this->matrix->roleCan(User::ROLE_ADMIN, RoleAuthorization::ACTION_MANAGE_USERS));
         $this->assertFalse($this->matrix->roleCan(User::ROLE_ADMIN, RoleAuthorization::ACTION_MANAGE_SETTINGS));
+        // The Admin can SET UP Stripe but must NOT manage it once connected
+        // (fee handling stays Owner-only).
+        $this->assertFalse($this->matrix->roleCan(User::ROLE_ADMIN, RoleAuthorization::ACTION_MANAGE_STRIPE));
+    }
+
+    public function test_only_owner_and_admin_can_set_up_stripe(): void
+    {
+        $this->assertTrue($this->matrix->roleCan(User::ROLE_OWNER, RoleAuthorization::ACTION_SETUP_STRIPE));
+        $this->assertTrue($this->matrix->roleCan(User::ROLE_ADMIN, RoleAuthorization::ACTION_SETUP_STRIPE));
+
+        foreach ([User::ROLE_BOX_OFFICE, User::ROLE_ACCOUNTANT, User::ROLE_SCANNER] as $role) {
+            $this->assertFalse($this->matrix->roleCan($role, RoleAuthorization::ACTION_SETUP_STRIPE));
+        }
+    }
+
+    public function test_only_owner_can_manage_stripe_fees(): void
+    {
+        $this->assertTrue($this->matrix->roleCan(User::ROLE_OWNER, RoleAuthorization::ACTION_MANAGE_STRIPE));
+
+        foreach ([User::ROLE_ADMIN, User::ROLE_BOX_OFFICE, User::ROLE_ACCOUNTANT, User::ROLE_SCANNER] as $role) {
+            $this->assertFalse($this->matrix->roleCan($role, RoleAuthorization::ACTION_MANAGE_STRIPE));
+        }
     }
 
     public function test_box_office_permitted_set(): void
@@ -92,6 +116,7 @@ class RoleAuthorizationTest extends TestCase
         foreach ([
             RoleAuthorization::ACTION_MANAGE_SETTINGS,
             RoleAuthorization::ACTION_MANAGE_USERS,
+            RoleAuthorization::ACTION_SETUP_STRIPE,
             RoleAuthorization::ACTION_MANAGE_STRIPE,
             RoleAuthorization::ACTION_MANAGE_BILLING,
             RoleAuthorization::ACTION_MANAGE_GDPR,

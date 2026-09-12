@@ -89,7 +89,8 @@ class CompanyLegalDetailsTest extends TestCase
         $this->assertSame('Suite 2', $company->address_line_2);
         $this->assertSame('London', $company->city);
         $this->assertSame('EC1A 1BB', $company->postcode);
-        // Country is normalised to an upper-case ISO code.
+        // Self-signup is UK-only: there is no country field on the form and the
+        // registered address country is always set to GB.
         $this->assertSame('GB', $company->country);
         // New Companies remain active (the suspension gates key off suspended).
         $this->assertSame(Company::STATUS_ACTIVE, $company->status);

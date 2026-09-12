@@ -5,16 +5,18 @@ namespace App\Services;
 use App\Models\User;
 
 /**
- * The role permission matrix (design Property 6): maps each of the four Company
+ * The role permission matrix (design Property 6): maps each of the five Company
  * roles to the closed set of abstract actions it may perform, and answers
  * whether a given (role, action) pair is authorised.
  *
  * Permitted sets (Requirements 3.3–3.7):
  *   - Owner:       every Company action (the Owner is the account superuser and
  *                  can do anything a lower role can, in addition to the
- *                  Owner-only billing/Stripe/settings/user-management)
- *   - Admin:       manage Events, Ticket_Types, Orders (incl. cancel/refund/comp)
- *                  and GDPR data-subject handling
+ *                  Owner-only billing/Stripe-management/settings/user-management)
+ *   - Admin:       manage Events, Ticket_Types, Orders (incl. cancel/refund/comp),
+ *                  GDPR data-subject handling, and Stripe Connect *setup* (getting
+ *                  the account connected) — but NOT ongoing Stripe management
+ *                  (fee handling), which stays Owner-only
  *   - Box_Office:  manage Events, Ticket_Types, Orders (incl. cancel/refund/comp)
  *                  — a cut-down Admin with no Company settings or GDPR access
  *   - Accountant:  read-only reports/payouts
@@ -33,7 +35,17 @@ class RoleAuthorization
     // Owner-only actions.
     public const ACTION_MANAGE_BILLING = 'billing';
 
+    // Managing an already-connected Stripe account: changing how the platform
+    // fee is handled (Absorb vs Pass_On) and other post-setup billing levers.
+    // Owner-only — the Admin can get the account connected but not change how
+    // money is handled once it is.
     public const ACTION_MANAGE_STRIPE = 'stripe';
+
+    // Setting up / onboarding the Company's Stripe Connect account: viewing the
+    // connection status, starting Connect onboarding, and handling the return.
+    // Held by the Owner AND the Admin so an Admin can get payments connected,
+    // while ongoing management (fees) stays Owner-only via ACTION_MANAGE_STRIPE.
+    public const ACTION_SETUP_STRIPE = 'stripe_setup';
 
     public const ACTION_MANAGE_SETTINGS = 'settings';
 
@@ -102,6 +114,10 @@ class RoleAuthorization
             self::ACTION_MANAGE_GDPR,
             self::ACTION_VIEW_AUDIT_LOG,
             self::ACTION_RESET_SCANS,
+            // The Admin can connect the Company's Stripe account (onboarding),
+            // but NOT manage it afterwards (fee handling) — that stays Owner-only
+            // via ACTION_MANAGE_STRIPE.
+            self::ACTION_SETUP_STRIPE,
         ],
         // Box_Office is a cut-down Admin: it runs the box office (events,
         // ticket types, orders incl. cancel/refund/comp) but is NOT trusted
@@ -194,7 +210,8 @@ class RoleAuthorization
             'Handle GDPR requests' => self::ACTION_MANAGE_GDPR,
             'View the activity log' => self::ACTION_VIEW_AUDIT_LOG,
             'Manage company settings' => self::ACTION_MANAGE_SETTINGS,
-            'Manage Stripe & payouts setup' => self::ACTION_MANAGE_STRIPE,
+            'Connect Stripe (payments setup)' => self::ACTION_SETUP_STRIPE,
+            'Manage Stripe fees & payouts' => self::ACTION_MANAGE_STRIPE,
             'Manage billing' => self::ACTION_MANAGE_BILLING,
             'Manage the team' => self::ACTION_MANAGE_USERS,
         ];

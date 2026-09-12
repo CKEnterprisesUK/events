@@ -30,6 +30,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password;
 use Stripe\StripeClient;
 
 class AppServiceProvider extends ServiceProvider
@@ -157,6 +158,30 @@ class AppServiceProvider extends ServiceProvider
         $this->registerRateLimiters();
         $this->registerGraphMailTransport();
         $this->applyMailTransport();
+        $this->configurePasswordRules();
+    }
+
+    /**
+     * Define the default password policy applied everywhere the app validates a
+     * password via `Password::defaults()` (signup, password reset, profile
+     * password change). Passwords must be at least 8 characters, and outside
+     * of testing they are also checked against known data-breach corpora
+     * (`uncompromised`) so compromised passwords are rejected.
+     *
+     * We deliberately do not force mixed case / numbers / symbols: a long,
+     * memorable passphrase (e.g. three random words) is both stronger and more
+     * usable, which is the guidance shown on the forms. The breach check is
+     * skipped under `testing` so the suite never reaches the external HIBP API.
+     */
+    private function configurePasswordRules(): void
+    {
+        Password::defaults(function (): Password {
+            $rule = Password::min(8);
+
+            return $this->app->environment('testing')
+                ? $rule
+                : $rule->uncompromised();
+        });
     }
 
     /**

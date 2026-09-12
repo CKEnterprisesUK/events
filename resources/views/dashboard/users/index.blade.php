@@ -23,9 +23,10 @@
     <div class="panel">
         <div class="panel__head"><h2>What each role can do</h2></div>
         <p class="role-matrix__intro">
-            Only Owners and Admins can handle GDPR requests. Owners also manage
-            company settings, Stripe, billing and the team. Box office staff run
-            events, ticketing and orders without access to company settings.
+            Only Owners and Admins can handle GDPR requests and connect Stripe for
+            payments. Owners alone manage company settings, Stripe fees, billing
+            and the team. Box office staff run events, ticketing and orders without
+            access to company settings.
         </p>
         <div class="role-matrix__scroll">
             <table class="data-table role-matrix">

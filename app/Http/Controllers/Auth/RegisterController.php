@@ -75,7 +75,6 @@ class RegisterController extends Controller
             'address_line_2' => ['nullable', 'string', 'max:255'],
             'city' => ['required', 'string', 'max:255'],
             'postcode' => ['required', 'string', 'max:20'],
-            'country' => ['required', 'string', 'size:2'],
 
             // The Owner account.
             'name' => ['required', 'string', 'max:255'],
@@ -106,7 +105,10 @@ class RegisterController extends Controller
                 'address_line_2' => $validated['address_line_2'] ?? null,
                 'city' => $validated['city'],
                 'postcode' => $validated['postcode'],
-                'country' => strtoupper($validated['country']),
+                // Self-signup is UK-only, so the registered address country is
+                // always GB. There is no country field on the form; a
+                // Super_Admin can change it later if an org relocates.
+                'country' => 'GB',
             ]);
 
             return User::create([

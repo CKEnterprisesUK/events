@@ -651,6 +651,17 @@ Route::middleware('tenant')->group(function () {
         ->middleware('throttle:public')
         ->name('event.tickets.resend');
 
+    // Public "Report this event" from the Event page footer. Any visitor can
+    // flag an Event for abuse/misuse; the report is filed as an `abuse`-category
+    // support ticket for the platform operators and the support inbox is
+    // notified. Resolved within the active Company (foreign/unpublished Events
+    // 404) and rate-limited like the other public POSTs.
+    Route::post('/{companySlug}/{event}/report', [EventPageController::class, 'reportAbuse'])
+        ->where('companySlug', '[A-Za-z0-9-]+')
+        ->where('event', '[0-9]+')
+        ->middleware('throttle:public')
+        ->name('event.report-abuse');
+
     // Dedicated checkout step at `/{company-slug}/{event-id}/checkout/review`.
     // The public Event page handles discovery + ticket selection only, then
     // POSTs the chosen quantities here; this renders the checkout page where the

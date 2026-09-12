@@ -3,15 +3,18 @@
 namespace Tests\Feature;
 
 use App\Jobs\SendTicketEmailJob;
+use App\Mail\SupportRequestReceivedMail;
 use App\Models\Company;
 use App\Models\Event;
 use App\Models\Order;
+use App\Models\SupportRequest;
 use App\Models\TicketType;
 use App\Models\User;
-use Illuminate\Support\Facades\Queue;
 use App\Services\StorefrontListing;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 /**
@@ -345,7 +348,7 @@ class StorefrontAndEventPageTest extends TestCase
 
     public function test_resend_queues_ticket_emails_for_matching_confirmed_orders(): void
     {
-        \Illuminate\Support\Facades\Queue::fake();
+        Queue::fake();
 
         $company = Company::factory()->create();
         $event = Event::factory()->for($company)->published()->create();
@@ -367,12 +370,12 @@ class StorefrontAndEventPageTest extends TestCase
 
         $response->assertRedirect();
         $response->assertSessionHas('resend_status');
-        \Illuminate\Support\Facades\Queue::assertPushed(\App\Jobs\SendTicketEmailJob::class, 2);
+        Queue::assertPushed(SendTicketEmailJob::class, 2);
     }
 
     public function test_resend_does_not_queue_for_unmatched_email_but_still_confirms(): void
     {
-        \Illuminate\Support\Facades\Queue::fake();
+        Queue::fake();
 
         $company = Company::factory()->create();
         $event = Event::factory()->for($company)->published()->create();
@@ -389,12 +392,12 @@ class StorefrontAndEventPageTest extends TestCase
         // the email has a booking.
         $response->assertRedirect();
         $response->assertSessionHas('resend_status');
-        \Illuminate\Support\Facades\Queue::assertNothingPushed();
+        Queue::assertNothingPushed();
     }
 
     public function test_resend_ignores_unconfirmed_orders(): void
     {
-        \Illuminate\Support\Facades\Queue::fake();
+        Queue::fake();
 
         $company = Company::factory()->create();
         $event = Event::factory()->for($company)->published()->create();
@@ -412,12 +415,12 @@ class StorefrontAndEventPageTest extends TestCase
             'email' => 'pending@example.test',
         ])->assertRedirect();
 
-        \Illuminate\Support\Facades\Queue::assertNothingPushed();
+        Queue::assertNothingPushed();
     }
 
     public function test_resend_does_not_cross_event_or_company_boundaries(): void
     {
-        \Illuminate\Support\Facades\Queue::fake();
+        Queue::fake();
 
         $company = Company::factory()->create();
         $event = Event::factory()->for($company)->published()->create();
@@ -434,7 +437,7 @@ class StorefrontAndEventPageTest extends TestCase
             'email' => 'buyer@example.test',
         ])->assertRedirect();
 
-        \Illuminate\Support\Facades\Queue::assertNothingPushed();
+        Queue::assertNothingPushed();
     }
 
     public function test_resend_validates_the_email(): void
@@ -455,5 +458,91 @@ class StorefrontAndEventPageTest extends TestCase
         $this->post("/{$company->slug}/{$event->id}/resend", [
             'email' => 'buyer@example.test',
         ])->assertNotFound();
+    }
+
+    // ---- Report abuse --------------------------------------------------------
+
+    public function test_event_page_shows_report_this_event_control(): void
+    {
+        $company = Company::factory()->create();
+        $event = Event::factory()->for($company)->published()->create();
+
+        $response = $this->get("/{$company->slug}/{$event->id}");
+
+        $response->assertOk();
+        $response->assertSee('Report this event');
+    }
+
+    public function test_report_abuse_creates_an_abuse_support_ticket(): void
+    {
+        Mail::fake();
+
+        $company = Company::factory()->create();
+        $event = Event::factory()->for($company)->published()->create(['name' => 'Suspicious Gig']);
+
+        $response = $this->post("/{$company->slug}/{$event->id}/report", [
+            'reason' => 'Fraud or a scam',
+            'details' => 'This looks like a fake event stealing card details.',
+            'reporter_email' => 'Reporter@example.test',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('report_status');
+
+        $ticket = SupportRequest::withoutGlobalScopes()->latest('id')->first();
+        $this->assertNotNull($ticket);
+        $this->assertSame($company->id, $ticket->company_id);
+        $this->assertNull($ticket->user_id);
+        $this->assertSame(SupportRequest::CATEGORY_ABUSE, $ticket->category);
+        $this->assertSame(SupportRequest::STATUS_OPEN, $ticket->status);
+        $this->assertStringContainsString('Suspicious Gig', $ticket->subject);
+        $this->assertStringContainsString('Fraud or a scam', $ticket->message);
+        $this->assertStringContainsString('reporter@example.test', $ticket->message);
+
+        Mail::assertSent(SupportRequestReceivedMail::class);
+    }
+
+    public function test_report_abuse_works_without_a_reporter_email(): void
+    {
+        Mail::fake();
+
+        $company = Company::factory()->create();
+        $event = Event::factory()->for($company)->published()->create();
+
+        $this->post("/{$company->slug}/{$event->id}/report", [
+            'reason' => 'Something else',
+            'details' => 'Please take a look at this listing.',
+        ])->assertRedirect()->assertSessionHas('report_status');
+
+        $ticket = SupportRequest::withoutGlobalScopes()->latest('id')->first();
+        $this->assertNotNull($ticket);
+        $this->assertStringContainsString('not provided', $ticket->message);
+    }
+
+    public function test_report_abuse_validates_reason_and_details(): void
+    {
+        $company = Company::factory()->create();
+        $event = Event::factory()->for($company)->published()->create();
+
+        // Missing reason, too-short details, invalid email.
+        $this->post("/{$company->slug}/{$event->id}/report", [
+            'details' => 'short',
+            'reporter_email' => 'not-an-email',
+        ])->assertSessionHasErrors(['reason', 'details', 'reporter_email']);
+
+        $this->assertSame(0, SupportRequest::withoutGlobalScopes()->count());
+    }
+
+    public function test_report_abuse_on_unpublished_event_returns_404(): void
+    {
+        $company = Company::factory()->create();
+        $event = Event::factory()->for($company)->unpublished()->create();
+
+        $this->post("/{$company->slug}/{$event->id}/report", [
+            'reason' => 'Fraud or a scam',
+            'details' => 'This event should not be reportable.',
+        ])->assertNotFound();
+
+        $this->assertSame(0, SupportRequest::withoutGlobalScopes()->count());
     }
 }

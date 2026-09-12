@@ -98,32 +98,41 @@
 
     <div class="panel">
         <div class="panel__head"><h2>Who pays the fee</h2></div>
-        <form method="POST" action="{{ route('dashboard.stripe.fee-mode') }}" class="fee-mode-form">
-            @csrf
-            @method('PUT')
-            <p class="fee-mode-help">
-                Choose whether the platform fee is added onto the customer's total
-                or taken out of your ticket price. Changes apply to new orders only.
-            </p>
-            <label class="fee-option">
-                <input type="radio" name="fee_handling_mode" value="{{ \App\Models\Company::FEE_MODE_PASS_ON }}"
-                       @checked($feeMode === \App\Models\Company::FEE_MODE_PASS_ON)>
-                <span>
-                    <strong>Add the fee onto the ticket</strong>
-                    <span class="fee-option__desc">The customer pays the fee on top as a booking fee. You keep the full ticket price.</span>
-                </span>
-            </label>
-            <label class="fee-option">
-                <input type="radio" name="fee_handling_mode" value="{{ \App\Models\Company::FEE_MODE_ABSORB }}"
-                       @checked($feeMode === \App\Models\Company::FEE_MODE_ABSORB)>
-                <span>
-                    <strong>Absorb the fee myself</strong>
-                    <span class="fee-option__desc">The customer pays only the ticket price and the fee comes out of it.</span>
-                </span>
-            </label>
-            @error('fee_handling_mode')<p class="error">{{ $message }}</p>@enderror
-            <button type="submit" class="btn">Save fee handling</button>
-        </form>
+        @if ($canManage)
+            <form method="POST" action="{{ route('dashboard.stripe.fee-mode') }}" class="fee-mode-form">
+                @csrf
+                @method('PUT')
+                <p class="fee-mode-help">
+                    Choose whether the platform fee is added onto the customer's total
+                    or taken out of your ticket price. Changes apply to new orders only.
+                </p>
+                <label class="fee-option">
+                    <input type="radio" name="fee_handling_mode" value="{{ \App\Models\Company::FEE_MODE_PASS_ON }}"
+                           @checked($feeMode === \App\Models\Company::FEE_MODE_PASS_ON)>
+                    <span>
+                        <strong>Add the fee onto the ticket</strong>
+                        <span class="fee-option__desc">The customer pays the fee on top as a booking fee. You keep the full ticket price.</span>
+                    </span>
+                </label>
+                <label class="fee-option">
+                    <input type="radio" name="fee_handling_mode" value="{{ \App\Models\Company::FEE_MODE_ABSORB }}"
+                           @checked($feeMode === \App\Models\Company::FEE_MODE_ABSORB)>
+                    <span>
+                        <strong>Absorb the fee myself</strong>
+                        <span class="fee-option__desc">The customer pays only the ticket price and the fee comes out of it.</span>
+                    </span>
+                </label>
+                @error('fee_handling_mode')<p class="error">{{ $message }}</p>@enderror
+                <button type="submit" class="btn">Save fee handling</button>
+            </form>
+        @else
+            <div class="fee-mode-form">
+                <p class="fee-mode-help">
+                    The platform fee is currently {{ $feeModeLabel }}. Only the account
+                    Owner can change how the fee is handled.
+                </p>
+            </div>
+        @endif
     </div>
 
     @if ($connected)

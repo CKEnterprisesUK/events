@@ -132,16 +132,42 @@ class StripeConnectOnboardingTest extends TestCase
         $response->assertSee('charges_enabled');
     }
 
-    public function test_non_owner_company_user_is_denied_and_company_unchanged(): void
+    public function test_admin_can_set_up_stripe_but_not_see_fee_controls(): void
     {
-        // ACTION_MANAGE_STRIPE is Owner-only: an Admin is denied (403) and the
-        // Company's Stripe association is left unchanged.
+        // ACTION_SETUP_STRIPE is held by the Admin: an Admin can view the status
+        // page and drive onboarding, so payments can be connected without the
+        // Owner. But the Owner-only fee-handling controls are hidden from them.
+        $this->fakeStripe()->nextAccountId('acct_ADMINSETUP');
         $company = Company::factory()->create(['stripe_account_id' => null]);
         $admin = User::factory()->admin()->create(['company_id' => $company->id]);
 
-        $this->actingAs($admin)->get(route('dashboard.stripe.status'))->assertForbidden();
-        $this->actingAs($admin)->post(route('dashboard.stripe.start'))->assertForbidden();
-        $this->actingAs($admin)->get(route('dashboard.stripe.return'))->assertForbidden();
+        $status = $this->actingAs($admin)->get(route('dashboard.stripe.status'));
+        $status->assertOk();
+        $status->assertSee('Not connected');
+        // The fee-handling form is Owner-only; the Admin sees the read-only note.
+        $status->assertDontSee('Save fee handling');
+        $status->assertSee('Only the account');
+
+        $this->actingAs($admin)
+            ->post(route('dashboard.stripe.start'))
+            ->assertRedirect('https://connect.stripe.test/onboarding/acct_ADMINSETUP');
+
+        $this->assertDatabaseHas('companies', [
+            'id' => $company->id,
+            'stripe_account_id' => 'acct_ADMINSETUP',
+        ]);
+    }
+
+    public function test_role_without_stripe_setup_is_denied_and_company_unchanged(): void
+    {
+        // A Box_Office user holds neither ACTION_SETUP_STRIPE nor
+        // ACTION_MANAGE_STRIPE: denied (403) and the Company is left unchanged.
+        $company = Company::factory()->create(['stripe_account_id' => null]);
+        $boxOffice = User::factory()->boxOffice()->create(['company_id' => $company->id]);
+
+        $this->actingAs($boxOffice)->get(route('dashboard.stripe.status'))->assertForbidden();
+        $this->actingAs($boxOffice)->post(route('dashboard.stripe.start'))->assertForbidden();
+        $this->actingAs($boxOffice)->get(route('dashboard.stripe.return'))->assertForbidden();
 
         $this->assertDatabaseHas('companies', [
             'id' => $company->id,

@@ -37,7 +37,8 @@
                 </div>
                 <div class="field">
                     <label for="password">New password</label>
-                    <input id="password" type="password" name="password" required autocomplete="new-password">
+                    <input id="password" type="password" name="password" required autocomplete="new-password" minlength="8">
+                    <p class="hint">At least 8 characters. Tip: three random words make a strong, memorable password &mdash; for example <em>coffee-tractor-lantern</em>.</p>
                 </div>
                 <div class="field">
                     <label for="password_confirmation">Confirm new password</label>

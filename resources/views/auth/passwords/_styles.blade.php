@@ -31,6 +31,8 @@
     .field label { display: block; font-weight: 600; color: var(--ink); margin-bottom: .45rem; font-size: .93rem; }
     .field input { width: 100%; padding: .75rem .9rem; border: 1px solid #d5d7e0; border-radius: 6px; font-size: 1rem; font-family: var(--body-font); color: var(--ink); background: #fff; }
     .field input:focus { outline: none; border-color: var(--purple); box-shadow: 0 0 0 3px rgba(103,77,243,.12); }
+    .field .hint { margin: .5rem 0 0; font-size: .85rem; color: var(--muted); line-height: 1.5; }
+    .field .hint em { font-style: normal; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink); }
 
     .btn { display: inline-flex; align-items: center; justify-content: center; width: 100%; padding: .8rem 1.5rem; border-radius: 6px; font-weight: 600; font-size: 1rem; font-family: var(--body-font); cursor: pointer; border: none; background: var(--purple); color: #fff; transition: background .15s ease; }
     .btn:hover { background: var(--purple-dark); }

@@ -18,12 +18,17 @@ use Illuminate\Validation\Rule;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Owner-facing Stripe Connect dashboard: shows the Company's connection status,
- * starts Connect Standard onboarding, and handles the return from Stripe.
+ * Stripe Connect dashboard: shows the Company's connection status, starts
+ * Connect Standard onboarding, and handles the return from Stripe.
  * (Requirements 11.1, 11.2, 11.3, 11.5)
  *
- * Every action is gated on the Owner-only `ACTION_MANAGE_STRIPE` permission
- * (design → RoleAuthorization); a non-Owner Company_User is denied with an
+ * Authorisation is split between two permissions (design → RoleAuthorization):
+ *   - The onboarding/status flow (`show`, `start`, `return`) is gated on
+ *     `ACTION_SETUP_STRIPE`, held by the Owner AND the Admin, so an Admin can
+ *     get the Company's payments connected.
+ *   - Ongoing management (`updateFeeMode` — how the platform fee is handled) is
+ *     gated on the Owner-only `ACTION_MANAGE_STRIPE`.
+ * A Company_User without the relevant permission is denied with an
  * authorisation error and nothing changes. All Stripe interaction goes through
  * {@see StripePaymentService}, which is the fake in tests.
  */
@@ -37,13 +42,15 @@ class StripeConnectController extends Controller
     ) {}
 
     /**
-     * Show the Stripe connection status for the Owner's Company. When no
-     * account is connected the status is "not connected"; otherwise it reflects
-     * whether charges are enabled. (Requirements 11.3, 11.5)
+     * Show the Stripe connection status for the acting Company. When no account
+     * is connected the status is "not connected"; otherwise it reflects whether
+     * charges are enabled. Readable by anyone who can set up Stripe (Owner or
+     * Admin); `canManage` tells the view whether to also expose the Owner-only
+     * fee-handling controls. (Requirements 11.3, 11.5)
      */
     public function show(): View
     {
-        Gate::authorize(RoleAuthorization::ACTION_MANAGE_STRIPE);
+        Gate::authorize(RoleAuthorization::ACTION_SETUP_STRIPE);
 
         $company = $this->ownerCompany();
 
@@ -58,6 +65,9 @@ class StripeConnectController extends Controller
             // to the customer as a booking fee. (Requirements 12.1–12.4, 13.4, 13.5)
             'feePercent' => $this->fees->effectivePercent($company),
             'feeMode' => $company->fee_handling_mode,
+            // Whether the current user may change the fee handling (Owner-only).
+            // An Admin can view/connect Stripe but must not see the fee controls.
+            'canManage' => Gate::allows(RoleAuthorization::ACTION_MANAGE_STRIPE),
         ]);
     }
 
@@ -69,7 +79,7 @@ class StripeConnectController extends Controller
      */
     public function start(): RedirectResponse
     {
-        Gate::authorize(RoleAuthorization::ACTION_MANAGE_STRIPE);
+        Gate::authorize(RoleAuthorization::ACTION_SETUP_STRIPE);
 
         $company = $this->ownerCompany();
 
@@ -108,7 +118,7 @@ class StripeConnectController extends Controller
      */
     public function return(Request $request): RedirectResponse
     {
-        Gate::authorize(RoleAuthorization::ACTION_MANAGE_STRIPE);
+        Gate::authorize(RoleAuthorization::ACTION_SETUP_STRIPE);
 
         $company = $this->ownerCompany();
 

@@ -9,7 +9,7 @@
     // reveal the step that contains the first invalid field on reload.
     $stepFields = [
         1 => ['company_name', 'slug', 'legal_name', 'trading_name', 'organisation_type', 'company_number', 'charity_number', 'website', 'organisation_email', 'phone'],
-        2 => ['address_line_1', 'address_line_2', 'city', 'postcode', 'country'],
+        2 => ['address_line_1', 'address_line_2', 'city', 'postcode'],
         3 => ['name', 'email', 'password', 'agree_terms'],
     ];
 
@@ -168,15 +168,9 @@
                         <input id="postcode" type="text" name="postcode" value="{{ old('postcode') }}" required autocomplete="postal-code">
                         @error('postcode')<p class="error">{{ $message }}</p>@enderror
                     </div>
-
-                    <div class="field">
-                        <label for="country">Country</label>
-                        <input id="country" type="text" name="country" value="{{ old('country', 'GB') }}" maxlength="2" required autocomplete="country"
-                            pattern="[A-Za-z]{2}">
-                        <p class="hint">Two-letter code (ISO 3166-1). Defaults to GB.</p>
-                        @error('country')<p class="error">{{ $message }}</p>@enderror
-                    </div>
                 </div>
+
+                <p class="hint">We currently support UK-based organisations only, so your registered address is set to the United Kingdom.</p>
 
                 <div class="form-actions wizard-nav">
                     <button type="button" class="btn btn-outline" data-prev>Back</button>
@@ -206,13 +200,14 @@
                 <div class="field-row">
                     <div class="field">
                         <label for="password">Password</label>
-                        <input id="password" type="password" name="password" required autocomplete="new-password">
+                        <input id="password" type="password" name="password" required autocomplete="new-password" minlength="8">
+                        <p class="hint">At least 8 characters. Tip: three random words make a strong, memorable password &mdash; for example <em>coffee-tractor-lantern</em>. Avoid names, dates and common words.</p>
                         @error('password')<p class="error">{{ $message }}</p>@enderror
                     </div>
 
                     <div class="field">
                         <label for="password_confirmation">Confirm password</label>
-                        <input id="password_confirmation" type="password" name="password_confirmation" required autocomplete="new-password">
+                        <input id="password_confirmation" type="password" name="password_confirmation" required autocomplete="new-password" minlength="8">
                     </div>
                 </div>
 
@@ -270,6 +265,39 @@
         if (orgType) {
             orgType.addEventListener('change', syncConditionalFields);
             syncConditionalFields();
+        }
+
+        // ---- Storefront slug sanitising ----
+        // Keep the slug field valid and friendly as the user types: lowercase
+        // everything, replace spaces and any disallowed characters with a
+        // hyphen, and collapse runs of hyphens. This mirrors the server-side
+        // CompanySlug rule (lowercase letters, numbers and hyphens only) so the
+        // value the user sees is exactly what will be accepted.
+        var slug = form.querySelector('#slug');
+        if (slug) {
+            var sanitiseSlug = function (raw) {
+                return String(raw)
+                    .toLowerCase()
+                    .replace(/[^a-z0-9-]+/g, '-') // spaces + disallowed chars -> hyphen
+                    .replace(/-{2,}/g, '-')       // collapse repeated hyphens
+                    .replace(/^-+/, '');          // no leading hyphen
+            };
+            slug.addEventListener('input', function () {
+                var start = slug.selectionStart;
+                var before = slug.value;
+                var cleaned = sanitiseSlug(before);
+                if (cleaned !== before) {
+                    slug.value = cleaned;
+                    // Keep the caret roughly where it was after cleaning.
+                    var delta = before.length - cleaned.length;
+                    var pos = Math.max(0, (start || cleaned.length) - delta);
+                    try { slug.setSelectionRange(pos, pos); } catch (e) {}
+                }
+            });
+            // Drop any trailing hyphen once the user leaves the field.
+            slug.addEventListener('blur', function () {
+                slug.value = slug.value.replace(/-+$/, '');
+            });
         }
 
         // ---- Step navigation ----

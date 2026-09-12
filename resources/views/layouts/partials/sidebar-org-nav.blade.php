@@ -55,7 +55,7 @@
         <a class="nav-link {{ $navActive('dashboard.scan.*') ? 'active' : '' }}" @if($navActive('dashboard.scan.*')) aria-current="page" @endif href="{{ route('dashboard.scan.index') }}"><x-icon name="scan" class="nav-ico" /> Scan tickets</a>
     @endcan
 
-    @canany(['settings', 'stripe', 'users'])
+    @canany(['settings', 'stripe_setup', 'users'])
         <p class="nav-section">Company</p>
         @can('users')
             <a class="nav-link {{ $navActive('dashboard.users.*') ? 'active' : '' }}" @if($navActive('dashboard.users.*')) aria-current="page" @endif href="{{ route('dashboard.users.index') }}"><x-icon name="team" class="nav-ico" /> Team</a>
@@ -66,7 +66,7 @@
                  an Event, so it must not mark Settings active. --}}
             <a class="nav-link {{ $navActive('dashboard.settings.*', 'dashboard.branding.edit', 'dashboard.branding.update') ? 'active' : '' }}" @if($navActive('dashboard.settings.*', 'dashboard.branding.edit', 'dashboard.branding.update')) aria-current="page" @endif href="{{ route('dashboard.branding.edit') }}"><x-icon name="settings" class="nav-ico" /> Settings</a>
         @endcan
-        @can('stripe')
+        @can('stripe_setup')
             <a class="nav-link {{ $navActive('dashboard.stripe.*') ? 'active' : '' }}" @if($navActive('dashboard.stripe.*')) aria-current="page" @endif href="{{ route('dashboard.stripe.status') }}"><x-icon name="payments" class="nav-ico" /> Payments</a>
         @endcan
     @endcanany

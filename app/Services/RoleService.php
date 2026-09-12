@@ -8,7 +8,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Enforces the four-role model and the single-Owner invariant on role
+ * Enforces the closed five-role model and the single-Owner invariant on role
  * assignment, removal, and demotion. (Requirements 3.1, 3.2, 4.5)
  *
  * The invariant: a Company must always have exactly one Owner. Any operation
@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\DB;
 class RoleService
 {
     /**
-     * Assign a role to a Company_User, enforcing the four-role set and the
+     * Assign a role to a Company_User, enforcing the closed role set and the
      * single-Owner invariant.
      *
      * Assigning `owner` is treated as an Owner *transfer*: it is rejected when a
@@ -178,7 +178,7 @@ class RoleService
     }
 
     /**
-     * Reject any role outside the closed four-role set. (Requirement 3.1)
+     * Reject any role outside the closed five-role set. (Requirement 3.1)
      *
      * @throws RoleAssignmentException
      */
