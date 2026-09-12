@@ -100,6 +100,13 @@ class EventPageController extends Controller
                     'availability_status' => $this->availabilityStatus($type, $available),
                     'sale_state' => $this->saleState($type, $now),
                     'on_sale' => $type->isOnSaleAt($now),
+                    // Human-readable "on sale" date for a not-yet-open type with
+                    // an explicit future start (e.g. "8am on Tues 25th June",
+                    // UTC). Null when there is no concrete date to show — either
+                    // the type is already open/ended, or its "not yet" state is
+                    // only because the Event is unpublished (start = publication,
+                    // which has no fixed date).
+                    'sale_starts_label' => $this->saleStartsLabel($type, $now),
                 ];
             });
 
@@ -298,6 +305,46 @@ class EventPageController extends Controller
         }
 
         return 'on_sale';
+    }
+
+    /**
+     * Build the display string for when a not-yet-open Ticket_Type goes on
+     * sale, formatted in UTC as e.g. "8am on Tues 25th June" (on-the-hour times
+     * drop the ":00").
+     *
+     * Returns null when there is nothing concrete to show: the type is already
+     * on sale or ended, or its "not yet" state comes only from an unpublished
+     * Event (whose effective start is publication — {@see saleState} — which
+     * has no fixed date). We only surface a date when `sale_starts_at` is an
+     * explicit future instant.
+     */
+    private function saleStartsLabel(TicketType $type, Carbon $now): ?string
+    {
+        $start = $type->sale_starts_at;
+
+        if ($start === null || $now->greaterThanOrEqualTo($start)) {
+            return null;
+        }
+
+        $start = $start->copy()->utc();
+
+        // Time: "8am" on the hour, otherwise "8:30am". Carbon `g:ia` yields
+        // "8:00am"; strip the ":00" for whole hours.
+        $time = $start->minute === 0
+            ? $start->format('ga')
+            : $start->format('g:ia');
+
+        // Day abbreviation: the example uses "Tues", but Carbon's `D` gives
+        // "Tue". Map the two that differ from a simple 3-letter cut.
+        $dayAbbr = [
+            'Tue' => 'Tues',
+            'Thu' => 'Thurs',
+        ][$start->format('D')] ?? $start->format('D');
+
+        // e.g. "25th June".
+        $date = $start->format('jS F');
+
+        return "{$time} on {$dayAbbr} {$date}";
     }
 
     /**

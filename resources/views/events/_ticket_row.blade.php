@@ -30,7 +30,11 @@
             @if ($type['sold_out'])
                 Sold out
             @elseif ($type['sale_state'] === 'not_yet')
-                Not yet on sale
+                @if (! empty($type['sale_starts_label']))
+                    Tickets go on sale at {{ $type['sale_starts_label'] }}
+                @else
+                    Not yet on sale
+                @endif
             @elseif ($type['sale_state'] === 'ended')
                 Sale ended
             @elseif ($type['sale_state'] === 'on_sale')
