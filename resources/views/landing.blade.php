@@ -48,8 +48,12 @@
 
             <div class="mkt-hero__visual">
                 {{-- Lightweight, real-UI-flavoured storefront preview built from
-                     existing styling primitives — not a dense illustration. --}}
-                <div class="mkt-preview" role="img" aria-label="Preview of a branded event ticket storefront">
+                     existing styling primitives — not a dense illustration. It
+                     is a non-interactive illustration, so the whole card links
+                     through to "How it works" rather than exposing controls
+                     (like the ticket "Continue") that don't do anything here. --}}
+                <a class="mkt-preview" href="{{ route('how-it-works') }}"
+                   aria-label="See how selling tickets works">
                     <div class="mkt-preview__bar" aria-hidden="true">
                         <span class="mkt-preview__dot"></span>
                         <span class="mkt-preview__dot"></span>
@@ -76,9 +80,9 @@
                             <span class="mkt-preview__price">£25.00</span>
                         </div>
 
-                        <div class="mkt-preview__cta">Continue</div>
+                        <div class="mkt-preview__cta">See how it works →</div>
                     </div>
-                </div>
+                </a>
             </div>
         </div>
     </section>
