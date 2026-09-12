@@ -3,101 +3,28 @@
 # cPanel Git Version Control — deployment tasks (pre-prod subdomain)
 # =============================================================================
 #
-# WHAT THIS IS
-#   cPanel's "Git Version Control" runs these `tasks` on the host every time the
-#   tracked branch is deployed (Manage → Pull or Deploy → "Deploy HEAD Commit").
-#   This is what turns "git push + deploy" into "migrations applied" WITHOUT
-#   SSH.
+# INTENTIONALLY MINIMAL — no tasks that write into the checkout.
 #
-# LAYOUT: IN-PLACE (single directory)
-#   On this account the repository checkout IS the live app directory:
+# WHY: earlier versions ran migrate/seed/cache here on "Deploy HEAD Commit".
+# Those steps wrote files into the working tree (caches, logs) and the shared
+# host also drifts file permissions, which left the checkout "dirty" and
+# blocked the NEXT deploy — forcing a repeated delete/re-add of the repo. The
+# host also disables proc_open AND shell_exec, so there is no reliable way to
+# self-clean the tree from a deploy task.
 #
-#     Repository Path : /home/ckent/preprod.events.ckent.uk
-#     Subdomain       : preprod.events.ckent.uk (served from this dir's public/)
-#     Branch          : preprod
+# NEW WORKFLOW (no dirty-tree loop):
+#   1. git push
+#   2. cPanel Git → "Update from Remote"   ← pulls code, runs NO tasks, so it
+#                                             cannot dirty the working tree
+#   3. Log in as Super_Admin and open  /admin/ops  → click "Run migrations"
+#      and/or "Rebuild sample data". These run migrate/seed IN-PROCESS (no
+#      shell, no deploy), guarded to non-production. See PREPROD.md.
 #
-#   Because the checkout and the served app are the same directory, there is
-#   NOTHING to copy — cPanel updates the files in place when it deploys, and we
-#   simply run artisan right here. `deployment.tasks` run from the repository
-#   root, so relative `artisan` resolves to this app.
-#
-# PRE-PROD ONLY
-#   This is the pre-prod subdomain, where a fresh database makes real Laravel
-#   migrations safe as the single source of truth. Production applies schema by
-#   hand via phpMyAdmin (see DEPLOYMENT.md) — do NOT add this file to the prod
-#   repo/branch.
-#
-# IMPORTANT NOTES
-#   * `.env` and `public/storage` are host-only and NOT in git, so a deploy
-#     never touches them — no excludes needed with the in-place layout.
-#   * `vendor/` is COMMITTED (see .gitignore) because the host cannot run
-#     `composer install`. So there is deliberately NO composer step here.
-#   * The app renders server-side Blade with inline CSS and has NO build step,
-#     so there is no `npm` / asset compilation here either.
-#   * We do NOT run `schedule:run` or anything that spawns a child process:
-#     shared cPanel disables `proc_open`. `migrate` and the cache commands are
-#     safe because they run in-process.
-#   * `migrate --force` is required because APP_ENV=production suppresses the
-#     interactive confirmation prompt (there is no TTY on deploy).
-#   * PHP CLI is the account's ea-php85 binary; adjust if the subdomain runs a
-#     different version in cPanel → MultiPHP Manager.
+# A valid .cpanel.yml must still exist for cPanel to manage the repo, so this
+# file stays — it simply does nothing on deploy. If you ever DO click "Deploy
+# HEAD Commit", the empty task list is a safe no-op.
 # =============================================================================
 
 deployment:
   tasks:
-    - export APPPATH=/home/ckent/preprod.events.ckent.uk
-    - export PHP=/opt/cpanel/ea-php85/root/usr/bin/php
-    - export LOG="$APPPATH"/storage/logs/deploy.log
-
-    # Timestamp this deploy run in a log we can read from File Manager (no SSH).
-    - echo "=== deploy $(date) commit ${CPANEL_GIT_HEAD:-unknown} ===" >> "$LOG" 2>&1 || true
-
-    # ---- Keep the checkout CLEAN so cPanel can always deploy next time -------
-    # cPanel refuses to deploy if the working tree has uncommitted changes. The
-    # deploy itself, PHP, and the shared-host filesystem all touch tracked files
-    # (most often permission/mode drift), which dirties the tree and blocks the
-    # NEXT deploy — the reason you kept having to delete and re-add the repo.
-    #
-    # Fix it at the source, every run:
-    #   * core.fileMode false → git stops treating permission-bit changes as
-    #     modifications (the usual cause on shared hosting).
-    #   * checkout -- . → discard any drift to TRACKED files so the tree matches
-    #     the commit. This does NOT touch untracked/ignored files, so .env,
-    #     storage/, and bootstrap/cache are all safe. We deliberately do NOT run
-    #     `git clean`, so nothing untracked is ever deleted.
-    - git -C "$APPPATH" config core.fileMode false >> "$LOG" 2>&1 || true
-    - git -C "$APPPATH" checkout -- . >> "$LOG" 2>&1 || true
-    - echo "--- git status after clean ---" >> "$LOG" 2>&1
-    - git -C "$APPPATH" status --short >> "$LOG" 2>&1 || true
-
-    # Clear any stale cached config FIRST, then migrate against the LIVE .env
-    # (do NOT cache config before migrate — a wrong/partial .env at cache time
-    # gets baked in and migrate then runs on the wrong connection, e.g. the
-    # sqlite fallback instead of mysql).
-    - $PHP "$APPPATH"/artisan config:clear   >> "$LOG" 2>&1 || true
-
-    # Show EXACTLY what DB config Laravel resolves from .env, so the log proves
-    # whether it is really pointing at mysql + your prefixed database. If this
-    # prints "sqlite", the .env is not being read as expected — fix .env, do
-    # NOT proceed.
-    - echo "--- resolved DB config ---" >> "$LOG" 2>&1
-    - $PHP "$APPPATH"/artisan tinker --execute='echo "connection=".config("database.default")." host=".config("database.connections.".config("database.default").".host")." database=".config("database.connections.".config("database.default").".database").PHP_EOL;' >> "$LOG" 2>&1 || true
-
-    # Migrate against the live .env. Short socket timeout so a bad DB fails fast
-    # instead of hanging the deploy. `|| echo` keeps a failed migrate from
-    # wedging the deploy; the reason is captured above in this log.
-    - $PHP -d default_socket_timeout=10 "$APPPATH"/artisan migrate --force >> "$LOG" 2>&1 || echo "MIGRATE FAILED — check the 'resolved DB config' line above and your .env" >> "$LOG"
-
-    # Seed sample data + the known test logins on a FRESH (empty) database.
-    # `preprod:seed` self-guards: it refuses on production and refuses unless
-    # the resolved connection is really mysql/mariadb (not the sqlite
-    # fallback), and it skips silently once the DB already has data — so it is
-    # safe to leave here across repeated deploys. To force a full rebuild,
-    # deploy once with `--fresh` appended, then revert.
-    - $PHP "$APPPATH"/artisan preprod:seed >> "$LOG" 2>&1 || echo "SEED SKIPPED/FAILED — see resolved DB config above" >> "$LOG"
-
-    # Cache config/routes/views LAST — only after migrate has run against the
-    # live .env — so we never pin a bad config before the DB is confirmed.
-    - $PHP "$APPPATH"/artisan config:cache    >> "$LOG" 2>&1 || true
-    - $PHP "$APPPATH"/artisan route:cache      >> "$LOG" 2>&1 || true
-    - $PHP "$APPPATH"/artisan view:cache       >> "$LOG" 2>&1 || true
+    - /bin/true

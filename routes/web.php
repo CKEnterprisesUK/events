@@ -46,6 +46,7 @@ use App\Http\Controllers\SuperAdmin\ReservedSlugController as SuperAdminReserved
 use App\Http\Controllers\SuperAdmin\SettingsController as SuperAdminSettingsController;
 use App\Http\Controllers\SuperAdmin\StripeAccountController as SuperAdminStripeAccountController;
 use App\Http\Controllers\SuperAdmin\SupportRequestController as SuperAdminSupportRequestController;
+use App\Http\Controllers\SuperAdmin\OpsController as SuperAdminOpsController;
 use App\Http\Controllers\SuperAdmin\SystemHealthController as SuperAdminSystemHealthController;
 use App\Http\Controllers\SuperAdmin\TransactionController as SuperAdminTransactionController;
 use App\Http\Controllers\TicketTypeController;
@@ -269,6 +270,10 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
         // recovery-code regeneration require the current password.
         Route::post('/profile/two-factor', [TwoFactorController::class, 'enable'])
             ->withoutMiddleware('dashboard.tenant')->name('profile.two-factor.enable');
+        Route::get('/profile/two-factor/setup', [TwoFactorController::class, 'setup'])
+            ->withoutMiddleware('dashboard.tenant')->name('profile.two-factor.setup');
+        Route::get('/profile/two-factor/qr', [TwoFactorController::class, 'qr'])
+            ->withoutMiddleware('dashboard.tenant')->name('profile.two-factor.qr');
         Route::post('/profile/two-factor/confirm', [TwoFactorController::class, 'confirm'])
             ->withoutMiddleware('dashboard.tenant')->name('profile.two-factor.confirm');
         Route::delete('/profile/two-factor', [TwoFactorController::class, 'disable'])
@@ -622,6 +627,18 @@ Route::middleware(['auth', 'super.admin', 'session.timeout'])
         // jobs and cache — so a stalled worker or broken dependency is visible
         // rather than silently backing up ticket emails / webhook processing.
         Route::get('/system', [SuperAdminSystemHealthController::class, 'index'])->name('system.index');
+
+        // Pre-prod database operations (migrate / reseed) run IN-PROCESS from an
+        // authenticated Super_Admin request. Exists ONLY off-production: the
+        // host has no terminal and disables proc_open/shell_exec, and cPanel
+        // "Deploy" keeps dirtying the git checkout, so this is the reliable,
+        // no-terminal way to apply schema and rebuild sample data. Each action
+        // also refuses in production defensively. (Pre-prod tooling)
+        if (! app()->environment('production')) {
+            Route::get('/ops', [SuperAdminOpsController::class, 'index'])->name('ops.index');
+            Route::post('/ops/migrate', [SuperAdminOpsController::class, 'migrate'])->name('ops.migrate');
+            Route::post('/ops/reseed', [SuperAdminOpsController::class, 'reseed'])->name('ops.reseed');
+        }
 
         // Support ticket queue: the operator view of every in-dashboard
         // "Contact support" request across the whole Platform. Deliberately
