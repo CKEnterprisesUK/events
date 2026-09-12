@@ -216,6 +216,49 @@ class BrandingManagementTest extends TestCase
         $this->get(route('dashboard.branding.edit'))->assertRedirect(route('login'));
     }
 
+    // ---- Impersonation (Super_Admin jumped into a tenant) --------------------
+
+    public function test_impersonating_super_admin_sees_the_impersonated_companys_branding(): void
+    {
+        // Regression: while impersonating, the branding screen must show the
+        // impersonated Company's settings — resolved from the bound tenant —
+        // not the Super_Admin's own (they have none).
+        Storage::fake('public');
+        $superAdmin = User::factory()->superAdmin()->create();
+        $company = Company::factory()->create([
+            'primary_colour' => '#ABCDEF',
+            'logo_path' => 'branding/logos/tenant.png',
+        ]);
+
+        $response = $this->actingAs($superAdmin)
+            ->withSession([\App\Http\Controllers\SuperAdmin\ImpersonationController::SESSION_KEY => $company->id])
+            ->get(route('dashboard.branding.edit'));
+
+        $response->assertOk();
+        $response->assertSee('#ABCDEF');
+        $response->assertSee('tenant.png');
+    }
+
+    public function test_impersonating_super_admin_edits_the_impersonated_company_not_their_own(): void
+    {
+        // Regression: a saved branding change must land on the impersonated
+        // Company, not the acting Super_Admin's account.
+        $superAdmin = User::factory()->superAdmin()->create();
+        $company = Company::factory()->create(['primary_colour' => null]);
+
+        $this->actingAs($superAdmin)
+            ->withSession([\App\Http\Controllers\SuperAdmin\ImpersonationController::SESSION_KEY => $company->id])
+            ->put(route('dashboard.branding.update'), $this->orgFields([
+                'primary_colour' => '#123456',
+                'terms_text' => 'Tenant terms.',
+            ]))
+            ->assertRedirect(route('dashboard.branding.edit'));
+
+        $fresh = $company->fresh();
+        $this->assertSame('#123456', $fresh->primary_colour);
+        $this->assertSame('Tenant terms.', $fresh->terms_text);
+    }
+
     // ---- BrandingResolver ----------------------------------------------------
 
     public function test_resolver_returns_company_branding_for_storefront(): void

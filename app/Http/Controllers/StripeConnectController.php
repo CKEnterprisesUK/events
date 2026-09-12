@@ -8,6 +8,7 @@ use App\Services\AuditLogger;
 use App\Services\FeeCalculationService;
 use App\Services\RoleAuthorization;
 use App\Services\Stripe\StripePaymentService;
+use App\Services\TenantContext;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,6 +33,7 @@ class StripeConnectController extends Controller
         private readonly StripePaymentService $stripe,
         private readonly FeeCalculationService $fees,
         private readonly AuditLogger $audit,
+        private readonly TenantContext $tenantContext,
     ) {}
 
     /**
@@ -169,13 +171,20 @@ class StripeConnectController extends Controller
     }
 
     /**
-     * The Owner's own Company. Authenticated Company_Users are scoped to their
-     * own Company; an Owner without a Company (should not happen for this
-     * Owner-gated surface) yields a 404 rather than acting on nothing.
+     * The Company currently being acted on.
+     *
+     * This is the tenant bound onto {@see TenantContext} by `dashboard.tenant`:
+     * the authenticated Owner's own Company OR — for a Super_Admin who has
+     * jumped into a tenant — the impersonated Company. Using the resolved tenant
+     * (rather than `Auth::user()->company`) ensures an impersonating Super_Admin
+     * views and changes the impersonated Company's Stripe connection, not their
+     * own. Falls back to the user's own Company for safety; a request with no
+     * acting Company (should not happen on this Owner-gated surface) yields a
+     * 404 rather than acting on nothing.
      */
     private function ownerCompany(): Company
     {
-        $company = Auth::user()?->company;
+        $company = $this->tenantContext->company() ?? Auth::user()?->company;
 
         if (! $company instanceof Company) {
             throw new NotFoundHttpException;

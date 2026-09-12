@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\Ticket;
 use App\Services\EventReportService;
 use App\Services\RoleAuthorization;
+use App\Services\TenantContext;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -60,7 +61,26 @@ class ReportController extends Controller
      */
     private const CONFIRMED_STATUSES = EventReportService::CONFIRMED_STATUSES;
 
-    public function __construct(private readonly EventReportService $reports) {}
+    public function __construct(
+        private readonly EventReportService $reports,
+        private readonly TenantContext $tenantContext,
+    ) {}
+
+    /**
+     * The currency of the Company currently being acted on.
+     *
+     * Reads the tenant bound onto {@see TenantContext} by `dashboard.tenant` —
+     * the user's own Company OR, for an impersonating Super_Admin, the Company
+     * they have jumped into — so the reported figures carry the impersonated
+     * Company's currency rather than the admin's own. Falls back to the user's
+     * own Company, then GBP.
+     */
+    private function currency(): string
+    {
+        $company = $this->tenantContext->company() ?? Auth::user()?->company;
+
+        return (string) ($company?->currency ?? 'GBP');
+    }
 
     /**
      * The Company's sales/revenue report plus payout information, scoped to the
@@ -75,7 +95,7 @@ class ReportController extends Controller
         return view('dashboard.reports.index', [
             'totals' => $this->companyTotals($confirmedOrders),
             'perEvent' => $this->perEventBreakdown($confirmedOrders),
-            'currency' => (string) (Auth::user()?->company?->currency ?? 'GBP'),
+            'currency' => $this->currency(),
         ]);
     }
 
@@ -95,7 +115,7 @@ class ReportController extends Controller
         $confirmedOrders = $this->confirmedOrders();
         $totals = $this->companyTotals($confirmedOrders);
         $perEvent = $this->perEventBreakdown($confirmedOrders);
-        $currency = (string) (Auth::user()?->company?->currency ?? 'GBP');
+        $currency = $this->currency();
 
         $filename = 'sales-report-'.now()->format('Y-m-d').'.csv';
 

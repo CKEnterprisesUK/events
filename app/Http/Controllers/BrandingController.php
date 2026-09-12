@@ -9,6 +9,7 @@ use App\Services\Branding\BrandingResolver;
 use App\Services\BrandingImageStore;
 use App\Services\EventReadiness;
 use App\Services\RoleAuthorization;
+use App\Services\TenantContext;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -57,6 +58,7 @@ class BrandingController extends Controller
         private readonly BrandingResolver $resolver,
         private readonly BrandingImageStore $imageStore,
         private readonly EventReadiness $readiness,
+        private readonly TenantContext $tenantContext,
     ) {}
 
     // ---- Company-level branding (Owner, ACTION_MANAGE_SETTINGS) --------------
@@ -243,14 +245,20 @@ class BrandingController extends Controller
     // ---- Helpers -------------------------------------------------------------
 
     /**
-     * The authenticated Company_User's own Company. An authenticated
-     * Company_User is always scoped to their own Company; a user without one
-     * (should not reach this Owner-gated surface) yields a 404 rather than
-     * acting on nothing.
+     * The Company currently being acted on.
+     *
+     * This is the tenant bound onto {@see TenantContext} by `dashboard.tenant`,
+     * which is the authenticated Company_User's own Company OR — for a
+     * Super_Admin who has jumped into a tenant — the impersonated Company. Using
+     * the resolved tenant (rather than `Auth::user()->company`) ensures an
+     * impersonating Super_Admin edits the impersonated Company's settings, not
+     * their own. Falls back to the user's own Company for safety, and a request
+     * with no acting Company (should not reach this Owner-gated surface) yields
+     * a 404 rather than acting on nothing.
      */
     private function currentCompany(): Company
     {
-        $company = Auth::user()?->company;
+        $company = $this->tenantContext->company() ?? Auth::user()?->company;
 
         if (! $company instanceof Company) {
             throw new NotFoundHttpException;
