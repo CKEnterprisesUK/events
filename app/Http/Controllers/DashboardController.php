@@ -90,12 +90,16 @@ class DashboardController extends Controller
         $confirmedOrders = (clone $ordersQuery)->count();
         $grossSalesMinor = (int) (clone $ordersQuery)->sum('ticket_subtotal_minor');
 
-        // Net to company (payout) = collected order total less the platform's
-        // application fee — the direct-charge skim. Mirrors ReportController's
-        // definition exactly so the dashboard and the reports page agree.
+        // Net payout = collected order total less BOTH the platform's application
+        // fee (our direct-charge skim) AND the actual Stripe card-processing fee
+        // taken inside the connected account. Mirrors ReportController exactly so
+        // the dashboard and the reports page agree. stripe_fee_minor is nullable
+        // (not yet captured), so SUM treats a null as 0 and the figure fills in
+        // as fees land/are backfilled. (Truthful-payout)
         $orderTotalMinor = (int) (clone $ordersQuery)->sum('order_total_minor');
         $applicationFeesMinor = (int) (clone $ordersQuery)->sum('application_fee_minor');
-        $netToCompanyMinor = $orderTotalMinor - $applicationFeesMinor;
+        $stripeFeesMinor = (int) (clone $ordersQuery)->sum('stripe_fee_minor');
+        $netPayoutMinor = $orderTotalMinor - $applicationFeesMinor - $stripeFeesMinor;
 
         // Tickets sold: valid tickets on the company's confirmed orders. Voided
         // tickets (from a later cancel/refund) do not count. Scoped explicitly
@@ -179,7 +183,8 @@ class DashboardController extends Controller
                 'confirmed_orders' => $confirmedOrders,
                 'gross_sales_minor' => $grossSalesMinor,
                 'tickets_sold' => $ticketsSold,
-                'net_to_company_minor' => $netToCompanyMinor,
+                'stripe_fees_minor' => $stripeFeesMinor,
+                'net_payout_minor' => $netPayoutMinor,
             ],
             'recentEvents' => $recentEvents,
             'upcomingEvents' => $upcomingEvents,

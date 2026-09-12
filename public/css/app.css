@@ -123,6 +123,21 @@ h3 { font-size: 1.0625rem; color: var(--ink); font-weight: 700; }
 }
 
 .hint { font-size: 0.8125rem; color: var(--muted); margin: 0.25rem 0 0; }
+
+/* Current hero/logo image preview inside upload fields. Constrain the thumbnail
+   so a full-resolution upload doesn't render at its natural (huge) size. */
+.poster-preview { margin-bottom: 0.5rem; }
+.poster-thumb {
+    display: block;
+    max-width: 320px;
+    width: 100%;
+    height: auto;
+    max-height: 180px;
+    object-fit: cover;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+
 .error { color: #b91c1c; font-size: 0.875rem; margin-top: 0.25rem; }
 .status {
     background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46;

@@ -41,6 +41,83 @@
               integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
               crossorigin="">
     @endif
+
+    @php
+        $seoCanonical = route('event.page', [
+            'companySlug' => $company->slug,
+            'event' => $event->getKey(),
+        ]);
+        $seoImage = $branding->hasPoster()
+            ? \Illuminate\Support\Facades\Storage::disk('public')->url($branding->posterPath)
+            : ($branding->hasLogo()
+                ? \Illuminate\Support\Facades\Storage::disk('public')->url($branding->logoPath)
+                : null);
+        $seoDescription = $event->description
+            ?: ($event->venue
+                ? $event->name.' at '.$event->venue.'. Book tickets now.'
+                : 'Book tickets for '.$event->name.'.');
+    @endphp
+    @include('partials.seo-meta', [
+        'seoTitle' => $event->name.' · '.$sellerName,
+        'seoDescription' => $seoDescription,
+        'seoCanonical' => $seoCanonical,
+        'seoImage' => $seoImage,
+        'seoType' => 'article',
+    ])
+
+    {{-- schema.org Event structured data for rich results / Google Events.
+         Only fields we can populate authoritatively are emitted (no endDate
+         column exists, so it is omitted). Offers reflect the current lowest
+         purchasable price and whether anything is on sale right now. --}}
+    @php
+        $eventLd = array_filter([
+            '@context' => 'https://schema.org',
+            '@type' => 'Event',
+            'name' => $event->name,
+            'description' => $event->description
+                ? trim(preg_replace('/\s+/', ' ', strip_tags($event->description)))
+                : null,
+            'url' => $seoCanonical,
+            'startDate' => $event->starts_at?->toIso8601String(),
+            'image' => $seoImage,
+            'eventStatus' => $event->cancelled_at
+                ? 'https://schema.org/EventCancelled'
+                : 'https://schema.org/EventScheduled',
+            'eventAttendanceMode' => $event->isOnline()
+                ? 'https://schema.org/OnlineEventAttendanceMode'
+                : 'https://schema.org/OfflineEventAttendanceMode',
+            'organizer' => array_filter([
+                '@type' => 'Organization',
+                'name' => $sellerName,
+                'url' => $company->website ?: route('storefront', ['companySlug' => $company->slug]),
+            ], fn ($v) => $v !== null && $v !== ''),
+            'location' => $event->isOnline()
+                ? array_filter([
+                    '@type' => 'VirtualLocation',
+                    'url' => $seoCanonical,
+                ], fn ($v) => $v !== null && $v !== '')
+                : array_filter([
+                    '@type' => 'Place',
+                    'name' => $event->venue ?: null,
+                    'address' => $event->address ?: $event->venue ?: null,
+                ], fn ($v) => $v !== null && $v !== ''),
+        ], fn ($v) => $v !== null && $v !== '' && $v !== []);
+
+        if ($bookNowFromMinor !== null) {
+            $eventLd['offers'] = array_filter([
+                '@type' => 'Offer',
+                'price' => number_format($bookNowFromMinor / 100, 2, '.', ''),
+                'priceCurrency' => $currency,
+                'availability' => $hasOnSale
+                    ? 'https://schema.org/InStock'
+                    : 'https://schema.org/SoldOut',
+                'url' => $seoCanonical,
+            ], fn ($v) => $v !== null && $v !== '');
+        }
+    @endphp
+    <script type="application/ld+json">
+        {!! json_encode($eventLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
+    </script>
 @endpush
 
 @section('content')

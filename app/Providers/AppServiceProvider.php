@@ -31,6 +31,8 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
+use PragmaRX\Google2FAQRCode\Google2FA;
+use PragmaRX\Google2FAQRCode\QRCode\Bacon as BaconQRCode;
 use Stripe\StripeClient;
 
 class AppServiceProvider extends ServiceProvider
@@ -56,6 +58,13 @@ class AppServiceProvider extends ServiceProvider
         $this->bindStripePaymentService();
         $this->bindTicketMailer();
         $this->bindGraphMail();
+
+        // The TOTP engine used by TwoFactorAuthenticationService. Wire the
+        // Bacon QR backend explicitly (bacon/bacon-qr-code is already present
+        // via endroid/qr-code) so getQRCodeInline() renders an inline SVG.
+        $this->app->bind(Google2FA::class, function (): Google2FA {
+            return new Google2FA(new BaconQRCode);
+        });
     }
 
     /**

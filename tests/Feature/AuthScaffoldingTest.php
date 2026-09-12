@@ -30,6 +30,10 @@ class AuthScaffoldingTest extends TestCase
     {
         $user = User::factory()->create([
             'password' => Hash::make('secret-password'),
+            // Suppress the post-login MFA recommendation nudge so this test
+            // asserts the plain "session established → dashboard" path. The
+            // nudge redirect has its own coverage below.
+            'mfa_prompt_dismissed_at' => now(),
         ]);
 
         $response = $this->post('/login', [
@@ -39,6 +43,31 @@ class AuthScaffoldingTest extends TestCase
 
         $this->assertAuthenticatedAs($user);
         $response->assertRedirect('/dashboard');
+    }
+
+    public function test_user_without_mfa_is_nudged_to_recommendation_after_login(): void
+    {
+        $user = User::factory()->create([
+            'password' => Hash::make('secret-password'),
+        ]);
+
+        $response = $this->post('/login', [
+            'email' => $user->email,
+            'password' => 'secret-password',
+        ]);
+
+        $this->assertAuthenticatedAs($user);
+        $response->assertRedirect('/two-factor-recommendation');
+    }
+
+    public function test_user_can_permanently_dismiss_mfa_recommendation(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post('/two-factor-recommendation/never')
+            ->assertRedirect('/dashboard');
+
+        $this->assertNotNull($user->fresh()->mfa_prompt_dismissed_at);
     }
 
     public function test_invalid_credentials_are_rejected_with_no_session(): void

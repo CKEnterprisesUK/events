@@ -1292,7 +1292,12 @@
                     </ul>
                 </div>
 
-                <div class="calc" data-fee="{{ $feePercent }}">
+                <div
+                    class="calc"
+                    data-fee="{{ $feePercent }}"
+                    data-stripe-fee-pct="{{ $stripeFeePercent }}"
+                    data-stripe-fee-fixed="{{ $stripeFeeFixedMinor }}"
+                >
                     <div class="calc-grid">
                         <div class="field">
                             <label for="calc-price">Ticket price</label>
@@ -1355,13 +1360,20 @@
                             <span>£<span id="result-fee-total">{{ number_format((round(10 * ($feePercent / 100), 2)) * 100, 2) }}</span></span>
                         </div>
 
+                        <div class="calc-row">
+                            <span>Estimated Stripe fees</span>
+                            <span>£<span id="result-stripe-fee">0.00</span></span>
+                        </div>
+
                         <div class="calc-row total">
-                            <span id="result-payout-label">You receive before Stripe fees</span>
+                            <span id="result-payout-label">You receive (estimated)</span>
                             <span>£<span id="result-payout">{{ number_format(1000 - ((round(10 * ($feePercent / 100), 2)) * 100), 2) }}</span></span>
                         </div>
 
                         <p class="calc-hint">
-                            Estimate excludes Stripe's own payment-processing charges.
+                            Stripe's payment-processing fee is estimated at {{ rtrim(rtrim(number_format($stripeFeePercent, 2), '0'), '.') }}%
+                            + £{{ number_format($stripeFeeFixedMinor / 100, 2) }} per transaction. Your exact Stripe fee is
+                            confirmed on each settled payment.
                         </p>
                     </div>
                 </div>
@@ -1512,6 +1524,12 @@
             }
 
             var feePct = Math.max(0, parseFloat(root.getAttribute('data-fee')) || 0);
+            // Configurable Stripe-fee estimate (percent + fixed pence), from the
+            // DB via the controller. Used to show an approximate Stripe cut so
+            // the "you receive" figure reflects the real net, not one that
+            // ignores Stripe. Fixed part is in minor units (pence).
+            var stripeFeePct = Math.max(0, parseFloat(root.getAttribute('data-stripe-fee-pct')) || 0);
+            var stripeFeeFixed = Math.max(0, (parseInt(root.getAttribute('data-stripe-fee-fixed'), 10) || 0) / 100);
 
             var priceEl = document.getElementById('calc-price');
             var qtyEl = document.getElementById('calc-qty');
@@ -1523,6 +1541,7 @@
             var outBuyerPrice = document.getElementById('result-buyer-price');
             var outFeeEach = document.getElementById('result-fee-each');
             var outFeeTotal = document.getElementById('result-fee-total');
+            var outStripeFee = document.getElementById('result-stripe-fee');
             var outPayoutLabel = document.getElementById('result-payout-label');
             var outPayout = document.getElementById('result-payout');
 
@@ -1543,26 +1562,38 @@
                 var feeTotal = Math.round(feeEach * qty * 100) / 100;
 
                 var buyerPrice;
-                var payout;
+                var payoutBeforeStripe;
 
                 if (passOn) {
                     buyerPrice = price + feeEach;
-                    payout = Math.round(price * qty * 100) / 100;
+                    payoutBeforeStripe = Math.round(price * qty * 100) / 100;
 
                     outModeLabel.textContent = 'Ticket price including platform fee';
-                    outPayoutLabel.textContent = 'You receive before Stripe fees';
                 } else {
                     buyerPrice = price;
-                    payout = Math.round((price * qty - feeTotal) * 100) / 100;
+                    payoutBeforeStripe = Math.round((price * qty - feeTotal) * 100) / 100;
 
                     outModeLabel.textContent = 'Ticket price';
-                    outPayoutLabel.textContent = 'You receive before Stripe fees';
                 }
+
+                outPayoutLabel.textContent = 'You receive (estimated)';
+
+                // Estimated Stripe fee: percent of what the buyer is actually
+                // charged (buyerPrice × qty) plus the fixed part per transaction.
+                // Mirrors StripeFeeEstimator (half-up) closely enough for a
+                // display estimate; the exact fee is confirmed per settled order.
+                var chargedTotal = buyerPrice * qty;
+                var stripeFee = qty > 0 && chargedTotal > 0
+                    ? Math.round((chargedTotal * (stripeFeePct / 100) + stripeFeeFixed * qty) * 100) / 100
+                    : 0;
+
+                var payout = Math.max(0, Math.round((payoutBeforeStripe - stripeFee) * 100) / 100);
 
                 outBuyerPrice.textContent = money(buyerPrice);
                 outFeeEach.textContent = money(feeEach);
                 outFeeTotal.textContent = money(feeTotal);
-                outPayout.textContent = money(Math.max(0, payout));
+                outStripeFee.textContent = money(stripeFee);
+                outPayout.textContent = money(payout);
             }
 
             function setMode(isPassOn) {

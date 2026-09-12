@@ -28,6 +28,8 @@ class EventReportUtilisationTest extends PbtTestCase
             ticketsSold: $ticketsSold,
             grossRevenueMinor: 0,
             netToCompanyMinor: 0,
+            stripeFeesMinor: 0,
+            netPayoutMinor: 0,
             capacity: $capacity,
             perTicketType: [],
             ordersByStatus: [],

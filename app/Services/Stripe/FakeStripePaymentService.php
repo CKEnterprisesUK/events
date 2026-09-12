@@ -63,6 +63,24 @@ class FakeStripePaymentService implements StripePaymentService
     private ?\Throwable $checkoutSessionFailure = null;
 
     /**
+     * The actual Stripe processing fee a {@see retrieveChargeFee()} call reports,
+     * keyed by PaymentIntent id. Absent => the fee is not yet available (Stripe
+     * has not settled the charge), which the fake models by returning null — the
+     * same "retry later" signal the real boundary gives. Tests arrange a fee
+     * with {@see setChargeFee()}. (Truthful-payout feature)
+     *
+     * @var array<string, StripeChargeFee>
+     */
+    private array $chargeFees = [];
+
+    /**
+     * Recorded {@see retrieveChargeFee()} calls, for assertions.
+     *
+     * @var list<array{connected_account_id: string, payment_intent_id: string}>
+     */
+    public array $chargeFeeCalls = [];
+
+    /**
      * Arrange the fake so the next Checkout Session creation fails, simulating
      * a failed direct charge at the Stripe boundary. The recorded call is NOT
      * appended (the session was never created), mirroring a real failure where
@@ -199,6 +217,42 @@ class FakeStripePaymentService implements StripePaymentService
             amountMinor: $amountMinor,
             status: 'succeeded',
         );
+    }
+
+    /**
+     * Arrange the actual Stripe processing fee the next
+     * {@see retrieveChargeFee()} for the given PaymentIntent will report. A
+     * PaymentIntent with no arranged fee reports null (fee not yet available),
+     * mirroring a charge Stripe has not settled. Returns $this for fluent setup.
+     * (Truthful-payout feature)
+     */
+    public function setChargeFee(
+        string $paymentIntentId,
+        int $feeMinor,
+        string $currency = 'gbp',
+        string $chargeId = 'ch_test_fake',
+    ): static {
+        $this->chargeFees[$paymentIntentId] = new StripeChargeFee(
+            chargeId: $chargeId,
+            feeMinor: $feeMinor,
+            currency: $currency,
+        );
+
+        return $this;
+    }
+
+    public function retrieveChargeFee(
+        string $connectedAccountId,
+        string $paymentIntentId,
+    ): ?StripeChargeFee {
+        $this->chargeFeeCalls[] = [
+            'connected_account_id' => $connectedAccountId,
+            'payment_intent_id' => $paymentIntentId,
+        ];
+
+        // No arranged fee => not yet available, same null the real boundary
+        // returns for an unsettled charge, so the caller retries later.
+        return $this->chargeFees[$paymentIntentId] ?? null;
     }
 
     /**

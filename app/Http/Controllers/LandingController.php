@@ -23,11 +23,17 @@ class LandingController extends Controller
     {
         // The live Platform fee percent (Company overrides aside) drives the
         // pricing calculator on the Landing_Page, so the figure shown always
-        // matches the current Global_Fee_Percent in platform_settings.
-        $feePercent = (float) PlatformSetting::current()->global_fee_percent;
+        // matches the current Global_Fee_Percent in platform_settings. The
+        // configurable Stripe-fee estimate (percent + fixed) lets the calculator
+        // also show an approximate Stripe cut, so "you receive" reflects the real
+        // net rather than excluding Stripe entirely. Both come from the DB, never
+        // hardcoded. (Configurable-estimate feature)
+        $setting = PlatformSetting::current();
 
         return view('landing', [
-            'feePercent' => $feePercent,
+            'feePercent' => (float) $setting->global_fee_percent,
+            'stripeFeePercent' => (float) $setting->stripe_fee_percent,
+            'stripeFeeFixedMinor' => (int) $setting->stripe_fee_fixed_minor,
         ]);
     }
 }

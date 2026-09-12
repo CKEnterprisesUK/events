@@ -5,6 +5,9 @@ use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\Auth\TwoFactorChallengeController;
+use App\Http\Controllers\Auth\TwoFactorController;
+use App\Http\Controllers\Auth\TwoFactorRecommendationController;
 use App\Http\Controllers\BrandingController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerController;
@@ -25,6 +28,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ScanController;
 use App\Http\Controllers\SharingController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\StorefrontController;
 use App\Http\Controllers\StripeConnectController;
 use App\Http\Controllers\StripeReturnController;
@@ -67,6 +71,18 @@ Route::get('/', [LandingController::class, 'index'])->name('landing');
 | as a storefront slug. It establishes no active Company. (Requirement 22.3)
 */
 Route::get('/privacy', [GdprController::class, 'privacy'])->name('privacy');
+
+/*
+|--------------------------------------------------------------------------
+| Public XML sitemap (reserved path, no tenant / auth)
+|--------------------------------------------------------------------------
+| `/sitemap.xml` lists the publicly indexable URLs (landing page, each active
+| Company storefront, and every published Event) for search engines. The `.xml`
+| suffix keeps it out of the `/{company-slug}` catch-all (slug regex excludes
+| dots); it is declared here for clarity and establishes no active Company.
+*/
+Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
+Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('robots');
 
 /*
 |--------------------------------------------------------------------------
@@ -135,6 +151,24 @@ Route::middleware('guest')->group(function () {
         ->middleware('throttle:auth')->name('password.update');
 });
 
+/*
+|--------------------------------------------------------------------------
+| Two-factor login challenge (reserved prefix, guest — pending second factor)
+|--------------------------------------------------------------------------
+| Reached only in the window between a correct password and a proven second
+| factor: LoginController drops the guard session and stashes the user as
+| "pending two-factor", then redirects here. `guest` is correct because there
+| is NO authenticated user during the challenge. Throttled like login to blunt
+| code brute-forcing. Accepts a TOTP code or a one-time recovery code.
+*/
+Route::middleware('guest')->group(function () {
+    Route::get('/two-factor-challenge', [TwoFactorChallengeController::class, 'show'])
+        ->name('two-factor.challenge');
+    Route::post('/two-factor-challenge', [TwoFactorChallengeController::class, 'store'])
+        ->middleware('throttle:login')
+        ->name('two-factor.challenge.store');
+});
+
 Route::post('/logout', [LoginController::class, 'logout'])
     ->middleware('auth')
     ->name('logout');
@@ -163,6 +197,25 @@ Route::middleware('auth')->group(function () {
     Route::post('/email/verification-notification', [EmailVerificationController::class, 'resend'])
         ->middleware('throttle:auth')
         ->name('verification.send');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Post-login MFA recommendation nudge (reserved prefix, authenticated+verified)
+|--------------------------------------------------------------------------
+| After a completed login, a Company_User who has not enabled MFA and has not
+| permanently dismissed the reminder is sent here before the dashboard. They
+| can set up MFA now (link to the profile section), be reminded next time, or
+| dismiss the reminder forever. Behind `auth`+`verified` (a real, verified
+| session) but outside the tenant group — it acts only on the acting user.
+*/
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/two-factor-recommendation', [TwoFactorRecommendationController::class, 'show'])
+        ->name('two-factor.recommend');
+    Route::post('/two-factor-recommendation/later', [TwoFactorRecommendationController::class, 'dismissOnce'])
+        ->name('two-factor.recommend.later');
+    Route::post('/two-factor-recommendation/never', [TwoFactorRecommendationController::class, 'dismissForever'])
+        ->name('two-factor.recommend.never');
 });
 
 /*
@@ -209,6 +262,19 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
             ->withoutMiddleware('dashboard.tenant')->name('profile.logout-other-sessions');
         Route::get('/profile/data', [ProfileController::class, 'downloadData'])
             ->withoutMiddleware('dashboard.tenant')->name('profile.data');
+
+        // Self-service two-factor (TOTP) management, on the profile page. Like
+        // the profile routes above it acts only on the acting user's own record
+        // (no tenant binding). Enable/confirm sets up MFA; disable and
+        // recovery-code regeneration require the current password.
+        Route::post('/profile/two-factor', [TwoFactorController::class, 'enable'])
+            ->withoutMiddleware('dashboard.tenant')->name('profile.two-factor.enable');
+        Route::post('/profile/two-factor/confirm', [TwoFactorController::class, 'confirm'])
+            ->withoutMiddleware('dashboard.tenant')->name('profile.two-factor.confirm');
+        Route::delete('/profile/two-factor', [TwoFactorController::class, 'disable'])
+            ->withoutMiddleware('dashboard.tenant')->name('profile.two-factor.disable');
+        Route::post('/profile/two-factor/recovery-codes', [TwoFactorController::class, 'regenerateRecoveryCodes'])
+            ->withoutMiddleware('dashboard.tenant')->name('profile.two-factor.recovery-codes');
 
         // Help & Knowledge portal + Contact support. Open to every authenticated
         // Company_User (any role) and to an impersonating Super_Admin: the Help

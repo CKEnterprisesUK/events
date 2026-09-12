@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Model;
  *
  * @property int $id
  * @property string $global_fee_percent
+ * @property string $stripe_fee_percent
+ * @property int $stripe_fee_fixed_minor
  * @property string $mail_transport
  */
 class PlatformSetting extends Model
@@ -25,6 +27,18 @@ class PlatformSetting extends Model
      * schema-level column default.
      */
     public const DEFAULT_GLOBAL_FEE_PERCENT = '5.00';
+
+    /**
+     * Default estimate of Stripe's own card-processing fee, used for the
+     * pre-purchase calculator and checkout preview. Reflects Stripe's UK
+     * standard pricing (1.5% + £0.20) at time of writing; a Super_Admin adjusts
+     * these if Stripe's rates change — they are DB-configured, never hardcoded
+     * in .env/config. The exact fee on a settled order is captured separately
+     * from the balance transaction. (Configurable-estimate feature)
+     */
+    public const DEFAULT_STRIPE_FEE_PERCENT = '1.50';
+
+    public const DEFAULT_STRIPE_FEE_FIXED_MINOR = 20;
 
     /**
      * The supported outbound-mail transports for {@see self::$mail_transport}.
@@ -54,14 +68,18 @@ class PlatformSetting extends Model
      */
     protected $fillable = [
         'global_fee_percent',
+        'stripe_fee_percent',
+        'stripe_fee_fixed_minor',
         'mail_transport',
     ];
 
     /**
-     * @var array<string, string>
+     * @var array<string, string|int>
      */
     protected $attributes = [
         'global_fee_percent' => self::DEFAULT_GLOBAL_FEE_PERCENT,
+        'stripe_fee_percent' => self::DEFAULT_STRIPE_FEE_PERCENT,
+        'stripe_fee_fixed_minor' => self::DEFAULT_STRIPE_FEE_FIXED_MINOR,
         'mail_transport' => self::DEFAULT_MAIL_TRANSPORT,
     ];
 
@@ -72,6 +90,8 @@ class PlatformSetting extends Model
     {
         return [
             'global_fee_percent' => 'decimal:2',
+            'stripe_fee_percent' => 'decimal:2',
+            'stripe_fee_fixed_minor' => 'integer',
         ];
     }
 

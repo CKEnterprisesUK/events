@@ -242,6 +242,7 @@
 
                 @if (! $isSuperAdmin)
                     <a href="{{ route('dashboard.profile.edit') }}" class="menu-item" role="menuitem">Your profile</a>
+                    <a href="{{ route('dashboard.profile.edit') }}#two-factor" class="menu-item" role="menuitem">Two-factor authentication</a>
                     <div class="menu-divider"></div>
                 @endif
 

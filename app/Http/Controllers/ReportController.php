@@ -130,13 +130,16 @@ class ReportController extends Controller
             fputcsv($out, ['Booking fees collected', $this->major($totals['booking_fees_minor'])]);
             fputcsv($out, ['Platform fees', $this->major($totals['application_fees_minor'])]);
             fputcsv($out, ['Total collected', $this->major($totals['order_total_minor'])]);
-            fputcsv($out, ['Net to company (payout)', $this->major($totals['net_to_company_minor'])]);
+            fputcsv($out, ['Net after platform fee', $this->major($totals['net_to_company_minor'])]);
+            fputcsv($out, ['Stripe processing fees', $this->major($totals['stripe_fees_minor'])]);
+            fputcsv($out, ['Net payout to bank', $this->major($totals['net_payout_minor'])]);
 
             // Blank separator, then the per-Event breakdown table.
             fputcsv($out, []);
             fputcsv($out, [
                 'Event', 'Orders', 'Tickets sold', 'Gross sales', 'Booking fees',
-                'Platform fees', 'Total collected', 'Net to company',
+                'Platform fees', 'Total collected', 'Net after platform fee',
+                'Stripe fees', 'Net payout',
             ]);
 
             foreach ($perEvent as $row) {
@@ -149,6 +152,8 @@ class ReportController extends Controller
                     $this->major($row['application_fees_minor']),
                     $this->major($row['order_total_minor']),
                     $this->major($row['net_to_company_minor']),
+                    $this->major($row['stripe_fees_minor']),
+                    $this->major($row['net_payout_minor']),
                 ]);
             }
 
@@ -177,6 +182,9 @@ class ReportController extends Controller
      * settles to the connected account: the collected Order_Total less the
      * Platform's Application_Fee (the direct-charge fee skim).
      *
+     * The `net_to_company_minor` is net of the platform fee only; the truthful
+     * `net_payout_minor` also subtracts the actual `stripe_fees_minor`.
+     *
      * @param  Collection<int, Order>  $confirmedOrders
      * @return array<string, int>
      */
@@ -196,13 +204,26 @@ class ReportController extends Controller
                 ->where('status', Ticket::STATUS_VALID)
                 ->count();
 
+        // Actual Stripe card-processing fees captured on the confirmed Orders.
+        // stripe_fee_minor is nullable (not yet captured), so a null counts as 0
+        // and the figure fills in as fees land/are backfilled. The TRUTHFUL
+        // payout subtracts BOTH the platform fee and this Stripe fee from the
+        // collected total — what actually reaches the Company's bank, unlike the
+        // platform-fee-only "net to company" figure above. (Truthful-payout)
+        $stripeFeesMinor = (int) $confirmedOrders->sum(
+            fn (Order $order): int => (int) $order->stripe_fee_minor
+        );
+        $netToCompanyMinor = $orderTotalMinor - $applicationFeesMinor;
+
         return [
             'orders' => $confirmedOrders->count(),
             'gross_sales_minor' => (int) $confirmedOrders->sum('ticket_subtotal_minor'),
             'booking_fees_minor' => (int) $confirmedOrders->sum('booking_fee_minor'),
             'application_fees_minor' => $applicationFeesMinor,
             'order_total_minor' => $orderTotalMinor,
-            'net_to_company_minor' => $orderTotalMinor - $applicationFeesMinor,
+            'net_to_company_minor' => $netToCompanyMinor,
+            'stripe_fees_minor' => $stripeFeesMinor,
+            'net_payout_minor' => $netToCompanyMinor - $stripeFeesMinor,
             'tickets_sold' => $ticketsSold,
         ];
     }
@@ -274,6 +295,10 @@ class ReportController extends Controller
                 'application_fees_minor' => $report->grossRevenueMinor - $report->netToCompanyMinor,
                 'order_total_minor' => $report->grossRevenueMinor,
                 'net_to_company_minor' => $report->netToCompanyMinor,
+                // Actual Stripe fees + truthful net payout, taken from the same
+                // shared source so per-event and company totals never diverge.
+                'stripe_fees_minor' => $report->stripeFeesMinor,
+                'net_payout_minor' => $report->netPayoutMinor,
                 'tickets_sold' => $report->ticketsSold,
             ];
         }

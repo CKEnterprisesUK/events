@@ -1,0 +1,66 @@
+---
+# =============================================================================
+# cPanel Git Version Control — deployment tasks
+# =============================================================================
+#
+# WHAT THIS IS
+#   cPanel's "Git Version Control" runs these `tasks` on the host every time the
+#   tracked branch is updated and a deployment is triggered (Manage → Pull or
+#   "Deploy HEAD Commit", or an automatic deploy if your host enables it). This
+#   is what turns "git push" into "migrations applied" WITHOUT SSH.
+#
+# WHERE IT RUNS
+#   Tasks run in the cPanel account's shell on the DEPLOYMENT path you configure
+#   in cPanel (the repository checkout), NOT the web root. We therefore copy the
+#   checkout into the live app path, then run artisan there. Set the two paths
+#   in the variables below to match your subdomain.
+#
+# PRE-PROD ONLY (for now)
+#   This pipeline is intended for the pre-prod subdomain, where a fresh database
+#   makes real Laravel migrations safe as the single source of truth. Production
+#   still applies schema by hand via phpMyAdmin (see DEPLOYMENT.md); do not point
+#   this at the production docroot without reading PREPROD.md first.
+#
+# IMPORTANT NOTES
+#   * `vendor/` is COMMITTED (see .gitignore) because the host cannot run
+#     `composer install`. So there is deliberately NO composer step here.
+#   * The app renders server-side Blade with inline CSS and has NO build step,
+#     so there is no `npm` / asset compilation here either.
+#   * We do NOT run `schedule:run` or anything that spawns a child process:
+#     shared cPanel disables `proc_open`. `migrate` and the cache commands are
+#     safe because they run in-process.
+#   * `migrate --force` is required because APP_ENV=production suppresses the
+#     interactive confirmation prompt (there is no TTY on deploy).
+# =============================================================================
+
+deployment:
+  tasks:
+    # ---- Configure these two paths for your subdomain ----------------------
+    # DEPLOYPATH is provided by cPanel as the repository checkout directory.
+    # APPPATH is the document-root's parent for the pre-prod subdomain — the
+    # directory that actually serves the site and holds the .env.
+    - export DEPLOYPATH=/home/CPANELUSER/repositories/events-preprod
+    - export APPPATH=/home/CPANELUSER/preprod.yourdomain.tld
+
+    # ---- Sync the checkout into the live app path --------------------------
+    # -a preserves perms/links, --delete keeps the target clean, and the
+    # excludes protect host-only, per-environment state that must never be
+    # overwritten by a deploy: the real .env, the storage symlink, writable
+    # runtime dirs, and the VCS metadata.
+    - /bin/cp -R "$DEPLOYPATH"/. "$APPPATH"/ 2>/dev/null || true
+    - /usr/bin/rsync -a --delete
+      --exclude='.git'
+      --exclude='.env'
+      --exclude='public/storage'
+      --exclude='storage/app'
+      --exclude='storage/framework'
+      --exclude='storage/logs'
+      "$DEPLOYPATH"/ "$APPPATH"/
+
+    # ---- Apply schema + refresh caches in the live app ---------------------
+    # Use the account's PHP CLI. On this host that is the ea-php85 binary; adjust
+    # if the subdomain runs a different PHP version in cPanel → MultiPHP Manager.
+    - /opt/cpanel/ea-php85/root/usr/bin/php "$APPPATH"/artisan migrate --force
+    - /opt/cpanel/ea-php85/root/usr/bin/php "$APPPATH"/artisan config:cache
+    - /opt/cpanel/ea-php85/root/usr/bin/php "$APPPATH"/artisan route:cache
+    - /opt/cpanel/ea-php85/root/usr/bin/php "$APPPATH"/artisan view:cache

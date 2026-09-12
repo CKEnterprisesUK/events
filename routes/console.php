@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\BackfillStripeFeesJob;
 use App\Jobs\PruneAuditLogsJob;
 use App\Jobs\ReleaseExpiredReservationsJob;
 use Illuminate\Foundation\Inspiring;
@@ -37,6 +38,24 @@ Artisan::command('audit:prune', function () {
     $deleted = dispatch_sync(new PruneAuditLogsJob);
     $this->info("Pruned {$deleted} audit log row(s) past retention.");
 })->purpose('Delete audit-log records older than the retention window');
+
+// Backfill the ACTUAL Stripe processing fee onto paid Orders where it is still
+// unknown, by reading each charge's balance transaction from the Company's
+// connected account. The fee is captured opportunistically at payment
+// confirmation, but Stripe may not have the balance transaction ready at that
+// instant; this sweeper fills the gaps once the charge has settled, so every
+// paid Order converges on its true fee. Runs SYNCHRONOUSLY, like the sweepers
+// above, for the same proc_open reason. A frequent cron keeps the fee latency
+// low without a persistent worker:
+//
+//   */10 * * * * cd /home/<user>/<app> && /opt/cpanel/ea-php85/root/usr/bin/php \
+//       artisan stripe:backfill-fees >> /dev/null 2>&1
+//
+// (Truthful-payout feature)
+Artisan::command('stripe:backfill-fees', function () {
+    $captured = dispatch_sync(new BackfillStripeFeesJob);
+    $this->info("Captured Stripe fees for {$captured} order(s).");
+})->purpose('Backfill actual Stripe processing fees onto paid orders missing them');
 
 // NOTE ON DRAINING THE QUEUE (ticket emails, webhook processing):
 // Do NOT use `schedule:run` here. On shared cPanel hosting `proc_open` is

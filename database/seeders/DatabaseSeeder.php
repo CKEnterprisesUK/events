@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -21,11 +20,11 @@ class DatabaseSeeder extends Seeder
         // The system Company_Slug blocklist (reserved routes / infra / brand).
         $this->call(ReservedSlugSeeder::class);
 
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // Realistic, prod-LIKE sample data for the pre-prod/staging subdomain
+        // and local development. Guarded so it can NEVER run on production:
+        // production schema/data is managed deliberately, never faker-seeded.
+        if (! app()->environment('production')) {
+            $this->call(PreprodSeeder::class);
+        }
     }
 }

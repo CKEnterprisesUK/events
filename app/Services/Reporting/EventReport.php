@@ -20,7 +20,9 @@ final class EventReport
      * @param  int  $confirmedOrders  count of the Event's confirmed orders.
      * @param  int  $ticketsSold  valid tickets on confirmed orders (Req 5.2, 6.2).
      * @param  int  $grossRevenueMinor  gross revenue in minor units (Req 5.1, 6.2).
-     * @param  int  $netToCompanyMinor  net to company in minor units (Req 5.3, 6.6).
+     * @param  int  $netToCompanyMinor  net after the PLATFORM fee only, in minor units (Req 5.3, 6.6).
+     * @param  int  $stripeFeesMinor  actual Stripe card-processing fees captured on confirmed orders, in minor units; 0 where not yet captured (Truthful-payout).
+     * @param  int  $netPayoutMinor  TRUTHFUL net that reaches the bank: gross − platform fee − Stripe fee, in minor units (Truthful-payout).
      * @param  ?int  $capacity  the Event capacity ceiling; null => unlimited (Req 5.4).
      * @param  list<array{type_id:int,name:string,sold:int,remaining:?int,revenue_minor:int,capacity_mode:string}>  $perTicketType  per-ticket-type breakdown; remaining is null for shared-pool types (Req 6.3).
      * @param  array<string,int>  $ordersByStatus  order counts keyed by status (Req 6.4).
@@ -31,11 +33,24 @@ final class EventReport
         public readonly int $ticketsSold,
         public readonly int $grossRevenueMinor,
         public readonly int $netToCompanyMinor,
+        public readonly int $stripeFeesMinor,
+        public readonly int $netPayoutMinor,
         public readonly ?int $capacity,
         public readonly array $perTicketType,
         public readonly array $ordersByStatus,
         public readonly array $salesByDay,
     ) {}
+
+    /**
+     * The Platform's Application_Fee on this Event's confirmed orders, derived
+     * from the shared net definition (gross − net-to-company) so it stays a
+     * function of the single source of truth rather than a separately-summed
+     * figure. (Req 6.6)
+     */
+    public function platformFeesMinor(): int
+    {
+        return $this->grossRevenueMinor - $this->netToCompanyMinor;
+    }
 
     /**
      * Capacity_Utilisation: the string 'unlimited' when there is no fixed

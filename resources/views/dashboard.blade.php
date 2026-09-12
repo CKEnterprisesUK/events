@@ -96,9 +96,9 @@
                 <span class="metric-card__sub">Ticket subtotal</span>
             </div>
             <div class="metric-card">
-                <span class="metric-card__label">Net to company</span>
-                <span class="metric-card__value">{{ $money($stats['net_to_company_minor']) }}</span>
-                <span class="metric-card__sub">After platform fees</span>
+                <span class="metric-card__label">Net payout</span>
+                <span class="metric-card__value">{{ $money($stats['net_payout_minor']) }}</span>
+                <span class="metric-card__sub">After platform &amp; Stripe fees</span>
             </div>
         </div>
     @endif
