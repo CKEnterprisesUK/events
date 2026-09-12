@@ -101,6 +101,20 @@ return Application::configure(basePath: dirname(__DIR__))
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
 
+        // Wrong-email / wrong-password sign-in attempts are expected, routine
+        // events — not server faults — so they must never land in the error
+        // log. The failed-login path throws a ValidationException (see
+        // LoginController::login), and a rejected guard raises an
+        // AuthenticationException. Both are already suppressed by Laravel's
+        // internal don't-report list; registering them here makes that intent
+        // explicit and keeps it true even if the login flow is refactored. The
+        // failure is still recorded on the audit trail (AUTH_LOGIN_FAILED),
+        // which is the intended place for it.
+        $exceptions->dontReport([
+            \Illuminate\Validation\ValidationException::class,
+            \Illuminate\Auth\AuthenticationException::class,
+        ]);
+
         // Production error capture. With APP_DEBUG=false an uncaught 500 would
         // otherwise render a generic framework page and vanish into the log.
         // Instead we persist the raw exception to `error_reports`, mint a short

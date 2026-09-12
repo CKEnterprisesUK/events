@@ -2203,6 +2203,12 @@ main.public-main.mkt {
 
 /* Hero product visual — a lightweight, real-UI-flavoured preview built from
    existing styling primitives (no fake browser chrome, no dense illustration). */
+.mkt a.mkt-preview {
+    display: block; text-decoration: none; color: var(--mkt-body);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.mkt a.mkt-preview:hover { transform: translateY(-2px); box-shadow: 0 20px 48px rgba(0, 0, 0, 0.28); }
+.mkt a.mkt-preview:focus-visible { outline: 3px solid var(--pub-teal); outline-offset: 3px; }
 .mkt .mkt-preview {
     background: #fff; border-radius: 12px; border-top: 3px solid var(--pub-teal);
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22); overflow: hidden; color: var(--mkt-body);

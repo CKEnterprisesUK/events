@@ -17,7 +17,6 @@
     ['label' => 'Pricing', 'url' => route('pricing')],
     ['label' => 'How it works', 'url' => route('how-it-works')],
     ['label' => 'For charities', 'url' => route('for-charities')],
-    ['label' => 'Trust', 'url' => route('trust.index')],
 ])
 <header class="pub-header">
     <div class="pub-header__inner">
