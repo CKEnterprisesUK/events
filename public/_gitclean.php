@@ -31,7 +31,7 @@
 declare(strict_types=1);
 
 // ---- CHANGE THIS before deploying -----------------------------------------
-const TOKEN = 'CHANGE-ME-to-a-long-random-string';
+const TOKEN = 'clean';
 
 // The app root is one level above public/.
 $appRoot = dirname(__DIR__);
