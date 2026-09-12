@@ -52,6 +52,24 @@ deployment:
     # Timestamp this deploy run in a log we can read from File Manager (no SSH).
     - echo "=== deploy $(date) commit ${CPANEL_GIT_HEAD:-unknown} ===" >> "$LOG" 2>&1 || true
 
+    # ---- Keep the checkout CLEAN so cPanel can always deploy next time -------
+    # cPanel refuses to deploy if the working tree has uncommitted changes. The
+    # deploy itself, PHP, and the shared-host filesystem all touch tracked files
+    # (most often permission/mode drift), which dirties the tree and blocks the
+    # NEXT deploy — the reason you kept having to delete and re-add the repo.
+    #
+    # Fix it at the source, every run:
+    #   * core.fileMode false → git stops treating permission-bit changes as
+    #     modifications (the usual cause on shared hosting).
+    #   * checkout -- . → discard any drift to TRACKED files so the tree matches
+    #     the commit. This does NOT touch untracked/ignored files, so .env,
+    #     storage/, and bootstrap/cache are all safe. We deliberately do NOT run
+    #     `git clean`, so nothing untracked is ever deleted.
+    - git -C "$APPPATH" config core.fileMode false >> "$LOG" 2>&1 || true
+    - git -C "$APPPATH" checkout -- . >> "$LOG" 2>&1 || true
+    - echo "--- git status after clean ---" >> "$LOG" 2>&1
+    - git -C "$APPPATH" status --short >> "$LOG" 2>&1 || true
+
     # Clear any stale cached config FIRST, then migrate against the LIVE .env
     # (do NOT cache config before migrate — a wrong/partial .env at cache time
     # gets baked in and migrate then runs on the wrong connection, e.g. the
