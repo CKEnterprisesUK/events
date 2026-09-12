@@ -135,6 +135,8 @@ class AuditLog extends Model
 
     public const FEE_COMPANY_CHANGED = 'fee.company_changed';
 
+    public const STRIPE_FEE_ESTIMATE_CHANGED = 'fee.stripe_estimate_changed';
+
     public const MAIL_TRANSPORT_CHANGED = 'mail.transport_changed';
 
     public const STRIPE_CREDENTIALS_CHECKED = 'stripe.credentials_checked';
@@ -221,6 +223,7 @@ class AuditLog extends Model
         self::FEE_MODE_CHANGED => ['category' => self::CATEGORY_MONEY, 'label' => 'Changed fee handling'],
         self::FEE_GLOBAL_CHANGED => ['category' => self::CATEGORY_MONEY, 'label' => 'Changed the global fee'],
         self::FEE_COMPANY_CHANGED => ['category' => self::CATEGORY_MONEY, 'label' => 'Changed a company fee'],
+        self::STRIPE_FEE_ESTIMATE_CHANGED => ['category' => self::CATEGORY_MONEY, 'label' => 'Changed the Stripe fee estimate'],
         self::MAIL_TRANSPORT_CHANGED => ['category' => self::CATEGORY_SYSTEM, 'label' => 'Changed the mail transport'],
         self::STRIPE_CREDENTIALS_CHECKED => ['category' => self::CATEGORY_SYSTEM, 'label' => 'Checked Stripe credentials'],
         self::STRIPE_ONBOARDING_STARTED => ['category' => self::CATEGORY_MONEY, 'label' => 'Started Stripe onboarding'],

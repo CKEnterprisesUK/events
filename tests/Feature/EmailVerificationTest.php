@@ -115,6 +115,10 @@ class EmailVerificationTest extends TestCase
     {
         $user = User::factory()->owner()->create([
             'password' => Hash::make('secret-password'),
+            // Dismiss the post-login MFA nudge so a verified user lands
+            // directly on the dashboard (the nudge is unrelated to email
+            // verification).
+            'mfa_prompt_dismissed_at' => now(),
         ]);
 
         $this->post('/login', [

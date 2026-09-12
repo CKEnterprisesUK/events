@@ -115,6 +115,9 @@ class SessionTimeoutTest extends TestCase
             'email' => 'returning@example.com',
             'password' => bcrypt('secret-password'),
             'last_activity_at' => Carbon::now()->subDays(3),
+            // Dismiss the post-login MFA nudge so login lands on /dashboard;
+            // this test is about the idle-window reset, not the nudge.
+            'mfa_prompt_dismissed_at' => now(),
         ]);
 
         $this->post('/login', [

@@ -90,10 +90,20 @@
                 <div class="kv__value">{{ $feeModeLabel }}</div>
             </div>
             <div>
+                <div class="kv__label">Estimated Stripe fee</div>
+                <div class="kv__value">
+                    {{ rtrim(rtrim(number_format($stripeFeePercent, 2), '0'), '.') }}% + £{{ number_format($stripeFeeFixedMinor / 100, 2) }} per transaction
+                </div>
+            </div>
+            <div>
                 <div class="kv__label">Payouts</div>
                 <div class="kv__value">Direct to your Stripe account</div>
             </div>
         </div>
+        <p class="panel__note">
+            The Stripe fee shown is an estimate for planning. Your exact Stripe fee is read from each
+            settled payment and included in the net payout figure on your Reports &amp; Payouts page.
+        </p>
     </div>
 
     <div class="panel">

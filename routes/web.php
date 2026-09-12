@@ -671,6 +671,10 @@ Route::middleware(['auth', 'super.admin', 'session.timeout'])
         Route::get('/fees', [SuperAdminFeeController::class, 'index'])->name('fees.index');
         Route::put('/fees/global', [SuperAdminFeeController::class, 'updateGlobal'])->name('fees.global.update');
         Route::put('/fees/companies/{company}', [SuperAdminFeeController::class, 'updateCompany'])->name('fees.company.update');
+        // Configurable estimate of Stripe's own card-processing fee (percent +
+        // fixed), used for the pre-purchase calculator/preview only. DB-stored,
+        // not hardcoded. (Configurable-estimate feature)
+        Route::put('/fees/stripe-estimate', [SuperAdminFeeController::class, 'updateStripeEstimate'])->name('fees.stripe-estimate.update');
 
         // Jump into a Company's dashboard as the acting Super_Admin (and step
         // back out). Impersonation is a session flag honoured by

@@ -42,6 +42,52 @@
     </div>
 
     <div class="admin-panel">
+        <div class="admin-panel__head"><h2>Stripe fee estimate</h2></div>
+        <div class="admin-panel__body">
+            <p class="muted">
+                An estimate of Stripe's own card-processing fee, shown to organisers on the pricing
+                calculator and their Stripe status page. This is display guidance only — the exact fee on
+                each order is read from Stripe and used in reports. Update it if Stripe changes its rates.
+            </p>
+            <form method="POST" action="{{ route('admin.fees.stripe-estimate.update') }}">
+                @csrf
+                @method('PUT')
+                <div class="field">
+                    <label for="stripe_fee_percent">Stripe fee percent</label>
+                    <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="100"
+                        id="stripe_fee_percent"
+                        name="stripe_fee_percent"
+                        value="{{ old('stripe_fee_percent', $stripeFeePercent) }}"
+                    >
+                    @error('stripe_fee_percent')
+                        <p class="error">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div class="field">
+                    <label for="stripe_fee_fixed">Stripe fixed fee (per transaction)</label>
+                    <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="10000"
+                        id="stripe_fee_fixed"
+                        name="stripe_fee_fixed"
+                        value="{{ old('stripe_fee_fixed', number_format($stripeFeeFixedMinor / 100, 2, '.', '')) }}"
+                    >
+                    @error('stripe_fee_fixed')
+                        <p class="error">{{ $message }}</p>
+                    @enderror
+                </div>
+                <button type="submit" class="btn">Save Stripe estimate</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="admin-panel">
         <div class="admin-panel__head"><h2>Per-company fees</h2></div>
         <div class="admin-panel__body">
             @if ($companies->isEmpty())

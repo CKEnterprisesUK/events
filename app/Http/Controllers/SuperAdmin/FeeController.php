@@ -38,10 +38,61 @@ class FeeController extends Controller
      */
     public function index(): View
     {
+        $setting = PlatformSetting::current();
+
         return view('admin.fees.index', [
-            'globalFeePercent' => PlatformSetting::current()->global_fee_percent,
+            'globalFeePercent' => $setting->global_fee_percent,
+            'stripeFeePercent' => $setting->stripe_fee_percent,
+            'stripeFeeFixedMinor' => $setting->stripe_fee_fixed_minor,
             'companies' => Company::query()->orderBy('name')->get(),
         ]);
+    }
+
+    /**
+     * Set the configurable estimate of Stripe's OWN card-processing fee — a
+     * percent plus a fixed amount (in minor units) — used by the pre-purchase
+     * calculator and the organiser's Stripe status page to show an approximate
+     * Stripe cut before a payment settles. This is display-only guidance; the
+     * exact fee on each order is captured from its balance transaction and drives
+     * the realised net payout in reports. DB-configured so nothing about Stripe's
+     * pricing is hardcoded, and easily corrected if Stripe changes its rates.
+     * (Configurable-estimate feature)
+     */
+    public function updateStripeEstimate(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'stripe_fee_percent' => ['required', 'numeric', 'min:0', 'max:100'],
+            // Fixed part entered in major units (e.g. 0.20) for a natural admin
+            // UX; stored as integer minor units.
+            'stripe_fee_fixed' => ['required', 'numeric', 'min:0', 'max:10000'],
+        ]);
+
+        $fixedMinor = (int) round(((float) $validated['stripe_fee_fixed']) * 100);
+
+        $setting = PlatformSetting::current();
+        $previousPercent = $setting->stripe_fee_percent;
+        $previousFixedMinor = $setting->stripe_fee_fixed_minor;
+
+        $setting->stripe_fee_percent = $validated['stripe_fee_percent'];
+        $setting->stripe_fee_fixed_minor = $fixedMinor;
+        $setting->save();
+
+        // Platform-level change (no tenant): recorded with a null company_id so
+        // it appears only on the super-admin trail.
+        $this->audit->record(
+            action: AuditLog::STRIPE_FEE_ESTIMATE_CHANGED,
+            summary: 'Changed the Stripe fee estimate to '.$validated['stripe_fee_percent'].'% + '.number_format($fixedMinor / 100, 2),
+            context: [
+                'percent_from' => $previousPercent,
+                'percent_to' => $validated['stripe_fee_percent'],
+                'fixed_minor_from' => $previousFixedMinor,
+                'fixed_minor_to' => $fixedMinor,
+            ],
+        );
+
+        return redirect()
+            ->route('admin.fees.index')
+            ->with('status', __('Stripe fee estimate updated.'));
     }
 
     /**

@@ -39,6 +39,9 @@ class CompanySuspensionEnforcementTest extends TestCase
         $user = User::factory()->create([
             'company_id' => $company->id,
             'password' => Hash::make('secret-password'),
+            // Dismiss the post-login MFA nudge so this suspension-gating test
+            // observes the plain login landing (/dashboard).
+            'mfa_prompt_dismissed_at' => now(),
         ]);
 
         $response = $this->post('/login', [
@@ -97,6 +100,7 @@ class CompanySuspensionEnforcementTest extends TestCase
         $user = User::factory()->create([
             'company_id' => $company->id,
             'password' => Hash::make('secret-password'),
+            'mfa_prompt_dismissed_at' => now(),
         ]);
 
         $this->from('/login')->post('/login', [

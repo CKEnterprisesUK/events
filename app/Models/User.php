@@ -145,6 +145,11 @@ class User extends Authenticatable implements MustVerifyEmail
         'password',
         'agreed_to_terms_at',
         'last_activity_at',
+        // Harmless UI preference (suppresses the post-login MFA nudge). Unlike
+        // the `two_factor_*` secret columns — which stay OUT of `$fillable` and
+        // are only written via the service's `forceFill` — this carries no
+        // privilege, so it is safe to mass-assign (and lets factories set it).
+        'mfa_prompt_dismissed_at',
     ];
 
     /**
