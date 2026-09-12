@@ -27,6 +27,7 @@
         'help'      => '<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
         'support'   => '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/>',
         'activity'  => '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+        'warning'   => '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/>',
         // Status flags + chrome
         'check'     => '<path d="m20 6-11 11-5-5"/>',
         'cross'     => '<path d="M18 6 6 18M6 6l12 12"/>',
