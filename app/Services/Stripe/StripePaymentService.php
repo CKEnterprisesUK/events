@@ -83,6 +83,29 @@ interface StripePaymentService
     ): StripeRefund;
 
     /**
+     * Read the ACTUAL card-processing fee Stripe took for a completed payment on
+     * a connected account. Given the connected account and the PaymentIntent id
+     * from a completed Checkout Session, this resolves the underlying charge and
+     * its Balance Transaction — where Stripe records the exact `fee` it deducted
+     * inside the connected account — and returns the fee in integer minor units
+     * along with the resolved charge id.
+     *
+     * This is Stripe's own fee, distinct from the Platform's `application_fee_amount`.
+     * It lets the dashboard and reports show a truthful net payout, and stays
+     * accurate automatically if Stripe changes its pricing — nothing is hardcoded.
+     *
+     * Returns null when the fee cannot be determined (e.g. the PaymentIntent has
+     * no settled charge yet, or the balance transaction is not available), so the
+     * caller can leave the Order's `stripe_fee_minor` unset and retry later rather
+     * than record a wrong value. Implementations must not throw for a missing fee.
+     * (Truthful-payout feature)
+     */
+    public function retrieveChargeFee(
+        string $connectedAccountId,
+        string $paymentIntentId,
+    ): ?StripeChargeFee;
+
+    /**
      * Verify an incoming webhook request and construct the event from it. The
      * signature carried in `$signatureHeader` (Stripe's `Stripe-Signature`
      * header) is checked against the raw `$payload` under the webhook signing

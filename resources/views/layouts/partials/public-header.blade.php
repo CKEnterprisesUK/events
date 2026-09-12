@@ -1,13 +1,24 @@
 {{--
-    Shared public site header, matching the landing page chrome. Navy sticky
-    bar with the "Events by CK Enterprises UK" wordmark and primary nav. Used by
-    layouts.app so public pages (Trust & Legal Centre, privacy, auth) share the
-    same header as the main landing page. Styling: `.pub-header*` in app.css.
+    Shared public site header for the marketing site. Navy sticky bar with the
+    "Events by CK Enterprises UK" wordmark (unchanged) and the primary nav.
+    Used by layouts.app so every public page — homepage, Features, Pricing,
+    How it works, For charities and the Trust Centre — shares one header.
 
-    The primary section links (Why us / Pricing / How it works) live on the
-    landing page, so they point at the homepage anchors. This keeps the nav
-    identical to the landing page rather than a squished cut-down version.
+    Primary destinations are dedicated pages (not homepage anchors), so the nav
+    is a single source of truth: update it here and every public page follows.
+    Auth state comes straight from Laravel's @auth/@else so we never duplicate
+    login detection: logged-out visitors see Sign in + Get started; an
+    authenticated organiser sees a single Dashboard link instead.
+
+    Styling: `.pub-header*` / `.pub-nav*` / `.pub-mobile-*` in app.css.
 --}}
+@php($navLinks = [
+    ['label' => 'Features', 'url' => route('features')],
+    ['label' => 'Pricing', 'url' => route('pricing')],
+    ['label' => 'How it works', 'url' => route('how-it-works')],
+    ['label' => 'For charities', 'url' => route('for-charities')],
+    ['label' => 'Trust', 'url' => route('trust.index')],
+])
 <header class="pub-header">
     <div class="pub-header__inner">
         <a class="pub-logo" href="{{ url('/') }}" aria-label="Events by CK Enterprises UK">
@@ -17,19 +28,14 @@
         </a>
 
         <nav class="pub-nav" aria-label="Primary">
-            <a class="pub-nav__link" href="{{ url('/#why') }}">Why us</a>
-            <a class="pub-nav__link" href="{{ url('/#pricing') }}">Pricing</a>
-            <a class="pub-nav__link" href="{{ url('/#how') }}">How it works</a>
-            <a class="pub-nav__link" href="{{ route('trust.index') }}">Trust &amp; Legal</a>
+            @foreach ($navLinks as $link)
+                <a class="pub-nav__link" href="{{ $link['url'] }}">{{ $link['label'] }}</a>
+            @endforeach
 
             @auth
                 <a class="pub-nav__btn" href="{{ route('dashboard.home') }}">Dashboard</a>
-                <form method="POST" action="{{ url('/logout') }}">
-                    @csrf
-                    <button type="submit" class="pub-nav__link pub-nav__logout">Log out</button>
-                </form>
             @else
-                <a class="pub-nav__link" href="{{ url('/login') }}">Log in</a>
+                <a class="pub-nav__link" href="{{ url('/login') }}">Sign in</a>
                 <a class="pub-nav__btn" href="{{ url('/register') }}">Get started</a>
             @endauth
         </nav>
@@ -48,22 +54,17 @@
         </button>
     </div>
 
-    <div class="pub-mobile-nav" id="pub-mobile-menu">
+    <div class="pub-mobile-nav" id="pub-mobile-menu" hidden>
         <nav class="pub-mobile-nav__inner" aria-label="Mobile navigation">
-            <a href="{{ url('/#why') }}">Why us</a>
-            <a href="{{ url('/#pricing') }}">Pricing</a>
-            <a href="{{ url('/#how') }}">How it works</a>
-            <a href="{{ route('trust.index') }}">Trust &amp; Legal</a>
+            @foreach ($navLinks as $link)
+                <a href="{{ $link['url'] }}">{{ $link['label'] }}</a>
+            @endforeach
 
             <div class="pub-mobile-nav__actions">
                 @auth
                     <a class="pub-nav__btn" href="{{ route('dashboard.home') }}">Dashboard</a>
-                    <form method="POST" action="{{ url('/logout') }}">
-                        @csrf
-                        <button type="submit" class="pub-nav__btn pub-nav__btn--secondary">Log out</button>
-                    </form>
                 @else
-                    <a class="pub-nav__btn pub-nav__btn--secondary" href="{{ url('/login') }}">Log in</a>
+                    <a class="pub-nav__btn pub-nav__btn--secondary" href="{{ url('/login') }}">Sign in</a>
                     <a class="pub-nav__btn" href="{{ url('/register') }}">Get started</a>
                 @endauth
             </div>
@@ -79,10 +80,70 @@
                 var menu = document.getElementById('pub-mobile-menu');
                 if (!toggle || !menu) return;
 
+                function focusables() {
+                    return menu.querySelectorAll('a[href], button:not([disabled])');
+                }
+
+                function openMenu() {
+                    menu.hidden = false;
+                    menu.classList.add('open');
+                    toggle.setAttribute('aria-expanded', 'true');
+                    toggle.setAttribute('aria-label', 'Close navigation');
+                    document.body.classList.add('pub-menu-open');
+                    var first = focusables()[0];
+                    if (first) { first.focus(); }
+                }
+
+                function closeMenu(returnFocus) {
+                    menu.classList.remove('open');
+                    menu.hidden = true;
+                    toggle.setAttribute('aria-expanded', 'false');
+                    toggle.setAttribute('aria-label', 'Open navigation');
+                    document.body.classList.remove('pub-menu-open');
+                    if (returnFocus) { toggle.focus(); }
+                }
+
+                function isOpen() {
+                    return menu.classList.contains('open');
+                }
+
                 toggle.addEventListener('click', function () {
-                    var open = menu.classList.toggle('open');
-                    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-                    toggle.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
+                    if (isOpen()) { closeMenu(false); } else { openMenu(); }
+                });
+
+                // Follow a link: let navigation happen, but tidy the drawer state.
+                menu.addEventListener('click', function (event) {
+                    if (event.target.closest('a[href]')) { closeMenu(false); }
+                });
+
+                document.addEventListener('keydown', function (event) {
+                    if (!isOpen()) { return; }
+
+                    if (event.key === 'Escape') {
+                        closeMenu(true);
+                        return;
+                    }
+
+                    // Simple focus trap while the drawer is open.
+                    if (event.key === 'Tab') {
+                        var items = focusables();
+                        if (!items.length) { return; }
+                        var first = items[0];
+                        var last = items[items.length - 1];
+                        if (event.shiftKey && document.activeElement === first) {
+                            event.preventDefault();
+                            last.focus();
+                        } else if (!event.shiftKey && document.activeElement === last) {
+                            event.preventDefault();
+                            first.focus();
+                        }
+                    }
+                });
+
+                // The drawer only exists below the desktop breakpoint; if the
+                // viewport grows back to desktop, close it so focus/state reset.
+                window.addEventListener('resize', function () {
+                    if (window.innerWidth > 940 && isOpen()) { closeMenu(false); }
                 });
             })();
         </script>

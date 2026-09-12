@@ -1,0 +1,20 @@
+# =============================================================================
+# Deterministic checkout behavior — prevents the recurring cPanel Git
+# "uncommitted changes on the checked-out branch" deploy block.
+#
+# WHY: on a fresh clone, git can renormalize line endings differently on the
+# shared host than on a dev machine (depending on the host's core.autocrlf).
+# Any tracked file whose EOLs get rewritten then shows as "modified", dirtying
+# the working tree and blocking the next deploy. Pinning EOL policy here — a
+# COMMITTED file that travels with the repo, unlike .git/config — stops that.
+# =============================================================================
+
+# Do not touch line endings on ANY file: whatever is committed is what is
+# checked out, byte-for-byte, on every machine including the host. This is the
+# safest choice for a repo that commits `vendor/` (which contains files with
+# mixed/CRLF endings we must not rewrite).
+* -text
+
+# Treat everything as binary for diff/merge purposes too where endings matter,
+# by being explicit about the vendored assets that ship with CRLF.
+*.map -text

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Http\Controllers\ReportController;
 use App\Models\Event;
 use App\Models\Order;
 use App\Models\Ticket;
@@ -15,7 +16,7 @@ use Illuminate\Support\Collection;
  * The single accounting source of truth for a single Event's figures.
  *
  * This service extracts the accounting definitions that previously lived only
- * in {@see \App\Http\Controllers\ReportController} — the CONFIRMED_STATUSES set,
+ * in {@see ReportController} — the CONFIRMED_STATUSES set,
  * tickets-sold, net-to-company, and gross-revenue — so the company-wide report
  * and the per-event report can never diverge. Every figure here is computed
  * with EXACTLY the same rules the controller uses (Requirement 6.6):
@@ -24,6 +25,10 @@ use Illuminate\Support\Collection;
  *   - Tickets_Sold     = count of `valid` tickets on confirmed orders.
  *   - Gross_Revenue    = sum of `order_total_minor` over confirmed orders.
  *   - Net_To_Company   = Gross_Revenue − sum of `application_fee_minor`.
+ *   - Stripe_Fees      = sum of `stripe_fee_minor` (actual card-processing fees;
+ *                        a not-yet-captured fee counts as 0).
+ *   - Net_Payout       = Net_To_Company − Stripe_Fees (the TRUTHFUL amount that
+ *                        reaches the connected account's bank).
  *
  * All money is expressed in integer minor-currency units.
  */
@@ -45,8 +50,8 @@ class EventReportService
      * Produce the full accounting report for a single Event.
      *
      * @return EventReport the immutable value object carrying every figure
-     *                      surfaced by the inline summary (Req 5) and the
-     *                      dedicated report page (Req 6).
+     *                     surfaced by the inline summary (Req 5) and the
+     *                     dedicated report page (Req 6).
      */
     public function for(Event $event): EventReport
     {
@@ -67,16 +72,30 @@ class EventReportService
                 ->where('status', Ticket::STATUS_VALID)
                 ->count();
 
-        // Gross = collected order totals; Net = that less the platform's
-        // application fee (the direct-charge fee skim). (Req 5.1, 5.3, 6.2, 6.6)
+        // Gross = collected order totals; Net-to-company = that less the
+        // platform's application fee (the direct-charge fee skim). (Req 5.1, 5.3,
+        // 6.2, 6.6)
         $grossRevenueMinor = (int) $confirmed->sum('order_total_minor');
         $netToCompanyMinor = $grossRevenueMinor - (int) $confirmed->sum('application_fee_minor');
+
+        // Actual Stripe card-processing fees captured on these confirmed orders.
+        // stripe_fee_minor is nullable (unpaid/free orders, or paid orders whose
+        // balance transaction has not landed yet), so a null contributes 0 and
+        // the figure grows as fees are captured/backfilled. The TRUTHFUL net
+        // payout is gross less BOTH the platform fee and this Stripe fee — what
+        // actually reaches the connected account's bank. (Truthful-payout)
+        $stripeFeesMinor = (int) $confirmed->sum(
+            fn (Order $order): int => (int) $order->stripe_fee_minor
+        );
+        $netPayoutMinor = $netToCompanyMinor - $stripeFeesMinor;
 
         return new EventReport(
             confirmedOrders: $confirmed->count(),
             ticketsSold: $ticketsSold,
             grossRevenueMinor: $grossRevenueMinor,
             netToCompanyMinor: $netToCompanyMinor,
+            stripeFeesMinor: $stripeFeesMinor,
+            netPayoutMinor: $netPayoutMinor,
             capacity: $event->capacity,
             perTicketType: $this->perTicketType($event, $confirmedIds),
             ordersByStatus: $this->ordersByStatus($event),

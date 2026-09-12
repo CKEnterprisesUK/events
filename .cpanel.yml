@@ -1,0 +1,41 @@
+---
+# =============================================================================
+# cPanel Git Version Control — deployment tasks (pre-prod subdomain)
+# =============================================================================
+#
+# INTENTIONALLY MINIMAL — no tasks that write into the checkout.
+#
+# WHY: earlier versions ran migrate/seed/cache here on "Deploy HEAD Commit".
+# Those steps wrote files into the working tree (caches, logs) and the shared
+# host also drifts file permissions, which left the checkout "dirty" and
+# blocked the NEXT deploy — forcing a repeated delete/re-add of the repo. The
+# host also disables proc_open AND shell_exec, so there is no reliable way to
+# self-clean the tree from a deploy task.
+#
+# NEW WORKFLOW (no dirty-tree loop):
+#   1. git push
+#   2. cPanel Git → "Update from Remote"   ← pulls code, runs NO tasks, so it
+#                                             cannot dirty the working tree
+#   3. Log in as Super_Admin and open  /admin/ops  → click "Run migrations"
+#      and/or "Rebuild sample data". These run migrate/seed IN-PROCESS (no
+#      shell, no deploy), guarded to non-production. See PREPROD.md.
+#
+# A valid .cpanel.yml must still exist for cPanel to manage the repo, so this
+# file stays — it simply does nothing on deploy. If you ever DO click "Deploy
+# HEAD Commit", the empty task list is a safe no-op.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# UPDATED WORKFLOW (identical on pre-prod AND production):
+#   1. git push (pre-prod) / merge to main + push (prod)
+#   2. cPanel Git -> "Update from Remote"   (pulls code, runs NO tasks)
+#   3. Log in as Super_Admin. If there are pending migrations you are routed
+#      automatically to /admin/ops. Click "Run migrations", then "Clear caches".
+#      Migrations run IN-PROCESS from the web request (no shell, no deploy), so
+#      they work on this host and never dirty the checkout. See DEPLOYMENT.md
+#      and PREPROD.md.
+# -----------------------------------------------------------------------------
+
+deployment:
+  tasks:
+    - /bin/true

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\Company;
+use App\Models\PlatformSetting;
 use App\Services\AuditLogger;
 use App\Services\FeeCalculationService;
 use App\Services\RoleAuthorization;
@@ -65,6 +66,14 @@ class StripeConnectController extends Controller
             // to the customer as a booking fee. (Requirements 12.1–12.4, 13.4, 13.5)
             'feePercent' => $this->fees->effectivePercent($company),
             'feeMode' => $company->fee_handling_mode,
+            // The configurable estimate of Stripe's OWN card-processing fee, so
+            // the Owner sees the full cost picture — our platform fee AND Stripe's
+            // cut — rather than being told Stripe's charge is simply "separate".
+            // These are DB-configured (Super_Admin), never hardcoded; the exact
+            // fee on each order is captured from the balance transaction and shown
+            // in reports. (Configurable-estimate feature)
+            'stripeFeePercent' => (float) PlatformSetting::current()->stripe_fee_percent,
+            'stripeFeeFixedMinor' => (int) PlatformSetting::current()->stripe_fee_fixed_minor,
             // Whether the current user may change the fee handling (Owner-only).
             // An Admin can view/connect Stripe but must not see the fee controls.
             'canManage' => Gate::allows(RoleAuthorization::ACTION_MANAGE_STRIPE),

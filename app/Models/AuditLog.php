@@ -81,6 +81,18 @@ class AuditLog extends Model
 
     public const AUTH_EMAIL_VERIFIED = 'auth.email_verified';
 
+    public const AUTH_MFA_ENABLED = 'auth.mfa_enabled';
+
+    public const AUTH_MFA_DISABLED = 'auth.mfa_disabled';
+
+    public const AUTH_MFA_CHALLENGE_SUCCEEDED = 'auth.mfa_challenge_succeeded';
+
+    public const AUTH_MFA_CHALLENGE_FAILED = 'auth.mfa_challenge_failed';
+
+    public const AUTH_MFA_RECOVERY_CODE_USED = 'auth.mfa_recovery_code_used';
+
+    public const AUTH_MFA_RECOVERY_CODES_REGENERATED = 'auth.mfa_recovery_codes_regenerated';
+
     public const IMPERSONATION_STARTED = 'impersonation.started';
 
     public const IMPERSONATION_STOPPED = 'impersonation.stopped';
@@ -122,6 +134,8 @@ class AuditLog extends Model
     public const FEE_GLOBAL_CHANGED = 'fee.global_changed';
 
     public const FEE_COMPANY_CHANGED = 'fee.company_changed';
+
+    public const STRIPE_FEE_ESTIMATE_CHANGED = 'fee.stripe_estimate_changed';
 
     public const MAIL_TRANSPORT_CHANGED = 'mail.transport_changed';
 
@@ -181,6 +195,12 @@ class AuditLog extends Model
         self::AUTH_LOGIN_SUCCEEDED => ['category' => self::CATEGORY_AUTH, 'label' => 'Signed in'],
         self::AUTH_LOGIN_FAILED => ['category' => self::CATEGORY_AUTH, 'label' => 'Failed sign-in'],
         self::AUTH_EMAIL_VERIFIED => ['category' => self::CATEGORY_AUTH, 'label' => 'Verified email address'],
+        self::AUTH_MFA_ENABLED => ['category' => self::CATEGORY_AUTH, 'label' => 'Enabled two-factor authentication'],
+        self::AUTH_MFA_DISABLED => ['category' => self::CATEGORY_AUTH, 'label' => 'Disabled two-factor authentication'],
+        self::AUTH_MFA_CHALLENGE_SUCCEEDED => ['category' => self::CATEGORY_AUTH, 'label' => 'Passed two-factor challenge'],
+        self::AUTH_MFA_CHALLENGE_FAILED => ['category' => self::CATEGORY_AUTH, 'label' => 'Failed two-factor challenge'],
+        self::AUTH_MFA_RECOVERY_CODE_USED => ['category' => self::CATEGORY_AUTH, 'label' => 'Used a two-factor recovery code'],
+        self::AUTH_MFA_RECOVERY_CODES_REGENERATED => ['category' => self::CATEGORY_AUTH, 'label' => 'Regenerated two-factor recovery codes'],
         self::IMPERSONATION_STARTED => ['category' => self::CATEGORY_AUTH, 'label' => 'Started impersonation'],
         self::IMPERSONATION_STOPPED => ['category' => self::CATEGORY_AUTH, 'label' => 'Stopped impersonation'],
 
@@ -203,6 +223,7 @@ class AuditLog extends Model
         self::FEE_MODE_CHANGED => ['category' => self::CATEGORY_MONEY, 'label' => 'Changed fee handling'],
         self::FEE_GLOBAL_CHANGED => ['category' => self::CATEGORY_MONEY, 'label' => 'Changed the global fee'],
         self::FEE_COMPANY_CHANGED => ['category' => self::CATEGORY_MONEY, 'label' => 'Changed a company fee'],
+        self::STRIPE_FEE_ESTIMATE_CHANGED => ['category' => self::CATEGORY_MONEY, 'label' => 'Changed the Stripe fee estimate'],
         self::MAIL_TRANSPORT_CHANGED => ['category' => self::CATEGORY_SYSTEM, 'label' => 'Changed the mail transport'],
         self::STRIPE_CREDENTIALS_CHECKED => ['category' => self::CATEGORY_SYSTEM, 'label' => 'Checked Stripe credentials'],
         self::STRIPE_ONBOARDING_STARTED => ['category' => self::CATEGORY_MONEY, 'label' => 'Started Stripe onboarding'],

@@ -67,7 +67,9 @@ class PublicPageRenderingTest extends TestCase
     {
         // Requirement 8.3 — the event page shows the Event with its available
         // Ticket_Types; free ones render "Free" and paid ones render a price.
-        $company = Company::factory()->create();
+        // Absorb mode: the buyer pays exactly the ticket price, so the headline
+        // price is the ticket price with no add-on.
+        $company = Company::factory()->create(['fee_handling_mode' => Company::FEE_MODE_ABSORB]);
         $event = Event::factory()->for($company)->published()->create(['name' => 'Mixed Bill']);
         TicketType::factory()->forEvent($event)->free()->create(['name' => 'Community Pass']);
         TicketType::factory()->forEvent($event)->create([
@@ -83,6 +85,28 @@ class PublicPageRenderingTest extends TestCase
         $response->assertSee('Free');
         $response->assertSee('Premium Seat');
         $response->assertSee('25.00');
+    }
+
+    public function test_event_page_shows_mandatory_buyer_fee_in_the_headline_price(): void
+    {
+        // Pricing transparency — when the buyer covers the platform fee (Pass_On),
+        // the mandatory fee is included in the ticket price shown from the first
+        // display (no drip pricing), with an optional breakdown. At the default
+        // 5% Global_Fee_Percent, a £25.00 ticket is shown as £26.25 including a
+        // £1.25 platform fee.
+        $company = Company::factory()->create(['fee_handling_mode' => Company::FEE_MODE_PASS_ON]);
+        $event = Event::factory()->for($company)->published()->create(['name' => 'Fee Included Fest']);
+        TicketType::factory()->forEvent($event)->create([
+            'name' => 'Premium Seat',
+            'price_minor' => 2500,
+        ]);
+
+        $response = $this->get("/{$company->slug}/{$event->id}");
+
+        $response->assertOk();
+        // Full mandatory price up front, plus the transparent breakdown.
+        $response->assertSee('26.25');
+        $response->assertSee('Includes £1.25 platform fee', false);
     }
 
     public function test_event_page_renders_event_details(): void

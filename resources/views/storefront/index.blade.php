@@ -8,6 +8,47 @@
     @endif
 @endsection
 
+@push('head')
+    @php
+        $seoCanonical = route('storefront', ['companySlug' => $company->slug]);
+        $seoImage = $branding->hasPoster()
+            ? \Illuminate\Support\Facades\Storage::disk('public')->url($branding->posterPath)
+            : ($branding->hasLogo()
+                ? \Illuminate\Support\Facades\Storage::disk('public')->url($branding->logoPath)
+                : null);
+    @endphp
+    @include('partials.seo-meta', [
+        'seoTitle' => $company->name,
+        'seoDescription' => $company->about_text
+            ?: 'Book tickets for events by '.$company->name.'.',
+        'seoCanonical' => $seoCanonical,
+        'seoImage' => $seoImage,
+        'seoType' => 'website',
+    ])
+
+    {{-- schema.org Organization so search engines understand the storefront
+         represents an event organiser, with its social profiles as sameAs. --}}
+    <script type="application/ld+json">
+        {!! json_encode(array_filter([
+            '@context' => 'https://schema.org',
+            '@type' => 'Organization',
+            'name' => $company->name,
+            'url' => $seoCanonical,
+            'logo' => $branding->hasLogo()
+                ? \Illuminate\Support\Facades\Storage::disk('public')->url($branding->logoPath)
+                : null,
+            'description' => $company->about_text ?: null,
+            'sameAs' => array_values(array_filter([
+                $company->website,
+                $company->facebook_url,
+                $company->instagram_url,
+                $company->x_url,
+                $company->linkedin_url,
+            ])),
+        ], fn ($v) => $v !== null && $v !== [] && $v !== ''), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
+    </script>
+@endpush
+
 @section('content')
     <header class="store-header {{ $branding->hasPoster() ? 'store-header--poster' : '' }}">
         @if ($branding->hasPoster())

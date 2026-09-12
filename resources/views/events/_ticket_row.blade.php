@@ -14,9 +14,18 @@
             @if ($type['is_free'])
                 Free
             @else
-                {{ $money($type['price_minor']) }}
+                {{-- Show the full mandatory price the buyer pays. When the buyer
+                     covers the platform fee (Pass_On), that fee is included here
+                     from the first display — never revealed only at checkout —
+                     with an optional breakdown below. --}}
+                {{ $money($type['display_price_minor'] ?? $type['price_minor']) }}
             @endif
         </span>
+        @if (! ($type['is_free'] ?? false) && ! empty($type['includes_fee']))
+            <span class="ticket-type-fee-note">
+                Includes {{ $money($type['fee_each_minor']) }} platform fee
+            </span>
+        @endif
         <span class="ticket-type-availability" data-availability="{{ $type['availability_status'] }}">
             @if ($type['sold_out'])
                 Sold out

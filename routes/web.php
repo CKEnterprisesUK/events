@@ -5,6 +5,9 @@ use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\Auth\TwoFactorChallengeController;
+use App\Http\Controllers\Auth\TwoFactorController;
+use App\Http\Controllers\Auth\TwoFactorRecommendationController;
 use App\Http\Controllers\BrandingController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerController;
@@ -22,9 +25,11 @@ use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PublicPagesController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ScanController;
 use App\Http\Controllers\SharingController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\StorefrontController;
 use App\Http\Controllers\StripeConnectController;
 use App\Http\Controllers\StripeReturnController;
@@ -42,7 +47,10 @@ use App\Http\Controllers\SuperAdmin\ReservedSlugController as SuperAdminReserved
 use App\Http\Controllers\SuperAdmin\SettingsController as SuperAdminSettingsController;
 use App\Http\Controllers\SuperAdmin\StripeAccountController as SuperAdminStripeAccountController;
 use App\Http\Controllers\SuperAdmin\SupportRequestController as SuperAdminSupportRequestController;
+use App\Http\Controllers\SuperAdmin\OpsController as SuperAdminOpsController;
+use App\Http\Controllers\SuperAdmin\ProfileController as SuperAdminProfileController;
 use App\Http\Controllers\SuperAdmin\SystemHealthController as SuperAdminSystemHealthController;
+use App\Http\Controllers\SuperAdmin\TwoFactorController as SuperAdminTwoFactorController;
 use App\Http\Controllers\SuperAdmin\TransactionController as SuperAdminTransactionController;
 use App\Http\Controllers\TicketTypeController;
 use App\Http\Controllers\TrustController;
@@ -60,6 +68,32 @@ Route::get('/', [LandingController::class, 'index'])->name('landing');
 
 /*
 |--------------------------------------------------------------------------
+| Public marketing pages (reserved prefixes, no tenant / auth)
+|--------------------------------------------------------------------------
+| The homepage summarises the product and links through to these focused
+| pages. Each is a reserved prefix declared before the `/{company-slug}/`
+| storefront catch-all so it renders the marketing page rather than being
+| treated as a storefront slug. They establish no active Company.
+*/
+Route::get('/features', [PublicPagesController::class, 'features'])->name('features');
+Route::get('/pricing', [PublicPagesController::class, 'pricing'])->name('pricing');
+Route::get('/how-it-works', [PublicPagesController::class, 'howItWorks'])->name('how-it-works');
+Route::get('/for-charities', [PublicPagesController::class, 'forCharities'])->name('for-charities');
+
+/*
+|--------------------------------------------------------------------------
+| Legacy marketing redirects
+|--------------------------------------------------------------------------
+| The old single-page homepage carried "Why us" / "How it works" / "Pricing"
+| as in-page anchors (/#why, /#how, /#pricing). Those concerns now have their
+| own pages, so redirect the anchor URLs (and any bookmarked `/why-us`) to the
+| closest dedicated destination. 301 so search engines follow the move.
+*/
+Route::permanentRedirect('/why-us', '/for-charities');
+
+
+/*
+|--------------------------------------------------------------------------
 | Public privacy policy page (reserved prefix, no tenant / auth)
 |--------------------------------------------------------------------------
 | `/privacy` is a reserved prefix declared before the `/{company-slug}/`
@@ -67,6 +101,18 @@ Route::get('/', [LandingController::class, 'index'])->name('landing');
 | as a storefront slug. It establishes no active Company. (Requirement 22.3)
 */
 Route::get('/privacy', [GdprController::class, 'privacy'])->name('privacy');
+
+/*
+|--------------------------------------------------------------------------
+| Public XML sitemap (reserved path, no tenant / auth)
+|--------------------------------------------------------------------------
+| `/sitemap.xml` lists the publicly indexable URLs (landing page, each active
+| Company storefront, and every published Event) for search engines. The `.xml`
+| suffix keeps it out of the `/{company-slug}` catch-all (slug regex excludes
+| dots); it is declared here for clarity and establishes no active Company.
+*/
+Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
+Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('robots');
 
 /*
 |--------------------------------------------------------------------------
@@ -135,6 +181,24 @@ Route::middleware('guest')->group(function () {
         ->middleware('throttle:auth')->name('password.update');
 });
 
+/*
+|--------------------------------------------------------------------------
+| Two-factor login challenge (reserved prefix, guest — pending second factor)
+|--------------------------------------------------------------------------
+| Reached only in the window between a correct password and a proven second
+| factor: LoginController drops the guard session and stashes the user as
+| "pending two-factor", then redirects here. `guest` is correct because there
+| is NO authenticated user during the challenge. Throttled like login to blunt
+| code brute-forcing. Accepts a TOTP code or a one-time recovery code.
+*/
+Route::middleware('guest')->group(function () {
+    Route::get('/two-factor-challenge', [TwoFactorChallengeController::class, 'show'])
+        ->name('two-factor.challenge');
+    Route::post('/two-factor-challenge', [TwoFactorChallengeController::class, 'store'])
+        ->middleware('throttle:login')
+        ->name('two-factor.challenge.store');
+});
+
 Route::post('/logout', [LoginController::class, 'logout'])
     ->middleware('auth')
     ->name('logout');
@@ -163,6 +227,25 @@ Route::middleware('auth')->group(function () {
     Route::post('/email/verification-notification', [EmailVerificationController::class, 'resend'])
         ->middleware('throttle:auth')
         ->name('verification.send');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Post-login MFA recommendation nudge (reserved prefix, authenticated+verified)
+|--------------------------------------------------------------------------
+| After a completed login, a Company_User who has not enabled MFA and has not
+| permanently dismissed the reminder is sent here before the dashboard. They
+| can set up MFA now (link to the profile section), be reminded next time, or
+| dismiss the reminder forever. Behind `auth`+`verified` (a real, verified
+| session) but outside the tenant group — it acts only on the acting user.
+*/
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/two-factor-recommendation', [TwoFactorRecommendationController::class, 'show'])
+        ->name('two-factor.recommend');
+    Route::post('/two-factor-recommendation/later', [TwoFactorRecommendationController::class, 'dismissOnce'])
+        ->name('two-factor.recommend.later');
+    Route::post('/two-factor-recommendation/never', [TwoFactorRecommendationController::class, 'dismissForever'])
+        ->name('two-factor.recommend.never');
 });
 
 /*
@@ -209,6 +292,23 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
             ->withoutMiddleware('dashboard.tenant')->name('profile.logout-other-sessions');
         Route::get('/profile/data', [ProfileController::class, 'downloadData'])
             ->withoutMiddleware('dashboard.tenant')->name('profile.data');
+
+        // Self-service two-factor (TOTP) management, on the profile page. Like
+        // the profile routes above it acts only on the acting user's own record
+        // (no tenant binding). Enable/confirm sets up MFA; disable and
+        // recovery-code regeneration require the current password.
+        Route::post('/profile/two-factor', [TwoFactorController::class, 'enable'])
+            ->withoutMiddleware('dashboard.tenant')->name('profile.two-factor.enable');
+        Route::get('/profile/two-factor/setup', [TwoFactorController::class, 'setup'])
+            ->withoutMiddleware('dashboard.tenant')->name('profile.two-factor.setup');
+        Route::get('/profile/two-factor/qr', [TwoFactorController::class, 'qr'])
+            ->withoutMiddleware('dashboard.tenant')->name('profile.two-factor.qr');
+        Route::post('/profile/two-factor/confirm', [TwoFactorController::class, 'confirm'])
+            ->withoutMiddleware('dashboard.tenant')->name('profile.two-factor.confirm');
+        Route::delete('/profile/two-factor', [TwoFactorController::class, 'disable'])
+            ->withoutMiddleware('dashboard.tenant')->name('profile.two-factor.disable');
+        Route::post('/profile/two-factor/recovery-codes', [TwoFactorController::class, 'regenerateRecoveryCodes'])
+            ->withoutMiddleware('dashboard.tenant')->name('profile.two-factor.recovery-codes');
 
         // Help & Knowledge portal + Contact support. Open to every authenticated
         // Company_User (any role) and to an impersonating Super_Admin: the Help
@@ -437,6 +537,9 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
         // 21.1, 21.2, 21.3, 3.5, 3.7)
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
+        // PDF payout statement — the same figures/range as the CSV, formatted for
+        // filing or handing to a bookkeeper. (Report export types)
+        Route::get('/reports/export/pdf', [ReportController::class, 'exportPdf'])->name('reports.export-pdf');
 
         // Company activity trail (Owner/Admin-gated in the controller via
         // ACTION_VIEW_AUDIT_LOG). READ-ONLY: a single GET renders the Company's
@@ -490,7 +593,7 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
 | of the authenticated surface. (Requirements 20.1, 20.2, 20.3, 20.4, 20.5,
 | 20.6, 20.7)
 */
-Route::middleware(['auth', 'super.admin', 'session.timeout'])
+Route::middleware(['auth', 'super.admin', 'session.timeout', 'migrations.pending'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
@@ -499,9 +602,29 @@ Route::middleware(['auth', 'super.admin', 'session.timeout'])
         // This is the super-admin landing page. (20.1, 20.2)
         Route::get('/', [SuperAdminDashboardController::class, 'index'])->name('home');
 
+        // Super_Admin account security: change password + self-service two-factor
+        // (TOTP) management. Acts only on the acting Super_Admin's OWN record, so
+        // no per-action Gate is needed beyond the group's `super.admin` guard.
+        // Mirrors the Company-side `dashboard.profile.two-factor.*` surface,
+        // reusing the same role-agnostic TwoFactorAuthenticationService — once a
+        // Super_Admin confirms enrolment here they are challenged for a code at
+        // their next login with no further wiring. Sensitive actions require the
+        // current password.
+        Route::get('/profile', [SuperAdminProfileController::class, 'edit'])->name('profile.edit');
+        Route::put('/profile/password', [SuperAdminProfileController::class, 'updatePassword'])->name('profile.password');
+        Route::post('/profile/two-factor', [SuperAdminTwoFactorController::class, 'enable'])->name('profile.two-factor.enable');
+        Route::get('/profile/two-factor/setup', [SuperAdminTwoFactorController::class, 'setup'])->name('profile.two-factor.setup');
+        Route::get('/profile/two-factor/qr', [SuperAdminTwoFactorController::class, 'qr'])->name('profile.two-factor.qr');
+        Route::post('/profile/two-factor/confirm', [SuperAdminTwoFactorController::class, 'confirm'])->name('profile.two-factor.confirm');
+        Route::delete('/profile/two-factor', [SuperAdminTwoFactorController::class, 'disable'])->name('profile.two-factor.disable');
+        Route::post('/profile/two-factor/recovery-codes', [SuperAdminTwoFactorController::class, 'regenerateRecoveryCodes'])->name('profile.two-factor.recovery-codes');
+
         // All Companies' transactions + total Application_Fees earned across the
         // whole Platform (cross-Company, bypasses the tenant scope). (20.1, 20.2)
         Route::get('/transactions', [SuperAdminTransactionController::class, 'index'])->name('transactions.index');
+        // CSV export of the same Platform-wide transactions + total fees earned,
+        // for the Platform operator's own accounting. (20.1, 20.2)
+        Route::get('/transactions/export', [SuperAdminTransactionController::class, 'export'])->name('transactions.export');
 
         // Platform-wide, cross-tenant audit trail (forensics/compliance). Adds a
         // Company filter and an impersonated-only toggle over the shared filters
@@ -550,6 +673,35 @@ Route::middleware(['auth', 'super.admin', 'session.timeout'])
         // jobs and cache — so a stalled worker or broken dependency is visible
         // rather than silently backing up ticket emails / webhook processing.
         Route::get('/system', [SuperAdminSystemHealthController::class, 'index'])->name('system.index');
+
+        // Database "build" operations run IN-PROCESS from an authenticated
+        // Super_Admin request. The host has no terminal and disables
+        // proc_open/shell_exec, and cPanel "Deploy" keeps dirtying the git
+        // checkout, so this is the reliable, no-terminal way to apply schema
+        // after an "Update from Remote".
+        //
+        // These routes exist in EVERY environment (production included) so the
+        // same UI-driven flow works on prod and pre-prod. Safety is enforced in
+        // OpsController, not by hiding routes:
+        //   * migrate + rebuild-caches are forward-only / non-destructive and
+        //     run anywhere (the view gates the prod migrate behind a typed
+        //     confirmation + backup reminder).
+        //   * reseed (migrate:fresh --seed) is DESTRUCTIVE, so its route is
+        //     still registered ONLY in non-production, and the controller
+        //     re-checks the APP_ENV allow-list defensively on top of that.
+        Route::get('/ops', [SuperAdminOpsController::class, 'index'])->name('ops.index');
+        Route::post('/ops/migrate', [SuperAdminOpsController::class, 'migrate'])->name('ops.migrate');
+        // Clear the compiled route/config/view caches after a code pull.
+        // Non-destructive, so safe to run any time — this is what makes a
+        // newly-pulled route (which "Update from Remote" doesn't cache-bust)
+        // resolvable without a terminal.
+        Route::post('/ops/rebuild-caches', [SuperAdminOpsController::class, 'rebuildCaches'])->name('ops.rebuild-caches');
+
+        // Destructive sample-data rebuild: non-production only (defence in depth
+        // with the controller's own production guard).
+        if (app()->environment(['local', 'staging', 'preprod', 'development'])) {
+            Route::post('/ops/reseed', [SuperAdminOpsController::class, 'reseed'])->name('ops.reseed');
+        }
 
         // Support ticket queue: the operator view of every in-dashboard
         // "Contact support" request across the whole Platform. Deliberately
@@ -605,6 +757,10 @@ Route::middleware(['auth', 'super.admin', 'session.timeout'])
         Route::get('/fees', [SuperAdminFeeController::class, 'index'])->name('fees.index');
         Route::put('/fees/global', [SuperAdminFeeController::class, 'updateGlobal'])->name('fees.global.update');
         Route::put('/fees/companies/{company}', [SuperAdminFeeController::class, 'updateCompany'])->name('fees.company.update');
+        // Configurable estimate of Stripe's own card-processing fee (percent +
+        // fixed), used for the pre-purchase calculator/preview only. DB-stored,
+        // not hardcoded. (Configurable-estimate feature)
+        Route::put('/fees/stripe-estimate', [SuperAdminFeeController::class, 'updateStripeEstimate'])->name('fees.stripe-estimate.update');
 
         // Jump into a Company's dashboard as the acting Super_Admin (and step
         // back out). Impersonation is a session flag honoured by

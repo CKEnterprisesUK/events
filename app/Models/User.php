@@ -33,6 +33,10 @@ use Illuminate\Support\Carbon;
  * @property string $password
  * @property Carbon|null $agreed_to_terms_at
  * @property Carbon|null $last_activity_at
+ * @property string|null $two_factor_secret
+ * @property string|null $two_factor_recovery_codes
+ * @property Carbon|null $two_factor_confirmed_at
+ * @property Carbon|null $mfa_prompt_dismissed_at
  */
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -141,14 +145,26 @@ class User extends Authenticatable implements MustVerifyEmail
         'password',
         'agreed_to_terms_at',
         'last_activity_at',
+        // Harmless UI preference (suppresses the post-login MFA nudge). Unlike
+        // the `two_factor_*` secret columns — which stay OUT of `$fillable` and
+        // are only written via the service's `forceFill` — this carries no
+        // privilege, so it is safe to mass-assign (and lets factories set it).
+        'mfa_prompt_dismissed_at',
     ];
 
     /**
+     * The two-factor columns are deliberately EXCLUDED from `$fillable`: like
+     * `is_super_admin`, they are security-critical and are only ever written
+     * through the dedicated {@see \App\Services\TwoFactorAuthenticationService}
+     * (via `forceFill`), never from mass-assignment of request input.
+     *
      * @var list<string>
      */
     protected $hidden = [
         'password',
         'remember_token',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
     ];
 
     /**
@@ -171,6 +187,13 @@ class User extends Authenticatable implements MustVerifyEmail
             'last_activity_at' => 'datetime',
             'is_super_admin' => 'boolean',
             'password' => 'hashed',
+            // Encrypted at rest: the raw TOTP secret and the recovery-code list
+            // never touch the DB in plaintext. `encrypted:array` also handles
+            // the JSON (de)serialisation of the recovery codes for us.
+            'two_factor_secret' => 'encrypted',
+            'two_factor_recovery_codes' => 'encrypted:array',
+            'two_factor_confirmed_at' => 'datetime',
+            'mfa_prompt_dismissed_at' => 'datetime',
         ];
     }
 
@@ -235,5 +258,33 @@ class User extends Authenticatable implements MustVerifyEmail
         $companyId = $company instanceof Company ? $company->getKey() : $company;
 
         return $this->company_id === $companyId;
+    }
+
+    /**
+     * Whether this user has ACTIVE two-factor authentication — a secret that
+     * has been confirmed with a valid code. A half-finished enrolment (secret
+     * present but never confirmed) does NOT count, so such a user is not
+     * challenged at login and can safely restart enrolment. (MFA opt-in)
+     */
+    public function hasTwoFactorEnabled(): bool
+    {
+        return $this->two_factor_secret !== null
+            && $this->two_factor_confirmed_at !== null;
+    }
+
+    /**
+     * Whether the post-login "MFA recommended" nudge should be shown to this
+     * user. Shown to any Company_User (never Super_Admins) who has not enabled
+     * MFA and has not permanently dismissed the reminder. Returning false once
+     * MFA is on keeps the nudge from ever reappearing.
+     */
+    public function shouldSeeMfaRecommendation(): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return false;
+        }
+
+        return ! $this->hasTwoFactorEnabled()
+            && $this->mfa_prompt_dismissed_at === null;
     }
 }

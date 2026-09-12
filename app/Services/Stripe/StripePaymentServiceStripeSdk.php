@@ -2,6 +2,7 @@
 
 namespace App\Services\Stripe;
 
+use Illuminate\Support\Facades\Log;
 use Stripe\Exception\ApiErrorException;
 use Stripe\Exception\AuthenticationException;
 use Stripe\Exception\SignatureVerificationException;
@@ -150,6 +151,61 @@ class StripePaymentServiceStripeSdk implements StripePaymentService
                 id: $refund->id,
                 amountMinor: (int) $refund->amount,
                 status: (string) $refund->status,
+            );
+        });
+    }
+
+    public function retrieveChargeFee(
+        string $connectedAccountId,
+        string $paymentIntentId,
+    ): ?StripeChargeFee {
+        // Read on the connected account (Stripe-Account header) because the
+        // charge and its balance transaction — where Stripe records the exact
+        // processing fee it deducted — live on the connected account, not the
+        // Platform account (direct charges). We expand the charge and its
+        // balance transaction so the fee comes back in a single round-trip.
+        // (Truthful-payout feature; Stripe: "expand latest_charge.balance_transaction")
+        return $this->withoutStripeNoticeEscalation(function () use ($connectedAccountId, $paymentIntentId): ?StripeChargeFee {
+            try {
+                $intent = $this->client->paymentIntents->retrieve(
+                    $paymentIntentId,
+                    ['expand' => ['latest_charge.balance_transaction']],
+                    ['stripe_account' => $connectedAccountId],
+                );
+            } catch (Throwable $e) {
+                // A missing/unavailable fee must never fail the webhook: log and
+                // return null so the caller leaves stripe_fee_minor unset and can
+                // retry on a later delivery. (Interface contract: never throw.)
+                Log::warning('Could not retrieve Stripe charge fee for payment intent.', [
+                    'payment_intent' => $paymentIntentId,
+                    'connected_account' => $connectedAccountId,
+                    'error' => $e->getMessage(),
+                ]);
+
+                return null;
+            }
+
+            $charge = $intent->latest_charge ?? null;
+
+            // The SDK returns the id (string) when not expanded, or the object
+            // when expanded. We asked to expand, so expect the object; guard the
+            // string case so a partial response degrades to "not yet available".
+            if (! is_object($charge)) {
+                return null;
+            }
+
+            $balanceTransaction = $charge->balance_transaction ?? null;
+
+            // The balance transaction (and thus the fee) is only present once the
+            // PaymentIntent has succeeded and been captured. Absent => not ready.
+            if (! is_object($balanceTransaction) || ! isset($balanceTransaction->fee)) {
+                return null;
+            }
+
+            return new StripeChargeFee(
+                chargeId: (string) $charge->id,
+                feeMinor: (int) $balanceTransaction->fee,
+                currency: (string) ($balanceTransaction->currency ?? ''),
             );
         });
     }

@@ -37,6 +37,7 @@ use Illuminate\Support\Carbon;
  * @property int $application_fee_minor
  * @property int $order_total_minor
  * @property int $refunded_total_minor
+ * @property int|null $stripe_fee_minor
  * @property string $fee_handling_mode
  * @property Carbon|null $reserved_until
  * @property string|null $stripe_session_id
@@ -82,6 +83,7 @@ class Order extends Model
         'application_fee_minor',
         'order_total_minor',
         'refunded_total_minor',
+        'stripe_fee_minor',
         'fee_handling_mode',
         'reserved_until',
         'stripe_session_id',
@@ -115,6 +117,7 @@ class Order extends Model
             'application_fee_minor' => 'integer',
             'order_total_minor' => 'integer',
             'refunded_total_minor' => 'integer',
+            'stripe_fee_minor' => 'integer',
             'reserved_until' => 'datetime',
             'scanned_at' => 'datetime',
             'fulfilled_at' => 'datetime',
@@ -212,5 +215,20 @@ class Order extends Model
     {
         return $this->order_total_minor > 0
             && $this->refunded_total_minor >= $this->order_total_minor;
+    }
+
+    /**
+     * The TRUTHFUL net payout that actually reaches the Company's bank for this
+     * Order, in integer minor units: the collected Order_Total less BOTH the
+     * Platform's Application_Fee (our skim, collected via `application_fee_amount`)
+     * AND the actual card-processing fee Stripe took inside the connected account
+     * (`stripe_fee_minor`). When the Stripe fee has not been captured yet (an
+     * unpaid/free Order, or a paid Order whose balance transaction has not landed)
+     * it is treated as 0 so the figure degrades to the prior platform-fee-only
+     * net rather than becoming null. Never negative. (Truthful-payout feature)
+     */
+    public function netPayoutMinor(): int
+    {
+        return max(0, $this->order_total_minor - $this->application_fee_minor - (int) $this->stripe_fee_minor);
     }
 }

@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
-use App\Models\Company;
 use App\Models\User;
+use App\Services\Auth\LoginFlow;
 use App\Services\AuditLogger;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -26,7 +26,10 @@ use Illuminate\Validation\ValidationException;
  */
 class LoginController extends Controller
 {
-    public function __construct(private readonly AuditLogger $audit) {}
+    public function __construct(
+        private readonly AuditLogger $audit,
+        private readonly LoginFlow $loginFlow,
+    ) {}
 
     /**
      * Show the login form.
@@ -71,65 +74,26 @@ class LoginController extends Controller
             ]);
         }
 
-        // A Company_User of a suspended Company must not be granted a session,
-        // even with valid credentials. Tear the session down and reject the
-        // login with an error. (Requirement 2.3)
-        $company = Auth::user()->company;
-
-        if ($company instanceof Company && $company->isSuspended()) {
-            Auth::logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-
-            throw ValidationException::withMessages([
-                'email' => __('This account has been suspended.'),
-            ]);
-        }
-
-        // A self-signed-up Owner must verify their email before they can sign
-        // in. Super_Admins are provisioned out-of-band and invited users are
-        // auto-verified on accept, so in practice only an unverified Owner is
-        // rejected here. Tear the session down (so no usable session is granted)
-        // and send them to the verification notice with a resend option, rather
-        // than leaving them authenticated-but-bounced. The notice route
-        // re-establishes a lightweight session on its own auth check.
         $user = Auth::user();
 
-        if ($user instanceof User && ! $user->isSuperAdmin() && ! $user->hasVerifiedEmail()) {
-            // Keep the session just long enough to show the notice + resend:
-            // the user stays authenticated but `verified` gates the dashboard,
-            // so they can go no further until they verify.
-            $request->session()->regenerate();
+        // If the user has active two-factor authentication, the password is
+        // only the FIRST factor. Drop the guard session immediately (so no
+        // usable session exists until the second factor is proven), stash the
+        // user as "pending two-factor", and hand off to the challenge screen.
+        // The challenge controller re-logs the user in and runs the shared
+        // completion flow (suspended / unverified / audit / redirect) on
+        // success. (MFA login challenge)
+        if ($user instanceof User && $user->hasTwoFactorEnabled()) {
+            Auth::logout();
 
-            return redirect()->route('verification.notice');
+            return $this->loginFlow->beginTwoFactorChallenge($request, $user, $remember);
         }
 
-        $request->session()->regenerate();
-
-        // Reset the idle-timeout window at sign-in. Without this, a returning
-        // user whose stored `last_activity_at` is older than the idle threshold
-        // authenticates successfully but is then immediately bounced by
-        // SessionTimeout on the first post-login request ("session expired").
-        // Stamping "now" here starts the idle window fresh from the sign-in.
-        // (Requirement 3.11)
-        Auth::user()->forceFill(['last_activity_at' => now()])->save();
-
-        // Record the successful sign-in. The actor/Company are resolved from the
-        // now-authenticated user by the logger; a Super_Admin has a null Company
-        // so it lands only on the platform trail.
-        $this->audit->record(
-            action: AuditLog::AUTH_LOGIN_SUCCEEDED,
-            summary: 'Signed in',
-        );
-
-        // Super_Admins land on the platform (super-admin) surface by default;
-        // from there they can jump into a specific Company's dashboard. Company
-        // users land on their own dashboard.
-        if (Auth::user()->isSuperAdmin()) {
-            return redirect()->intended('/admin');
-        }
-
-        return redirect()->intended('/dashboard');
+        // No second factor: finalise the login now. LoginFlow applies the
+        // suspended-Company and unverified-email gates, resets the idle-timeout
+        // window, records the sign-in, and returns the correct landing redirect
+        // (including the post-login MFA recommendation nudge).
+        return $this->loginFlow->completeLogin($request);
     }
 
     /**

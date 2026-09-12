@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\Company;
 use App\Models\Order;
 use App\Models\ProcessedWebhook;
+use App\Services\Stripe\StripePaymentService;
 use App\Services\Stripe\StripeWebhookEvent;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -42,6 +43,7 @@ class WebhookProcessor
         private readonly OrderFulfilmentService $fulfilment,
         private readonly OrderCancellationService $cancellation,
         private readonly AuditLogger $audit,
+        private readonly StripePaymentService $stripe,
     ) {}
 
     /**
@@ -117,7 +119,13 @@ class WebhookProcessor
             return;
         }
 
-        $justPaid = DB::transaction(function () use ($order): bool {
+        // The completed Checkout Session carries the PaymentIntent id; capture
+        // it onto the Order (if not already set) so the actual Stripe fee can be
+        // read from its charge's balance transaction, and so refunds/lookups can
+        // resolve the Order by PaymentIntent later.
+        $paymentIntentId = $this->stringField($event->data, 'payment_intent');
+
+        $justPaid = DB::transaction(function () use ($order, $paymentIntentId): bool {
             $locked = Order::withoutGlobalScopes()
                 ->whereKey($order->getKey())
                 ->lockForUpdate()
@@ -128,6 +136,11 @@ class WebhookProcessor
             }
 
             $locked->status = Order::STATUS_PAID;
+
+            if ($paymentIntentId !== null && $locked->stripe_payment_intent_id === null) {
+                $locked->stripe_payment_intent_id = $paymentIntentId;
+            }
+
             $locked->save();
 
             return true;
@@ -139,7 +152,19 @@ class WebhookProcessor
         // itself idempotent — a redelivered event therefore neither re-charges
         // nor re-fulfils. (Requirements 14.1, 14.3)
         if ($justPaid) {
-            $this->fulfilment->fulfil($order->refresh());
+            $order = $order->refresh();
+
+            $this->fulfilment->fulfil($order);
+
+            // Capture the ACTUAL card-processing fee Stripe took on the connected
+            // account, so the dashboard and reports can show a truthful net
+            // payout rather than one that ignores Stripe's cut. This is a
+            // best-effort read: a free order has nothing to charge, and Stripe
+            // may not have settled the balance transaction at the instant this
+            // webhook fires, so a null result simply leaves stripe_fee_minor
+            // unset for a later delivery/backfill to fill in. It never blocks
+            // fulfilment or the audit trail. (Truthful-payout feature)
+            $this->captureStripeFee($order);
 
             // System event (no acting user): record the confirmed payment
             // against the Order's own Company for the trail.
@@ -153,6 +178,51 @@ class WebhookProcessor
                 ],
             );
         }
+    }
+
+    /**
+     * Best-effort capture of the actual Stripe processing fee for a just-paid
+     * Order, read from the charge's balance transaction on the Company's
+     * connected account. Skipped for free Orders (no charge) and for Orders with
+     * no PaymentIntent or no connected account resolvable. A null fee (Stripe not
+     * settled yet, or fee unavailable) leaves `stripe_fee_minor` unset so a later
+     * delivery or a backfill can populate it — it is never treated as zero.
+     * Persists the resolved charge id alongside the fee when the Order does not
+     * already carry one. (Truthful-payout feature)
+     */
+    private function captureStripeFee(Order $order): void
+    {
+        // Free/zero orders never hit Stripe, so there is no processing fee.
+        if ($order->order_total_minor === 0) {
+            return;
+        }
+
+        if ($order->stripe_payment_intent_id === null) {
+            return;
+        }
+
+        // The charge lives on the Company's connected account (direct charge),
+        // so the fee must be read with that account in the Stripe-Account header.
+        $company = Company::withoutGlobalScopes()->find($order->company_id);
+        $accountId = $company?->stripe_account_id;
+
+        if ($accountId === null || $accountId === '') {
+            return;
+        }
+
+        $fee = $this->stripe->retrieveChargeFee($accountId, $order->stripe_payment_intent_id);
+
+        if ($fee === null) {
+            return;
+        }
+
+        $order->stripe_fee_minor = $fee->feeMinor;
+
+        if ($order->stripe_charge_id === null && $fee->chargeId !== '') {
+            $order->stripe_charge_id = $fee->chargeId;
+        }
+
+        $order->save();
     }
 
     /**

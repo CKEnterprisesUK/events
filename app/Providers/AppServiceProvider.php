@@ -31,6 +31,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
+use PragmaRX\Google2FAQRCode\Google2FA;
 use Stripe\StripeClient;
 
 class AppServiceProvider extends ServiceProvider
@@ -56,6 +57,15 @@ class AppServiceProvider extends ServiceProvider
         $this->bindStripePaymentService();
         $this->bindTicketMailer();
         $this->bindGraphMail();
+
+        // The TOTP engine used by TwoFactorAuthenticationService. We only use
+        // it to generate/verify secrets and build the otpauth:// provisioning
+        // URI (getQRCodeUrl); the QR IMAGE itself is rendered as a PNG by the
+        // app's own QrService (endroid/qr-code) on a dedicated route, so no
+        // QR-code backend needs wiring here.
+        $this->app->bind(Google2FA::class, function (): Google2FA {
+            return new Google2FA;
+        });
     }
 
     /**

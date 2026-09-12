@@ -157,6 +157,10 @@ class SuspensionGatingReversibilityTest extends PbtTestCase
                 $controlUser = User::factory()->create([
                     'company_id' => $control->id,
                     'password' => Hash::make(self::PASSWORD),
+                    // Dismiss the post-login MFA recommendation nudge so this
+                    // property observes the plain login landing (/dashboard);
+                    // the nudge is unrelated to suspension gating.
+                    'mfa_prompt_dismissed_at' => now(),
                 ]);
 
                 // The Company under test starts active, then walks the random
@@ -165,6 +169,7 @@ class SuspensionGatingReversibilityTest extends PbtTestCase
                 $user = User::factory()->create([
                     'company_id' => $company->id,
                     'password' => Hash::make(self::PASSWORD),
+                    'mfa_prompt_dismissed_at' => now(),
                 ]);
 
                 // Baseline: active from creation, all surfaces available.

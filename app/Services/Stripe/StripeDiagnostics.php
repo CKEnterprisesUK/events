@@ -2,6 +2,8 @@
 
 namespace App\Services\Stripe;
 
+use Illuminate\Contracts\Container\Container;
+
 /**
  * Super_Admin-facing, read-only diagnostics for the Platform's Stripe API
  * credentials. Surfaces a masked view of the configured secret + webhook
@@ -17,7 +19,7 @@ namespace App\Services\Stripe;
 class StripeDiagnostics
 {
     public function __construct(
-        private readonly StripePaymentService $stripe,
+        private readonly Container $container,
     ) {}
 
     /**
@@ -66,7 +68,12 @@ class StripeDiagnostics
             );
         }
 
-        return $this->stripe->verifyPlatformCredentials();
+        // Resolve the Stripe boundary lazily: the settings page instantiates
+        // this class just to render config presence flags, and must not fail
+        // when Stripe is unconfigured. The client is only built once we've
+        // confirmed a secret is set and a live probe is actually requested.
+        return $this->container->make(StripePaymentService::class)
+            ->verifyPlatformCredentials();
     }
 
     /**
