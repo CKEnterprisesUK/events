@@ -135,13 +135,15 @@
             display: flex; flex-wrap: wrap; gap: .6rem .9rem; align-items: center;
         }
         .store-links__list a {
-            display: inline-flex; align-items: center;
+            display: inline-flex; align-items: center; gap: .5rem;
             padding: .45rem .9rem; border-radius: var(--radius-chip);
             border: 1px solid var(--line); background: var(--surface);
             font-size: .9rem; font-weight: 600; color: var(--ink);
             transition: border-color .15s ease, color .15s ease;
         }
         .store-links__list a:hover { border-color: var(--brand); color: var(--brand); }
+        .store-links__icon { display: inline-flex; align-items: center; }
+        .store-links__icon svg { display: block; }
         .store-links__legal { font-size: .85rem; }
         .store-links__legal a { color: var(--muted); }
         .store-links__legal a:hover { color: var(--brand); }
