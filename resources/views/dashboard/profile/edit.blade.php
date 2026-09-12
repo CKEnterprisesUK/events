@@ -143,7 +143,9 @@
                     </p>
 
                     @if (! empty($mfaSetup['qr']))
-                        <div class="mfa-qr">{!! $mfaSetup['qr'] !!}</div>
+                        <div class="mfa-qr">
+                            <img src="{{ $mfaSetup['qr'] }}" alt="Two-factor authentication QR code" width="200" height="200">
+                        </div>
                     @endif
 
                     @if (! empty($mfaSetup['secret']))
