@@ -26,6 +26,7 @@
     <a class="nav-link {{ $navActive('admin.reserved-slugs.*') ? 'active' : '' }}" @if($navActive('admin.reserved-slugs.*')) aria-current="page" @endif href="{{ route('admin.reserved-slugs.index') }}"><x-icon name="cross" class="nav-ico" /> Reserved slugs</a>
     <a class="nav-link {{ $navActive('admin.settings.*') ? 'active' : '' }}" @if($navActive('admin.settings.*')) aria-current="page" @endif href="{{ route('admin.settings.index') }}"><x-icon name="settings" class="nav-ico" /> Settings</a>
     <a class="nav-link {{ $navActive('admin.system.*') ? 'active' : '' }}" @if($navActive('admin.system.*')) aria-current="page" @endif href="{{ route('admin.system.index') }}"><x-icon name="activity" class="nav-ico" /> System health</a>
+    <a class="nav-link {{ $navActive('admin.ops.*') ? 'active' : '' }}" @if($navActive('admin.ops.*')) aria-current="page" @endif href="{{ route('admin.ops.index') }}"><x-icon name="settings" class="nav-ico" /> Build / deploy</a>
 @else
     {{-- Company dashboard, adapts to the user's role --}}
     @if ($impersonating)
