@@ -26,6 +26,13 @@
     .status-banner__cta { margin-top: 0.9rem; }
     .btn-connect { font-size: 1.02rem; font-weight: 600; padding: 0.7rem 1.4rem; }
     .status-banner__cta .btn-connect-hint { display: block; margin-top: 0.5rem; font-size: 0.85rem; color: var(--muted); }
+    .req-list { margin: 0.75rem 0 0; padding-left: 1.2rem; }
+    .req-list li { margin: 0.25rem 0; font-weight: 600; }
+    .req-pending { margin: 0.75rem 0 0; }
+    .req-errors { margin: 0.75rem 0 0; padding-left: 1.2rem; }
+    .req-errors li { margin: 0.25rem 0; }
+    .status-banner__where { margin: 0.9rem 0 0; font-size: 0.9rem; }
+    .status-banner__where a { font-weight: 600; }
 </style>
 @endpush
 
@@ -60,11 +67,95 @@
         <div class="status-banner status-banner--ok" data-status="charges_enabled">
             <h2>Connected — ready to take payments</h2>
             <p>Your Stripe account is connected and charges are enabled. You can publish and sell paid tickets.</p>
+            <p class="status-banner__where">
+                Manage payouts, bank details and documents any time by logging in to Stripe directly at
+                <a href="https://dashboard.stripe.com" target="_blank" rel="noopener">dashboard.stripe.com</a>
+                with the email and password you set up when connecting.
+            </p>
         </div>
     @else
+        @php
+            // Friendly labels for the Stripe requirement ids we most often see,
+            // so the Company reads "Business verification document" rather than
+            // the raw `company.verification.document`. Anything unmapped falls
+            // back to a tidied-up version of the id.
+            $requirementLabels = [
+                'company.verification.document' => 'Business verification document',
+                'individual.verification.document' => 'Identity verification document',
+                'individual.verification.additional_document' => 'Additional identity document',
+                'company.tax_id' => 'Company tax ID / registration number',
+                'business_profile.url' => 'Business website',
+                'business_profile.mcc' => 'Business category',
+                'external_account' => 'Bank account for payouts',
+                'tos_acceptance.date' => 'Accept Stripe\'s terms of service',
+            ];
+            $labelFor = static function (string $id) use ($requirementLabels): string {
+                return $requirementLabels[$id] ?? ucfirst(str_replace(['_', '.'], [' ', ' — '], $id));
+            };
+
+            $pastDue = $requirements['past_due'] ?? [];
+            $currentlyDue = $requirements['currently_due'] ?? [];
+            $pendingVerification = $requirements['pending_verification'] ?? [];
+            // NB: not `$errors` — that name is Laravel's shared validation
+            // MessageBag, which the @error directive below relies on.
+            $requirementErrors = $requirements['errors'] ?? [];
+
+            // Items still needing action = past due + currently due, de-duplicated.
+            $needsAction = array_values(array_unique(array_merge($pastDue, $currentlyDue)));
+
+            // If the ONLY outstanding thing is under review, this is a "waiting on
+            // Stripe" state rather than "waiting on you".
+            $onlyPending = empty($needsAction) && ! empty($pendingVerification);
+        @endphp
+
         <div class="status-banner status-banner--warn" data-status="charges_disabled">
-            <h2>Connected — action needed</h2>
-            <p>Your Stripe account is connected but charges aren't enabled yet. Finish Stripe onboarding to start taking payments.</p>
+            @if ($onlyPending)
+                <h2>Connected — verification in progress</h2>
+                <p>Your Stripe account is connected and your details are with Stripe for review. Charges turn on automatically once the review completes — there's nothing more you need to do right now.</p>
+            @else
+                <h2>Connected — action needed</h2>
+                <p>Your Stripe account is connected but charges aren't enabled yet. Stripe still needs a few things from you before you can take payments.</p>
+            @endif
+
+            @if (! empty($needsAction))
+                <ul class="req-list" data-req="action-required">
+                    @foreach ($needsAction as $req)
+                        <li>{{ $labelFor($req) }}</li>
+                    @endforeach
+                </ul>
+            @endif
+
+            @if (! empty($pendingVerification))
+                <p class="req-pending" data-req="pending-verification">
+                    <strong>Under review by Stripe:</strong>
+                    {{ collect($pendingVerification)->map($labelFor)->implode(', ') }}
+                </p>
+            @endif
+
+            @if (! empty($requirementErrors))
+                <ul class="req-errors" data-req="errors">
+                    @foreach ($requirementErrors as $error)
+                        @if (! empty($error['reason']))
+                            <li>{{ $error['reason'] }}</li>
+                        @endif
+                    @endforeach
+                </ul>
+            @endif
+
+            <div class="status-banner__cta">
+                <form method="POST" action="{{ route('dashboard.stripe.start') }}">
+                    @csrf
+                    <button type="submit" class="btn btn-connect" data-action="finish-stripe">Finish Stripe setup</button>
+                    <span class="btn-connect-hint">
+                        This takes you to Stripe's guided onboarding to provide exactly what's outstanding above. Sign in with the same Stripe login you used when connecting.
+                    </span>
+                </form>
+                <p class="status-banner__where">
+                    Some verification items (like uploading a document) can only be completed by logging in to your own Stripe account at
+                    <a href="https://dashboard.stripe.com" target="_blank" rel="noopener">dashboard.stripe.com</a>.
+                    If you signed up recently, that's the same email and password you set during onboarding.
+                </p>
+            </div>
         </div>
     @endif
 
@@ -145,12 +236,18 @@
         @endif
     </div>
 
-    @if ($connected)
-        <form method="POST" action="{{ route('dashboard.stripe.start') }}">
-            @csrf
-            <button type="submit" class="btn">
-                {{ $chargesEnabled ? 'Manage on Stripe' : 'Finish Stripe onboarding' }}
-            </button>
-        </form>
+    @if ($connected && $chargesEnabled)
+        {{-- Charges-enabled accounts manage payouts/bank details/documents in
+             their OWN Stripe Dashboard (these are Standard accounts they own),
+             so link there directly rather than re-running onboarding — that was
+             the source of the "Manage on Stripe just re-linked me" confusion.
+             Accounts that still need setup get the "Finish Stripe setup" CTA in
+             the banner above instead. --}}
+        <a class="btn" href="https://dashboard.stripe.com" target="_blank" rel="noopener" data-action="manage-stripe">
+            Log in to Stripe to manage payouts
+        </a>
+        <p class="panel__note">
+            Opens your Stripe Dashboard in a new tab. This is where you view payouts, update bank details, and handle any verification requests directly with Stripe.
+        </p>
     @endif
 @endsection

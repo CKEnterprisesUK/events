@@ -114,6 +114,19 @@
                 <button type="submit" class="btn btn--primary">Clear caches</button>
             </form>
 
+            <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--border)">
+
+            <p>
+                <strong>Refresh Stripe account status</strong> — re-reads every connected Stripe
+                account and updates what each one still needs (verification documents, etc.).
+                Run this once after deploying the payments update so existing blocked customers
+                see their outstanding items. Non-destructive (never touches data) and safe to re-run.
+            </p>
+            <form method="POST" action="{{ route('admin.ops.refresh-stripe-accounts') }}">
+                @csrf
+                <button type="submit" class="btn btn--primary">Refresh Stripe account status</button>
+            </form>
+
             @if (! $reseedBlocked)
                 <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--border)">
 

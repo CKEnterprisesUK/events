@@ -160,6 +160,33 @@ class OpsController extends Controller
     }
 
     /**
+     * Refresh the connected-account Stripe state (charges/payouts enabled,
+     * details submitted, disabled reason, outstanding requirements) for every
+     * Company with a connected account, in-process.
+     *
+     * This is the browser-driven equivalent of the `stripe:refresh-accounts`
+     * cron command, for a host with no SSH/terminal. Its purpose is the one-time
+     * backfill for EXISTING customers who connected before the requirements
+     * feature shipped and so never triggered an onboarding return or an
+     * account.updated webhook — after running this, an already-blocked customer
+     * sees exactly what Stripe is waiting on. It is NON-DESTRUCTIVE (it only
+     * reads from Stripe and overwrites the Platform's own snapshot columns with
+     * Stripe's current truth) and idempotent, so it is safe to run in any
+     * environment, production included, and safe to re-run. (Requirements 11.3,
+     * 11.4)
+     */
+    public function refreshStripeAccounts(): RedirectResponse
+    {
+        try {
+            Artisan::call('stripe:refresh-accounts');
+        } catch (\Throwable $e) {
+            return back()->with('ops_error', 'Stripe account refresh failed: '.$e->getMessage());
+        }
+
+        return back()->with('ops_status', trim(Artisan::output()) ?: 'Stripe account state refreshed.');
+    }
+
+    /**
      * Returns a refusal message when we are in production, or null otherwise.
      *
      * Used ONLY by the destructive reseed action. This is an ALLOW-LIST, not a

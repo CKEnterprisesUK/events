@@ -33,7 +33,6 @@ use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\StorefrontController;
 use App\Http\Controllers\StripeConnectController;
 use App\Http\Controllers\StripeReturnController;
-use App\Http\Controllers\SupportController;
 use App\Http\Controllers\SuperAdmin\AuditController as SuperAdminAuditController;
 use App\Http\Controllers\SuperAdmin\ClientController as SuperAdminClientController;
 use App\Http\Controllers\SuperAdmin\CompanyController as SuperAdminCompanyController;
@@ -43,15 +42,16 @@ use App\Http\Controllers\SuperAdmin\ErrorReportController as SuperAdminErrorRepo
 use App\Http\Controllers\SuperAdmin\FeeController as SuperAdminFeeController;
 use App\Http\Controllers\SuperAdmin\ImpersonationController as SuperAdminImpersonationController;
 use App\Http\Controllers\SuperAdmin\LegalDocumentController as SuperAdminLegalDocumentController;
+use App\Http\Controllers\SuperAdmin\OpsController as SuperAdminOpsController;
+use App\Http\Controllers\SuperAdmin\ProfileController as SuperAdminProfileController;
 use App\Http\Controllers\SuperAdmin\ReservedSlugController as SuperAdminReservedSlugController;
 use App\Http\Controllers\SuperAdmin\SettingsController as SuperAdminSettingsController;
 use App\Http\Controllers\SuperAdmin\StripeAccountController as SuperAdminStripeAccountController;
 use App\Http\Controllers\SuperAdmin\SupportRequestController as SuperAdminSupportRequestController;
-use App\Http\Controllers\SuperAdmin\OpsController as SuperAdminOpsController;
-use App\Http\Controllers\SuperAdmin\ProfileController as SuperAdminProfileController;
 use App\Http\Controllers\SuperAdmin\SystemHealthController as SuperAdminSystemHealthController;
-use App\Http\Controllers\SuperAdmin\TwoFactorController as SuperAdminTwoFactorController;
 use App\Http\Controllers\SuperAdmin\TransactionController as SuperAdminTransactionController;
+use App\Http\Controllers\SuperAdmin\TwoFactorController as SuperAdminTwoFactorController;
+use App\Http\Controllers\SupportController;
 use App\Http\Controllers\TicketTypeController;
 use App\Http\Controllers\TrustController;
 use App\Http\Controllers\WebhookController;
@@ -90,7 +90,6 @@ Route::get('/for-charities', [PublicPagesController::class, 'forCharities'])->na
 | closest dedicated destination. 301 so search engines follow the move.
 */
 Route::permanentRedirect('/why-us', '/for-charities');
-
 
 /*
 |--------------------------------------------------------------------------
@@ -696,6 +695,13 @@ Route::middleware(['auth', 'super.admin', 'session.timeout', 'migrations.pending
         // newly-pulled route (which "Update from Remote" doesn't cache-bust)
         // resolvable without a terminal.
         Route::post('/ops/rebuild-caches', [SuperAdminOpsController::class, 'rebuildCaches'])->name('ops.rebuild-caches');
+
+        // Re-read every connected Stripe account and refresh its verification /
+        // requirements snapshot in-process. Non-destructive (reads from Stripe,
+        // overwrites only our own snapshot columns), so it runs in every
+        // environment. Its main job is the one-time backfill for customers who
+        // connected before the requirements feature shipped. (Requirements 11.3, 11.4)
+        Route::post('/ops/refresh-stripe-accounts', [SuperAdminOpsController::class, 'refreshStripeAccounts'])->name('ops.refresh-stripe-accounts');
 
         // Destructive sample-data rebuild: non-production only (defence in depth
         // with the controller's own production guard).

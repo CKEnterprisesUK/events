@@ -66,11 +66,88 @@ class StripePaymentServiceStripeSdk implements StripePaymentService
         return $this->withoutStripeNoticeEscalation(function () use ($accountId): StripeAccountCapabilities {
             $account = $this->client->accounts->retrieve($accountId);
 
+            // Stripe's `requirements` hangs off the account and holds WHY an
+            // account isn't fully enabled: what's needed now (`currently_due`),
+            // what's overdue and already restricting the account (`past_due`),
+            // what's under review after submission (`pending_verification`), and
+            // the human-facing `errors`. We read these so the Payments page can
+            // tell the Company exactly what to fix instead of only "charges off".
+            $requirements = $account->requirements ?? null;
+
             return new StripeAccountCapabilities(
                 accountId: $accountId,
                 chargesEnabled: (bool) ($account->charges_enabled ?? false),
+                payoutsEnabled: (bool) ($account->payouts_enabled ?? false),
+                detailsSubmitted: (bool) ($account->details_submitted ?? false),
+                disabledReason: $this->stringOrNull($requirements->disabled_reason ?? null),
+                currentlyDue: $this->stringList($requirements->currently_due ?? null),
+                pastDue: $this->stringList($requirements->past_due ?? null),
+                pendingVerification: $this->stringList($requirements->pending_verification ?? null),
+                errors: $this->requirementErrors($requirements->errors ?? null),
             );
         });
+    }
+
+    /**
+     * Normalise a Stripe requirements list (a SDK collection or array of ids)
+     * into a plain list of non-empty strings.
+     *
+     * @return list<string>
+     */
+    private function stringList(mixed $value): array
+    {
+        if ($value === null) {
+            return [];
+        }
+
+        $items = is_iterable($value) ? $value : [];
+
+        $out = [];
+        foreach ($items as $item) {
+            if (is_string($item) && $item !== '') {
+                $out[] = $item;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Normalise Stripe's requirement `errors` (each a `{requirement, code,
+     * reason}` object) into a plain list of maps for display and storage.
+     *
+     * @return list<array{requirement: string, code: string, reason: string}>
+     */
+    private function requirementErrors(mixed $value): array
+    {
+        if ($value === null) {
+            return [];
+        }
+
+        $items = is_iterable($value) ? $value : [];
+
+        $out = [];
+        foreach ($items as $error) {
+            $requirement = is_object($error) ? ($error->requirement ?? null) : ($error['requirement'] ?? null);
+            $code = is_object($error) ? ($error->code ?? null) : ($error['code'] ?? null);
+            $reason = is_object($error) ? ($error->reason ?? null) : ($error['reason'] ?? null);
+
+            $out[] = [
+                'requirement' => (string) ($requirement ?? ''),
+                'code' => (string) ($code ?? ''),
+                'reason' => (string) ($reason ?? ''),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * A non-empty string, or null.
+     */
+    private function stringOrNull(mixed $value): ?string
+    {
+        return is_string($value) && $value !== '' ? $value : null;
     }
 
     public function createCheckoutSession(

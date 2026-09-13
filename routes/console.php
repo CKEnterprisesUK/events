@@ -2,6 +2,7 @@
 
 use App\Jobs\BackfillStripeFeesJob;
 use App\Jobs\PruneAuditLogsJob;
+use App\Jobs\RefreshStripeAccountStateJob;
 use App\Jobs\ReleaseExpiredReservationsJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -58,6 +59,26 @@ Artisan::command('stripe:backfill-fees', function () {
     $captured = dispatch_sync(new BackfillStripeFeesJob);
     $this->info("Captured Stripe fees for {$captured} order(s).");
 })->purpose('Backfill actual Stripe processing fees onto paid orders missing them');
+
+// Refresh the connected-account onboarding/verification snapshot for every
+// Company that has a connected Stripe account, by re-reading the account from
+// Stripe. This backfills the requirements/disabled-reason detail for EXISTING
+// customers who connected before this feature existed (and never triggered an
+// onboarding return or an account.updated webhook), so an already-blocked
+// customer sees exactly what Stripe is waiting on. Runs SYNCHRONOUSLY, like the
+// other sweepers, for the same proc_open reason.
+//
+// Run once by hand right after deploy to refresh existing accounts, then keep a
+// daily cron as a reconciliation pass in case a webhook is ever missed:
+//
+//   0 4 * * * cd /home/<user>/<app> && /opt/cpanel/ea-php85/root/usr/bin/php \
+//       artisan stripe:refresh-accounts >> /dev/null 2>&1
+//
+// (Requirements 11.3, 11.4)
+Artisan::command('stripe:refresh-accounts', function () {
+    $refreshed = dispatch_sync(new RefreshStripeAccountStateJob);
+    $this->info("Refreshed Stripe account state for {$refreshed} company(ies).");
+})->purpose('Re-read connected Stripe accounts and refresh their verification/requirements state');
 
 // NOTE ON DRAINING THE QUEUE (ticket emails, webhook processing):
 // Do NOT use `schedule:run` here. On shared cPanel hosting `proc_open` is

@@ -250,21 +250,50 @@ class StorefrontAndEventPageTest extends TestCase
         $response->assertSee('On sale');
     }
 
-    public function test_event_page_shows_not_yet_on_sale_before_the_window(): void
+    public function test_event_page_shows_when_a_future_ticket_type_goes_on_sale(): void
     {
-        // Requirement 6.4 — before the window opens => not yet on sale.
+        // Requirement 6.4 — before the window opens, a type with an explicit
+        // future start advertises the exact on-sale date/time (UTC).
+        Carbon::setTestNow(Carbon::parse('2026-01-01 00:00:00', 'UTC'));
+
         $company = Company::factory()->create();
         $event = Event::factory()->for($company)->published()->create();
         TicketType::factory()->forEvent($event)->create([
             'name' => 'Future Sale',
-            'sale_starts_at' => Carbon::now()->addWeek(),
-            'sale_ends_at' => Carbon::now()->addMonth(),
+            // 08:00 UTC on Tuesday 25 June 2030 => "8am on Tues 25th June".
+            'sale_starts_at' => Carbon::parse('2030-06-25 08:00:00', 'UTC'),
+            'sale_ends_at' => Carbon::parse('2030-07-25 08:00:00', 'UTC'),
         ]);
 
         $response = $this->get("/{$company->slug}/{$event->id}");
 
         $response->assertOk();
-        $response->assertSee('Not yet on sale');
+        $response->assertSee('Tickets go on sale at 8am on Tues 25th June');
+
+        Carbon::setTestNow();
+    }
+
+    public function test_event_page_drops_the_on_the_hour_minutes_in_the_on_sale_label(): void
+    {
+        // Non-whole-hour starts keep the minutes ("8:30am"); this asserts the
+        // whole-hour path renders "8am", not "8:00am", and abbreviates the day.
+        Carbon::setTestNow(Carbon::parse('2026-01-01 00:00:00', 'UTC'));
+
+        $company = Company::factory()->create();
+        $event = Event::factory()->for($company)->published()->create();
+        TicketType::factory()->forEvent($event)->create([
+            'name' => 'Half Past',
+            // 08:30 UTC on Thursday 25 July 2030 => "8:30am on Thurs 25th July".
+            'sale_starts_at' => Carbon::parse('2030-07-25 08:30:00', 'UTC'),
+            'sale_ends_at' => Carbon::parse('2030-08-25 08:30:00', 'UTC'),
+        ]);
+
+        $response = $this->get("/{$company->slug}/{$event->id}");
+
+        $response->assertOk();
+        $response->assertSee('Tickets go on sale at 8:30am on Thurs 25th July');
+
+        Carbon::setTestNow();
     }
 
     public function test_event_page_shows_sale_ended_after_the_window(): void
