@@ -79,9 +79,25 @@ class RefreshStripeAccountStateJob implements ShouldQueue
      * read threw (see the log), which is a very different situation from
      * `matched = 0` (no connected account in the database at all).
      *
-     * @var array{matched: int, refreshed: int, skipped_blank: int, failed: int}
+     * The `connection`/`database`/`total_companies` fields pin down WHICH
+     * database the app actually queried, so a "matched: 0" against a database
+     * that visibly has connected accounts can be diagnosed as a wrong-connection
+     * / wrong-.env problem rather than a code bug.
+     *
+     * @var array{
+     *     connection: string,
+     *     database: string,
+     *     total_companies: int,
+     *     matched: int,
+     *     refreshed: int,
+     *     skipped_blank: int,
+     *     failed: int
+     * }
      */
     public array $summary = [
+        'connection' => '',
+        'database' => '',
+        'total_companies' => 0,
         'matched' => 0,
         'refreshed' => 0,
         'skipped_blank' => 0,
@@ -95,6 +111,8 @@ class RefreshStripeAccountStateJob implements ShouldQueue
      */
     public function handle(StripePaymentService $stripe): int
     {
+        $connection = (string) config('database.default');
+
         // Before the companies table exists (fresh install mid-migration) this
         // is a safe no-op, mirroring the other sweepers' schema guard.
         if (! Schema::hasTable('companies')) {
@@ -108,6 +126,13 @@ class RefreshStripeAccountStateJob implements ShouldQueue
             ->get();
 
         $this->summary = [
+            // Which database the app is REALLY talking to. Compare this against
+            // the DB you inspect in phpMyAdmin: if they differ (or `connection`
+            // is sqlite), the app is reading a different/empty database — usually
+            // a wrong or partial .env. (Mirrors the preprod:seed sqlite guard.)
+            'connection' => $connection,
+            'database' => (string) config("database.connections.{$connection}.database"),
+            'total_companies' => Company::query()->count(),
             'matched' => $companies->count(),
             'refreshed' => 0,
             'skipped_blank' => 0,
