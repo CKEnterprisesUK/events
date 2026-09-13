@@ -76,8 +76,28 @@ Artisan::command('stripe:backfill-fees', function () {
 //
 // (Requirements 11.3, 11.4)
 Artisan::command('stripe:refresh-accounts', function () {
-    $refreshed = dispatch_sync(new RefreshStripeAccountStateJob);
-    $this->info("Refreshed Stripe account state for {$refreshed} company(ies).");
+    // Run the job in-process and read its per-run summary directly off the same
+    // instance. We call handle() through the container (not the bus) so the very
+    // instance we hold is the one that ran — dispatch_sync can hand the job
+    // through serialization, which would leave our local $job->summary empty.
+    $job = new RefreshStripeAccountStateJob;
+    app()->call([$job, 'handle']);
+    $s = $job->summary;
+
+    $this->info("Refreshed Stripe account state for {$s['refreshed']} company(ies).");
+    $this->line("Database: connection '{$s['connection']}', database '{$s['database']}', total companies {$s['total_companies']}.");
+    $this->line(
+        "Connected accounts found: {$s['matched']} "
+        ."(refreshed {$s['refreshed']}, blank id {$s['skipped_blank']}, failed {$s['failed']})."
+    );
+
+    if ($s['total_companies'] === 0) {
+        $this->warn('This database has NO companies at all. The app is almost certainly connected to the wrong database — check the .env DB_* settings (a partial .env falls back to sqlite). Compare the connection/database above with the one you inspect in phpMyAdmin.');
+    } elseif ($s['matched'] === 0) {
+        $this->warn('Companies exist but none has a Stripe account id stored. If a company shows as "connected" in the UI, its onboarding may have started without the account id being saved.');
+    } elseif ($s['failed'] > 0) {
+        $this->warn('One or more accounts could not be read from Stripe — see the application log (storage/logs) for the reason.');
+    }
 })->purpose('Re-read connected Stripe accounts and refresh their verification/requirements state');
 
 // NOTE ON DRAINING THE QUEUE (ticket emails, webhook processing):

@@ -250,9 +250,14 @@ class StripeAccountRequirementsTest extends TestCase
             ]],
         );
 
-        $refreshed = app(RefreshStripeAccountStateJob::class)->handle($this->fakeStripe());
+        $job = app(RefreshStripeAccountStateJob::class);
+        $refreshed = $job->handle($this->fakeStripe());
 
         $this->assertSame(1, $refreshed);
+        $this->assertSame(1, $job->summary['matched']);
+        $this->assertSame(1, $job->summary['refreshed']);
+        $this->assertSame(0, $job->summary['skipped_blank']);
+        $this->assertSame(0, $job->summary['failed']);
 
         $company->refresh();
         $this->assertSame('requirements.past_due', $company->stripe_disabled_reason);
@@ -262,6 +267,71 @@ class StripeAccountRequirementsTest extends TestCase
         );
         $this->assertFalse($company->stripe_payouts_enabled);
         $this->assertTrue($company->stripe_details_submitted);
+    }
+
+    public function test_refresh_job_counts_a_blank_account_id_separately(): void
+    {
+        // A company whose stripe_account_id is an empty string (onboarding
+        // half-started) matches the whereNotNull query but is not a real
+        // connection. It must be counted as skipped_blank, NOT silently make the
+        // run look like "no accounts at all".
+        Company::factory()->create([
+            'stripe_account_id' => '',
+            'stripe_charges_enabled' => false,
+        ]);
+
+        $job = app(RefreshStripeAccountStateJob::class);
+        $job->handle($this->fakeStripe());
+
+        $this->assertSame(1, $job->summary['matched']);
+        $this->assertSame(0, $job->summary['refreshed']);
+        $this->assertSame(1, $job->summary['skipped_blank']);
+        $this->assertSame(0, $job->summary['failed']);
+    }
+
+    public function test_refresh_job_reports_the_database_it_queried(): void
+    {
+        // The summary names the connection/database and total company count so a
+        // "matched: 0" can be diagnosed as a wrong-database problem rather than a
+        // code bug.
+        Company::factory()->create([
+            'stripe_account_id' => 'acct_DBCHECK',
+            'stripe_charges_enabled' => true,
+        ]);
+        $this->fakeStripe()->setChargesEnabled('acct_DBCHECK', true);
+
+        $job = app(RefreshStripeAccountStateJob::class);
+        $job->handle($this->fakeStripe());
+
+        $this->assertSame(config('database.default'), $job->summary['connection']);
+        $this->assertSame(1, $job->summary['total_companies']);
+        $this->assertSame(1, $job->summary['matched']);
+    }
+
+    public function test_refresh_command_reports_when_companies_exist_but_none_connected(): void
+    {
+        // Companies exist but none has an account id — the command should say so
+        // plainly (and NOT claim the database is empty), so the operator knows it
+        // is a data situation, not a silent failure or a wrong database.
+        Company::factory()->create(['stripe_account_id' => null]);
+
+        $this->artisan('stripe:refresh-accounts')
+            ->expectsOutputToContain('Connected accounts found: 0')
+            ->expectsOutputToContain('none has a Stripe account id stored')
+            ->assertExitCode(0);
+    }
+
+    public function test_refresh_command_reports_the_database_context(): void
+    {
+        Company::factory()->create([
+            'stripe_account_id' => 'acct_CTX',
+            'stripe_charges_enabled' => true,
+        ]);
+        $this->fakeStripe()->setChargesEnabled('acct_CTX', true);
+
+        $this->artisan('stripe:refresh-accounts')
+            ->expectsOutputToContain('total companies 1')
+            ->assertExitCode(0);
     }
 
     public function test_refresh_job_skips_companies_with_no_connected_account(): void
