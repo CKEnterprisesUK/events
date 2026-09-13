@@ -73,6 +73,22 @@ class RefreshStripeAccountStateJob implements ShouldQueue
     public function __construct(private readonly int $limit = self::BATCH_LIMIT) {}
 
     /**
+     * A breakdown of the last run, so the caller can report WHY the refreshed
+     * count is what it is rather than a bare number. A "0 refreshed" with, say,
+     * `matched = 1` and `failed = 1` means the account was found but the Stripe
+     * read threw (see the log), which is a very different situation from
+     * `matched = 0` (no connected account in the database at all).
+     *
+     * @var array{matched: int, refreshed: int, skipped_blank: int, failed: int}
+     */
+    public array $summary = [
+        'matched' => 0,
+        'refreshed' => 0,
+        'skipped_blank' => 0,
+        'failed' => 0,
+    ];
+
+    /**
      * Re-read and persist the connected-account state for each connected Company.
      *
      * @return int the number of Companies whose state was refreshed this run.
@@ -91,12 +107,22 @@ class RefreshStripeAccountStateJob implements ShouldQueue
             ->limit($this->limit)
             ->get();
 
-        $refreshed = 0;
+        $this->summary = [
+            'matched' => $companies->count(),
+            'refreshed' => 0,
+            'skipped_blank' => 0,
+            'failed' => 0,
+        ];
 
         foreach ($companies as $company) {
             $accountId = (string) $company->stripe_account_id;
 
+            // whereNotNull matches a stored empty string too — treat a blank id
+            // as "not really connected" and count it separately so a run that
+            // found only blank ids is not mistaken for "no accounts at all".
             if ($accountId === '') {
+                $this->summary['skipped_blank']++;
+
                 continue;
             }
 
@@ -106,6 +132,8 @@ class RefreshStripeAccountStateJob implements ShouldQueue
                 // One unreadable account (e.g. deauthorised, or a transient
                 // Stripe error) must not abort the whole batch. Log and move on;
                 // the next run retries it.
+                $this->summary['failed']++;
+
                 Log::warning('Could not refresh Stripe account state for company.', [
                     'company_id' => $company->id,
                     'stripe_account_id' => $accountId,
@@ -117,10 +145,10 @@ class RefreshStripeAccountStateJob implements ShouldQueue
 
             $this->applyCapabilities($company, $capabilities);
             $company->save();
-            $refreshed++;
+            $this->summary['refreshed']++;
         }
 
-        return $refreshed;
+        return $this->summary['refreshed'];
     }
 
     /**
