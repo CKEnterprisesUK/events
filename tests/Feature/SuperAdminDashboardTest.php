@@ -64,6 +64,17 @@ class SuperAdminDashboardTest extends TestCase
         $this->actingAs($this->superAdmin())->get('/admin/transactions')->assertOk();
     }
 
+    public function test_super_admin_sidebar_links_to_the_build_deploy_page(): void
+    {
+        // The build/deploy (ops) page is reachable and surfaced in the platform
+        // sidebar so a Super_Admin can find it without knowing the URL.
+        $this->actingAs($this->superAdmin())
+            ->get('/admin/ops')
+            ->assertOk()
+            ->assertSee('Build / deploy')
+            ->assertSee(route('admin.ops.index'));
+    }
+
     public function test_company_users_are_denied_the_admin_dashboard(): void
     {
         // Requirement 20.7 — no Company role grants the super-admin surface.
