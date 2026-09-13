@@ -289,6 +289,42 @@ class StripeAccountRequirementsTest extends TestCase
             ->assertExitCode(0);
     }
 
+    public function test_super_admin_can_refresh_stripe_accounts_from_ops_page(): void
+    {
+        // The no-SSH / in-browser equivalent of the cron command: a Super_Admin
+        // triggers the backfill from the build/ops page and it refreshes the
+        // requirements state of an existing blocked account. (Deployment: no
+        // terminal, proc_open disabled — see DEPLOYMENT.md)
+        $superAdmin = User::factory()->superAdmin()->create();
+
+        $company = Company::factory()->create([
+            'stripe_account_id' => 'acct_OPS',
+            'stripe_charges_enabled' => false,
+            'stripe_requirements' => null,
+        ]);
+
+        $this->fakeStripe()->setChargesEnabled('acct_OPS', false);
+        $this->fakeStripe()->setAccountState(
+            'acct_OPS',
+            payoutsEnabled: false,
+            detailsSubmitted: true,
+            disabledReason: 'requirements.past_due',
+            pastDue: ['company.verification.document'],
+        );
+
+        $this->actingAs($superAdmin)
+            ->post(route('admin.ops.refresh-stripe-accounts'))
+            ->assertRedirect()
+            ->assertSessionHas('ops_status');
+
+        $company->refresh();
+        $this->assertSame('requirements.past_due', $company->stripe_disabled_reason);
+        $this->assertSame(
+            ['company.verification.document'],
+            $company->stripe_requirements['past_due'],
+        );
+    }
+
     public function test_account_updated_webhook_clears_requirements_when_verified(): void
     {
         $company = Company::factory()->create([
