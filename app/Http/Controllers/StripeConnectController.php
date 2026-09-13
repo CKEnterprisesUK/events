@@ -8,6 +8,7 @@ use App\Models\PlatformSetting;
 use App\Services\AuditLogger;
 use App\Services\FeeCalculationService;
 use App\Services\RoleAuthorization;
+use App\Services\Stripe\StripeAccountCapabilities;
 use App\Services\Stripe\StripePaymentService;
 use App\Services\TenantContext;
 use Illuminate\Contracts\View\View;
@@ -64,6 +65,16 @@ class StripeConnectController extends Controller
             // effective percent is the Company override or the global default;
             // the mode decides whether the Company absorbs it or passes it on
             // to the customer as a booking fee. (Requirements 12.1–12.4, 13.4, 13.5)
+            // Payouts enabled and details submitted round out the picture of how
+            // far onboarding has got, so the view can distinguish "connected but
+            // unfinished" from "connected and verified". (Requirements 11.3, 11.4)
+            'payoutsEnabled' => (bool) $company->stripe_payouts_enabled,
+            'detailsSubmitted' => (bool) $company->stripe_details_submitted,
+            // Why Stripe has restricted the account (if it has) and what it still
+            // needs — surfaced so the Company sees the compliance errors that
+            // otherwise only appear inside the Stripe Dashboard.
+            'disabledReason' => $company->stripe_disabled_reason,
+            'requirements' => $this->normaliseRequirements($company->stripe_requirements),
             'feePercent' => $this->fees->effectivePercent($company),
             'feeMode' => $company->fee_handling_mode,
             // The configurable estimate of Stripe's OWN card-processing fee, so
@@ -136,7 +147,13 @@ class StripeConnectController extends Controller
 
             $wasEnabled = (bool) $company->stripe_charges_enabled;
 
-            $company->stripe_charges_enabled = $capabilities->chargesEnabled;
+            // Persist the full onboarding/verification snapshot, not just the
+            // charges flag: returning from Account Links does NOT mean onboarding
+            // finished (Stripe fires the return URL as soon as the user exits),
+            // so we capture what is still outstanding — the "needs a business
+            // verification document" state the Company otherwise only sees inside
+            // Stripe. (Requirements 11.2, 11.3, 11.4)
+            $this->applyCapabilities($company, $capabilities);
             $company->save();
 
             // Record only a genuine change in the charges-enabled capability —
@@ -187,6 +204,48 @@ class StripeConnectController extends Controller
         return redirect()
             ->route('dashboard.stripe.status')
             ->with('fee_status', 'Fee handling updated. This applies to new orders from now on.');
+    }
+
+    /**
+     * Copy a connected account's capability/verification snapshot onto the
+     * Company (without saving). Kept in one place so the onboarding-return path
+     * and any other caller persist the same set of fields consistently: the
+     * charges/payouts gates, whether onboarding details were submitted, why the
+     * account is disabled (if it is), and the outstanding requirements the
+     * dashboard lists back to the Company. (Requirements 11.3, 11.4)
+     */
+    private function applyCapabilities(Company $company, StripeAccountCapabilities $capabilities): void
+    {
+        $company->stripe_charges_enabled = $capabilities->chargesEnabled;
+        $company->stripe_payouts_enabled = $capabilities->payoutsEnabled;
+        $company->stripe_details_submitted = $capabilities->detailsSubmitted;
+        $company->stripe_disabled_reason = $capabilities->disabledReason;
+        $company->stripe_requirements = $capabilities->requirements();
+    }
+
+    /**
+     * Coerce the stored `stripe_requirements` JSON into the shape the view
+     * relies on, so a null (never-refreshed) or partial value renders cleanly
+     * rather than erroring. Always returns the four expected keys.
+     *
+     * @param  array<string, mixed>|null  $requirements
+     * @return array{
+     *     currently_due: list<string>,
+     *     past_due: list<string>,
+     *     pending_verification: list<string>,
+     *     errors: list<array{requirement: string, code: string, reason: string}>
+     * }
+     */
+    private function normaliseRequirements(?array $requirements): array
+    {
+        $requirements ??= [];
+
+        return [
+            'currently_due' => array_values(array_filter((array) ($requirements['currently_due'] ?? []), 'is_string')),
+            'past_due' => array_values(array_filter((array) ($requirements['past_due'] ?? []), 'is_string')),
+            'pending_verification' => array_values(array_filter((array) ($requirements['pending_verification'] ?? []), 'is_string')),
+            'errors' => array_values(array_filter((array) ($requirements['errors'] ?? []), 'is_array')),
+        ];
     }
 
     /**

@@ -9,7 +9,7 @@
     'canonical' => route('how-it-works'),
 ])
 
-@push('styles')
+@push('head')
 <style>
     .hiw-intro {
         max-width: 760px;
@@ -445,8 +445,8 @@
                     <img
                         src="{{ asset('images/marketing/signup.png') }}"
                         alt="Events by CK Enterprises UK organisation signup screen"
-                        width="1600"
-                        height="1000"
+                        width="2592"
+                        height="1742"
                         fetchpriority="high"
                     >
                 </figure>
@@ -482,8 +482,8 @@
                     <img
                         src="{{ asset('images/marketing/storefront.png') }}"
                         alt="Example branded organisation storefront"
-                        width="1600"
-                        height="1000"
+                        width="2592"
+                        height="1742"
                         loading="lazy"
                     >
                 </figure>

@@ -117,12 +117,80 @@
                         </span>
                     </td>
                 </tr>
+                @if ($company->stripe_account_id !== null)
+                    <tr>
+                        <th scope="row">Payouts enabled</th>
+                        <td>
+                            <span class="admin-pill {{ $company->stripe_payouts_enabled ? 'admin-pill--active' : 'admin-pill--suspended' }}">
+                                {{ $company->stripe_payouts_enabled ? 'Yes' : 'No' }}
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Details submitted</th>
+                        <td>
+                            <span class="admin-pill {{ $company->stripe_details_submitted ? 'admin-pill--active' : 'admin-pill--suspended' }}">
+                                {{ $company->stripe_details_submitted ? 'Yes' : 'No' }}
+                            </span>
+                        </td>
+                    </tr>
+                    @if ($company->stripe_disabled_reason)
+                        <tr>
+                            <th scope="row">Restriction reason</th>
+                            <td class="mono">{{ $company->stripe_disabled_reason }}</td>
+                        </tr>
+                    @endif
+                @endif
             </tbody>
         </table>
+        @php
+            $requirementLabels = [
+                'company.verification.document' => 'Business verification document',
+                'individual.verification.document' => 'Identity verification document',
+                'individual.verification.additional_document' => 'Additional identity document',
+                'company.tax_id' => 'Company tax ID / registration number',
+                'business_profile.url' => 'Business website',
+                'business_profile.mcc' => 'Business category',
+                'external_account' => 'Bank account for payouts',
+                'tos_acceptance.date' => 'Accept Stripe terms of service',
+            ];
+            $labelFor = static fn (string $id): string => $requirementLabels[$id]
+                ?? ucfirst(str_replace(['_', '.'], [' ', ' — '], $id));
+
+            $reqs = $company->stripe_requirements ?? [];
+            $needsAction = array_values(array_unique(array_merge(
+                (array) ($reqs['past_due'] ?? []),
+                (array) ($reqs['currently_due'] ?? []),
+            )));
+            $pending = (array) ($reqs['pending_verification'] ?? []);
+            $reqErrors = (array) ($reqs['errors'] ?? []);
+        @endphp
         @if ($company->stripe_account_id !== null && ! $company->canAcceptPayments())
-            <p class="muted" style="padding: 0 1rem 1rem;">
-                Onboarding has started but charges are not enabled. This company cannot sell paid tickets until Stripe finishes verifying the account.
-            </p>
+            <div class="muted" style="padding: 0 1rem 1rem;" data-stripe="requirements">
+                @if (! empty($needsAction))
+                    <p><strong>Waiting on the client</strong> — they need to provide the following by logging in to their own Stripe account (dashboard.stripe.com) or via the "Finish Stripe setup" button on their Payments page:</p>
+                    <ul data-req="action-required">
+                        @foreach ($needsAction as $req)
+                            <li>{{ $labelFor($req) }}</li>
+                        @endforeach
+                    </ul>
+                @elseif (! empty($pending))
+                    <p data-req="pending-verification"><strong>Under review by Stripe</strong> — {{ collect($pending)->map($labelFor)->implode(', ') }}. Charges enable automatically once Stripe finishes reviewing. Nothing is needed from the client right now.</p>
+                @else
+                    <p>Onboarding has started but charges are not enabled. This company cannot sell paid tickets until Stripe finishes verifying the account.</p>
+                @endif
+
+                @if (! empty($reqErrors))
+                    <p><strong>Stripe's notes:</strong></p>
+                    <ul data-req="errors">
+                        @foreach ($reqErrors as $error)
+                            @if (! empty($error['reason']))
+                                <li>{{ $error['reason'] }}</li>
+                            @endif
+                        @endforeach
+                    </ul>
+                @endif
+            </div>
         @endif
     </div>
 

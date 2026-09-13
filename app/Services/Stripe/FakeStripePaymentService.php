@@ -56,6 +56,25 @@ class FakeStripePaymentService implements StripePaymentService
     private ?string $nextAccountId = null;
 
     /**
+     * Per-account verification/onboarding state a capability read reports,
+     * beyond charges-enabled. Keyed by account id; absent => the healthy
+     * defaults (payouts enabled, details submitted, no disabled reason, no
+     * outstanding requirements). Tests arrange restricted/pending accounts with
+     * {@see setAccountState()}. (Requirements 11.3, 11.4)
+     *
+     * @var array<string, array{
+     *     payouts_enabled: bool,
+     *     details_submitted: bool,
+     *     disabled_reason: ?string,
+     *     currently_due: list<string>,
+     *     past_due: list<string>,
+     *     pending_verification: list<string>,
+     *     errors: list<array{requirement: string, code: string, reason: string}>
+     * }>
+     */
+    private array $accountState = [];
+
+    /**
      * When set, the next {@see createCheckoutSession()} throws this to simulate
      * a Stripe session-creation / direct-charge failure, so tests can exercise
      * the failed-payment path without a live API. (Requirement 12.8)
@@ -124,6 +143,41 @@ class FakeStripePaymentService implements StripePaymentService
         return $this->chargesEnabled[$accountId] ?? false;
     }
 
+    /**
+     * Arrange the verification/onboarding state a capability read reports for an
+     * account, so tests can simulate a restricted account (e.g. a business
+     * verification document past due or pending review). Any field left out
+     * falls back to a healthy default. Returns $this for fluent test setup.
+     * (Requirements 11.3, 11.4)
+     *
+     * @param  list<string>  $currentlyDue
+     * @param  list<string>  $pastDue
+     * @param  list<string>  $pendingVerification
+     * @param  list<array{requirement: string, code: string, reason: string}>  $errors
+     */
+    public function setAccountState(
+        string $accountId,
+        bool $payoutsEnabled = true,
+        bool $detailsSubmitted = true,
+        ?string $disabledReason = null,
+        array $currentlyDue = [],
+        array $pastDue = [],
+        array $pendingVerification = [],
+        array $errors = [],
+    ): static {
+        $this->accountState[$accountId] = [
+            'payouts_enabled' => $payoutsEnabled,
+            'details_submitted' => $detailsSubmitted,
+            'disabled_reason' => $disabledReason,
+            'currently_due' => $currentlyDue,
+            'past_due' => $pastDue,
+            'pending_verification' => $pendingVerification,
+            'errors' => $errors,
+        ];
+
+        return $this;
+    }
+
     public function createOnboardingLink(
         ?string $existingAccountId,
         string $returnUrl,
@@ -152,9 +206,29 @@ class FakeStripePaymentService implements StripePaymentService
 
     public function retrieveAccountCapabilities(string $accountId): StripeAccountCapabilities
     {
+        $state = $this->accountState[$accountId] ?? [
+            // A freshly connected account with no arranged state: healthy
+            // defaults so existing tests that only care about charges keep
+            // passing. Tests simulating a restriction opt in via setAccountState().
+            'payouts_enabled' => true,
+            'details_submitted' => true,
+            'disabled_reason' => null,
+            'currently_due' => [],
+            'past_due' => [],
+            'pending_verification' => [],
+            'errors' => [],
+        ];
+
         return new StripeAccountCapabilities(
             accountId: $accountId,
             chargesEnabled: $this->chargesEnabledFor($accountId),
+            payoutsEnabled: $state['payouts_enabled'],
+            detailsSubmitted: $state['details_submitted'],
+            disabledReason: $state['disabled_reason'],
+            currentlyDue: $state['currently_due'],
+            pastDue: $state['past_due'],
+            pendingVerification: $state['pending_verification'],
+            errors: $state['errors'],
         );
     }
 

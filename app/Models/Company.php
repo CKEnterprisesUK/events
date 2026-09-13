@@ -32,6 +32,10 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $company_fee_percent
  * @property string|null $stripe_account_id
  * @property bool $stripe_charges_enabled
+ * @property bool $stripe_payouts_enabled
+ * @property bool $stripe_details_submitted
+ * @property string|null $stripe_disabled_reason
+ * @property array|null $stripe_requirements
  * @property string $currency
  * @property string|null $primary_colour
  * @property string|null $logo_path
@@ -150,6 +154,10 @@ class Company extends Model
         'company_fee_percent',
         'stripe_account_id',
         'stripe_charges_enabled',
+        'stripe_payouts_enabled',
+        'stripe_details_submitted',
+        'stripe_disabled_reason',
+        'stripe_requirements',
         'currency',
         'primary_colour',
         'logo_path',
@@ -176,6 +184,8 @@ class Company extends Model
         // from the Payments page. (Requirement 13.1)
         'fee_handling_mode' => self::FEE_MODE_PASS_ON,
         'stripe_charges_enabled' => false,
+        'stripe_payouts_enabled' => false,
+        'stripe_details_submitted' => false,
     ];
 
     /**
@@ -185,6 +195,9 @@ class Company extends Model
     {
         return [
             'stripe_charges_enabled' => 'boolean',
+            'stripe_payouts_enabled' => 'boolean',
+            'stripe_details_submitted' => 'boolean',
+            'stripe_requirements' => 'array',
             'company_fee_percent' => 'decimal:2',
         ];
     }

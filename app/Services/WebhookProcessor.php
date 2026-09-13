@@ -276,8 +276,14 @@ class WebhookProcessor
     }
 
     /**
-     * Refresh a Company's charges-enabled flag from an account-capability
-     * update so enabling charges turns on paid ticket sales. (Requirement 11.4)
+     * Refresh a Company's connected-account state from an `account.updated`
+     * event so verification progress syncs automatically — without the Owner
+     * having to revisit the onboarding return URL. Enabling charges turns on
+     * paid ticket sales, and the outstanding requirements / disabled reason are
+     * captured so the Payments page shows the Company exactly what Stripe is
+     * still waiting on (e.g. once a business verification document clears review).
+     * The `account.updated` event carries the full Account object, so these
+     * fields are read straight off the event payload. (Requirements 11.3, 11.4)
      */
     private function handleAccountUpdated(StripeWebhookEvent $event): void
     {
@@ -295,10 +301,72 @@ class WebhookProcessor
             return;
         }
 
-        $chargesEnabled = (bool) ($event->data['charges_enabled'] ?? false);
+        $data = $event->data;
+        $requirements = is_array($data['requirements'] ?? null) ? $data['requirements'] : [];
 
-        $company->stripe_charges_enabled = $chargesEnabled;
+        $company->stripe_charges_enabled = (bool) ($data['charges_enabled'] ?? false);
+        $company->stripe_payouts_enabled = (bool) ($data['payouts_enabled'] ?? false);
+        $company->stripe_details_submitted = (bool) ($data['details_submitted'] ?? false);
+        $company->stripe_disabled_reason = $this->stringField($requirements, 'disabled_reason');
+        $company->stripe_requirements = [
+            'currently_due' => $this->stringListField($requirements, 'currently_due'),
+            'past_due' => $this->stringListField($requirements, 'past_due'),
+            'pending_verification' => $this->stringListField($requirements, 'pending_verification'),
+            'errors' => $this->requirementErrorsField($requirements),
+        ];
         $company->save();
+    }
+
+    /**
+     * Read a list-of-strings requirements field (e.g. `currently_due`) from a
+     * requirements payload, keeping only non-empty string ids.
+     *
+     * @param  array<string, mixed>  $requirements
+     * @return list<string>
+     */
+    private function stringListField(array $requirements, string $key): array
+    {
+        $value = $requirements[$key] ?? null;
+
+        if (! is_array($value)) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            $value,
+            static fn ($item): bool => is_string($item) && $item !== '',
+        ));
+    }
+
+    /**
+     * Normalise Stripe's requirement `errors` from the event payload into a
+     * plain list of `{requirement, code, reason}` maps for storage/display.
+     *
+     * @param  array<string, mixed>  $requirements
+     * @return list<array{requirement: string, code: string, reason: string}>
+     */
+    private function requirementErrorsField(array $requirements): array
+    {
+        $errors = $requirements['errors'] ?? null;
+
+        if (! is_array($errors)) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($errors as $error) {
+            if (! is_array($error)) {
+                continue;
+            }
+
+            $out[] = [
+                'requirement' => (string) ($error['requirement'] ?? ''),
+                'code' => (string) ($error['code'] ?? ''),
+                'reason' => (string) ($error['reason'] ?? ''),
+            ];
+        }
+
+        return $out;
     }
 
     /**
