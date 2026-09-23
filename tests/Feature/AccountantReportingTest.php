@@ -70,15 +70,24 @@ class AccountantReportingTest extends TestCase
 
     public function test_non_accountant_roles_cannot_view_reports(): void
     {
-        // Requirements 3.5, 3.7 — reports are the Accountant's read-only slice;
-        // Admin/Scanner are not granted ACTION_VIEW_REPORTS. (The Owner, as the
-        // account superuser, does hold every permission including reports.)
+        // Requirements 3.5, 3.7 — reports are shared by Owner, Admin and
+        // Accountant. The Box_Office and Scanner roles are not granted
+        // ACTION_VIEW_REPORTS. (The Owner, as the account superuser, does hold
+        // every permission including reports.)
         foreach ([
-            User::factory()->admin()->create(),
+            User::factory()->boxOffice()->create(),
             User::factory()->scanner()->create(),
         ] as $user) {
             $this->actingAs($user)->get('/dashboard/reports')->assertForbidden();
         }
+    }
+
+    public function test_admin_can_view_reports(): void
+    {
+        // The Admin role now holds ACTION_VIEW_REPORTS alongside the Accountant.
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)->get('/dashboard/reports')->assertStatus(200);
     }
 
     public function test_guests_are_redirected_from_reports(): void
@@ -266,25 +275,40 @@ class AccountantReportingTest extends TestCase
         }
     }
 
-    public function test_accountant_cannot_modify_events_ticket_types_or_orders(): void
+    public function test_accountant_cannot_modify_events_or_ticket_types(): void
     {
         $accountant = User::factory()->accountant()->create();
         $company = Company::find($accountant->company_id);
         $event = Event::factory()->for($company)->unlimitedCapacity()->create(['name' => 'Untouched']);
-        $type = TicketType::factory()->forEvent($event)->create(['capacity' => 1000, 'sold_count' => 0, 'reserved_count' => 0]);
-        $order = Order::factory()->forEvent($event)->create(['status' => Order::STATUS_PAID]);
 
-        // Requirement 21.2 / 3.7 — every write action is denied for the
+        // Requirement 3.7 — event and ticket-type writes are denied for the
         // Accountant with an authorisation error, leaving data unchanged.
         $this->actingAs($accountant)->post('/dashboard/events', ['name' => 'Nope'])->assertForbidden();
         $this->actingAs($accountant)->put("/dashboard/events/{$event->id}", ['name' => 'Hijacked'])->assertForbidden();
         $this->actingAs($accountant)->post("/dashboard/events/{$event->id}/publish")->assertForbidden();
         $this->actingAs($accountant)->post("/dashboard/events/{$event->id}/ticket-types", ['name' => 'X'])->assertForbidden();
-        $this->actingAs($accountant)->post("/dashboard/orders/{$order->id}/cancel")->assertForbidden();
-        $this->actingAs($accountant)->post("/dashboard/orders/{$order->id}/refund")->assertForbidden();
 
         // Data unchanged.
         $this->assertDatabaseHas('events', ['id' => $event->id, 'name' => 'Untouched']);
-        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => Order::STATUS_PAID]);
+    }
+
+    public function test_accountant_can_manage_and_cancel_refund_orders(): void
+    {
+        // The Accountant now holds ACTION_MANAGE_ORDERS / CANCEL / REFUND, so
+        // the order actions must pass the authorisation gate (i.e. not 403).
+        $accountant = User::factory()->accountant()->create();
+        $company = Company::find($accountant->company_id);
+        $event = Event::factory()->for($company)->unlimitedCapacity()->create();
+        $order = Order::factory()->forEvent($event)->create(['status' => Order::STATUS_PAID]);
+
+        $this->actingAs($accountant)
+            ->post("/dashboard/orders/{$order->id}/cancel")
+            ->assertStatus(302)
+            ->assertSessionMissing('errors');
+
+        $this->assertNotSame(
+            403,
+            $this->actingAs($accountant)->post("/dashboard/orders/{$order->id}/refund")->getStatusCode(),
+        );
     }
 }

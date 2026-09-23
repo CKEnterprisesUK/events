@@ -59,10 +59,19 @@ class RoleAuthorizationTest extends TestCase
             RoleAuthorization::ACTION_CANCEL_ORDER,
             RoleAuthorization::ACTION_REFUND_ORDER,
             RoleAuthorization::ACTION_ISSUE_COMP,
+            // Admins can view reports/payouts alongside the Owner and Accountant.
+            RoleAuthorization::ACTION_VIEW_REPORTS,
+            // Admins can check attendees in.
+            RoleAuthorization::ACTION_CHECK_IN,
             // Admins handle GDPR data-subject requests alongside the Owner.
             RoleAuthorization::ACTION_MANAGE_GDPR,
             // Admins can view the Company activity/audit trail.
             RoleAuthorization::ACTION_VIEW_AUDIT_LOG,
+            // Admins can reset an event's check-ins.
+            RoleAuthorization::ACTION_RESET_SCANS,
+            // Admins manage the team (invite/role-change members) — the
+            // single-Owner invariant still blocks creating/removing Owners.
+            RoleAuthorization::ACTION_MANAGE_USERS,
             // Admins can connect the Company's Stripe account (onboarding).
             RoleAuthorization::ACTION_SETUP_STRIPE,
         ] as $action) {
@@ -70,7 +79,6 @@ class RoleAuthorizationTest extends TestCase
         }
 
         $this->assertFalse($this->matrix->roleCan(User::ROLE_ADMIN, RoleAuthorization::ACTION_MANAGE_BILLING));
-        $this->assertFalse($this->matrix->roleCan(User::ROLE_ADMIN, RoleAuthorization::ACTION_MANAGE_USERS));
         $this->assertFalse($this->matrix->roleCan(User::ROLE_ADMIN, RoleAuthorization::ACTION_MANAGE_SETTINGS));
         // The Admin can SET UP Stripe but must NOT manage it once connected
         // (fee handling stays Owner-only).
@@ -107,13 +115,17 @@ class RoleAuthorizationTest extends TestCase
             RoleAuthorization::ACTION_CANCEL_ORDER,
             RoleAuthorization::ACTION_REFUND_ORDER,
             RoleAuthorization::ACTION_ISSUE_COMP,
+            // Box_Office also checks attendees in at the door.
+            RoleAuthorization::ACTION_CHECK_IN,
         ] as $action) {
             $this->assertTrue($this->matrix->roleCan(User::ROLE_BOX_OFFICE, $action));
         }
 
-        // But it is NOT trusted with company settings, users, Stripe, billing,
-        // or GDPR handling.
+        // But it is NOT trusted with reports, company settings, users, Stripe,
+        // billing, GDPR handling, resetting check-ins, or the audit trail.
         foreach ([
+            RoleAuthorization::ACTION_VIEW_REPORTS,
+            RoleAuthorization::ACTION_RESET_SCANS,
             RoleAuthorization::ACTION_MANAGE_SETTINGS,
             RoleAuthorization::ACTION_MANAGE_USERS,
             RoleAuthorization::ACTION_SETUP_STRIPE,
@@ -147,11 +159,28 @@ class RoleAuthorizationTest extends TestCase
         }
     }
 
-    public function test_accountant_is_read_only_reports(): void
+    public function test_accountant_permitted_set(): void
     {
-        $this->assertTrue($this->matrix->roleCan(User::ROLE_ACCOUNTANT, RoleAuthorization::ACTION_VIEW_REPORTS));
-        $this->assertFalse($this->matrix->roleCan(User::ROLE_ACCOUNTANT, RoleAuthorization::ACTION_MANAGE_EVENTS));
-        $this->assertFalse($this->matrix->roleCan(User::ROLE_ACCOUNTANT, RoleAuthorization::ACTION_REFUND_ORDER));
+        // Reports/payouts plus order management and cancel/refund handling.
+        foreach ([
+            RoleAuthorization::ACTION_VIEW_REPORTS,
+            RoleAuthorization::ACTION_MANAGE_ORDERS,
+            RoleAuthorization::ACTION_CANCEL_ORDER,
+            RoleAuthorization::ACTION_REFUND_ORDER,
+        ] as $action) {
+            $this->assertTrue($this->matrix->roleCan(User::ROLE_ACCOUNTANT, $action));
+        }
+
+        // But no event/ticket management, comps, check-in, or oversight.
+        foreach ([
+            RoleAuthorization::ACTION_MANAGE_EVENTS,
+            RoleAuthorization::ACTION_MANAGE_TICKET_TYPES,
+            RoleAuthorization::ACTION_ISSUE_COMP,
+            RoleAuthorization::ACTION_CHECK_IN,
+            RoleAuthorization::ACTION_MANAGE_USERS,
+        ] as $action) {
+            $this->assertFalse($this->matrix->roleCan(User::ROLE_ACCOUNTANT, $action));
+        }
     }
 
     public function test_scanner_is_check_in_only(): void

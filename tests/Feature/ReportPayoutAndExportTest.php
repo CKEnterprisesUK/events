@@ -156,10 +156,15 @@ class ReportPayoutAndExportTest extends TestCase
 
     public function test_exports_are_gated_like_the_report(): void
     {
-        $admin = User::factory()->admin()->create();
-
-        $this->actingAs($admin)->get('/dashboard/reports/export')->assertForbidden();
-        $this->actingAs($admin)->get('/dashboard/reports/export/pdf')->assertForbidden();
+        // Exports follow ACTION_VIEW_REPORTS: the Box_Office and Scanner roles
+        // do not hold it and are forbidden.
+        foreach ([
+            User::factory()->boxOffice()->create(),
+            User::factory()->scanner()->create(),
+        ] as $user) {
+            $this->actingAs($user)->get('/dashboard/reports/export')->assertForbidden();
+            $this->actingAs($user)->get('/dashboard/reports/export/pdf')->assertForbidden();
+        }
     }
 
     public function test_super_admin_transactions_export_is_csv(): void

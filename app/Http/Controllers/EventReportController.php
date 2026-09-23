@@ -15,10 +15,10 @@ use Illuminate\Support\Facades\Gate;
  * figures. (Requirements 6.1, 6.2)
  *
  * The action is gated by the `ACTION_VIEW_REPORTS` authorisation Gate, which
- * the role matrix grants only to the Accountant role (and, via the
- * `Gate::before` bypass, Super_Admins) plus the Owner. Any other Company role —
- * Admin, Scanner — is denied with a 403 and sees nothing, matching the
- * read-only reporting slice of the permission matrix. (Requirement 6.7)
+ * the role matrix grants to the Owner, Admin and Accountant roles (and, via the
+ * `Gate::before` bypass, Super_Admins). The Box_Office and Scanner roles are
+ * denied with a 403 and see nothing, matching the reporting slice of the
+ * permission matrix. (Requirement 6.7)
  *
  * This controller is deliberately READ-ONLY: it exposes only a GET endpoint and
  * performs no mutations. All figures come from {@see EventReportService}, the

@@ -127,13 +127,16 @@ class InvitationFlowsTest extends TestCase
         ])->assertRedirect(route('dashboard.users.index'));
 
         // Requirement 4.3 — permissions now match the newly assigned Admin role:
-        // event/order management is granted and the Scanner check-in is gone.
+        // event/order management and team management are granted. The Admin can
+        // also check attendees in.
         $this->assertSame(User::ROLE_ADMIN, $member->fresh()->role);
         $this->assertTrue($this->userCan($member, RoleAuthorization::ACTION_MANAGE_EVENTS));
         $this->assertTrue($this->userCan($member, RoleAuthorization::ACTION_REFUND_ORDER));
-        $this->assertFalse($this->userCan($member, RoleAuthorization::ACTION_CHECK_IN));
-        // Admin is not an Owner: user management stays denied.
-        $this->assertFalse($this->userCan($member, RoleAuthorization::ACTION_MANAGE_USERS));
+        $this->assertTrue($this->userCan($member, RoleAuthorization::ACTION_CHECK_IN));
+        $this->assertTrue($this->userCan($member, RoleAuthorization::ACTION_MANAGE_USERS));
+        // Admin is not an Owner: billing and settings stay denied.
+        $this->assertFalse($this->userCan($member, RoleAuthorization::ACTION_MANAGE_BILLING));
+        $this->assertFalse($this->userCan($member, RoleAuthorization::ACTION_MANAGE_SETTINGS));
     }
 
     // ---- 4.4 Removal revokes access -----------------------------------------
