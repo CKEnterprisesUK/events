@@ -105,7 +105,7 @@ class EventQuestionController extends Controller
     /**
      * The answers report for this Event: per-question response counts and, for
      * select questions, a breakdown by option — plus the recent orders with
-     * their answers. Gated on ACTION_VIEW_REPORTS (Accountant/Owner, plus
+     * their answers. Gated on ACTION_VIEW_REPORTS (Owner/Admin/Accountant, plus
      * Super_Admin), matching the sales reports.
      */
     public function report(Event $event): View

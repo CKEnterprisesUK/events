@@ -54,15 +54,20 @@ class RolePermissionMatrixTest extends PbtTestCase
                 RoleAuthorization::ACTION_CANCEL_ORDER,
                 RoleAuthorization::ACTION_REFUND_ORDER,
                 RoleAuthorization::ACTION_ISSUE_COMP,
+                RoleAuthorization::ACTION_VIEW_REPORTS,
+                RoleAuthorization::ACTION_CHECK_IN,
                 RoleAuthorization::ACTION_MANAGE_GDPR,
                 RoleAuthorization::ACTION_VIEW_AUDIT_LOG,
                 RoleAuthorization::ACTION_RESET_SCANS,
+                // The Admin manages the team (invite/role-change members); the
+                // single-Owner invariant still guards Owner create/remove.
+                RoleAuthorization::ACTION_MANAGE_USERS,
                 // The Admin can set up (connect) Stripe, but managing an already
                 // connected account (fee handling) stays Owner-only.
                 RoleAuthorization::ACTION_SETUP_STRIPE,
             ],
-            // Box_Office is a cut-down Admin: the operational set with no
-            // company-settings/GDPR access.
+            // Box_Office is a cut-down Admin: the operational set plus check-in,
+            // with no reports, company-settings, GDPR, or check-in reset access.
             User::ROLE_BOX_OFFICE => [
                 RoleAuthorization::ACTION_MANAGE_EVENTS,
                 RoleAuthorization::ACTION_MANAGE_TICKET_TYPES,
@@ -70,8 +75,14 @@ class RolePermissionMatrixTest extends PbtTestCase
                 RoleAuthorization::ACTION_CANCEL_ORDER,
                 RoleAuthorization::ACTION_REFUND_ORDER,
                 RoleAuthorization::ACTION_ISSUE_COMP,
+                RoleAuthorization::ACTION_CHECK_IN,
             ],
+            // Accountant: read-only reports/payouts plus order management and
+            // cancel/refund handling.
             User::ROLE_ACCOUNTANT => [
+                RoleAuthorization::ACTION_MANAGE_ORDERS,
+                RoleAuthorization::ACTION_CANCEL_ORDER,
+                RoleAuthorization::ACTION_REFUND_ORDER,
                 RoleAuthorization::ACTION_VIEW_REPORTS,
             ],
             User::ROLE_SCANNER => [

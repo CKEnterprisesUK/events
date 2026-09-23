@@ -90,11 +90,11 @@ class InvitationManagementTest extends TestCase
         }
     }
 
-    public function test_non_owner_roles_cannot_manage_users(): void
+    public function test_roles_without_team_management_cannot_manage_users(): void
     {
-        // Requirement 3.3 — user management is Owner-only.
+        // Requirement 3.3 — team management is held by the Owner and Admin.
+        // The Accountant and Scanner cannot invite members.
         foreach ([
-            User::factory()->admin()->create(),
             User::factory()->accountant()->create(),
             User::factory()->scanner()->create(),
         ] as $user) {
@@ -105,6 +105,23 @@ class InvitationManagementTest extends TestCase
         }
 
         $this->assertDatabaseCount('invitations', 0);
+    }
+
+    public function test_admin_can_invite_members(): void
+    {
+        // The Admin role now holds ACTION_MANAGE_USERS and can invite the
+        // non-Owner roles.
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)->post('/dashboard/users/invitations', [
+            'email' => 'invited-by-admin@example.com',
+            'role' => User::ROLE_SCANNER,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('invitations', [
+            'email' => 'invited-by-admin@example.com',
+            'company_id' => $admin->company_id,
+        ]);
     }
 
     // ---- Accept (4.2) --------------------------------------------------------

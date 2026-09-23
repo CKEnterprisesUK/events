@@ -169,13 +169,15 @@ class EventReportPageTest extends TestCase
 
     // ---- Authorization: non-report-viewers are denied (Req 6.7) -------------
 
-    public function test_admin_and_scanner_are_forbidden_from_the_report(): void
+    public function test_box_office_and_scanner_are_forbidden_from_the_report(): void
     {
-        // Admin/Scanner do not hold ACTION_VIEW_REPORTS. Authorization fails
-        // BEFORE the view renders, so this is a clean 403 regardless of whether
-        // the report view file exists yet. (Req 6.7)
+        // Box_Office/Scanner do not hold ACTION_VIEW_REPORTS. Authorization
+        // fails BEFORE the view renders, so this is a clean 403 regardless of
+        // whether the report view file exists yet. (Req 6.7) The Admin now
+        // holds ACTION_VIEW_REPORTS and is covered by the accountant/admin
+        // report tests.
         foreach ([
-            User::factory()->admin()->create(),
+            User::factory()->boxOffice()->create(),
             User::factory()->scanner()->create(),
         ] as $user) {
             $company = Company::find($user->company_id);

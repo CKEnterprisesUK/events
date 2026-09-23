@@ -26,10 +26,14 @@ use Illuminate\Validation\ValidationException;
 /**
  * Company-dashboard controller for User Invitation and Management. (Requirement 4)
  *
- * User management is an Owner-only capability: every dashboard write here is
- * gated by the `ACTION_MANAGE_USERS` authorisation Gate, which the role matrix
- * grants to the Owner role (and, via the `Gate::before` bypass, Super_Admins).
- * Anything else is denied with a 403 leaving data unchanged. (Requirement 3.3)
+ * Team management is a capability of the Owner and Admin: every dashboard write
+ * here is gated by the `ACTION_MANAGE_USERS` authorisation Gate, which the role
+ * matrix grants to the Owner and Admin roles (and, via the `Gate::before`
+ * bypass, Super_Admins). Anything else is denied with a 403 leaving data
+ * unchanged. The Owner role itself is never invitable and the single-Owner
+ * invariant (enforced in {@see RoleService}) guards Owner promotion/removal, so
+ * an Admin can manage admin/accountant/scanner members but cannot create or
+ * remove an Owner. (Requirement 3.3)
  *
  * Invitations are Company-owned: the invite/role-change/removal actions run
  * under the reserved `/dashboard` prefix where the `dashboard.tenant`

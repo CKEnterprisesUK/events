@@ -273,26 +273,23 @@ class ScanCheckInTest extends TestCase
 
     // ---- Role gating (3.6, 3.7) ---------------------------------------------
 
-    public function test_non_scanner_roles_cannot_reach_the_scanner(): void
+    public function test_roles_without_check_in_cannot_reach_the_scanner(): void
     {
-        foreach ([
-            User::factory()->admin()->create(),
-            User::factory()->accountant()->create(),
-        ] as $user) {
-            // 3.6/3.7 — check-in belongs to the Scanner. (The Owner, as the
-            // account superuser, also holds check-in and is covered elsewhere.)
-            $this->actingAs($user)->get('/dashboard/scan')->assertForbidden();
+        // 3.6/3.7 — check-in is held by Scanner, Owner, Admin and Box_Office.
+        // The Accountant is the only role without it and is forbidden.
+        $user = User::factory()->accountant()->create();
 
-            $order = $this->confirmedOrderFor(
-                User::factory()->scanner()->create(['company_id' => $user->company_id])
-            );
-            $payload = $this->qr->payload($order->order_reference);
+        $this->actingAs($user)->get('/dashboard/scan')->assertForbidden();
 
-            $this->actingAs($user)->post('/dashboard/scan', ['payload' => $payload])
-                ->assertForbidden();
+        $order = $this->confirmedOrderFor(
+            User::factory()->scanner()->create(['company_id' => $user->company_id])
+        );
+        $payload = $this->qr->payload($order->order_reference);
 
-            // A denied action leaves the Order unscanned.
-            $this->assertNull($order->fresh()->scanned_at);
-        }
+        $this->actingAs($user)->post('/dashboard/scan', ['payload' => $payload])
+            ->assertForbidden();
+
+        // A denied action leaves the Order unscanned.
+        $this->assertNull($order->fresh()->scanned_at);
     }
 }

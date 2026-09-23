@@ -14,12 +14,16 @@ use App\Models\User;
  *                  can do anything a lower role can, in addition to the
  *                  Owner-only billing/Stripe-management/settings/user-management)
  *   - Admin:       manage Events, Ticket_Types, Orders (incl. cancel/refund/comp),
- *                  GDPR data-subject handling, and Stripe Connect *setup* (getting
- *                  the account connected) — but NOT ongoing Stripe management
- *                  (fee handling), which stays Owner-only
+ *                  view reports/payouts, check attendees in, reset check-ins,
+ *                  GDPR data-subject handling, activity-log oversight, team
+ *                  management, and Stripe Connect *setup* (getting the account
+ *                  connected) — but NOT ongoing Stripe management (fee handling)
+ *                  or billing, which stay Owner-only
  *   - Box_Office:  manage Events, Ticket_Types, Orders (incl. cancel/refund/comp)
- *                  — a cut-down Admin with no Company settings or GDPR access
- *   - Accountant:  read-only reports/payouts
+ *                  and check attendees in — a cut-down Admin with no reports,
+ *                  Company settings, GDPR access or check-in reset
+ *   - Accountant:  read-only reports/payouts, plus order management and
+ *                  cancel/refund handling
  *   - Scanner:     check-in only
  *
  * A user is authorised for an action iff the action belongs to their role's
@@ -111,17 +115,21 @@ class RoleAuthorization
             self::ACTION_CANCEL_ORDER,
             self::ACTION_REFUND_ORDER,
             self::ACTION_ISSUE_COMP,
+            self::ACTION_VIEW_REPORTS,
+            self::ACTION_CHECK_IN,
             self::ACTION_MANAGE_GDPR,
             self::ACTION_VIEW_AUDIT_LOG,
             self::ACTION_RESET_SCANS,
+            self::ACTION_MANAGE_USERS,
             // The Admin can connect the Company's Stripe account (onboarding),
             // but NOT manage it afterwards (fee handling) — that stays Owner-only
             // via ACTION_MANAGE_STRIPE.
             self::ACTION_SETUP_STRIPE,
         ],
         // Box_Office is a cut-down Admin: it runs the box office (events,
-        // ticket types, orders incl. cancel/refund/comp) but is NOT trusted
-        // with Company settings, users, Stripe, billing, or GDPR handling.
+        // ticket types, orders incl. cancel/refund/comp) and checks attendees
+        // in, but is NOT trusted with reports, Company settings, users, Stripe,
+        // billing, GDPR handling, or resetting check-ins.
         User::ROLE_BOX_OFFICE => [
             self::ACTION_MANAGE_EVENTS,
             self::ACTION_MANAGE_TICKET_TYPES,
@@ -129,8 +137,15 @@ class RoleAuthorization
             self::ACTION_CANCEL_ORDER,
             self::ACTION_REFUND_ORDER,
             self::ACTION_ISSUE_COMP,
+            self::ACTION_CHECK_IN,
         ],
+        // Accountant: read-only reports/payouts, plus order management and
+        // cancel/refund handling (money operations) — but no event/ticket
+        // management, comps, check-in, settings or oversight actions.
         User::ROLE_ACCOUNTANT => [
+            self::ACTION_MANAGE_ORDERS,
+            self::ACTION_CANCEL_ORDER,
+            self::ACTION_REFUND_ORDER,
             self::ACTION_VIEW_REPORTS,
         ],
         User::ROLE_SCANNER => [
