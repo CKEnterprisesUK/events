@@ -153,6 +153,7 @@ class ClientController extends Controller
             'recentSupportRequests' => $recentSupportRequests,
             'owner' => $owner,
             'transferCandidates' => $transferCandidates,
+            'companyUsers' => $companyUsers,
         ]);
     }
 }

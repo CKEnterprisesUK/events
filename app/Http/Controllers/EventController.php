@@ -9,6 +9,7 @@ use App\Models\TicketType;
 use App\Rules\SafeUpload;
 use App\Services\AuditLogger;
 use App\Services\BrandingImageStore;
+use App\Services\EventDuplicator;
 use App\Services\EventReadiness;
 use App\Services\EventReportService;
 use App\Services\GeocodingService;
@@ -20,6 +21,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\Response;
@@ -56,6 +58,7 @@ class EventController extends Controller
         private GeocodingService $geocoder,
         private BrandingImageStore $images,
         private readonly AuditLogger $audit,
+        private readonly EventDuplicator $duplicator,
     ) {}
 
     /**
@@ -113,6 +116,37 @@ class EventController extends Controller
         return redirect()
             ->route('dashboard.events.show', $event)
             ->with('status', 'Event created.');
+    }
+
+    /**
+     * Duplicate an existing Event into a fresh, unpublished draft belonging to
+     * the same Company, then drop the organiser on the new Event's overview to
+     * set its date and finish it off. (Copy event)
+     *
+     * The heavy lifting — copying the details, ticket types, questions and
+     * sponsors (with their image files) while resetting all booking state —
+     * lives in {@see EventDuplicator}, so this action stays a thin
+     * authorise → duplicate → audit → redirect. The source Event is
+     * route-model-bound under the `dashboard.tenant` group, so a foreign Event
+     * 404s and the copy can only ever land in the acting Company. Bookings are
+     * NOT copied, so this is safe to run against a live, selling Event.
+     */
+    public function duplicate(Event $event): RedirectResponse
+    {
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+
+        $copy = $this->duplicator->duplicate($event);
+
+        $this->audit->record(
+            action: AuditLog::EVENT_DUPLICATED,
+            auditable: $copy,
+            summary: 'Duplicated event "'.$event->name.'" as "'.$copy->name.'"',
+            context: ['source_event_id' => $event->id],
+        );
+
+        return redirect()
+            ->route('dashboard.events.show', $copy)
+            ->with('status', 'Event duplicated. This is a draft copy — set a date and publish when you\'re ready.');
     }
 
     /**
@@ -279,7 +313,7 @@ class EventController extends Controller
      * aggregates to a collection of Events for the listing page. Two grouped
      * queries (no N+1). Read-only and tenant-scoped — no behaviour change.
      *
-     * @param  \Illuminate\Support\Collection<int, Event>  $events
+     * @param  Collection<int, Event>  $events
      */
     private function attachListingCounts($events): void
     {

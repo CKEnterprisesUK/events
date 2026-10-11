@@ -33,6 +33,7 @@ use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\StorefrontController;
 use App\Http\Controllers\StripeConnectController;
 use App\Http\Controllers\StripeReturnController;
+use App\Http\Controllers\SuperAdmin\AnnouncementController as SuperAdminAnnouncementController;
 use App\Http\Controllers\SuperAdmin\AuditController as SuperAdminAuditController;
 use App\Http\Controllers\SuperAdmin\ClientController as SuperAdminClientController;
 use App\Http\Controllers\SuperAdmin\CompanyController as SuperAdminCompanyController;
@@ -51,6 +52,7 @@ use App\Http\Controllers\SuperAdmin\SupportRequestController as SuperAdminSuppor
 use App\Http\Controllers\SuperAdmin\SystemHealthController as SuperAdminSystemHealthController;
 use App\Http\Controllers\SuperAdmin\TransactionController as SuperAdminTransactionController;
 use App\Http\Controllers\SuperAdmin\TwoFactorController as SuperAdminTwoFactorController;
+use App\Http\Controllers\SuperAdmin\UserController as SuperAdminUserController;
 use App\Http\Controllers\SupportController;
 use App\Http\Controllers\TicketTypeController;
 use App\Http\Controllers\TrustController;
@@ -364,6 +366,13 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
         Route::post('/events/{event}/cancel', [EventController::class, 'cancel'])->name('events.cancel');
         Route::delete('/events/{event}', [EventController::class, 'destroy'])->name('events.destroy');
 
+        // Duplicate an Event into a fresh unpublished draft (Admin-gated in the
+        // controller via ACTION_MANAGE_EVENTS). Copies the details, ticket
+        // types, questions and sponsors (with their image files) but NO booking
+        // state, so it is safe to run against a live event. Scoped to the user's
+        // Company by the `dashboard.tenant` group (foreign Events 404). (Copy event)
+        Route::post('/events/{event}/duplicate', [EventController::class, 'duplicate'])->name('events.duplicate');
+
         // Dedicated per-section manage screens. Each is its own URL (no JS-only
         // tabs) so a section can be linked to and bookmarked directly. The
         // Overview screen is `events.show` above; these are its siblings.
@@ -412,6 +421,14 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
         // Events 404). (Requirements 4.3, 6.1, 6.9)
         Route::get('/events/{event}/qr', [EventController::class, 'qr'])->name('events.qr');
         Route::get('/events/{event}/report', [EventReportController::class, 'show'])->name('events.report');
+        // Per-event attendance / check-in report (Accountant/Admin-gated via
+        // ACTION_VIEW_REPORTS in the controller). READ-ONLY: surfaces the
+        // door-scan data (attendance vs. no-shows, check-ins by staff, arrival
+        // timeline) built from Orders' scanned_at/scanned_by. `export` streams
+        // the same figures as CSV. Scoped to the user's Company by the
+        // `dashboard.tenant` group (foreign Events 404). (Attendance report)
+        Route::get('/events/{event}/attendance', [EventReportController::class, 'attendance'])->name('events.attendance');
+        Route::get('/events/{event}/attendance/export', [EventReportController::class, 'attendanceExport'])->name('events.attendance.export');
 
         // Ticket_Type management (Admin-gated in the controller), nested under
         // an Event. Create/update are scoped to the authenticated user's
@@ -539,6 +556,9 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
         // PDF payout statement — the same figures/range as the CSV, formatted for
         // filing or handing to a bookkeeper. (Report export types)
         Route::get('/reports/export/pdf', [ReportController::class, 'exportPdf'])->name('reports.export-pdf');
+        // Excel (.xlsx) workbook — the same figures/range as the CSV, but a real
+        // spreadsheet finance can total/pivot natively. (Report export types)
+        Route::get('/reports/export/excel', [ReportController::class, 'exportExcel'])->name('reports.export-excel');
 
         // Company activity trail (Owner/Admin-gated in the controller via
         // ACTION_VIEW_AUDIT_LOG). READ-ONLY: a single GET renders the Company's
@@ -750,6 +770,37 @@ Route::middleware(['auth', 'super.admin', 'session.timeout', 'migrations.pending
         Route::post('/companies/{company}/owner/password-reset', [SuperAdminCompanyUserController::class, 'sendPasswordReset'])->name('companies.owner.password-reset');
         Route::post('/companies/{company}/owner/resend-verification', [SuperAdminCompanyUserController::class, 'resendVerification'])->name('companies.owner.resend-verification');
         Route::post('/companies/{company}/owner/transfer', [SuperAdminCompanyUserController::class, 'transferOwnership'])->name('companies.owner.transfer');
+
+        // Platform announcements: compose an essential operational email and
+        // send it to selected Company_Users (by role, optionally within one
+        // Company). Not marketing — no consent/unsubscribe gate; disabled
+        // accounts and super admins are always excluded. A large send requires
+        // an explicit confirmation. Delivery is fanned out to the queue.
+        // (Platform communications)
+        Route::get('/announcements', [SuperAdminAnnouncementController::class, 'create'])->name('announcements.create');
+        Route::post('/announcements', [SuperAdminAnnouncementController::class, 'send'])->name('announcements.send');
+
+        // Cross-tenant user management: a platform-wide directory of every
+        // Company_User plus per-user actions (edit, disable/enable, delete,
+        // password reset, resend verification). Super_Admin accounts are never
+        // listed or mutated here — they are provisioned out-of-band. The
+        // `{user}` segment is a plain id resolved explicitly in the controller
+        // (which enforces the non-super-admin exclusion), so it never resolves
+        // a Super_Admin. Owner promotion stays with the ownership-transfer
+        // action (single-Owner invariant). (Cross-tenant user management)
+        Route::get('/users', [SuperAdminUserController::class, 'index'])->name('users.index');
+        Route::put('/users/{user}', [SuperAdminUserController::class, 'update'])
+            ->where('user', '[0-9]+')->name('users.update');
+        Route::post('/users/{user}/disable', [SuperAdminUserController::class, 'disable'])
+            ->where('user', '[0-9]+')->name('users.disable');
+        Route::post('/users/{user}/enable', [SuperAdminUserController::class, 'enable'])
+            ->where('user', '[0-9]+')->name('users.enable');
+        Route::delete('/users/{user}', [SuperAdminUserController::class, 'destroy'])
+            ->where('user', '[0-9]+')->name('users.destroy');
+        Route::post('/users/{user}/password-reset', [SuperAdminUserController::class, 'sendPasswordReset'])
+            ->where('user', '[0-9]+')->name('users.password-reset');
+        Route::post('/users/{user}/resend-verification', [SuperAdminUserController::class, 'resendVerification'])
+            ->where('user', '[0-9]+')->name('users.resend-verification');
 
         // Suspend / unsuspend a Company. The company list + detail live on the
         // Clients surface; these actions redirect back to that client page.

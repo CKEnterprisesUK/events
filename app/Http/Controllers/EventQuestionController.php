@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Services\AuditLogger;
 use App\Services\EventReadiness;
 use App\Services\EventReportService;
+use App\Services\Reporting\ReportDateRange;
 use App\Services\RoleAuthorization;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
@@ -16,7 +17,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -108,12 +111,16 @@ class EventQuestionController extends Controller
      * their answers. Gated on ACTION_VIEW_REPORTS (Owner/Admin/Accountant, plus
      * Super_Admin), matching the sales reports.
      */
-    public function report(Event $event): View
+    public function report(Request $request, Event $event): View
     {
         Gate::authorize(RoleAuthorization::ACTION_VIEW_REPORTS);
 
+        // Optional inclusive from/to range, parsed with the same rules as the
+        // sales and attendance reports so every report surface agrees.
+        $range = ReportDateRange::fromRequest($request);
+
         $questions = $event->questions()->get();
-        $orders = $this->confirmedOrders($event);
+        $orders = $this->confirmedOrders($event, $range);
 
         return view('dashboard.events.questions_report', [
             'event' => $event,
@@ -121,6 +128,7 @@ class EventQuestionController extends Controller
             'questions' => $questions,
             'stats' => $this->buildStats($questions, $orders),
             'responseCount' => $orders->count(),
+            'range' => $range,
         ]);
     }
 
@@ -130,14 +138,16 @@ class EventQuestionController extends Controller
      * customer name/email and date). Uses the same streamDownload + fputcsv
      * shape as the company sales export.
      */
-    public function export(Event $event): StreamedResponse
+    public function export(Request $request, Event $event): StreamedResponse
     {
         Gate::authorize(RoleAuthorization::ACTION_VIEW_REPORTS);
 
-        $questions = $event->questions()->get();
-        $orders = $this->confirmedOrders($event);
+        $range = ReportDateRange::fromRequest($request);
 
-        $slug = \Illuminate\Support\Str::slug($event->name) ?: 'event';
+        $questions = $event->questions()->get();
+        $orders = $this->confirmedOrders($event, $range);
+
+        $slug = Str::slug($event->name) ?: 'event';
         $filename = 'attendee-answers-'.$slug.'-'.now()->format('Y-m-d').'.csv';
 
         return response()->streamDownload(function () use ($questions, $orders): void {
@@ -184,10 +194,14 @@ class EventQuestionController extends Controller
      *
      * @return EloquentCollection<int, Order>
      */
-    private function confirmedOrders(Event $event): EloquentCollection
+    private function confirmedOrders(Event $event, ?ReportDateRange $range = null): EloquentCollection
     {
+        $range ??= ReportDateRange::none();
+
         return $event->orders()
             ->whereIn('status', EventReportService::CONFIRMED_STATUSES)
+            ->when($range->from !== null, fn ($q) => $q->where('created_at', '>=', $range->from))
+            ->when($range->to !== null, fn ($q) => $q->where('created_at', '<=', $range->to))
             ->with('questionAnswers')
             ->latest()
             ->get();
@@ -292,13 +306,13 @@ class EventQuestionController extends Controller
                 // A single-choice question needs at least two options to be a
                 // meaningful choice, and we cap the list to keep it usable.
                 if (count($options) < 2) {
-                    throw \Illuminate\Validation\ValidationException::withMessages([
+                    throw ValidationException::withMessages([
                         "questions.{$index}.options" => __('A multiple-choice question needs at least two options, one per line.'),
                     ]);
                 }
 
                 if (count($options) > 20) {
-                    throw \Illuminate\Validation\ValidationException::withMessages([
+                    throw ValidationException::withMessages([
                         "questions.{$index}.options" => __('A multiple-choice question may have at most 20 options.'),
                     ]);
                 }

@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\Ticket;
 use App\Services\EventReportService;
 use App\Services\RoleAuthorization;
+use App\Services\SimpleXlsxWriter;
 use App\Services\TenantContext;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\View\View;
@@ -212,6 +213,75 @@ class ReportController extends Controller
     }
 
     /**
+     * Export the same company report as a real `.xlsx` workbook — the format a
+     * finance team can open natively in Excel and total/pivot, unlike the CSV.
+     * Built from the identical confirmed-Orders query, gate, tenant scope and
+     * optional `from`/`to` range as {@see index()}, {@see export()} and
+     * {@see exportPdf()}, so all four surfaces agree. Money is written in major
+     * units as real numbers so the spreadsheet can sum them. Read-only.
+     *
+     * The workbook is assembled in memory by {@see SimpleXlsxWriter} (no new
+     * dependency; uses PHP's Zip extension). (Report export types)
+     */
+    public function exportExcel(Request $request, SimpleXlsxWriter $writer): Response
+    {
+        Gate::authorize(RoleAuthorization::ACTION_VIEW_REPORTS);
+
+        [$from, $to] = $this->dateRange($request);
+        $ranged = $from !== null || $to !== null;
+        $confirmedOrders = $this->confirmedOrders($from, $to);
+        $totals = $this->companyTotals($confirmedOrders);
+        $perEvent = $this->perEventBreakdown($confirmedOrders, $ranged);
+        $currency = $this->currency();
+
+        // Period the figures cover, so the file is self-describing.
+        $writer->addRow(['Period', $this->rangeLabel($from, $to)]);
+        $writer->addBlankRow();
+
+        // Company totals block. Money columns are real numbers in major units.
+        $writer->addRow(['Company totals', 'Value ('.$currency.')']);
+        $writer->addRow(['Confirmed orders', (int) $totals['orders']]);
+        $writer->addRow(['Tickets sold', (int) $totals['tickets_sold']]);
+        $writer->addRow(['Gross sales', $this->majorFloat($totals['gross_sales_minor'])]);
+        $writer->addRow(['Booking fees collected', $this->majorFloat($totals['booking_fees_minor'])]);
+        $writer->addRow(['Platform fees', $this->majorFloat($totals['application_fees_minor'])]);
+        $writer->addRow(['Total collected', $this->majorFloat($totals['order_total_minor'])]);
+        $writer->addRow(['Net after platform fee', $this->majorFloat($totals['net_to_company_minor'])]);
+        $writer->addRow(['Stripe processing fees', $this->majorFloat($totals['stripe_fees_minor'])]);
+        $writer->addRow(['Net payout to bank', $this->majorFloat($totals['net_payout_minor'])]);
+
+        // Blank separator, then the per-Event breakdown table.
+        $writer->addBlankRow();
+        $writer->addRow([
+            'Event', 'Orders', 'Tickets sold', 'Gross sales', 'Booking fees',
+            'Platform fees', 'Total collected', 'Net after platform fee',
+            'Stripe fees', 'Net payout',
+        ]);
+
+        foreach ($perEvent as $row) {
+            $writer->addRow([
+                (string) $row['event_name'],
+                (int) $row['orders'],
+                (int) $row['tickets_sold'],
+                $this->majorFloat($row['gross_sales_minor']),
+                $this->majorFloat($row['booking_fees_minor']),
+                $this->majorFloat($row['application_fees_minor']),
+                $this->majorFloat($row['order_total_minor']),
+                $this->majorFloat($row['net_to_company_minor']),
+                $this->majorFloat($row['stripe_fees_minor']),
+                $this->majorFloat($row['net_payout_minor']),
+            ]);
+        }
+
+        $filename = 'sales-report-'.$this->filenameRange($from, $to).'.xlsx';
+
+        return response($writer->build(), 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename='.$filename,
+        ]);
+    }
+
+    /**
      * Resolve an optional inclusive `from`/`to` date range from the request.
      * Each is a `Y-m-d` date; an invalid or absent value becomes null (no
      * bound). If both are present and reversed, they are swapped so the range is
@@ -364,6 +434,17 @@ class ReportController extends Controller
     private function major(int $minor): string
     {
         return number_format($minor / 100, 2, '.', '');
+    }
+
+    /**
+     * Render integer minor currency units as a major-unit float (e.g. 12500 =>
+     * 125.0) for the Excel export, where the value should land in a numeric
+     * cell the spreadsheet can total — unlike {@see major()}, which returns a
+     * fixed-precision string for the CSV.
+     */
+    private function majorFloat(int $minor): float
+    {
+        return round($minor / 100, 2);
     }
 
     /**

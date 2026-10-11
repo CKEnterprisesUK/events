@@ -26,6 +26,7 @@
                      the primary blue. --}}
                 @php $exportQuery = array_filter(['from' => $from ?? null, 'to' => $to ?? null]); @endphp
                 <a class="btn btn-outline" href="{{ route('dashboard.reports.export', $exportQuery) }}" download>Export CSV</a>
+                <a class="btn btn-outline" href="{{ route('dashboard.reports.export-excel', $exportQuery) }}" download>Export Excel</a>
                 <a class="btn btn-outline" href="{{ route('dashboard.reports.export-pdf', $exportQuery) }}">Export PDF</a>
             </div>
         </div>
