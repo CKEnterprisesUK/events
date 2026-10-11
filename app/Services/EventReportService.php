@@ -9,7 +9,12 @@ use App\Models\Event;
 use App\Models\Order;
 use App\Models\Ticket;
 use App\Models\TicketType;
+use App\Models\User;
+use App\Services\Reporting\AttendanceReport;
 use App\Services\Reporting\EventReport;
+use App\Services\Reporting\ReportDateRange;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
@@ -53,12 +58,12 @@ class EventReportService
      *                     surfaced by the inline summary (Req 5) and the
      *                     dedicated report page (Req 6).
      */
-    public function for(Event $event): EventReport
+    public function for(Event $event, ?ReportDateRange $range = null): EventReport
     {
+        $range ??= ReportDateRange::none();
+
         /** @var Collection<int, Order> $confirmed */
-        $confirmed = $event->orders()
-            ->whereIn('status', self::CONFIRMED_STATUSES)
-            ->get();
+        $confirmed = $this->confirmedOrdersQuery($event, $range)->get();
 
         /** @var list<int> $confirmedIds */
         $confirmedIds = $confirmed->pluck('id')->all();
@@ -101,6 +106,23 @@ class EventReportService
             ordersByStatus: $this->ordersByStatus($event),
             salesByDay: $this->salesByDay($confirmed, $confirmedIds),
         );
+    }
+
+    /**
+     * The Event's confirmed Orders query, optionally bounded by an inclusive
+     * `from`/`to` range on `created_at`. Tenant-scoped via the Event's relation
+     * under the global company scope. Shared by {@see for()} and
+     * {@see attendanceFor()} so the financial and attendance reports apply the
+     * identical "confirmed within range" definition.
+     *
+     * @return HasMany<Order, Event>
+     */
+    private function confirmedOrdersQuery(Event $event, ReportDateRange $range)
+    {
+        return $event->orders()
+            ->whereIn('status', self::CONFIRMED_STATUSES)
+            ->when($range->from !== null, fn ($q) => $q->where('created_at', '>=', $range->from))
+            ->when($range->to !== null, fn ($q) => $q->where('created_at', '<=', $range->to));
     }
 
     /**
@@ -235,6 +257,160 @@ class EventReportService
 
         // Chronological ordering by day.
         usort($rows, fn (array $a, array $b): int => strcmp($a['day'], $b['day']));
+
+        return $rows;
+    }
+
+    /**
+     * Produce the check-in / attendance report for a single Event from the
+     * `scanned_at` / `scanned_by` stamps the door scanner writes.
+     *
+     * Attendance is measured against the Event's CONFIRMED orders — the ones
+     * that were actually issued a QR and so are eligible for check-in. A
+     * confirmed order carrying a `scanned_at` attended; one without is a
+     * no-show. Ticket-level headcounts are the count of `valid` tickets on
+     * those orders, so the report can express attendance both as orders and as
+     * people.
+     *
+     * All queries are tenant-scoped exactly like {@see for()} (via the Event's
+     * `orders()` relation under the global company scope), so the report only
+     * ever sees this Company's data.
+     */
+    public function attendanceFor(Event $event, ?ReportDateRange $range = null): AttendanceReport
+    {
+        $range ??= ReportDateRange::none();
+
+        /** @var Collection<int, Order> $confirmed */
+        $confirmed = $this->confirmedOrdersQuery($event, $range)->get();
+
+        /** @var Collection<int, Order> $checkedIn */
+        $checkedIn = $confirmed->whereNotNull('scanned_at')->values();
+
+        // Valid-ticket headcount per confirmed order, so an order can be scored
+        // by the number of people it covers, not just as one row.
+        $validTicketsByOrder = $this->validTicketsByOrder($confirmed->pluck('id')->all());
+
+        $ticketsSold = (int) $confirmed->sum(
+            fn (Order $order): int => (int) $validTicketsByOrder->get($order->id, 0)
+        );
+        $ticketsCheckedIn = (int) $checkedIn->sum(
+            fn (Order $order): int => (int) $validTicketsByOrder->get($order->id, 0)
+        );
+
+        $scannedAtValues = $checkedIn->pluck('scanned_at')->filter();
+
+        return new AttendanceReport(
+            confirmedOrders: $confirmed->count(),
+            checkedInOrders: $checkedIn->count(),
+            ticketsSold: $ticketsSold,
+            ticketsCheckedIn: $ticketsCheckedIn,
+            firstCheckInAt: $scannedAtValues->min()?->toIso8601String(),
+            lastCheckInAt: $scannedAtValues->max()?->toIso8601String(),
+            byStaff: $this->checkInsByStaff($checkedIn, $validTicketsByOrder),
+            timeline: $this->checkInsByHour($checkedIn, $validTicketsByOrder),
+        );
+    }
+
+    /**
+     * Count of `valid` tickets per order id, for the given confirmed orders.
+     * Voided tickets (from a later cancel/refund) do not count, mirroring the
+     * tickets-sold definition used everywhere else.
+     *
+     * @param  list<int>  $orderIds
+     * @return Collection<int, int> order_id => valid ticket count
+     */
+    private function validTicketsByOrder(array $orderIds): Collection
+    {
+        if ($orderIds === []) {
+            return collect();
+        }
+
+        return Ticket::query()
+            ->whereIn('order_id', $orderIds)
+            ->where('status', Ticket::STATUS_VALID)
+            ->get()
+            ->groupBy('order_id')
+            ->map(fn (Collection $group): int => $group->count());
+    }
+
+    /**
+     * Check-ins grouped by the staff member who scanned them. `scanned_by`
+     * holds the acting user's id; unknown/deleted users (or a null id) fall
+     * under "Unknown". Each row carries both the order count and the ticket
+     * (headcount) total, ordered by orders scanned, descending.
+     *
+     * @param  Collection<int, Order>  $checkedIn
+     * @param  Collection<int, int>  $validTicketsByOrder
+     * @return list<array{name:string,orders:int,tickets:int}>
+     */
+    private function checkInsByStaff(Collection $checkedIn, Collection $validTicketsByOrder): array
+    {
+        if ($checkedIn->isEmpty()) {
+            return [];
+        }
+
+        // Resolve scanner user ids to display names in one query.
+        $userIds = $checkedIn->pluck('scanned_by')->filter()->unique()->all();
+        $names = $userIds === []
+            ? collect()
+            : User::query()
+                ->whereIn('id', $userIds)
+                ->pluck('name', 'id');
+
+        $rows = [];
+
+        foreach ($checkedIn->groupBy('scanned_by') as $scannedBy => $orders) {
+            $name = $scannedBy === '' || $scannedBy === null
+                ? 'Unknown'
+                : (string) ($names->get((int) $scannedBy) ?? 'Unknown');
+
+            $rows[] = [
+                'name' => $name,
+                'orders' => $orders->count(),
+                'tickets' => (int) $orders->sum(
+                    fn (Order $order): int => (int) $validTicketsByOrder->get($order->id, 0)
+                ),
+            ];
+        }
+
+        usort($rows, fn (array $a, array $b): int => $b['orders'] <=> $a['orders']
+            ?: strcmp($a['name'], $b['name']));
+
+        return $rows;
+    }
+
+    /**
+     * Check-ins grouped by clock hour (Y-m-d H:00), so the report can show the
+     * arrival curve at the door. Each bucket carries orders and tickets, in
+     * chronological order.
+     *
+     * @param  Collection<int, Order>  $checkedIn
+     * @param  Collection<int, int>  $validTicketsByOrder
+     * @return list<array{hour:string,orders:int,tickets:int}>
+     */
+    private function checkInsByHour(Collection $checkedIn, Collection $validTicketsByOrder): array
+    {
+        if ($checkedIn->isEmpty()) {
+            return [];
+        }
+
+        $byHour = $checkedIn->groupBy(
+            fn (Order $order): string => Carbon::parse($order->scanned_at)->format('Y-m-d H:00')
+        );
+
+        $rows = [];
+
+        foreach ($byHour as $hour => $orders) {
+            $rows[] = [
+                'hour' => (string) $hour,
+                'orders' => $orders->count(),
+                'tickets' => (int) $orders->sum(
+                    fn (Order $order): int => (int) $validTicketsByOrder->get($order->id, 0)
+                ),
+            ];
+        }
+
+        usort($rows, fn (array $a, array $b): int => strcmp($a['hour'], $b['hour']));
 
         return $rows;
     }

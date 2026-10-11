@@ -18,7 +18,8 @@
         <div class="panel__head panel__head--split">
             <h2>Attendee answers</h2>
             @if ($questions->isNotEmpty() && $responseCount > 0)
-                <a class="btn btn-secondary" href="{{ route('dashboard.events.questions.export', $event) }}">
+                @php $exportParams = array_merge(['event' => $event], isset($range) ? array_filter(['from' => $range->fromDate(), 'to' => $range->toDate()]) : []); @endphp
+                <a class="btn btn-secondary" href="{{ route('dashboard.events.questions.export', $exportParams) }}">
                     Export CSV
                 </a>
             @endif
@@ -28,6 +29,8 @@
             Based on {{ $responseCount }} confirmed {{ \Illuminate\Support\Str::plural('order', $responseCount) }}.
             <a href="{{ route('dashboard.events.questions', $event) }}">Edit questions</a>
         </p>
+
+        @includeWhen(isset($range) && $questions->isNotEmpty(), 'dashboard.events._report_date_filter', ['action' => 'dashboard.events.questions.report'])
 
         @if ($questions->isEmpty())
             <p class="empty-state">

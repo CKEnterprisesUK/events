@@ -80,6 +80,7 @@
             ['key' => 'orders',    'label' => 'Orders',    'icon' => 'orders',    'url' => route('dashboard.events.orders', $event)],
             ['key' => 'questions', 'label' => 'Questions', 'icon' => 'tickets',   'url' => route('dashboard.events.questions', $event)],
             ['key' => 'report',    'label' => 'Reports',   'icon' => 'reports',   'url' => route('dashboard.events.report', $event)],
+            ['key' => 'attendance', 'label' => 'Attendance', 'icon' => 'scan',    'url' => route('dashboard.events.attendance', $event)],
         ],
         'Promotion' => [
             ['key' => 'share', 'label' => 'Share', 'icon' => 'share', 'url' => route('dashboard.events.share', $event)],

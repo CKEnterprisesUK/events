@@ -120,6 +120,16 @@ class AuditLog extends Model
 
     public const USER_VERIFICATION_RESENT = 'user.verification_resent';
 
+    public const USER_UPDATED = 'user.updated';
+
+    public const USER_DISABLED = 'user.disabled';
+
+    public const USER_ENABLED = 'user.enabled';
+
+    public const USER_DELETED = 'user.deleted';
+
+    public const USER_PASSWORD_RESET_SENT = 'user.password_reset_sent';
+
     // Money
     public const ORDER_CANCELLED = 'order.cancelled';
 
@@ -139,6 +149,8 @@ class AuditLog extends Model
 
     public const MAIL_TRANSPORT_CHANGED = 'mail.transport_changed';
 
+    public const ANNOUNCEMENT_SENT = 'announcement.sent';
+
     public const STRIPE_CREDENTIALS_CHECKED = 'stripe.credentials_checked';
 
     public const STRIPE_ONBOARDING_STARTED = 'stripe.onboarding_started';
@@ -157,6 +169,8 @@ class AuditLog extends Model
     public const EVENT_CANCELLED = 'event.cancelled';
 
     public const EVENT_DELETED = 'event.deleted';
+
+    public const EVENT_DUPLICATED = 'event.duplicated';
 
     public const TICKET_TYPE_CREATED = 'ticket_type.created';
 
@@ -215,6 +229,11 @@ class AuditLog extends Model
         self::OWNER_TRANSFERRED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Transferred company ownership'],
         self::OWNER_PASSWORD_RESET_SENT => ['category' => self::CATEGORY_ACCESS, 'label' => 'Sent an owner password reset'],
         self::USER_VERIFICATION_RESENT => ['category' => self::CATEGORY_ACCESS, 'label' => 'Re-sent an email verification'],
+        self::USER_UPDATED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Updated a user'],
+        self::USER_DISABLED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Disabled a user'],
+        self::USER_ENABLED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Enabled a user'],
+        self::USER_DELETED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Deleted a user'],
+        self::USER_PASSWORD_RESET_SENT => ['category' => self::CATEGORY_ACCESS, 'label' => 'Sent a user password reset'],
 
         self::ORDER_CANCELLED => ['category' => self::CATEGORY_MONEY, 'label' => 'Cancelled an order'],
         self::ORDER_REFUNDED => ['category' => self::CATEGORY_MONEY, 'label' => 'Refunded an order'],
@@ -225,6 +244,7 @@ class AuditLog extends Model
         self::FEE_COMPANY_CHANGED => ['category' => self::CATEGORY_MONEY, 'label' => 'Changed a company fee'],
         self::STRIPE_FEE_ESTIMATE_CHANGED => ['category' => self::CATEGORY_MONEY, 'label' => 'Changed the Stripe fee estimate'],
         self::MAIL_TRANSPORT_CHANGED => ['category' => self::CATEGORY_SYSTEM, 'label' => 'Changed the mail transport'],
+        self::ANNOUNCEMENT_SENT => ['category' => self::CATEGORY_SYSTEM, 'label' => 'Sent a platform announcement'],
         self::STRIPE_CREDENTIALS_CHECKED => ['category' => self::CATEGORY_SYSTEM, 'label' => 'Checked Stripe credentials'],
         self::STRIPE_ONBOARDING_STARTED => ['category' => self::CATEGORY_MONEY, 'label' => 'Started Stripe onboarding'],
         self::STRIPE_CHARGES_ENABLED_CHANGED => ['category' => self::CATEGORY_MONEY, 'label' => 'Stripe charges status changed'],
@@ -235,6 +255,7 @@ class AuditLog extends Model
         self::EVENT_UNPUBLISHED => ['category' => self::CATEGORY_EVENTS, 'label' => 'Unpublished an event'],
         self::EVENT_CANCELLED => ['category' => self::CATEGORY_EVENTS, 'label' => 'Cancelled an event'],
         self::EVENT_DELETED => ['category' => self::CATEGORY_EVENTS, 'label' => 'Deleted an event'],
+        self::EVENT_DUPLICATED => ['category' => self::CATEGORY_EVENTS, 'label' => 'Duplicated an event'],
         self::TICKET_TYPE_CREATED => ['category' => self::CATEGORY_EVENTS, 'label' => 'Created a ticket type'],
         self::TICKET_TYPE_UPDATED => ['category' => self::CATEGORY_EVENTS, 'label' => 'Updated a ticket type'],
         self::TICKET_TYPE_DELETED => ['category' => self::CATEGORY_EVENTS, 'label' => 'Deleted a ticket type'],

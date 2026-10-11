@@ -11,7 +11,11 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Blocks login and existing sessions for Company_Users whose Company is
- * suspended.
+ * suspended, and for any user a Super_Admin has individually disabled
+ * (`users.disabled_at`). Both are enforced live on every authenticated request
+ * so the block takes effect immediately, without waiting for the session to
+ * expire. The disabled check comes first so a disabled user of an otherwise
+ * active Company is still ejected.
  *
  * A Super_Admin can suspend a Company at any time (Requirement 20.3). While a
  * Company is suspended:
@@ -42,10 +46,20 @@ class EnsureCompanyActive
 {
     public function handle(Request $request, Closure $next): Response
     {
+        // An account a Super_Admin has disabled must lose its session on the
+        // very next authenticated request, mirroring the immediate effect of a
+        // Company suspension. Checked first so a disabled user of an active
+        // Company is still ejected.
+        $user = Auth::user();
+
+        if ($user !== null && method_exists($user, 'isDisabled') && $user->isDisabled()) {
+            return $this->deny($request, __('This account has been disabled.'));
+        }
+
         $company = $this->authenticatedUserCompany();
 
         if ($company !== null && $company->isSuspended()) {
-            return $this->denySuspended($request);
+            return $this->deny($request, __('This account has been suspended.'));
         }
 
         return $next($request);
@@ -79,13 +93,14 @@ class EnsureCompanyActive
     }
 
     /**
-     * Tear down the session and deny the request for a suspended Company.
+     * Tear down the session and deny the request (a suspended Company or a
+     * disabled account).
      *
      * On a login attempt this surfaces as a validation error on the login form
      * (Requirement 2.3); on any other authenticated request the user is logged
      * out and redirected to the login screen (Requirement 2.4).
      */
-    private function denySuspended(Request $request): Response
+    private function deny(Request $request, string $message): Response
     {
         Auth::logout();
 
@@ -93,8 +108,6 @@ class EnsureCompanyActive
             $request->session()->invalidate();
             $request->session()->regenerateToken();
         }
-
-        $message = __('This account has been suspended.');
 
         if ($this->expectsJson($request)) {
             abort(403, $message);

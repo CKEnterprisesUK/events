@@ -80,6 +80,15 @@
             @endif
         </div>
         <div class="manage-topbar__actions">
+            {{-- Duplicate into a fresh draft. Non-destructive (no bookings are
+                 copied), so no confirmation modal — it just lands the organiser
+                 on the new draft's overview. Available in every state, including
+                 a cancelled event (handy for re-running next year). --}}
+            <form method="POST" action="{{ route('dashboard.events.duplicate', $event) }}">
+                @csrf
+                <button type="submit" class="btn btn-outline">Duplicate</button>
+            </form>
+
             @unless ($isCancelled)
                 @if ($event->isPublished())
                     <form method="POST" action="{{ route('dashboard.events.unpublish', $event) }}">

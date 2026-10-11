@@ -59,6 +59,21 @@ class LoginFlow
      */
     public function completeLogin(Request $request): RedirectResponse
     {
+        // A Super_Admin-disabled account must not obtain a session even with
+        // valid credentials + second factor. Checked before the Company gate so
+        // an individually disabled user of an active Company is still blocked.
+        $user = Auth::user();
+
+        if ($user instanceof User && $user->isDisabled()) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            throw ValidationException::withMessages([
+                'email' => __('This account has been disabled.'),
+            ]);
+        }
+
         // A Company_User of a suspended Company must not keep a session even
         // with valid credentials + second factor. (Requirement 2.3)
         $company = Auth::user()->company;

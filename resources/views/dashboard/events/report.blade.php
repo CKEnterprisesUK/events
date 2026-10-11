@@ -3,6 +3,13 @@
 @section('active_section', 'report')
 
 @section('section')
+    <p class="hint" style="margin-bottom:1rem;">
+        Looking for who showed up?
+        <a href="{{ route('dashboard.events.attendance', $event) }}">See the attendance &amp; check-in report</a>.
+    </p>
+
+    @includeWhen(isset($range), 'dashboard.events._report_date_filter', ['action' => 'dashboard.events.report'])
+
     @php
         $currency = $event->company->currency ?? 'GBP';
         $symbols = ['GBP' => '£', 'USD' => '$', 'EUR' => '€'];

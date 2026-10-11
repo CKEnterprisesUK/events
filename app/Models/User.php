@@ -33,6 +33,7 @@ use Illuminate\Support\Carbon;
  * @property string $password
  * @property Carbon|null $agreed_to_terms_at
  * @property Carbon|null $last_activity_at
+ * @property Carbon|null $disabled_at
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
@@ -135,6 +136,10 @@ class User extends Authenticatable implements MustVerifyEmail
      * role) and is validated with `Rule::in(...)` at every entry point, so it can
      * never elevate a user beyond the closed Company-role set.
      *
+     * `disabled_at` is likewise EXCLUDED: enabling/disabling an account is a
+     * privileged Super_Admin control written only via `forceFill` from the
+     * platform surface, never from mass-assignment of request input.
+     *
      * @var list<string>
      */
     protected $fillable = [
@@ -185,6 +190,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'agreed_to_terms_at' => 'datetime',
             'last_activity_at' => 'datetime',
+            'disabled_at' => 'datetime',
             'is_super_admin' => 'boolean',
             'password' => 'hashed',
             // Encrypted at rest: the raw TOTP secret and the recovery-code list
@@ -242,6 +248,29 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isSuperAdmin(): bool
     {
         return (bool) $this->is_super_admin;
+    }
+
+    /**
+     * Whether this account has been disabled by a Super_Admin. A disabled user
+     * cannot log in and any live session is torn down on the next authenticated
+     * request. This is reversible (the Super_Admin clears `disabled_at`) and is
+     * distinct from a hard delete or from Company suspension.
+     */
+    public function isDisabled(): bool
+    {
+        return $this->disabled_at !== null;
+    }
+
+    /**
+     * Limit a query to active (non-disabled) users. Used when sending platform
+     * communications so disabled accounts are never contacted.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<User>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<User>
+     */
+    public function scopeActive($query)
+    {
+        return $query->whereNull('disabled_at');
     }
 
     /**

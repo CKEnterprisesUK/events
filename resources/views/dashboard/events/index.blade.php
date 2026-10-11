@@ -4,6 +4,24 @@
 
 @section('page_title', 'Events')
 
+@push('head')
+<style>
+    /* Inline action group in the desktop table's Actions cell: the Manage link
+       plus a Duplicate submit styled to read like a sibling link. */
+    .row-actions { display: inline-flex; align-items: center; gap: 0.75rem; justify-content: flex-end; }
+    .row-action-form { margin: 0; display: inline; }
+    button.row-action {
+        background: none; border: 0; padding: 0; cursor: pointer;
+        font: inherit; color: inherit;
+    }
+    button.row-action--muted { color: var(--muted, #667085); font-weight: 600; }
+    button.row-action--muted:hover { text-decoration: underline; }
+    /* Mobile card actions: keep the two buttons side by side. */
+    .record-card__actions { display: flex; gap: 0.5rem; align-items: center; }
+    .record-card__actions form { margin: 0; }
+</style>
+@endpush
+
 @section('content')
     <div class="page-header">
         <div class="page-header__text">
@@ -100,7 +118,15 @@
                             </td>
                             <td class="num">{{ isset($event->sell_through) ? number_format($sold) : '—' }}</td>
                             <td class="num">{{ isset($event->confirmed_orders_count) ? number_format($event->confirmed_orders_count) : '—' }}</td>
-                            <td class="num"><a class="panel__link row-action" href="{{ route('dashboard.events.show', $event) }}">Manage</a></td>
+                            <td class="num">
+                                <span class="row-actions">
+                                    <a class="panel__link row-action" href="{{ route('dashboard.events.show', $event) }}">Manage</a>
+                                    <form method="POST" action="{{ route('dashboard.events.duplicate', $event) }}" class="row-action-form">
+                                        @csrf
+                                        <button type="submit" class="panel__link row-action row-action--muted">Duplicate</button>
+                                    </form>
+                                </span>
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -134,7 +160,13 @@
                             · {{ number_format($orders) }} {{ \Illuminate\Support\Str::plural('order', $orders) }}
                         </span>
                     </div>
-                    <a class="btn btn-outline btn-sm record-card__action" href="{{ route('dashboard.events.show', $event) }}">Manage</a>
+                    <div class="record-card__actions">
+                        <a class="btn btn-outline btn-sm record-card__action" href="{{ route('dashboard.events.show', $event) }}">Manage</a>
+                        <form method="POST" action="{{ route('dashboard.events.duplicate', $event) }}">
+                            @csrf
+                            <button type="submit" class="btn btn-outline btn-sm record-card__action">Duplicate</button>
+                        </form>
+                    </div>
                 </div>
             @endforeach
             <p class="table-empty-filter" data-events-empty hidden>No events match your search.</p>
