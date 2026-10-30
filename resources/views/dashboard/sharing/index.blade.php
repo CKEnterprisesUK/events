@@ -9,11 +9,17 @@
         $displayHost = rtrim(preg_replace('#^https?://#', '', url('/')), '/');
         $storefrontDisplay = $displayHost . '/' . $company->slug;
 
-        // The booking-feed embed snippet: a single iframe pointing at the
-        // public booking widget for this company.
+        // The booking-feed embed snippet: an iframe pointing at the public
+        // booking widget, plus a tiny script that auto-sizes the frame to its
+        // content. This keeps a single-event feed compact instead of sitting in
+        // a tall, half-empty 640px box, while still growing for many events. The
+        // CSS height is a fallback if the host blocks the script.
         $bookingEmbed = '<iframe src="' . e($bookingEmbedUrl) . '" '
-            . 'style="width:100%;max-width:640px;height:640px;border:0;" '
-            . 'loading="lazy" title="' . e($company->name) . ' — Book tickets"></iframe>';
+            . 'style="width:100%;max-width:640px;height:320px;border:0;" '
+            . 'loading="lazy" title="' . e($company->name) . ' — Book tickets" '
+            . 'onload="(function(f){window.addEventListener(\'message\',function(e){'
+            . 'if(e.source===f.contentWindow&&e.data&&e.data.type===\'ck-embed-height\')'
+            . '{f.style.height=e.data.height+\'px\';}});})(this)"></iframe>';
     @endphp
 
     <div class="dash-head">

@@ -77,5 +77,28 @@
     @endif
 
     <p class="powered">Powered by Events by CK Enterprises</p>
+
+    {{-- Report our rendered height to the host page so the embedding iframe can
+         shrink to fit a single event (or grow for many) instead of reserving a
+         fixed, half-empty box. The snippet in Sharing listens for this message;
+         a plain <iframe> without the listener simply ignores it and keeps its
+         CSS height. --}}
+    <script>
+        (function () {
+            function postHeight() {
+                var h = Math.ceil(document.body.getBoundingClientRect().height);
+                try {
+                    parent.postMessage({ type: 'ck-embed-height', widget: 'booking', height: h }, '*');
+                } catch (e) { /* noop */ }
+            }
+            window.addEventListener('load', postHeight);
+            window.addEventListener('resize', postHeight);
+            // Re-measure once images settle, in case posters change row heights.
+            if (document.readyState === 'complete') postHeight();
+            document.querySelectorAll('img').forEach(function (img) {
+                if (!img.complete) img.addEventListener('load', postHeight);
+            });
+        })();
+    </script>
 </body>
 </html>
