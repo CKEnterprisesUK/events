@@ -11,10 +11,10 @@
     }
     .filter-bar label { display: block; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 0.25rem; }
     .pager { display: flex; justify-content: center; padding: 1rem; }
-    .pill--paid, .pill--free_confirmed { background: #ecfdf5; color: #047857; }
-    .pill--reserved { background: #eff6ff; color: #1d4ed8; }
-    .pill--refunded, .pill--disputed { background: #fef2f2; color: #b91c1c; }
-    .pill--cancelled, .pill--expired, .pill--voided { background: #f3f4f6; color: #6b7280; }
+    /* Order-status pill colours are now provided by the shared dashboard theme
+       layer in app.css (softly-filled badges). No local palette needed. */
+    .orders-export { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .orders-export__label { font-size: 0.82rem; color: var(--muted); }
 </style>
 @endpush
 
@@ -38,6 +38,15 @@
             <input type="search" name="q" id="q" value="{{ $search }}" placeholder="Reference, name or email">
         </div>
         <div class="field">
+            <label for="event">Event</label>
+            <select name="event" id="event">
+                <option value="">All events</option>
+                @foreach ($events as $id => $name)
+                    <option value="{{ $id }}" @selected((string) $eventId === (string) $id)>{{ $name }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="field">
             <label for="status">Status</label>
             <select name="status" id="status">
                 <option value="">All statuses</option>
@@ -46,11 +55,36 @@
                 @endforeach
             </select>
         </div>
+        <div class="field">
+            <label for="from">From</label>
+            <input type="date" name="from" id="from" value="{{ $from }}">
+        </div>
+        <div class="field">
+            <label for="to">To</label>
+            <input type="date" name="to" id="to" value="{{ $to }}">
+        </div>
         <button type="submit" class="btn">Filter</button>
-        @if ($search !== '' || $status !== '')
+        @if ($search !== '' || $status !== '' || $eventId !== null || $from || $to)
             <a class="btn btn-outline" href="{{ route('dashboard.orders.index') }}">Clear</a>
         @endif
     </form>
+
+    @php
+        // Carry the active filters through to the export links so the file
+        // matches exactly what is on screen.
+        $exportQuery = array_filter([
+            'q' => $search,
+            'event' => $eventId,
+            'status' => $status,
+            'from' => $from,
+            'to' => $to,
+        ], fn ($v) => $v !== null && $v !== '');
+    @endphp
+    <div class="orders-export">
+        <span class="orders-export__label">Export{{ $orders->total() > 0 ? ' '.number_format($orders->total()).' '.\Illuminate\Support\Str::plural('order', $orders->total()) : '' }}:</span>
+        <a class="btn btn-outline btn-sm" href="{{ route('dashboard.orders.export', $exportQuery) }}" download>CSV</a>
+        <a class="btn btn-outline btn-sm" href="{{ route('dashboard.orders.export', array_merge($exportQuery, ['format' => 'xlsx'])) }}" download>Excel</a>
+    </div>
 
     <div class="panel">
         @if ($orders->isEmpty())
@@ -71,8 +105,8 @@
                 </thead>
                 <tbody>
                     @foreach ($orders as $order)
-                        <tr>
-                            <td><a class="cell-strong" href="{{ route('dashboard.orders.show', $order) }}">{{ $order->order_reference }}</a></td>
+                        <tr class="row-nav">
+                            <td><a class="cell-strong cell-ref row-link" href="{{ route('dashboard.orders.show', $order) }}">{{ $order->order_reference }}</a></td>
                             <td>
                                 {{ $order->customer_name }}
                                 <span class="cell-dim">{{ $order->customer_email }}</span>
@@ -81,7 +115,11 @@
                             <td>{{ $order->created_at?->format('j M Y, H:i') ?? '—' }}</td>
                             <td><span class="pill pill--{{ $order->status }}">{{ ucfirst(str_replace('_', ' ', $order->status)) }}</span></td>
                             <td class="num">£{{ number_format($order->order_total_minor / 100, 2) }}</td>
-                            <td class="num"><a class="panel__link" href="{{ route('dashboard.orders.show', $order) }}">View</a></td>
+                            <td class="num">
+                                <a class="row-go row-action" href="{{ route('dashboard.orders.show', $order) }}" aria-label="Open order {{ $order->order_reference }}">
+                                    <x-icon name="chevron" />
+                                </a>
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -90,9 +128,9 @@
             {{-- Mobile: stacked order records. --}}
             <div class="only-mobile record-list" style="padding: 1rem 1.25rem;">
                 @foreach ($orders as $order)
-                    <div class="record-card">
+                    <div class="record-card row-nav">
                         <div class="record-card__body">
-                            <a class="record-card__title cell-strong" href="{{ route('dashboard.orders.show', $order) }}">{{ $order->order_reference }}</a>
+                            <a class="record-card__title cell-strong cell-ref row-link" href="{{ route('dashboard.orders.show', $order) }}">{{ $order->order_reference }}</a>
                             <span class="record-card__meta record-card__meta--strong">{{ $order->customer_name }}</span>
                             <span class="record-card__meta">{{ $order->customer_email }}</span>
                             <span class="record-card__meta">{{ $order->event?->name ?? '—' }} · {{ $order->created_at?->format('j M Y, H:i') ?? '—' }}</span>
@@ -101,7 +139,7 @@
                                 · £{{ number_format($order->order_total_minor / 100, 2) }}
                             </span>
                         </div>
-                        <a class="btn btn-outline btn-sm record-card__action" href="{{ route('dashboard.orders.show', $order) }}">View</a>
+                        <a class="btn btn-outline btn-sm record-card__action row-action" href="{{ route('dashboard.orders.show', $order) }}">View</a>
                     </div>
                 @endforeach
             </div>

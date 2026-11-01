@@ -3,24 +3,29 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\InsufficientCapacityException;
+use App\Jobs\SendTicketEmailJob;
 use App\Models\AuditLog;
 use App\Models\Event;
 use App\Models\Order;
-use App\Jobs\SendTicketEmailJob;
 use App\Services\AuditLogger;
 use App\Services\CompTicketService;
 use App\Services\OrderCancellationService;
 use App\Services\QrService;
 use App\Services\RoleAuthorization;
+use App\Services\SimpleXlsxWriter;
 use App\Services\TenantContext;
 use App\Services\TicketPdfService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Company-dashboard controller for cancelling and refunding Orders and for
@@ -65,30 +70,247 @@ class OrderController extends Controller
     {
         Gate::authorize(RoleAuthorization::ACTION_MANAGE_ORDERS);
 
-        $search = trim((string) $request->query('q', ''));
-        $status = (string) $request->query('status', '');
+        $filters = $this->filtersFrom($request);
 
-        $orders = Order::query()
+        $orders = $this->filteredOrders($filters)
             ->with('event')
-            ->when($search !== '', function ($query) use ($search): void {
-                $like = '%'.$search.'%';
-                $query->where(function ($q) use ($like): void {
-                    $q->where('order_reference', 'like', $like)
-                        ->orWhere('customer_name', 'like', $like)
-                        ->orWhere('customer_email', 'like', $like);
-                });
-            })
-            ->when($this->isKnownStatus($status), fn ($query) => $query->where('status', $status))
             ->latest()
             ->paginate(25)
             ->withQueryString();
 
         return view('dashboard.orders.index', [
             'orders' => $orders,
-            'search' => $search,
-            'status' => $status,
+            'search' => $filters['search'],
+            'status' => $filters['status'],
             'statuses' => $this->statusOptions(),
+            'events' => $this->exportableEvents(),
+            'eventId' => $filters['event_id'],
+            'from' => $filters['from']?->toDateString(),
+            'to' => $filters['to']?->toDateString(),
         ]);
+    }
+
+    /**
+     * Stream the filtered Orders as a CSV or Excel workbook so an operator can
+     * take the list into a spreadsheet. The export honours exactly the same
+     * filters as the on-screen list — free-text search, status, a chosen Event,
+     * and an inclusive created-at date range — so "what you see is what you
+     * export". Gated on `ACTION_MANAGE_ORDERS` and scoped to the acting Company
+     * by the tenant global scope, so a Company can only ever export its own
+     * Orders. Read-only: it performs no mutation.
+     *
+     * The `format` query param selects the output: `xlsx` returns a real Excel
+     * workbook (numeric money cells the spreadsheet can total); anything else
+     * (the default) streams a CSV. Both carry one row per Order with its
+     * reference, customer, event, placed-at timestamp, status and the full
+     * money breakdown in major currency units.
+     */
+    public function export(Request $request): Response|StreamedResponse
+    {
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_ORDERS);
+
+        $filters = $this->filtersFrom($request);
+
+        // Oldest-first for an export so the file reads as a chronological
+        // ledger, independent of the newest-first on-screen ordering.
+        $orders = $this->filteredOrders($filters)
+            ->with('event')
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get();
+
+        $filename = 'orders-'.now()->format('Y-m-d');
+
+        return $request->query('format') === 'xlsx'
+            ? $this->exportExcel($orders, $filename.'.xlsx')
+            : $this->exportCsv($orders, $filename.'.csv');
+    }
+
+    /**
+     * The column headers shared by the CSV and Excel exports.
+     *
+     * @return list<string>
+     */
+    private function exportHeader(): array
+    {
+        return [
+            'Reference', 'Customer name', 'Email', 'Event', 'Placed at', 'Status',
+            'Tickets', 'Ticket subtotal', 'Booking fee', 'Platform fee',
+            'Total', 'Refunded', 'Stripe fee',
+        ];
+    }
+
+    /**
+     * One export row for an Order, money rendered in major units. The $money
+     * callback shapes each monetary cell: a fixed-precision string for the CSV,
+     * or a numeric major-unit value for the Excel workbook.
+     *
+     * @param  callable(int):(string|float)  $money
+     * @return list<string|int|float>
+     */
+    private function exportRow(Order $order, callable $money): array
+    {
+        return [
+            $order->order_reference,
+            $order->customer_name,
+            $order->customer_email,
+            $order->event?->name ?? '—',
+            optional($order->created_at)->format('Y-m-d H:i') ?? '',
+            ucfirst(str_replace('_', ' ', $order->status)),
+            (int) $order->tickets_count,
+            $money((int) $order->ticket_subtotal_minor),
+            $money((int) $order->booking_fee_minor),
+            $money((int) $order->application_fee_minor),
+            $money((int) $order->order_total_minor),
+            $money((int) $order->refunded_total_minor),
+            $money((int) ($order->stripe_fee_minor ?? 0)),
+        ];
+    }
+
+    /**
+     * Stream the Orders as a CSV. Money columns are written as fixed-precision
+     * major-unit strings (e.g. 125.00) so they stay numeric in a spreadsheet,
+     * with no currency symbol. Uses the same streamDownload + fputcsv shape as
+     * the sales and attendance exports.
+     *
+     * @param  Collection<int, Order>  $orders
+     */
+    private function exportCsv($orders, string $filename): StreamedResponse
+    {
+        $money = fn (int $minor): string => number_format($minor / 100, 2, '.', '');
+
+        return response()->streamDownload(function () use ($orders, $money): void {
+            $out = fopen('php://output', 'wb');
+
+            fputcsv($out, $this->exportHeader());
+
+            foreach ($orders as $order) {
+                fputcsv($out, $this->exportRow($order, $money));
+            }
+
+            fclose($out);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    /**
+     * Build a real `.xlsx` workbook of the Orders. Money columns are real
+     * numbers in major units so finance can total/pivot them natively, unlike
+     * the CSV. Falls back to a CSV when the Zip extension is unavailable rather
+     * than emit a corrupt file.
+     *
+     * @param  Collection<int, Order>  $orders
+     */
+    private function exportExcel($orders, string $filename): Response|StreamedResponse
+    {
+        $money = fn (int $minor): float => round($minor / 100, 2);
+
+        $writer = new SimpleXlsxWriter('Orders');
+        $writer->addRow($this->exportHeader());
+
+        foreach ($orders as $order) {
+            $writer->addRow($this->exportRow($order, $money));
+        }
+
+        try {
+            $bytes = $writer->build();
+        } catch (\RuntimeException) {
+            // No Zip extension — degrade gracefully to a CSV with the same data.
+            return $this->exportCsv($orders, Str::replaceLast('.xlsx', '.csv', $filename));
+        }
+
+        return response($bytes, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename='.$filename,
+        ]);
+    }
+
+    /**
+     * Parse the shared Orders filters from the request: a free-text search
+     * (reference / name / email), a status, an optional Event id and an
+     * inclusive created-at date range. A blank or unknown value drops that
+     * filter rather than erroring. A reversed range is swapped so it is always
+     * well-ordered.
+     *
+     * @return array{search:string, status:string, event_id:?int, from:?Carbon, to:?Carbon}
+     */
+    private function filtersFrom(Request $request): array
+    {
+        $from = $this->parseDate($request->query('from'));
+        $to = $this->parseDate($request->query('to'));
+
+        if ($from !== null && $to !== null && $from->greaterThan($to)) {
+            [$from, $to] = [$to, $from];
+        }
+
+        $eventId = $request->query('event');
+        $eventId = is_numeric($eventId) ? (int) $eventId : null;
+
+        return [
+            'search' => trim((string) $request->query('q', '')),
+            'status' => (string) $request->query('status', ''),
+            'event_id' => $eventId,
+            'from' => $from?->startOfDay(),
+            'to' => $to?->endOfDay(),
+        ];
+    }
+
+    /**
+     * The shared, tenant-scoped Orders query with the active filters applied,
+     * plus a count of each Order's tickets for the export. Unordered so callers
+     * choose their own sort (newest-first on screen, oldest-first for exports).
+     *
+     * @param  array{search:string, status:string, event_id:?int, from:?Carbon, to:?Carbon}  $filters
+     * @return Builder<Order>
+     */
+    private function filteredOrders(array $filters)
+    {
+        return Order::query()
+            ->withCount('tickets')
+            ->when($filters['search'] !== '', function ($query) use ($filters): void {
+                $like = '%'.$filters['search'].'%';
+                $query->where(function ($q) use ($like): void {
+                    $q->where('order_reference', 'like', $like)
+                        ->orWhere('customer_name', 'like', $like)
+                        ->orWhere('customer_email', 'like', $like);
+                });
+            })
+            ->when($this->isKnownStatus($filters['status']), fn ($query) => $query->where('status', $filters['status']))
+            ->when($filters['event_id'] !== null, fn ($query) => $query->where('event_id', $filters['event_id']))
+            ->when($filters['from'] !== null, fn ($query) => $query->where('created_at', '>=', $filters['from']))
+            ->when($filters['to'] !== null, fn ($query) => $query->where('created_at', '<=', $filters['to']));
+    }
+
+    /**
+     * The Company's Events for the export/filter dropdown, newest first and
+     * keyed id => name. Tenant-scoped via the global company scope.
+     *
+     * @return Collection<int, string>
+     */
+    private function exportableEvents()
+    {
+        return Event::query()
+            ->orderByDesc('id')
+            ->pluck('name', 'id');
+    }
+
+    /**
+     * Parse a `Y-m-d` query value into a Carbon date, or null when absent or
+     * malformed (so a bad param simply widens the range rather than erroring).
+     * Mirrors ReportController's parser so every surface filters consistently.
+     */
+    private function parseDate(mixed $value): ?Carbon
+    {
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::createFromFormat('Y-m-d', trim($value));
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**
@@ -120,7 +342,7 @@ class OrderController extends Controller
      * constrained here to this Order's Company as a defence-in-depth check on
      * top of route-model binding already scoping the Order to the tenant.
      *
-     * @return \Illuminate\Support\Collection<int, AuditLog>
+     * @return Collection<int, AuditLog>
      */
     private function historyFor(Order $order)
     {

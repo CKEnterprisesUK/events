@@ -357,6 +357,48 @@ main.public-main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; min-h
 }
 .app-header .logout-btn:hover { color: #fff; border-color: var(--dark-text); }
 
+/* ---- Quick order search in the top app bar ----
+   Sits in the header before the user chip. A pill input + submit button,
+   styled to read on the dark header. The visually-hidden label keeps it
+   accessible without taking space. On narrow screens the input collapses
+   and only the magnifier button shows, expanding on focus. */
+.header-search {
+    display: flex; align-items: center; margin-right: 0.85rem;
+    background: var(--dark-2); border: 1px solid var(--dark-border);
+    border-radius: var(--radius-chip);
+    overflow: hidden; transition: border-color 0.15s ease;
+}
+.header-search:focus-within { border-color: var(--dark-text); }
+.header-search__label {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.header-search__input {
+    background: transparent; border: none; color: #fff;
+    font-size: 0.85rem; padding: 0.4rem 0.2rem 0.4rem 0.75rem;
+    width: 15rem; max-width: 30vw; outline: none;
+}
+.header-search__input::placeholder { color: var(--dark-text-dim); }
+.header-search__btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: transparent; border: none; color: var(--dark-text);
+    cursor: pointer; padding: 0 0.6rem; height: 100%;
+}
+.header-search__btn:hover { color: #fff; }
+.header-search__btn .icon { width: 18px; height: 18px; }
+
+@media (max-width: 860px) {
+    /* Collapse to a magnifier-only control; expand when focused/typing so the
+       top bar stays uncluttered on phones. */
+    .header-search__input {
+        width: 0; padding-left: 0; padding-right: 0;
+        transition: width 0.18s ease, padding 0.18s ease;
+    }
+    .header-search:focus-within .header-search__input {
+        width: 9rem; padding-left: 0.65rem;
+    }
+}
+
 /* Hamburger (mobile only). 44x44 touch target with a centred icon. */
 .nav-toggle {
     display: none; background: transparent; border: none; color: #fff;
@@ -2406,4 +2448,377 @@ body.pub-menu-open { overflow: hidden; }
     .mkt .mkt-cta__actions .mkt-btn { width: 100%; }
     .mkt .mkt-price-preview { grid-template-columns: 1fr; text-align: left; }
     .pub-footer__cols { grid-template-columns: 1fr; }
+}
+
+/* =============================================================================
+   Reusable charts (dependency-free): line chart, horizontal bar chart, word
+   cloud. Used by the dashboard, the reports surfaces and the question-answer
+   report. Shared here so every chart looks consistent across the dashboard.
+   ============================================================================= */
+
+.chart-empty { color: var(--muted); font-style: italic; padding: 0.75rem 0; }
+
+/* Line chart (inline SVG) ---------------------------------------------------- */
+.line-chart { margin: 0; color: var(--ink); }
+.line-chart__svg { display: block; width: 100%; height: auto; }
+.line-chart__legend {
+    display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin-bottom: 0.6rem;
+    font-size: 0.82rem; color: var(--muted);
+}
+.line-chart__legend-item { display: inline-flex; align-items: center; gap: 0.4rem; }
+.line-chart__swatch { width: 0.7rem; height: 0.7rem; border-radius: 2px; display: inline-block; }
+
+/* Horizontal bar chart (CSS) ------------------------------------------------- */
+.bar-chart { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.bar-chart__row {
+    display: grid; grid-template-columns: minmax(80px, 30%) 1fr auto;
+    align-items: center; gap: 0.75rem;
+}
+.bar-chart__label {
+    font-size: 0.88rem; color: var(--ink); overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.bar-chart__track {
+    position: relative; height: 0.85rem; background: var(--surface-2, #f3f4f6);
+    border-radius: 999px; overflow: hidden;
+}
+.bar-chart__fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; min-width: 2px; }
+.bar-chart__value {
+    font-size: 0.85rem; color: var(--ink); font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.bar-chart__pct { color: var(--muted); margin-left: 0.25rem; }
+
+/* Word cloud ----------------------------------------------------------------- */
+.word-cloud {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 0.75rem;
+    padding: 0.5rem 0; line-height: 1.2;
+}
+.word-cloud__term { color: var(--brand); font-weight: 600; }
+
+/* Chart panel body spacing when a chart sits directly inside a .panel. */
+.panel .chart-body { padding: 1.1rem 1.25rem; }
+
+@media (max-width: 640px) {
+    .bar-chart__row { grid-template-columns: minmax(70px, 40%) 1fr auto; }
+}
+
+/* Question-answer report ----------------------------------------------------- */
+.report-question {
+    padding: 1.25rem 0; border-top: 1px solid var(--border);
+}
+.report-question:first-of-type { border-top: none; }
+.report-question h3 { font-size: 1.05rem; margin: 0 0 0.15rem; }
+.report-question__subhead {
+    font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em;
+    color: var(--muted); margin: 1rem 0 0.5rem; font-weight: 600;
+}
+.report-numeric {
+    display: grid; gap: 0.75rem; margin: 0.75rem 0 0.25rem;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+}
+.report-numeric__stat {
+    background: var(--surface-2, #f7f7f9); border-radius: 0.6rem; padding: 0.6rem 0.8rem;
+    display: flex; flex-direction: column; gap: 0.15rem;
+}
+.report-numeric__label {
+    font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted);
+}
+.report-numeric__value {
+    font-size: 1.25rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums;
+}
+
+/* Report filter + event-comparison picker forms ----------------------------- */
+.report-filter {
+    display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end;
+    margin-bottom: 1.5rem;
+}
+.report-filter .field { margin: 0; }
+.report-filter label {
+    display: block; font-size: 0.78rem; text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--muted); margin-bottom: 0.25rem;
+}
+.report-filter input,
+.report-filter select {
+    padding: 0.5rem 0.7rem; border: 1px solid var(--border); border-radius: 0.5rem;
+    min-width: 180px; background: #fff;
+}
+.report-filter__actions { display: flex; gap: 0.5rem; }
+.compare-picker select { min-width: 200px; }
+
+/* =============================================================================
+   Print styles. Turn any dashboard report page into a clean printable sheet
+   (and "Save as PDF" from the browser print dialog) by stripping the app chrome
+   — sidebar, header, action buttons and anything marked .no-print — and letting
+   the main content flow full width. Charts (inline SVG / CSS) print as-is.
+   ============================================================================= */
+.no-print { }
+
+@media print {
+    .app-header,
+    .app-sidebar,
+    .sidebar-backdrop,
+    .nav-toggle,
+    .page-header__actions,
+    .report-filter,
+    .pager,
+    .orders-export,
+    .no-print {
+        display: none !important;
+    }
+
+    .app-shell,
+    .app-body,
+    .app-content { display: block !important; margin: 0 !important; padding: 0 !important; }
+
+    .dashboard-main { padding: 0 !important; max-width: none !important; }
+
+    .panel {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+        break-inside: avoid;
+    }
+
+    body { background: #fff !important; }
+
+    /* Expand any mobile/desktop split so the full table prints. */
+    .only-desktop { display: table !important; }
+    .only-mobile { display: none !important; }
+
+    a[href]::after { content: ''; } /* don't append URLs after links */
+}
+
+
+/* =============================================================================
+   CK EVENTS — ADMIN DASHBOARD THEME LAYER  (Stripe-inspired redesign rollout)
+   =============================================================================
+   Scoped to `.app-shell` (the dashboard shell in layouts/dashboard.blade.php).
+   It restyles the existing admin component classes (.btn, .data-table, .pill,
+   .admin-pill, .filter-bar, .toolbar, .metric-card, .panel, status chips, rows)
+   WITHOUT touching global :root — so the public marketing site and auth pages
+   (which share this stylesheet via layouts/app.blade.php) keep their current
+   look. The storefront has its own tokens and is unaffected either way.
+
+   Design tokens are redeclared as a `--ck-*` set on the shell so they can't
+   collide with the global tokens the public side relies on. The dark header +
+   sidebar navy are intentionally preserved (brand identity), per direction.
+   ============================================================================= */
+.app-shell {
+    --ck-bg:         #f6f7f9;
+    --ck-surface:    #ffffff;
+    --ck-surface-2:  #fbfcfd;   /* table head / subtle fills */
+    --ck-text:       #141c2b;   /* primary ink */
+    --ck-text-2:     #667085;   /* secondary / labels */
+    --ck-text-3:     #8b93a3;   /* faint metadata (dates) */
+    --ck-brand:      #2349e8;
+    --ck-brand-ink:  #1b3bc0;
+    --ck-line:       #e4e8ef;
+    --ck-line-soft:  #eef1f5;
+    --ck-hover:      #f6f7f9;
+    --ck-success:    #138568;
+    --ck-warning:    #b7791f;
+    --ck-error:      #c93434;
+    --ck-r-ctrl:     7px;
+    --ck-r-card:     9px;
+}
+
+/* ---- Typography: Inter for the dashboard content only -------------------- */
+.app-shell .app-content {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+    color: var(--ck-text);
+    background: var(--ck-bg);
+}
+.app-shell .app-content h1 { font-weight: 600; letter-spacing: -0.02em; color: var(--ck-text); }
+.app-shell .app-content h2 { font-weight: 600; letter-spacing: -0.015em; color: var(--ck-text); }
+.app-shell .app-content h3 { font-weight: 600; letter-spacing: -0.005em; color: var(--ck-text); }
+.app-shell main.dashboard-main { background: var(--ck-bg); }
+
+/* ---- Page header copy ---------------------------------------------------- */
+.app-shell .app-content .page-header__desc,
+.app-shell .app-content .page-head__desc { color: var(--ck-text-2); }
+
+/* ---- Buttons ------------------------------------------------------------- */
+.app-shell .app-content .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+    min-height: 36px; padding: 0 0.85rem; border-radius: var(--ck-r-ctrl);
+    background: var(--ck-brand); color: #fff; font-weight: 500; font-size: 0.875rem;
+    border: 1px solid transparent; line-height: 1;
+    transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.app-shell .app-content .btn:hover { background: var(--ck-brand-ink); color: #fff; }
+.app-shell .app-content .btn-outline {
+    background: var(--ck-surface); color: var(--ck-text); box-shadow: none; border-color: var(--ck-line);
+}
+.app-shell .app-content .btn-outline:hover { background: var(--ck-hover); color: var(--ck-text); border-color: #d4d8e3; }
+.app-shell .app-content .btn-danger { background: var(--ck-surface); color: var(--ck-error); border-color: #edc9c9; }
+.app-shell .app-content .btn-danger:hover { background: #fcf3f3; color: var(--ck-error); }
+.app-shell .app-content .btn-sm { min-height: 30px; padding: 0 0.6rem; font-size: 0.8125rem; }
+
+/* ---- Links --------------------------------------------------------------- */
+.app-shell .app-content a:not(.btn):not(.nav-link):not(.pill):not(.cell-strong):not(.row-link) { color: var(--ck-brand); }
+.app-shell .app-content .panel__link { color: var(--ck-brand); font-weight: 500; }
+
+/* ---- Cards / panels: one hairline border + a whisper of elevation -------- */
+.app-shell .app-content .panel,
+.app-shell .app-content .admin-panel,
+.app-shell .app-content .card,
+.app-shell .app-content .empty-state {
+    background: var(--ck-surface); border: 1px solid var(--ck-line);
+    border-radius: var(--ck-r-card); box-shadow: 0 1px 2px rgba(17, 24, 43, 0.04);
+}
+.app-shell .app-content .panel__head,
+.app-shell .app-content .admin-panel__head {
+    border-bottom: 1px solid var(--ck-line); background: var(--ck-surface-2);
+}
+.app-shell .app-content .panel__head h2,
+.app-shell .app-content .admin-panel__head h2 { font-size: 0.95rem; font-weight: 600; }
+
+/* ---- Grouped KPI panel: fold the five standalone metric cards into one
+        bordered, hairline-divided container (dashboard home + reports). ----- */
+.app-shell .app-content .metric-row,
+.app-shell .app-content .summary-row {
+    gap: 0; background: var(--ck-surface); border: 1px solid var(--ck-line);
+    border-radius: var(--ck-r-card); overflow: hidden; box-shadow: 0 1px 2px rgba(17, 24, 43, 0.04);
+}
+.app-shell .app-content .metric-card,
+.app-shell .app-content .summary-row > * {
+    background: transparent; border: none; border-radius: 0; position: relative;
+    padding: 1rem 1.15rem;
+}
+.app-shell .app-content .metric-card + .metric-card::before,
+.app-shell .app-content .summary-row > * + *::before {
+    content: ""; position: absolute; left: 0; top: 0.9rem; bottom: 0.9rem; width: 1px; background: var(--ck-line);
+}
+.app-shell .app-content .metric-card__label { text-transform: none; letter-spacing: 0; font-size: 0.8125rem; font-weight: 500; color: var(--ck-text-2); }
+.app-shell .app-content .metric-card__value { font-size: 1.625rem; font-weight: 600; letter-spacing: -0.025em; color: var(--ck-text); }
+.app-shell .app-content .metric-card__sub { color: var(--ck-text-3); font-size: 0.75rem; }
+/* On wrap (narrow screens) the vertical dividers would misplace; hide below
+   the point the grid goes multi-row and lean on the card padding instead. */
+@media (max-width: 1080px) {
+    .app-shell .app-content .metric-card::before { display: none !important; }
+    .app-shell .app-content .metric-card { border-top: 1px solid var(--ck-line); }
+    .app-shell .app-content .metric-card:first-child { border-top: none; }
+}
+
+/* ---- Data tables: ~60px rows, calm separators, strong text contrast ------ */
+.app-shell .app-content .data-table thead th,
+.app-shell .app-content .admin-table thead th {
+    background: var(--ck-surface-2); color: var(--ck-text-2); font-weight: 600;
+    text-transform: none; letter-spacing: 0.01em; font-size: 0.75rem;
+    border-bottom: 1px solid var(--ck-line);
+}
+.app-shell .app-content .data-table th,
+.app-shell .app-content .data-table td,
+.app-shell .app-content .admin-table th,
+.app-shell .app-content .admin-table td { padding: 0.7rem 1.15rem; }
+.app-shell .app-content .data-table tbody td,
+.app-shell .app-content .admin-table tbody td { border-bottom: 1px solid var(--ck-line-soft); color: var(--ck-text); }
+.app-shell .app-content .data-table tbody tr,
+.app-shell .app-content .admin-table tbody tr { transition: background 0.1s ease; }
+.app-shell .app-content .data-table tbody tr:hover,
+.app-shell .app-content .admin-table tbody tr:hover { background: var(--ck-hover); }
+.app-shell .app-content .cell-strong { color: var(--ck-text); font-weight: 600; }
+.app-shell .app-content .cell-strong:hover { color: var(--ck-brand); }
+.app-shell .app-content .cell-dim { color: var(--ck-text-2); }
+/* reference-style monospace cells read as muted metadata */
+.app-shell .app-content .cell-ref { font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; font-size: 0.8125rem; color: var(--ck-text-2); }
+
+/* ---- Clickable rows: whole-row navigation (CSS-only, reuses row-nav) ------
+   Extends the existing row-nav/row-link mechanism with the new hover tint and
+   a quiet keyboard focus ring in dashboard colours. */
+.app-shell .app-content .row-nav { cursor: pointer; }
+.app-shell .app-content .row-nav:hover,
+.app-shell .app-content .row-nav:focus-within { background: var(--ck-hover); }
+.app-shell .app-content .row-nav:focus-within { outline: 2px solid var(--ck-brand); outline-offset: -2px; }
+/* Trailing chevron affordance for clickable rows */
+.app-shell .app-content .row-go {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: var(--ck-r-ctrl);
+    color: var(--ck-text-3); text-decoration: none; transition: color 0.1s ease, background 0.1s ease;
+}
+.app-shell .app-content .row-go .icon { width: 16px; height: 16px; transform: rotate(-90deg); }
+.app-shell .app-content tr.row-nav:hover .row-go,
+.app-shell .app-content .row-go:hover,
+.app-shell .app-content .row-go:focus-visible { color: var(--ck-brand); }
+
+/* ---- Status chips: small, softly-filled badges (text + dot, never colour
+        alone). Applies to BOTH .pill and .admin-pill families. --------------- */
+.app-shell .app-content .pill,
+.app-shell .app-content .admin-pill {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    font-size: 0.75rem; font-weight: 500; line-height: 1;
+    padding: 0.28rem 0.55rem 0.28rem 0.5rem; border-radius: 6px;
+    text-transform: none; letter-spacing: 0;
+}
+.app-shell .app-content .pill::before,
+.app-shell .app-content .admin-pill::before {
+    content: ""; width: 6px; height: 6px; border-radius: 999px; background: currentColor; flex: none;
+}
+/* Semantic mapping — positive/live/paid */
+.app-shell .app-content .pill--live,
+.app-shell .app-content .pill--paid,
+.app-shell .app-content .pill--free_confirmed,
+.app-shell .app-content .admin-pill--active { color: #0f6e57; background: #e6f4f0; }
+/* informational / in-progress */
+.app-shell .app-content .pill--reserved,
+.app-shell .app-content .admin-pill--pending { color: #1b3bc0; background: #e9edfd; }
+/* warning / draft */
+.app-shell .app-content .pill--draft { color: #92400e; background: #fcf1e2; }
+/* negative / refunded / failed / suspended */
+.app-shell .app-content .pill--refunded,
+.app-shell .app-content .pill--disputed,
+.app-shell .app-content .pill--failed,
+.app-shell .app-content .admin-pill--suspended { color: #a62d2d; background: #fbeaea; }
+/* neutral / cancelled / expired / closed */
+.app-shell .app-content .pill--cancelled,
+.app-shell .app-content .pill--expired,
+.app-shell .app-content .pill--voided,
+.app-shell .app-content .admin-pill--closed { color: #5b616e; background: #eef1f5; }
+
+/* ---- Filter bars / toolbars: compact, consistent controls ---------------- */
+.app-shell .app-content .filter-bar input,
+.app-shell .app-content .filter-bar select,
+.app-shell .app-content .toolbar input,
+.app-shell .app-content .toolbar select {
+    min-height: 38px; border: 1px solid #d4d8e3; border-radius: var(--ck-r-ctrl);
+    background: var(--ck-surface); font-size: 0.875rem; color: var(--ck-text);
+    transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.app-shell .app-content .filter-bar input:focus,
+.app-shell .app-content .filter-bar select:focus,
+.app-shell .app-content .toolbar input:focus,
+.app-shell .app-content .toolbar select:focus {
+    outline: none; border-color: var(--ck-brand);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ck-brand) 16%, transparent);
+}
+.app-shell .app-content .filter-bar label,
+.app-shell .app-content .toolbar label:not(.sr-only) {
+    text-transform: none; letter-spacing: 0; font-size: 0.8125rem; font-weight: 500; color: var(--ck-text-2);
+}
+
+/* ---- General form fields in the dashboard scope -------------------------- */
+.app-shell .app-content .field input:focus,
+.app-shell .app-content .field select:focus,
+.app-shell .app-content .field textarea:focus {
+    border-color: var(--ck-brand);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ck-brand) 16%, transparent);
+}
+
+/* ---- Keyboard focus ring in dashboard brand colour ----------------------- */
+.app-shell .app-content :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--ck-brand);
+}
+
+/* ---- Tabular numerals for money / counts everywhere in tables ------------ */
+.app-shell .app-content .data-table .num,
+.app-shell .app-content .admin-table .num,
+.app-shell .app-content .metric-card__value { font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+    .app-shell .app-content .data-table tbody tr,
+    .app-shell .app-content .admin-table tbody tr,
+    .app-shell .app-content .btn,
+    .app-shell .app-content .row-go { transition: none; }
 }
