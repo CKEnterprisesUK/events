@@ -7,6 +7,7 @@ use App\Models\ScanEvent;
 use App\Services\QrService;
 use App\Services\RoleAuthorization;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -101,7 +102,7 @@ class ScanController extends Controller
      * the live scanner page with a structured `result` describing the outcome.
      * (Requirements 16.3–16.10)
      */
-    public function scan(Request $request): View
+    public function scan(Request $request): View|JsonResponse
     {
         Gate::authorize(RoleAuthorization::ACTION_CHECK_IN);
 
@@ -112,9 +113,28 @@ class ScanController extends Controller
         $this->remember($request, $result);
         $this->logScanEvent($result);
 
+        $history = $this->history($request);
+
+        // The live scanner POSTs in the background (fetch) so the camera keeps
+        // running: it wants just the pieces it swaps in — the result banner it
+        // shows as a dismissible overlay, and the refreshed recent-scan list —
+        // not a whole new page. A plain (no-JS) POST still gets the full page,
+        // so the scanner degrades gracefully when JavaScript is unavailable.
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'status' => $result['status'],
+                'resultHtml' => view('dashboard.scan._result', [
+                    'result' => $result,
+                ])->render(),
+                'historyHtml' => view('dashboard.scan._history', [
+                    'history' => $history,
+                ])->render(),
+            ]);
+        }
+
         return view('dashboard.scan.index', [
             'result' => $result,
-            'history' => $this->history($request),
+            'history' => $history,
         ]);
     }
 
