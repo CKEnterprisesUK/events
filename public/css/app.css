@@ -2460,7 +2460,7 @@ body.pub-menu-open { overflow: hidden; }
 
 /* Line chart (inline SVG) ---------------------------------------------------- */
 .line-chart { margin: 0; color: var(--ink); }
-.line-chart__svg { display: block; width: 100%; }
+.line-chart__svg { display: block; width: 100%; height: auto; }
 .line-chart__legend {
     display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin-bottom: 0.6rem;
     font-size: 0.82rem; color: var(--muted);

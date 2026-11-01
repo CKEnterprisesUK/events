@@ -278,6 +278,13 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
         Route::get('/', [DashboardController::class, 'index'])
             ->withoutMiddleware('dashboard.tenant')->name('home');
 
+        // UI redesign demo. A throwaway, self-contained mockup of the proposed
+        // admin look (refreshed cards, roomier filters, richer tables) using
+        // only static demo data, so the design can be reviewed in the real
+        // dashboard shell before any rollout. No tenant binding needed.
+        Route::get('/ui-demo', fn () => view('dashboard.ui-demo'))
+            ->withoutMiddleware('dashboard.tenant')->name('ui-demo');
+
         // Self-service account profile. Open to every authenticated
         // Company_User (any role) since it only ever acts on the acting user's
         // own record; no tenant binding is needed. Update changes name/email;
