@@ -32,10 +32,12 @@ use Illuminate\Support\Facades\Gate;
  *     display updates live without a full reload.
  *
  * The headline counts (scanned / sold / %) come from the shared
- * {@see EventReportService} and {@see Event::sellThrough()} so they never
- * diverge from the reports. The live FEED and the issue tally come from the
- * `scan_events` breadcrumb table, which — unlike `orders.scanned_at` — records
- * every operator's attempts, successes and failures alike.
+ * {@see EventReportService::attendanceFor()} — valid tickets on confirmed
+ * orders — so they never diverge from the attendance report and sold is always
+ * consistent with scanned. The live FEED comes from the `scan_events`
+ * breadcrumb table, which — unlike `orders.scanned_at` — records every
+ * operator's attempts, successes AND failures (duplicates, rejections, invalid
+ * codes), so rejected tickets show in the feed too.
  *
  * Both are gated on ACTION_VIEW_REPORTS (Owner/Admin/Accountant; Super_Admins
  * bypass) and resolve the Event through the `dashboard.tenant` scope, so an
@@ -80,8 +82,8 @@ class EventLiveController extends Controller
 
     /**
      * The JSON snapshot the live page polls. Returns the headline figures, the
-     * per-operator breakdown for the graph, the issue tally, and the most
-     * recent scans for the feed. (Live event dashboard)
+     * per-operator breakdown for the graph, and the most recent scans for the
+     * feed. (Live event dashboard)
      */
     public function feed(Request $request, Event $event): JsonResponse
     {
@@ -96,7 +98,7 @@ class EventLiveController extends Controller
      *
      * @return array{
      *     doorsOpen: bool,
-     *     stats: array{scanned:int, sold:int, percent:float|null, checkedInOrders:int, confirmedOrders:int, issues:int},
+     *     stats: array{scanned:int, sold:int, percent:float|null, checkedInOrders:int, confirmedOrders:int},
      *     byOperator: list<array{name:string, tickets:int, orders:int}>,
      *     recent: list<array{id:int, outcome:string, reference:?string, name:?string, operator:string, tickets:int, at:string, atLabel:string, breakdown:string, message:string}>,
      *     generatedAt: string
@@ -106,20 +108,18 @@ class EventLiveController extends Controller
     {
         $attendance = $this->reports->attendanceFor($event);
 
-        $sellThrough = $event->sellThrough();
-        $sold = (int) $sellThrough['sold'];
+        // Both figures come from the SAME authoritative source — the attendance
+        // report, which counts valid Ticket rows on confirmed orders — so "sold"
+        // and "scanned" are always consistent (sold ≥ scanned). We deliberately
+        // do NOT read Event::sellThrough() here: that uses the denormalised
+        // ticket_types.sold_count counter, which can read 0 for orders inserted
+        // directly (e.g. pre-prod seed data) even though real tickets exist.
+        $sold = $attendance->ticketsSold;
         $scanned = $attendance->ticketsCheckedIn;
 
         // Scanned as a percentage of tickets sold (the headline dial). Null when
         // nothing has sold, so the view can show an em dash rather than 0%.
         $percent = $sold > 0 ? round(min(100, $scanned / $sold * 100), 1) : null;
-
-        // Count of problem scans for this event (duplicates + errors), from the
-        // breadcrumb table — the figure behind the "issues" chip.
-        $issues = ScanEvent::query()
-            ->where('event_id', $event->getKey())
-            ->whereIn('outcome', ScanEvent::PROBLEM_OUTCOMES)
-            ->count();
 
         return [
             'doorsOpen' => $event->starts_at === null || now()->gte($event->starts_at),
@@ -129,7 +129,6 @@ class EventLiveController extends Controller
                 'percent' => $percent,
                 'checkedInOrders' => $attendance->checkedInOrders,
                 'confirmedOrders' => $attendance->confirmedOrders,
-                'issues' => $issues,
             ],
             'byOperator' => $attendance->byStaff,
             'recent' => $this->recentScans($event),

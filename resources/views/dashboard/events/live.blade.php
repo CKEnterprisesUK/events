@@ -165,8 +165,6 @@
         .figure--pct .v { color: var(--accent); }
         .figure .bar { height: 7px; width: clamp(150px, 16vw, 260px); background: rgba(255,255,255,.1); margin-top: .6rem; border-radius: 4px; overflow: hidden; }
         .figure .bar > i { display: block; height: 100%; background: var(--accent); width: 0; border-radius: 4px; transition: width .7s cubic-bezier(.2,.7,.2,1); }
-        .figure--issues .v { color: var(--ink); }
-        .figure--issues.has-issues .v { color: var(--err); }
 
         /* Operator bar chart fills the rest of the left column. */
         .graph { margin-top: auto; padding-top: clamp(1.25rem, 2.5vw, 2rem); display: flex; flex-direction: column; min-height: 0; }
@@ -298,10 +296,6 @@
                             <span class="k">Total sold</span>
                             <span class="v" id="statSold">{{ number_format($snapshot['stats']['sold']) }}</span>
                         </div>
-                        <div class="figure figure--issues {{ $snapshot['stats']['issues'] > 0 ? 'has-issues' : '' }}" id="issuesFigure">
-                            <span class="k">Issues</span>
-                            <span class="v" id="statIssues">{{ number_format($snapshot['stats']['issues']) }}</span>
-                        </div>
                     </div>
                 </div>
 
@@ -358,8 +352,6 @@
     var elPercent = document.getElementById('statPercent');
     var elProgress = document.getElementById('statProgress');
     var elSold = document.getElementById('statSold');
-    var elIssues = document.getElementById('statIssues');
-    var elIssuesFig = document.getElementById('issuesFigure');
     var elBars = document.getElementById('bars');
     var elBarsEmpty = document.getElementById('barsEmpty');
     var elFeed = document.getElementById('feed');
@@ -402,8 +394,6 @@
         elSold.textContent = nf(st.sold);
         elPercent.textContent = st.percent == null ? '—' : st.percent + '%';
         elProgress.style.width = (st.percent == null ? 0 : Math.min(100, st.percent)) + '%';
-        elIssues.textContent = nf(st.issues);
-        elIssuesFig.classList.toggle('has-issues', (st.issues || 0) > 0);
     }
 
     // Operator chart: bars by ORDERS scanned, ranked top-scanner-first, each
