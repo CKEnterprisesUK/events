@@ -61,6 +61,12 @@
     }
     .ck .tnum { font-variant-numeric: tabular-nums; }
 
+    /* Constrain the workspace to a comfortable reading/scanning measure so the
+       UI doesn't spread thin on wide monitors (the shell caps at 1180px, but
+       an operational list reads better a touch narrower). Left-aligned, not
+       centred, so it stays anchored to the sidebar like Stripe/Linear. */
+    .ck { max-width: 1040px; }
+
     /* ---- Typography scale (spec §5) ---- */
     .ck .page-title { font-size: 1.75rem; line-height: 1.2; font-weight: 600; letter-spacing: -0.02em; margin: 0; color: var(--text); }
     .ck .page-desc  { font-size: 0.875rem; color: var(--text-2); margin: 0.25rem 0 0; }
@@ -76,15 +82,6 @@
     }
     .ck .ck-pagehead__count { color: var(--text-2); font-weight: 400; font-size: 1rem; }
     .ck .ck-pagehead__actions { display: flex; gap: 0.5rem; }
-
-    /* small review banner so it's unmistakably a demo */
-    .ck .ck-demochip {
-        display: inline-flex; align-items: center; gap: 0.45rem; margin-bottom: 1.25rem;
-        font-size: 0.78rem; font-weight: 500; color: var(--text-2);
-        background: var(--surface); border: 1px solid var(--line);
-        padding: 0.3rem 0.65rem; border-radius: 999px;
-    }
-    .ck .ck-demochip::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: var(--brand); }
 
     /* =====================================================================
        BUTTONS  (compact, comfortable — spec §6/§14)
@@ -192,15 +189,7 @@
     .ck .ck-link { color: var(--brand); font-weight: 500; text-decoration: none; font-size: 0.875rem; }
     .ck .ck-link:hover { text-decoration: underline; }
 
-    /* Customer identity cell with a small initials avatar (spec §11) */
-    .ck .cust { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
-    .ck .avatar {
-        flex: none; width: 30px; height: 30px; border-radius: 999px;
-        display: inline-flex; align-items: center; justify-content: center;
-        font-size: 0.72rem; font-weight: 600; color: var(--brand);
-        background: color-mix(in srgb, var(--brand) 10%, #fff);
-        border: 1px solid color-mix(in srgb, var(--brand) 18%, transparent);
-    }
+    /* Customer cell: name over email, no avatar (keeps the row tight) */
     .ck .cust__name { font-weight: 500; color: var(--text); display: block; line-height: 1.3; }
     .ck .cust__email { font-size: 0.8125rem; color: var(--text-2); display: block; line-height: 1.3; }
     .ck .muted-cell { color: var(--text-2); }
@@ -260,8 +249,6 @@
 
 @section('content')
 <div class="ck">
-
-    <span class="ck-demochip">Review mockup · static sample data · live Orders screen unchanged</span>
 
     {{-- ---- Page header: title + count + primary actions (spec §9) -------- --}}
     <div class="ck-pagehead">
@@ -378,25 +365,20 @@
                 <tbody>
                     @php
                         $rows = [
-                            ['ref' => 'U12ODTT9HTK3', 'name' => 'Prof. Bryon Gaylord', 'email' => 'wisozk.gene@example.net', 'init' => 'BG', 'event' => 'Beatae reprehenderit iusto facilis', 'placed' => '12 Sep 2026, 14:04', 'status' => 'paid', 'label' => 'Paid', 'total' => '43.62'],
-                            ['ref' => '5AB7MOK7KZHU', 'name' => 'Prof. Alysa Conroy DDS', 'email' => 'kara.williamson@example.net', 'init' => 'AC', 'event' => 'Beatae reprehenderit iusto facilis', 'placed' => '12 Sep 2026, 14:04', 'status' => 'paid', 'label' => 'Paid', 'total' => '231.58'],
-                            ['ref' => '6VVRTN8CBMGP', 'name' => 'Prof. Margarete Trantow Jr.', 'email' => 'linnie.skiles@example.net', 'init' => 'MT', 'event' => 'Tempora quod magnam cumque', 'placed' => '12 Sep 2026, 14:04', 'status' => 'paid', 'label' => 'Paid', 'total' => '278.59'],
-                            ['ref' => 'ZNIKPFPCQPVR', 'name' => 'Prof. Domenico Medhurst DVM', 'email' => 'jeremy70@example.com', 'init' => 'DM', 'event' => 'Tempora quod magnam cumque', 'placed' => '12 Sep 2026, 14:04', 'status' => 'paid', 'label' => 'Paid', 'total' => '439.00'],
-                            ['ref' => 'N0VJWJUOX2OQ', 'name' => 'Prof. Darrell Wehner PhD', 'email' => 'wendy.mann@example.net', 'init' => 'DW', 'event' => 'Tempora quod magnam cumque', 'placed' => '12 Sep 2026, 14:04', 'status' => 'reserved', 'label' => 'Reserved', 'total' => '242.34'],
-                            ['ref' => 'PHNN72RWRWG1', 'name' => 'Prof. Izaiah Thiel', 'email' => 'dejuan.hoppe@example.net', 'init' => 'IT', 'event' => 'Tempora quod magnam cumque', 'placed' => '12 Sep 2026, 14:04', 'status' => 'refunded', 'label' => 'Refunded', 'total' => '400.09'],
+                            ['ref' => 'U12ODTT9HTK3', 'name' => 'Prof. Bryon Gaylord', 'email' => 'wisozk.gene@example.net', 'event' => 'Beatae reprehenderit iusto facilis', 'placed' => '12 Sep 2026, 14:04', 'status' => 'paid', 'label' => 'Paid', 'total' => '43.62'],
+                            ['ref' => '5AB7MOK7KZHU', 'name' => 'Prof. Alysa Conroy DDS', 'email' => 'kara.williamson@example.net', 'event' => 'Beatae reprehenderit iusto facilis', 'placed' => '12 Sep 2026, 14:04', 'status' => 'paid', 'label' => 'Paid', 'total' => '231.58'],
+                            ['ref' => '6VVRTN8CBMGP', 'name' => 'Prof. Margarete Trantow Jr.', 'email' => 'linnie.skiles@example.net', 'event' => 'Tempora quod magnam cumque', 'placed' => '12 Sep 2026, 14:04', 'status' => 'paid', 'label' => 'Paid', 'total' => '278.59'],
+                            ['ref' => 'ZNIKPFPCQPVR', 'name' => 'Prof. Domenico Medhurst DVM', 'email' => 'jeremy70@example.com', 'event' => 'Tempora quod magnam cumque', 'placed' => '12 Sep 2026, 14:04', 'status' => 'paid', 'label' => 'Paid', 'total' => '439.00'],
+                            ['ref' => 'N0VJWJUOX2OQ', 'name' => 'Prof. Darrell Wehner PhD', 'email' => 'wendy.mann@example.net', 'event' => 'Tempora quod magnam cumque', 'placed' => '12 Sep 2026, 14:04', 'status' => 'reserved', 'label' => 'Reserved', 'total' => '242.34'],
+                            ['ref' => 'PHNN72RWRWG1', 'name' => 'Prof. Izaiah Thiel', 'email' => 'dejuan.hoppe@example.net', 'event' => 'Tempora quod magnam cumque', 'placed' => '12 Sep 2026, 14:04', 'status' => 'refunded', 'label' => 'Refunded', 'total' => '400.09'],
                         ];
                     @endphp
                     @foreach ($rows as $r)
                         <tr>
                             <td><a href="#" class="ref" onclick="return false;">{{ $r['ref'] }}</a></td>
                             <td>
-                                <span class="cust">
-                                    <span class="avatar" aria-hidden="true">{{ $r['init'] }}</span>
-                                    <span>
-                                        <span class="cust__name">{{ $r['name'] }}</span>
-                                        <span class="cust__email">{{ $r['email'] }}</span>
-                                    </span>
-                                </span>
+                                <span class="cust__name">{{ $r['name'] }}</span>
+                                <span class="cust__email">{{ $r['email'] }}</span>
                             </td>
                             <td class="muted-cell">{{ $r['event'] }}</td>
                             <td class="muted-cell tnum">{{ $r['placed'] }}</td>
