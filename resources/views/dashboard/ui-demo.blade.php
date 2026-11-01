@@ -1,32 +1,36 @@
 @extends('layouts.dashboard')
 
-@section('title', 'UI redesign demo')
-@section('page_title', 'UI redesign demo')
+@section('title', 'Orders')
+{{-- No @section('page_title'): the Orders screen renders its own strong page
+     heading below, so we suppress the layout's generic demo heading to preview
+     the production composition. --}}
 
 {{--
-    CK EVENTS — ADMIN UI REDESIGN DEMO (v3, composition + table polish)
-    ===================================================================
+    CK EVENTS — ADMIN UI REDESIGN DEMO (v4, direction correction)
+    =============================================================
     A throwaway review page rendered inside the real dashboard shell so the
     proposed design system can be judged in context before any rollout.
 
-    This revision addresses the designer's refinement notes:
-      1. Page composition — stronger hierarchy between title, a *secondary*
-         metric summary strip (not another panel), and the dominant table.
-      2. Metric presentation — fewer, clearer figures; money belongs mostly on
-         the Dashboard, so Orders shows a light contextual strip + one honest
-         sparkline from sample points. No invented metrics.
-      3. Table polish — tighter rows, no alternating fills, lighter status,
-         clear differentiation of ref / name / event / date, aligned money,
-         and a restrained row action instead of repeated bright-blue links.
-      4. Subtle CK brand character — blue reserved for primary action, active
-         controls, focus and link-hover only; identity via type + spacing.
+    Target: Stripe-quality polish, Linear precision, Shopify usability, subtle
+    DICE-inspired event character — a premium, confident product with visual
+    depth, NOT a stripped-down spreadsheet. This revision applies the
+    designer's seven targeted corrections:
+      1. Restored grouped, bordered KPI panel (refined type/spacing). No spark.
+      2. Table: ~60px rows, fixed column widths, non-wrapping dates, subtle
+         separators + light hover.
+      3. Status: small softly-filled badges, distinct per state (Paid /
+         Reserved / Refunded / Failed), with a dot (never colour alone).
+      4. Text contrast: darker ink for names/events, muted grey for metadata.
+      5. Strong page heading — "Orders" primary, count + description secondary.
+      6. Subtle CK navy/blue identity via active states, focus, spacing, type.
+      7. Sidebar preserved (lives in the shared layout — never touched here).
 
     Self-contained + reversible: static sample data, all CSS scoped to `.ck`,
     live Orders screen untouched. Deleting this file + its route reverts all.
 
     Accessibility (WCAG 2.2 AA target): native <label for>, real <th scope>,
-    status is text + dot (never colour alone), explicit focus rings, the
-    filters + row menus are real aria-expanded buttons, prefers-reduced-motion
+    status is a badge with text + dot (never colour alone), explicit focus
+    rings, filters are a real aria-expanded button, prefers-reduced-motion
     honoured, decorative glyphs aria-hidden.
 --}}
 
@@ -73,7 +77,6 @@
     .ck .section-title { font-size: 1.1875rem; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
     .ck .section-desc { font-size: 0.8125rem; color: var(--text-2); margin: 0.2rem 0 0; }
     .ck .card-title { font-size: 0.9375rem; font-weight: 600; margin: 0; letter-spacing: -0.005em; }
-    .ck .eyebrow { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); }
 
     /* =====================================================================
        PAGE HEADER — the clear primary (spec note 1)
@@ -109,32 +112,38 @@
     .ck .btn--sm { height: 30px; font-size: 0.8125rem; padding: 0 0.6rem; }
 
     /* =====================================================================
-       METRIC SUMMARY STRIP — secondary, NOT a panel (spec notes 1 & 2)
-       Borderless inline figures separated by hairlines, so it reads as
-       lightweight context sitting under the title rather than a card row.
+       GROUPED KPI PANEL — one container, hairline-divided cells (spec 1)
+       Restored from the earlier iteration; refined type + spacing. Gives the
+       metrics real structure and visual depth instead of floating figures.
        ===================================================================== */
-    .ck .ck-summary {
-        display: flex; align-items: stretch; flex-wrap: wrap;
-        gap: 0 var(--sp-8); margin-bottom: var(--sp-6);
-        padding-bottom: var(--sp-6); border-bottom: 1px solid var(--line);
+    .ck .ck-kpis {
+        display: grid; grid-template-columns: repeat(4, 1fr);
+        background: var(--surface); border: 1px solid var(--line);
+        border-radius: var(--r-card); overflow: hidden;
+        margin-bottom: var(--sp-6);
+        box-shadow: 0 1px 2px rgba(17, 24, 43, 0.04);
     }
-    .ck .ck-metric { display: flex; flex-direction: column; gap: 2px; padding: 2px 0; }
-    .ck .ck-metric__label { font-size: 0.8125rem; color: var(--text-2); }
-    .ck .ck-metric__value { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; color: var(--text); }
-    .ck .ck-metric__meta { font-size: 0.75rem; color: var(--text-3); }
-    .ck .ck-metric__meta--up { color: var(--success); }
-    .ck .ck-metric__meta--down { color: var(--error); }
-    .ck .ck-summary__spark { margin-left: auto; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
-    .ck .ck-summary__spark .eyebrow { align-self: flex-end; }
-    .ck .spark { display: block; }
-    .ck .spark path.line { fill: none; stroke: var(--brand); stroke-width: 1.5; }
-    .ck .spark path.area { fill: color-mix(in srgb, var(--brand) 8%, transparent); stroke: none; }
-    .ck .ck-summary__note { flex-basis: 100%; margin: var(--sp-3) 0 0; font-size: 0.75rem; color: var(--text-3); }
-    .ck .ck-summary__note a { color: var(--brand); text-decoration: none; }
-    .ck .ck-summary__note a:hover { text-decoration: underline; }
-    @media (max-width: 680px) {
-        .ck .ck-summary { gap: var(--sp-4) var(--sp-6); }
-        .ck .ck-summary__spark { display: none; }
+    .ck .ck-kpi { padding: var(--sp-4) 1.15rem; position: relative; }
+    /* hairline dividers between cells (not full borders → cleaner panel) */
+    .ck .ck-kpi + .ck-kpi::before {
+        content: ""; position: absolute; left: 0; top: 0.9rem; bottom: 0.9rem; width: 1px; background: var(--line);
+    }
+    .ck .ck-kpi__label { font-size: 0.8125rem; font-weight: 500; color: var(--text-2); }
+    .ck .ck-kpi__value { font-size: 1.625rem; font-weight: 600; letter-spacing: -0.025em; line-height: 1.1; color: var(--text); margin-top: 0.35rem; }
+    .ck .ck-kpi__meta { font-size: 0.75rem; color: var(--text-3); margin-top: 0.35rem; }
+    .ck .ck-kpi__meta--up { color: var(--success); }
+    .ck .ck-kpi__meta--down { color: var(--error); }
+    @media (max-width: 820px) {
+        .ck .ck-kpis { grid-template-columns: repeat(2, 1fr); }
+        /* reset left divider for new first-in-row cells; add a top divider */
+        .ck .ck-kpi:nth-child(3)::before, .ck .ck-kpi:nth-child(odd)::before { display: none; }
+        .ck .ck-kpi:nth-child(even)::before { display: block; }
+        .ck .ck-kpi:nth-child(3), .ck .ck-kpi:nth-child(4) { border-top: 1px solid var(--line); }
+    }
+    @media (max-width: 440px) {
+        .ck .ck-kpis { grid-template-columns: 1fr; }
+        .ck .ck-kpi::before { display: none !important; }
+        .ck .ck-kpi + .ck-kpi { border-top: 1px solid var(--line); }
     }
 
     /* =====================================================================
@@ -172,41 +181,58 @@
     .ck .ck-field label { display: block; font-size: 0.8125rem; font-weight: 500; color: var(--text); margin-bottom: 0.3rem; }
 
     /* =====================================================================
-       TABLE — dominant, dense, calm (spec note 3)
+       TABLE — dominant, structured, scannable (spec note 2)
+       Row height ~56–64px, sensible column min-widths, no wrapping dates,
+       subtle separators + a light hover.
        ===================================================================== */
-    .ck .ck-table-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); overflow: hidden; }
-    .ck .ck-table { width: 100%; border-collapse: collapse; }
-    /* tighter rows: 0.55rem vertical vs the old 0.7 */
-    .ck .ck-table th, .ck .ck-table td { padding: 0.55rem 1rem; text-align: left; vertical-align: middle; }
-    .ck .ck-table thead th {
-        font-size: 0.75rem; font-weight: 500; color: var(--text-2);
-        border-bottom: 1px solid var(--line); background: var(--surface); white-space: nowrap;
-        padding-top: 0.65rem; padding-bottom: 0.65rem;
+    .ck .ck-table-card {
+        background: var(--surface); border: 1px solid var(--line);
+        border-radius: var(--r-card); overflow: hidden;
+        box-shadow: 0 1px 2px rgba(17, 24, 43, 0.04);
     }
-    .ck .ck-table tbody td { border-bottom: 1px solid var(--line-soft); font-size: 0.875rem; }
+    .ck .ck-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .ck .ck-table th, .ck .ck-table td { padding: 0 1rem; text-align: left; vertical-align: middle; }
+    .ck .ck-table thead th {
+        height: 42px; font-size: 0.75rem; font-weight: 600; color: var(--text-2);
+        border-bottom: 1px solid var(--line); background: #fbfcfd; white-space: nowrap;
+        letter-spacing: 0.01em;
+    }
+    .ck .ck-table tbody td { height: 60px; border-bottom: 1px solid var(--line-soft); font-size: 0.875rem; }
     .ck .ck-table tbody tr:last-child td { border-bottom: none; }
     .ck .ck-table tbody tr { transition: background 0.1s ease; }
     .ck .ck-table tbody tr:hover { background: var(--hover); }
-    /* let the event column absorb slack so other columns hug their data */
-    .ck .ck-table .col-event { width: 100%; }
     .ck .ck-table .num { text-align: right; }
-    .ck .ck-table__actions { width: 1%; white-space: nowrap; text-align: right; padding-left: 0; }
+    .ck .ck-table__actions { text-align: right; padding-left: 0; }
 
-    /* Four clearly differentiated text treatments in the row */
-    .ck .ref { font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; font-size: 0.8125rem; font-weight: 500; color: var(--text-2); text-decoration: none; letter-spacing: -0.01em; }
+    /* Fixed column widths: event absorbs slack, the rest hug their data. */
+    .ck .col-ref      { width: 11rem; }
+    .ck .col-customer { width: 15rem; }
+    .ck .col-event    { width: auto; }
+    .ck .col-placed   { width: 10.5rem; }
+    .ck .col-status   { width: 7.5rem; }
+    .ck .col-total    { width: 7rem; }
+    .ck .col-go       { width: 3.5rem; }
+
+    /* Text treatments: strong contrast on the scannable fields (spec note 4),
+       muted grey reserved for secondary metadata. */
+    .ck .ref { font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; font-size: 0.8125rem; font-weight: 500; color: var(--text-2); text-decoration: none; letter-spacing: -0.01em; white-space: nowrap; }
     .ck .ref:hover { color: var(--brand); }
-    .ck .cust__name { font-weight: 500; color: var(--text); display: block; line-height: 1.3; }
-    .ck .cust__email { font-size: 0.8125rem; color: var(--text-2); display: block; line-height: 1.3; }
-    .ck .event-cell { color: var(--text); max-width: 26ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
-    .ck .date-cell { color: var(--text-3); font-size: 0.8125rem; }
+    .ck .cust__name { font-weight: 600; color: var(--text); display: block; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ck .cust__email { font-size: 0.8125rem; color: var(--text-2); display: block; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ck .event-cell { color: var(--text); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+    .ck .date-cell { color: var(--text-2); font-size: 0.8125rem; white-space: nowrap; }
 
-    /* Status: quiet dot + regular-weight muted text (lighter than before) */
-    .ck .status { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.8125rem; font-weight: 400; color: var(--text); white-space: nowrap; }
+    /* Status: small, softly-filled pill badges — distinct per state (spec 3) */
+    .ck .status {
+        display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap;
+        font-size: 0.75rem; font-weight: 500; line-height: 1;
+        padding: 0.28rem 0.55rem 0.28rem 0.5rem; border-radius: 6px;
+    }
     .ck .status::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: currentColor; flex: none; }
-    .ck .status--paid { color: var(--success); }
-    .ck .status--reserved { color: var(--brand); }
-    .ck .status--refunded { color: var(--error); }
-    .ck .status--draft { color: var(--warning); }
+    .ck .status--paid     { color: #0f6e57; background: #e6f4f0; }
+    .ck .status--reserved { color: #1b3bc0; background: #e9edfd; }
+    .ck .status--refunded { color: #a62d2d; background: #fbeaea; }
+    .ck .status--failed   { color: #92400e; background: #fcf1e2; }
 
     /* Row action: a quiet chevron that only gains brand colour on hover/focus,
        replacing the repeated bright-blue "View" links. The whole row is also
@@ -283,12 +309,13 @@
 <div class="ck">
 
     {{-- ============================================================ --}}
-    {{-- PRIMARY: page title + main action                            --}}
+    {{-- PRIMARY: strong page heading (spec note 5)                   --}}
+    {{-- "Orders" is the clear title; count + description secondary.  --}}
     {{-- ============================================================ --}}
     <div class="ck-pagehead">
         <div>
-            <h1 class="page-title">Orders <span class="ck-pagehead__count tnum">1,284</span></h1>
-            <p class="page-desc">Every order across your events. Search or filter to narrow the list.</p>
+            <h1 class="page-title">Orders</h1>
+            <p class="page-desc"><span class="tnum">1,284</span> orders across your events · search or filter to narrow the list</p>
         </div>
         <div class="ck-pagehead__actions">
             <button type="button" class="btn btn--secondary"><x-icon name="report" /> Export</button>
@@ -296,33 +323,29 @@
     </div>
 
     {{-- ============================================================ --}}
-    {{-- SECONDARY: light contextual metric strip (spec notes 1 & 2)  --}}
-    {{-- Only the two figures that belong on Orders; the full finance  --}}
-    {{-- set lives on the Dashboard. One honest sparkline.            --}}
+    {{-- Grouped KPI panel — structured container, refined type (1)   --}}
     {{-- ============================================================ --}}
-    <div class="ck-summary">
-        <div class="ck-metric">
-            <span class="ck-metric__label">Gross sales · last 30 days</span>
-            <span class="ck-metric__value tnum">£48,920</span>
-            <span class="ck-metric__meta ck-metric__meta--up">+8.2% on previous period</span>
+    <div class="ck-kpis">
+        <div class="ck-kpi">
+            <div class="ck-kpi__label">Gross sales</div>
+            <div class="ck-kpi__value tnum">£48,920</div>
+            <div class="ck-kpi__meta ck-kpi__meta--up">+8.2% vs last 30 days</div>
         </div>
-        <div class="ck-metric">
-            <span class="ck-metric__label">Refunded · last 30 days</span>
-            <span class="ck-metric__value tnum">£1,240</span>
-            <span class="ck-metric__meta">8 orders · 2.5% of sales</span>
+        <div class="ck-kpi">
+            <div class="ck-kpi__label">Net payouts</div>
+            <div class="ck-kpi__value tnum">£45,110</div>
+            <div class="ck-kpi__meta">After fees &amp; refunds</div>
         </div>
-
-        {{-- Honest sparkline: a trend of daily sales from static sample points.
-             Decorative framing is aria-hidden; the figure above carries meaning. --}}
-        <div class="ck-summary__spark" aria-hidden="true">
-            <span class="eyebrow">Daily sales</span>
-            <svg class="spark" width="168" height="40" viewBox="0 0 168 40" role="img">
-                <path class="area" d="M0,32 L12,30 L24,31 L36,26 L48,28 L60,22 L72,24 L84,18 L96,20 L108,14 L120,16 L132,11 L144,13 L156,8 L168,10 L168,40 L0,40 Z"/>
-                <path class="line" d="M0,32 L12,30 L24,31 L36,26 L48,28 L60,22 L72,24 L84,18 L96,20 L108,14 L120,16 L132,11 L144,13 L156,8 L168,10"/>
-            </svg>
+        <div class="ck-kpi">
+            <div class="ck-kpi__label">Tickets sold</div>
+            <div class="ck-kpi__value tnum">3,642</div>
+            <div class="ck-kpi__meta ck-kpi__meta--up">+12% vs last 30 days</div>
         </div>
-
-        <p class="ck-summary__note">Looking for payouts, fees and net revenue? Those live on the <a href="#" onclick="return false;">Dashboard</a>.</p>
+        <div class="ck-kpi">
+            <div class="ck-kpi__label">Refunded</div>
+            <div class="ck-kpi__value tnum">£1,240</div>
+            <div class="ck-kpi__meta">8 orders</div>
+        </div>
     </div>
 
     {{-- ============================================================ --}}
@@ -391,11 +414,20 @@
     <div class="ck-table-card">
         <div class="ck-table-wrap">
             <table class="ck-table">
+                <colgroup>
+                    <col class="col-ref">
+                    <col class="col-customer">
+                    <col class="col-event">
+                    <col class="col-placed">
+                    <col class="col-status">
+                    <col class="col-total">
+                    <col class="col-go">
+                </colgroup>
                 <thead>
                     <tr>
                         <th scope="col">Reference</th>
                         <th scope="col">Customer</th>
-                        <th scope="col" class="col-event">Event</th>
+                        <th scope="col">Event</th>
                         <th scope="col">Placed</th>
                         <th scope="col">Status</th>
                         <th scope="col" class="num">Total</th>
@@ -411,6 +443,7 @@
                             ['ref' => 'ZNIKPFPCQPVR', 'name' => 'Prof. Domenico Medhurst DVM', 'email' => 'jeremy70@example.com', 'event' => 'Tempora quod magnam cumque', 'placed' => '12 Sep 2026, 14:04', 'status' => 'paid', 'label' => 'Paid', 'total' => '439.00'],
                             ['ref' => 'N0VJWJUOX2OQ', 'name' => 'Prof. Darrell Wehner PhD', 'email' => 'wendy.mann@example.net', 'event' => 'Tempora quod magnam cumque', 'placed' => '12 Sep 2026, 14:04', 'status' => 'reserved', 'label' => 'Reserved', 'total' => '242.34'],
                             ['ref' => 'PHNN72RWRWG1', 'name' => 'Prof. Izaiah Thiel', 'email' => 'dejuan.hoppe@example.net', 'event' => 'Tempora quod magnam cumque', 'placed' => '12 Sep 2026, 14:04', 'status' => 'refunded', 'label' => 'Refunded', 'total' => '400.09'],
+                            ['ref' => 'KM4XZ2PLQW8T', 'name' => 'Dr. Vinnie Haley DDS', 'email' => 'arielle31@example.org', 'event' => 'Tempora quod magnam cumque', 'placed' => '11 Sep 2026, 09:21', 'status' => 'failed', 'label' => 'Failed', 'total' => '0.00'],
                         ];
                     @endphp
                     @foreach ($rows as $r)
@@ -420,7 +453,7 @@
                                 <span class="cust__name">{{ $r['name'] }}</span>
                                 <span class="cust__email">{{ $r['email'] }}</span>
                             </td>
-                            <td class="col-event"><span class="event-cell">{{ $r['event'] }}</span></td>
+                            <td><span class="event-cell">{{ $r['event'] }}</span></td>
                             <td><span class="date-cell tnum">{{ $r['placed'] }}</span></td>
                             <td><span class="status status--{{ $r['status'] }}">{{ $r['label'] }}</span></td>
                             <td class="num tnum">£{{ $r['total'] }}</td>
@@ -435,7 +468,7 @@
             </table>
         </div>
         <div class="ck-tablefoot">
-            <span>Showing <span class="tnum">1–6</span> of <span class="tnum">1,284</span></span>
+            <span>Showing <span class="tnum">1–7</span> of <span class="tnum">1,284</span></span>
             <nav class="ck-pager" aria-label="Pagination">
                 <span class="is-disabled" aria-disabled="true">Prev</span>
                 <span class="is-current" aria-current="page">1</span>
@@ -513,12 +546,12 @@
         <div class="ck-card">
             <div class="ck-card__head"><h3 class="card-title">Status indicators</h3></div>
             <div class="gallery__body">
-                <p class="label-sm">Dot + text, never colour alone</p>
-                <div class="row" style="gap:1.25rem;">
+                <p class="label-sm">Softly-filled badges · dot + text, never colour alone</p>
+                <div class="row" style="gap:0.6rem;">
                     <span class="status status--paid">Paid</span>
                     <span class="status status--reserved">Reserved</span>
-                    <span class="status status--draft">Pending</span>
                     <span class="status status--refunded">Refunded</span>
+                    <span class="status status--failed">Failed</span>
                 </div>
             </div>
         </div>
