@@ -229,7 +229,7 @@ class ScanController extends Controller
      * result the view renders. Keeping it pure of HTTP concerns keeps the
      * outcomes easy to assert directly in tests.
      *
-     * @return array{status: string, message: string, order?: Order, scanned_at?: \Illuminate\Support\Carbon, breakdown?: array<int, array{name: string, quantity: int}>}
+     * @return array{status: string, message: string, order?: Order, scanned_at?: \Illuminate\Support\Carbon, scanned_by_name?: ?string, breakdown?: array<int, array{name: string, quantity: int}>}
      */
     private function resolve(string $payload): array
     {
@@ -303,7 +303,7 @@ class ScanController extends Controller
      * (16.7, 16.8). Both the scanned-payload and manual-reference paths funnel
      * through here so they behave identically once a reference is in hand.
      *
-     * @return array{status: string, message: string, order?: Order, scanned_at?: \Illuminate\Support\Carbon, breakdown?: array<int, array{name: string, quantity: int}>}
+     * @return array{status: string, message: string, order?: Order, scanned_at?: \Illuminate\Support\Carbon, scanned_by_name?: ?string, breakdown?: array<int, array{name: string, quantity: int}>}
      */
     private function checkIn(string $reference): array
     {
@@ -329,14 +329,10 @@ class ScanController extends Controller
             ];
         }
 
-        // 16.9 — an already-scanned Order reports its original scanned_at.
+        // 16.9 — an already-scanned Order reports its original scanned_at, plus
+        // who checked it in, so a second operator sees it wasn't them.
         if ($order->scanned_at !== null) {
-            return [
-                'status' => 'already_scanned',
-                'message' => 'Already scanned.',
-                'order' => $order,
-                'scanned_at' => $order->scanned_at,
-            ];
+            return $this->alreadyScanned($order);
         }
 
         // 16.8 — atomic single check-in. The WHERE ... scanned_at IS NULL guard
@@ -353,15 +349,10 @@ class ScanController extends Controller
 
         if ($affected !== 1) {
             // Lost the race: another scan checked this Order in first. Report
-            // the already-scanned result with the winner's scanned_at.
+            // the already-scanned result with the winner's scanned_at and name.
             $order->refresh();
 
-            return [
-                'status' => 'already_scanned',
-                'message' => 'Already scanned.',
-                'order' => $order,
-                'scanned_at' => $order->scanned_at,
-            ];
+            return $this->alreadyScanned($order);
         }
 
         $order->refresh();
@@ -373,6 +364,35 @@ class ScanController extends Controller
             'order' => $order,
             'scanned_at' => $order->scanned_at,
             'breakdown' => $this->breakdown($order),
+        ];
+    }
+
+    /**
+     * The already-scanned result for an Order that was checked in earlier.
+     * Alongside the original `scanned_at`, it carries the name of the operator
+     * who scanned it so a second operator at the door can see it was a prior
+     * check-in (and by whom), not their own. The name is null when the Order
+     * was never scanned by a still-existing user (e.g. the operator's account
+     * was deleted — `scanned_by` is nullOnDelete) or predates attribution.
+     * (Requirement 16.9)
+     *
+     * @return array{status: string, message: string, order: Order, scanned_at: \Illuminate\Support\Carbon, scanned_by_name: ?string}
+     */
+    private function alreadyScanned(Order $order): array
+    {
+        // Load the operator through the relationship if it isn't already set.
+        // scanned_by is nullOnDelete, so a since-deleted operator yields null
+        // and we simply omit the name rather than inventing one.
+        $operator = $order->relationLoaded('scannedBy')
+            ? $order->scannedBy
+            : $order->scannedBy()->first();
+
+        return [
+            'status' => 'already_scanned',
+            'message' => 'Already scanned.',
+            'order' => $order,
+            'scanned_at' => $order->scanned_at,
+            'scanned_by_name' => $operator?->name,
         ];
     }
 

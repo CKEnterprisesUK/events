@@ -57,9 +57,16 @@
     @endif
 
     @if ($result['status'] === 'already_scanned' && isset($result['scanned_at']))
+        {{-- Who checked it in and how long ago, so a second operator sees this
+             was a prior check-in — and by whom — not their own scan. The name
+             is omitted when the scanning operator's account no longer exists. --}}
         <p class="scan-result__meta">
-            Previously scanned at
-            {{ $result['scanned_at']->format('Y-m-d H:i:s') }}.
+            Previously scanned
+            @if (! empty($result['scanned_by_name']))
+                by {{ $result['scanned_by_name'] }}
+            @endif
+            {{ $result['scanned_at']->diffForHumans() }}
+            ({{ $result['scanned_at']->format('Y-m-d H:i:s') }}).
         </p>
     @endif
 </div>

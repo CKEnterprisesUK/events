@@ -6,16 +6,19 @@
     owns the whole black screen with no app chrome. Two phases, switched
     client-side off the polled feed:
 
-      BEFORE doors open → a very large countdown to the doors-opening time (the
-        Event's start time), laid out like a venue display board.
-      AFTER doors open  → a 2:1 split: the left two-thirds lead with one huge
-        "scanned" figure plus the % of sold and total sold, above a per-operator
-        bar graph; the right third is the live feed of EVERY scan — successes,
-        duplicates and errors — newest first.
+      BEFORE doors open → a large, clear countdown to the doors-opening time
+        (the Event's start time).
+      AFTER doors open  → a 2:1 split: the left two-thirds lead with one very
+        large "scanned" figure plus % of sold, total sold and issues, above a
+        per-operator bar chart (ordered top-scanner-first, by ORDERS scanned);
+        the right third is the live feed of every scan — successes, duplicates
+        and errors — newest first.
 
-    A slim top bar offers "Return to platform"; the company/event logo sits
-    bottom-right. The page polls `dashboard.events.live.feed` and reconciles the
-    DOM, so it stays live without a manual refresh.
+    Clean sans-serif throughout, numbers on black. A slim top bar offers
+    "Return to platform"; the company/event logo (or the Events by CK
+    Enterprises wordmark) sits bottom-right. The page polls
+    `dashboard.events.live.feed` and reconciles the DOM, so it stays live
+    without a manual refresh.
 
     Supplied by EventLiveController::show():
       $event    — the Event.
@@ -26,7 +29,7 @@
 @php
     use Illuminate\Support\Facades\Storage;
 
-    $accent = $branding->hasPrimaryColour() ? $branding->primaryColour : '#e8b54d';
+    $accent = $branding->hasPrimaryColour() ? $branding->primaryColour : '#3b82f6';
     $logoUrl = $branding->hasLogo()
         ? Storage::disk('public')->url($branding->logoPath)
         : null;
@@ -45,66 +48,56 @@
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    {{-- VT323 is a clean DOS/terminal bitmap-style face with dotless zeros — it
-         drives the whole screen for the simple console look. Cabin Sketch is
-         only for the "Events by CK Enterprises" wordmark lockup. --}}
-    <link href="https://fonts.googleapis.com/css2?family=Cabin+Sketch:wght@700&family=VT323&display=swap" rel="stylesheet">
+    {{-- One clean sans for the whole screen. Inter is the platform's UI face;
+         Cabin Sketch is only for the "Events by CK Enterprises" wordmark. --}}
+    <link href="https://fonts.googleapis.com/css2?family=Cabin+Sketch:wght@700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
             --accent: {{ $accent }};
-            --bg: #000;
-            --ink: #e8e6df;
-            --ink-dim: #7a786f;
+            --bg: #0a0a0b;
+            --ink: #f5f5f7;
+            --ink-dim: #86868b;
             --hair: rgba(255,255,255,.1);
-            --ok: #5fd98a;
-            --dup: #e6c15a;
-            --err: #e05a4f;
-            --mono: 'VT323', ui-monospace, 'SFMono-Regular', Menlo, monospace;
-            --sans: 'VT323', ui-monospace, Menlo, monospace;
+            --ok: #34c759;
+            --dup: #ffb02e;
+            --err: #ff453a;
+            --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            /* Operator bar palette, cycled in order so the top scanner gets the
+               first (accent) colour. */
+            --c1: var(--accent);
+            --c2: #34c759;
+            --c3: #ffb02e;
+            --c4: #af52de;
+            --c5: #ff6482;
+            --c6: #64d2ff;
         }
         * { box-sizing: border-box; }
         html, body {
             margin: 0; height: 100%; background: var(--bg); color: var(--ink);
-            font-family: var(--mono); overflow: hidden;
-            -webkit-font-smoothing: none;
-        }
-        /* Everything is the terminal face; VT323 renders crisp at large sizes. */
-
-        /* Faint CRT scanlines over the whole screen for the console feel. Kept
-           very subtle so the figures stay legible on a wall display. */
-        body::after {
-            content: ''; position: fixed; inset: 0; z-index: 50; pointer-events: none;
-            background: repeating-linear-gradient(
-                to bottom,
-                rgba(0,0,0,0) 0,
-                rgba(0,0,0,0) 2px,
-                rgba(0,0,0,.18) 3px,
-                rgba(0,0,0,.18) 3px
-            );
-            mix-blend-mode: multiply; opacity: .5;
+            font-family: var(--sans); overflow: hidden;
+            -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
         }
 
         .live { display: flex; flex-direction: column; height: 100vh; width: 100vw; }
 
-        /* ---- Top bar: a thin ruled strip, not a floating pill ---- */
+        /* ---- Top bar ---- */
         .topbar {
             flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between;
-            padding: .85rem 1.75rem; border-bottom: 1px solid var(--hair);
+            padding: .9rem 1.75rem; border-bottom: 1px solid var(--hair);
         }
-        .topbar .mark { display: flex; align-items: baseline; gap: .9rem; min-width: 0; }
+        .topbar .mark { display: flex; align-items: center; gap: .85rem; min-width: 0; }
         .topbar .live-tag {
-            font-size: 1rem; letter-spacing: .2em; text-transform: uppercase;
-            color: var(--bg); background: var(--accent);
-            padding: .05rem .5rem; white-space: nowrap;
+            font-size: .7rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+            color: #fff; background: var(--err); padding: .22rem .5rem; border-radius: 4px; white-space: nowrap;
         }
         .topbar .event-name {
-            font-size: 1.4rem; letter-spacing: .02em;
+            font-weight: 600; font-size: 1.1rem; letter-spacing: -.01em;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .topbar .back {
             display: inline-flex; align-items: center; gap: .5rem; text-decoration: none;
-            color: var(--ink-dim); font-size: 1.2rem; letter-spacing: .04em;
-            white-space: nowrap; transition: color .15s; text-transform: uppercase;
+            color: var(--ink-dim); font-size: .85rem; font-weight: 600; letter-spacing: .01em;
+            white-space: nowrap; transition: color .15s;
         }
         .topbar .back:hover { color: var(--ink); }
         .topbar .back svg { width: 16px; height: 16px; }
@@ -114,141 +107,131 @@
         /* ---- Countdown phase ---- */
         .countdown {
             position: absolute; inset: 0; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; gap: 1.75rem; padding: 1.5rem;
+            align-items: center; justify-content: center; gap: 2rem; padding: 1.5rem;
         }
         .countdown .eyebrow {
-            font-size: 1.5rem; letter-spacing: .5em; text-transform: uppercase;
-            color: var(--accent); padding-left: .5em;
+            font-size: 1rem; font-weight: 600; letter-spacing: .35em; text-transform: uppercase;
+            color: var(--ink-dim); padding-left: .35em;
         }
-        /* The clock must never overflow: four units + three separators share the
-           width. Sizing with min(vw, cap) keeps it on one line at any size. */
-        .clock { display: flex; align-items: baseline; gap: min(3vw, 2rem); max-width: 100vw; }
-        .clock .unit { display: flex; flex-direction: column; align-items: center; gap: .5rem; }
+        /* Never overflow: four units + three separators share the width. */
+        .clock { display: flex; align-items: baseline; gap: min(3vw, 2.5rem); max-width: 100vw; }
+        .clock .unit { display: flex; flex-direction: column; align-items: center; gap: .9rem; }
         .clock .num {
-            font-size: min(16vw, 13rem); line-height: .85; color: var(--ink);
-            letter-spacing: .02em;
+            font-weight: 800; font-variant-numeric: tabular-nums;
+            font-size: min(15vw, 12rem); line-height: .85; letter-spacing: -.03em; color: var(--ink);
         }
         .clock .cap {
-            font-size: min(2.2vw, 1.1rem); letter-spacing: .35em; text-transform: uppercase;
+            font-size: min(1.6vw, .9rem); font-weight: 600; letter-spacing: .28em; text-transform: uppercase;
             color: var(--ink-dim);
         }
         .clock .sep {
-            align-self: center; color: var(--accent);
-            font-size: min(12vw, 9rem); line-height: .85;
+            align-self: center; font-weight: 300; color: var(--accent);
+            font-size: min(10vw, 8rem); line-height: .85;
         }
-        .countdown .when { font-size: 1.6rem; color: var(--ink-dim); letter-spacing: .05em; }
+        .countdown .when { font-size: 1.3rem; color: var(--ink-dim); font-weight: 500; }
         .countdown .open-now {
-            font-size: min(9vw, 6rem); letter-spacing: .04em;
+            font-size: min(8vw, 5.5rem); font-weight: 800; letter-spacing: -.02em;
             color: var(--accent); text-transform: uppercase;
         }
 
         /* ---- Live phase: 2:1 split ---- */
-        .grid {
-            position: absolute; inset: 0; display: grid; grid-template-columns: 2fr 1fr;
-        }
+        .grid { position: absolute; inset: 0; display: grid; grid-template-columns: 2fr 1fr; }
         .left {
             display: flex; flex-direction: column; min-height: 0;
-            padding: clamp(1.25rem, 2.5vw, 2.75rem);
-            border-right: 1px solid var(--hair);
+            padding: clamp(1.5rem, 3vw, 3rem); border-right: 1px solid var(--hair);
         }
 
-        /* Headline: the scanned number dominates everything. */
-        .headline { display: flex; align-items: flex-end; gap: clamp(2rem, 5vw, 5rem); flex-wrap: wrap; }
+        /* Headline: the big scanned number dominates. */
+        .headline { display: flex; align-items: flex-start; gap: clamp(2rem, 5vw, 5rem); flex-wrap: wrap; }
         .scanned { display: flex; flex-direction: column; min-width: 0; }
         .scanned .k {
-            font-size: 1.15rem; letter-spacing: .25em; text-transform: uppercase;
-            color: var(--ink-dim); margin-bottom: .2rem;
+            font-size: clamp(.9rem, 1.2vw, 1.15rem); font-weight: 600; letter-spacing: .2em;
+            text-transform: uppercase; color: var(--ink-dim); margin-bottom: .2rem;
         }
         .scanned .n {
-            font-size: min(15vw, 13rem); line-height: .8; letter-spacing: .01em;
-            color: var(--ink);
+            font-weight: 900; font-variant-numeric: tabular-nums;
+            font-size: min(26vw, 22rem); line-height: .82; letter-spacing: -.045em; color: var(--ink);
         }
-        .scanned .sub { margin-top: .4rem; color: var(--ink-dim); font-size: 1.2rem; }
-        .scanned .sub b { color: var(--ink); font-weight: normal; }
+        .scanned .sub { margin-top: .5rem; color: var(--ink-dim); font-size: clamp(1rem, 1.3vw, 1.3rem); font-weight: 500; }
+        .scanned .sub b { color: var(--ink); font-weight: 700; }
 
-        /* Two secondary figures stacked beside the big number. */
-        .side { display: flex; flex-direction: column; gap: 1.4rem; padding-bottom: .5rem; }
+        /* Secondary figures stacked beside the big number. */
+        .side { display: flex; flex-direction: column; gap: clamp(1.25rem, 2.5vw, 2.25rem); padding-top: .3rem; }
         .figure .k {
-            font-size: 1rem; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-dim);
-            margin-bottom: .1rem;
+            font-size: .8rem; font-weight: 600; letter-spacing: .16em; text-transform: uppercase;
+            color: var(--ink-dim); margin-bottom: .15rem;
         }
-        .figure .v { font-size: min(5vw, 3.25rem); line-height: 1; }
+        .figure .v { font-weight: 800; font-variant-numeric: tabular-nums; font-size: clamp(2.25rem, 4.5vw, 4rem); line-height: 1; letter-spacing: -.02em; }
         .figure--pct .v { color: var(--accent); }
-        .figure .bar { height: 6px; width: clamp(140px, 16vw, 240px); background: rgba(255,255,255,.08); margin-top: .5rem; overflow: hidden; }
-        .figure .bar > i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .7s cubic-bezier(.2,.7,.2,1); }
+        .figure .bar { height: 7px; width: clamp(150px, 16vw, 260px); background: rgba(255,255,255,.1); margin-top: .6rem; border-radius: 4px; overflow: hidden; }
+        .figure .bar > i { display: block; height: 100%; background: var(--accent); width: 0; border-radius: 4px; transition: width .7s cubic-bezier(.2,.7,.2,1); }
         .figure--issues .v { color: var(--ink); }
         .figure--issues.has-issues .v { color: var(--err); }
 
-        /* Operator graph fills the rest of the left column. */
-        .graph { margin-top: auto; padding-top: clamp(1rem, 2.5vw, 2rem); display: flex; flex-direction: column; min-height: 0; }
+        /* Operator bar chart fills the rest of the left column. */
+        .graph { margin-top: auto; padding-top: clamp(1.25rem, 2.5vw, 2rem); display: flex; flex-direction: column; min-height: 0; }
         .graph .h {
-            display: flex; align-items: baseline; justify-content: space-between;
-            font-size: 1rem; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-dim);
-            margin-bottom: .8rem; border-top: 1px solid var(--hair); padding-top: .8rem;
+            font-size: .8rem; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-dim);
+            margin-bottom: 1rem; border-top: 1px solid var(--hair); padding-top: 1rem;
         }
-        .bars { display: flex; flex-direction: column; gap: .7rem; overflow-y: auto; }
-        .bar-row { display: grid; grid-template-columns: minmax(80px, 20%) 1fr auto; align-items: center; gap: 1rem; }
-        .bar-row .nm { font-size: 1.3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .bar-row .trk { height: 14px; background: rgba(255,255,255,.07); overflow: hidden; }
-        .bar-row .fil { height: 100%; background: var(--accent); min-width: 2px; transition: width .7s cubic-bezier(.2,.7,.2,1); }
-        .bar-row .vl { font-size: 1.4rem; min-width: 2.75rem; text-align: right; }
-        .empty { color: var(--ink-dim); font-size: 1.2rem; padding: 1rem 0; }
+        .bars { display: flex; flex-direction: column; gap: .8rem; overflow-y: auto; }
+        .bar-row { display: grid; grid-template-columns: minmax(120px, 22%) 1fr auto; align-items: center; gap: 1rem; }
+        .bar-row .nm { font-size: 1.1rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .bar-row .trk { height: 26px; background: rgba(255,255,255,.06); border-radius: 6px; overflow: hidden; }
+        .bar-row .fil { height: 100%; min-width: 4px; border-radius: 6px; transition: width .7s cubic-bezier(.2,.7,.2,1); }
+        .bar-row .vl { font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; min-width: 2.75rem; text-align: right; letter-spacing: -.02em; }
+        .empty { color: var(--ink-dim); font-size: 1.05rem; padding: 1rem 0; }
 
         /* ---- Right column: live feed ---- */
-        .feed-col { display: flex; flex-direction: column; min-height: 0; padding: clamp(1.25rem, 2vw, 2rem) clamp(1rem, 1.5vw, 1.5rem) 0; }
+        .feed-col { display: flex; flex-direction: column; min-height: 0; padding: clamp(1.5rem, 2vw, 2rem) clamp(1rem, 1.5vw, 1.5rem) 0; }
         .feed-col .h {
-            display: flex; align-items: center; gap: .6rem; font-size: 1rem; letter-spacing: .2em;
-            text-transform: uppercase; color: var(--ink-dim); margin-bottom: .8rem;
+            display: flex; align-items: center; gap: .55rem; font-size: .8rem; font-weight: 600; letter-spacing: .16em;
+            text-transform: uppercase; color: var(--ink-dim); margin-bottom: 1rem;
         }
-        .feed-col .h .beat { width: 10px; height: 10px; background: var(--accent); animation: beat 1.1s steps(1) infinite; }
-        @keyframes beat { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+        .feed-col .h .beat { width: 9px; height: 9px; background: var(--err); border-radius: 50%; animation: beat 1.5s ease-in-out infinite; }
+        @keyframes beat { 0%,100% { opacity: .3; } 50% { opacity: 1; } }
         .feed { flex: 1 1 auto; overflow-y: auto; display: flex; flex-direction: column; padding-bottom: 5rem; }
 
-        /* Feed rows are ruled lines, not floating cards — reads like a ticker. */
         .row {
             display: grid; grid-template-columns: 4px 1fr auto; gap: .9rem; align-items: start;
-            padding: .8rem .25rem; border-bottom: 1px solid var(--hair);
-            animation: rowin .35s ease;
+            padding: .85rem .25rem; border-bottom: 1px solid var(--hair); animation: rowin .35s ease;
         }
         @keyframes rowin { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
-        .row .tick { align-self: stretch; background: var(--ink-dim); }
+        .row .tick { align-self: stretch; border-radius: 2px; background: var(--ink-dim); }
         .row.is-success .tick { background: var(--ok); }
         .row.is-duplicate .tick { background: var(--dup); }
         .row.is-error .tick { background: var(--err); }
         .row .main { min-width: 0; }
-        .row .name { font-size: 1.35rem; letter-spacing: .01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .row .meta { color: var(--ink-dim); font-size: 1.05rem; margin-top: .05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .row .flag { font-size: 1rem; letter-spacing: .06em; text-transform: uppercase; margin-top: .1rem; display: inline-block; }
+        .row .name { font-size: 1.1rem; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .row .meta { color: var(--ink-dim); font-size: .9rem; margin-top: .15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .row .flag { font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin-top: .25rem; display: inline-block; }
         .row.is-duplicate .flag { color: var(--dup); }
         .row.is-error .flag { color: var(--err); }
-        .row .aside { display: flex; flex-direction: column; align-items: flex-end; gap: .1rem; }
-        .row .at { font-size: 1.05rem; color: var(--ink-dim); white-space: nowrap; }
-        .row .count { font-size: 1.5rem; line-height: 1; }
+        .row .aside { display: flex; flex-direction: column; align-items: flex-end; gap: .15rem; }
+        .row .at { font-size: .85rem; color: var(--ink-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .row .count { font-size: 1.2rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
         .row.is-success .count { color: var(--ok); }
         .row .count--none { color: var(--ink-dim); }
 
         .logo {
             position: absolute; bottom: 1.25rem; right: 1.5rem; z-index: 5;
-            max-height: 52px; max-width: 200px; opacity: .85; pointer-events: none;
-            filter: drop-shadow(0 2px 10px rgba(0,0,0,.7));
+            max-height: 52px; max-width: 200px; opacity: .9; pointer-events: none;
+            filter: drop-shadow(0 2px 10px rgba(0,0,0,.6));
         }
 
-        /* "Events by CK Enterprises" wordmark fallback, bottom-right, when no
-           event/company logo is uploaded. Mirrors the dashboard header lockup:
-           Cabin Sketch for "Events"/"CK Enterprises", a small uppercase "by"
-           between them. */
+        /* "Events by CK Enterprises" wordmark fallback, bottom-right. */
         .wordmark {
             position: absolute; bottom: 1.4rem; right: 1.75rem; z-index: 5;
             display: inline-flex; align-items: baseline; gap: .4rem;
             font-family: 'Cabin Sketch', cursive; font-weight: 700; line-height: 1;
             opacity: .9; pointer-events: none; user-select: none;
         }
-        .wordmark .events { font-size: 1.75rem; color: #2dd4bf; }
+        .wordmark .events { font-size: 1.6rem; color: #2dd4bf; }
         .wordmark .by {
-            font-family: 'VT323', monospace; font-size: 1rem; letter-spacing: .1em;
+            font-family: var(--sans); font-weight: 500; font-size: .72rem; letter-spacing: .06em;
             text-transform: uppercase; color: var(--ink-dim);
         }
-        .wordmark .ck { font-size: 1.75rem; color: var(--ink); }
+        .wordmark .ck { font-size: 1.6rem; color: var(--ink); }
 
         [hidden] { display: none !important; }
 
@@ -323,7 +306,7 @@
                 </div>
 
                 <div class="graph">
-                    <div class="h"><span>Scanned by operator</span></div>
+                    <div class="h">Orders scanned by operator</div>
                     <div class="bars" id="bars"></div>
                     <div class="empty" id="barsEmpty" hidden>No check-ins yet.</div>
                 </div>
@@ -355,6 +338,9 @@
     var doorsAt = parseInt(root.dataset.doorsAt, 10) || 0;   // epoch ms, 0 = none
     var doorsOpen = root.dataset.doorsOpen === '1';
     var POLL_MS = 2500;
+
+    // Operator bar colours, cycled in rank order (top scanner → first colour).
+    var BAR_COLOURS = ['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)','var(--c6)'];
 
     var elCountdown = document.getElementById('countdown');
     var elGrid = document.getElementById('grid');
@@ -420,21 +406,24 @@
         elIssuesFig.classList.toggle('has-issues', (st.issues || 0) > 0);
     }
 
+    // Operator chart: bars by ORDERS scanned, ranked top-scanner-first, each
+    // row a distinct colour. The server already sorts byStaff by orders desc,
+    // but we sort again defensively so the display order is guaranteed.
     function renderOperators(rows) {
         if (!rows || !rows.length) { elBars.innerHTML = ''; elBarsEmpty.hidden = false; return; }
         elBarsEmpty.hidden = true;
-        var max = rows.reduce(function (m, r) { return Math.max(m, r.tickets || 0); }, 0) || 1;
-        elBars.innerHTML = rows.map(function (r) {
-            var pct = Math.round(((r.tickets || 0) / max) * 100);
+        var sorted = rows.slice().sort(function (a, b) { return (b.orders || 0) - (a.orders || 0); });
+        var max = sorted.reduce(function (m, r) { return Math.max(m, r.orders || 0); }, 0) || 1;
+        elBars.innerHTML = sorted.map(function (r, i) {
+            var pct = Math.round(((r.orders || 0) / max) * 100);
+            var colour = BAR_COLOURS[i % BAR_COLOURS.length];
             return '<div class="bar-row">'
                 + '<span class="nm" title="' + esc(r.name) + '">' + esc(r.name) + '</span>'
-                + '<span class="trk"><span class="fil" style="width:' + pct + '%"></span></span>'
-                + '<span class="vl">' + nf(r.tickets) + '</span></div>';
+                + '<span class="trk"><span class="fil" style="width:' + pct + '%;background:' + colour + '"></span></span>'
+                + '<span class="vl" style="color:' + colour + '">' + nf(r.orders) + '</span></div>';
         }).join('');
     }
 
-    // Outcome → row class + display. Duplicates and errors read differently
-    // from a clean check-in so the door team spots problems at a glance.
     function outcomeClass(o) {
         if (o === 'success') return 'is-success';
         if (o === 'duplicate') return 'is-duplicate';
