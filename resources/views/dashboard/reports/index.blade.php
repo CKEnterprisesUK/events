@@ -21,10 +21,12 @@
                 </p>
             </div>
             <div class="page-header__actions">
-                {{-- Export carries the current date range through so the file
-                     matches what's on screen. Secondary actions — outline, not
-                     the primary blue. --}}
-                @php $exportQuery = array_filter(['from' => $from ?? null, 'to' => $to ?? null]); @endphp
+                {{-- Export carries the current date range AND event filter
+                     through so the file matches what's on screen. Secondary
+                     actions — outline, not the primary blue. --}}
+                @php $exportQuery = array_filter(['from' => $from ?? null, 'to' => $to ?? null, 'event' => $eventId ?? null], fn ($v) => $v !== null && $v !== ''); @endphp
+                <a class="btn btn-outline" href="{{ route('dashboard.reports.compare') }}">Compare events</a>
+                <button type="button" class="btn btn-outline" onclick="window.print()">Print / Save&nbsp;PDF</button>
                 <a class="btn btn-outline" href="{{ route('dashboard.reports.export', $exportQuery) }}" download>Export CSV</a>
                 <a class="btn btn-outline" href="{{ route('dashboard.reports.export-excel', $exportQuery) }}" download>Export Excel</a>
                 <a class="btn btn-outline" href="{{ route('dashboard.reports.export-pdf', $exportQuery) }}">Export PDF</a>
@@ -37,6 +39,15 @@
              chosen period. --}}
         <form method="GET" action="{{ route('dashboard.reports.index') }}" class="report-filter">
             <div class="field">
+                <label for="event">Event</label>
+                <select id="event" name="event">
+                    <option value="">All events</option>
+                    @foreach ($events as $id => $name)
+                        <option value="{{ $id }}" @selected((string) ($eventId ?? '') === (string) $id)>{{ $name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="field">
                 <label for="from">From</label>
                 <input type="date" id="from" name="from" value="{{ $from ?? '' }}">
             </div>
@@ -46,20 +57,23 @@
             </div>
             <div class="report-filter__actions">
                 <button type="submit" class="btn btn-sm">Apply</button>
-                @if (! empty($from) || ! empty($to))
+                @if (! empty($from) || ! empty($to) || ! empty($eventId))
                     <a class="btn btn-sm btn-outline" href="{{ route('dashboard.reports.index') }}">Clear</a>
                 @endif
             </div>
         </form>
 
-        @if (! empty($from) || ! empty($to))
+        @if (! empty($from) || ! empty($to) || ! empty($eventId))
             <p class="panel__note" data-report-period>
                 Showing
+                @if (! empty($eventId))
+                    <strong>{{ $events[$eventId] ?? 'selected event' }}</strong>@if (! empty($from) || ! empty($to)),@endif
+                @endif
                 @if (! empty($from) && ! empty($to))
                     {{ \Illuminate\Support\Carbon::parse($from)->format('j M Y') }} – {{ \Illuminate\Support\Carbon::parse($to)->format('j M Y') }}
                 @elseif (! empty($from))
                     from {{ \Illuminate\Support\Carbon::parse($from)->format('j M Y') }}
-                @else
+                @elseif (! empty($to))
                     up to {{ \Illuminate\Support\Carbon::parse($to)->format('j M Y') }}
                 @endif
             </p>
@@ -84,6 +98,27 @@
                 <span class="metric-card__value">{{ $money($totals['net_payout_minor']) }}</span>
             </div>
         </div>
+
+        {{-- Gross-sales trend over the covered period. Daily points (or weekly
+             for a very long span), built from the same confirmed orders as the
+             tables so the chart and figures agree. --}}
+        @if (! empty($salesTimeline))
+            <div class="panel">
+                <div class="panel__head"><h2>Gross sales over the period</h2></div>
+                <div class="chart-body">
+                    @include('dashboard.partials.line-chart', [
+                        'series' => [[
+                            'name' => 'Gross sales',
+                            'color' => 'var(--brand)',
+                            'points' => $salesTimeline,
+                        ]],
+                        'formatY' => $money,
+                        'height' => 240,
+                        'yLabel' => 'gross sales',
+                    ])
+                </div>
+            </div>
+        @endif
 
         {{-- Full financial reconciliation — the detail matters, so it stays a
              table (with the fee/collected breakdown), not a wall of cards. --}}

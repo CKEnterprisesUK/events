@@ -223,6 +223,10 @@ class EventQuestionController extends Controller
             $answered = 0;
             $breakdown = [];
 
+            // Collect this question's raw answer values across the confirmed
+            // orders once, so the per-type analytics below can work from them.
+            $values = [];
+
             // Pre-seed select options at zero so unpicked choices still show.
             if ($question->isSelect()) {
                 foreach ($question->choices() as $choice) {
@@ -239,6 +243,7 @@ class EventQuestionController extends Controller
                 }
 
                 $answered++;
+                $values[] = $value;
 
                 if ($question->isSelect()) {
                     $breakdown[$value] = ($breakdown[$value] ?? 0) + 1;
@@ -248,10 +253,131 @@ class EventQuestionController extends Controller
             $stats[$question->id] = [
                 'answered' => $answered,
                 'breakdown' => $breakdown,
+                // Chart-ready extras per question type. Null when not applicable
+                // so the view can skip the chart cleanly.
+                'numeric' => $question->isNumber() ? $this->numericSummary($values) : null,
+                'words' => ($question->isSelect() || $question->isNumber()) ? [] : $this->wordFrequencies($values),
             ];
         }
 
         return $stats;
+    }
+
+    /**
+     * Summarise a numeric question's answers: the count of parsable numbers,
+     * their min / max / average, and a small histogram binned across the range
+     * so the report can chart the distribution. Non-numeric or blank answers
+     * are ignored. Returns null when nothing parses to a number.
+     *
+     * @param  list<string>  $values  raw answer strings for this question.
+     * @return array{count:int, min:float, max:float, average:float, histogram:list<array{label:string, value:int}>}|null
+     */
+    private function numericSummary(array $values): ?array
+    {
+        $numbers = [];
+        foreach ($values as $value) {
+            if (is_numeric(trim($value))) {
+                $numbers[] = (float) trim($value);
+            }
+        }
+
+        if ($numbers === []) {
+            return null;
+        }
+
+        $min = min($numbers);
+        $max = max($numbers);
+
+        return [
+            'count' => count($numbers),
+            'min' => $min,
+            'max' => $max,
+            'average' => array_sum($numbers) / count($numbers),
+            'histogram' => $this->histogram($numbers, $min, $max),
+        ];
+    }
+
+    /**
+     * Bin a set of numbers into up to five equal-width buckets for a histogram.
+     * When every value is identical (min === max) a single bucket is returned.
+     * Bucket labels read as rounded ranges (e.g. "10–20").
+     *
+     * @param  list<float>  $numbers
+     * @return list<array{label:string, value:int}>
+     */
+    private function histogram(array $numbers, float $min, float $max): array
+    {
+        $fmt = fn (float $n): string => rtrim(rtrim(number_format($n, 2, '.', ''), '0'), '.');
+
+        if ($min === $max) {
+            return [['label' => $fmt($min), 'value' => count($numbers)]];
+        }
+
+        $bins = min(5, max(2, (int) ceil(sqrt(count($numbers)))));
+        $width = ($max - $min) / $bins;
+        $counts = array_fill(0, $bins, 0);
+
+        foreach ($numbers as $n) {
+            // Clamp the top value into the last bin rather than overflowing.
+            $index = (int) floor(($n - $min) / $width);
+            $index = min($bins - 1, max(0, $index));
+            $counts[$index]++;
+        }
+
+        $buckets = [];
+        for ($i = 0; $i < $bins; $i++) {
+            $lo = $min + $width * $i;
+            $hi = $min + $width * ($i + 1);
+            $buckets[] = [
+                'label' => $fmt($lo).'–'.$fmt($hi),
+                'value' => $counts[$i],
+            ];
+        }
+
+        return $buckets;
+    }
+
+    /**
+     * Tally the most common words across a free-text question's answers for a
+     * word cloud: lower-cased, split on non-letters, short/common stop words
+     * removed, capped to the top terms by frequency (most frequent first).
+     *
+     * @param  list<string>  $values  raw answer strings for this question.
+     * @return list<array{text:string, count:int}>
+     */
+    private function wordFrequencies(array $values, int $limit = 40): array
+    {
+        $stop = [
+            'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'any', 'can',
+            'her', 'was', 'one', 'our', 'out', 'has', 'had', 'his', 'she', 'him',
+            'they', 'them', 'this', 'that', 'with', 'from', 'have', 'will', 'your',
+            'would', 'there', 'their', 'what', 'about', 'which', 'when', 'were',
+            'been', 'than', 'then', 'into', 'some', 'more', 'just', 'also', 'very',
+        ];
+
+        $counts = [];
+
+        foreach ($values as $value) {
+            // Split on anything that isn't a unicode letter, lower-case, and
+            // keep words of 3+ letters that aren't stop words.
+            $tokens = preg_split('/[^\p{L}]+/u', mb_strtolower($value)) ?: [];
+            foreach ($tokens as $token) {
+                if (mb_strlen($token) < 3 || in_array($token, $stop, true)) {
+                    continue;
+                }
+                $counts[$token] = ($counts[$token] ?? 0) + 1;
+            }
+        }
+
+        arsort($counts);
+        $counts = array_slice($counts, 0, $limit, true);
+
+        $words = [];
+        foreach ($counts as $text => $count) {
+            $words[] = ['text' => $text, 'count' => $count];
+        }
+
+        return $words;
     }
 
     /**

@@ -15,6 +15,8 @@
     .pill--reserved { background: #eff6ff; color: #1d4ed8; }
     .pill--refunded, .pill--disputed { background: #fef2f2; color: #b91c1c; }
     .pill--cancelled, .pill--expired, .pill--voided { background: #f3f4f6; color: #6b7280; }
+    .orders-export { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .orders-export__label { font-size: 0.82rem; color: var(--muted); }
 </style>
 @endpush
 
@@ -38,6 +40,15 @@
             <input type="search" name="q" id="q" value="{{ $search }}" placeholder="Reference, name or email">
         </div>
         <div class="field">
+            <label for="event">Event</label>
+            <select name="event" id="event">
+                <option value="">All events</option>
+                @foreach ($events as $id => $name)
+                    <option value="{{ $id }}" @selected((string) $eventId === (string) $id)>{{ $name }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="field">
             <label for="status">Status</label>
             <select name="status" id="status">
                 <option value="">All statuses</option>
@@ -46,11 +57,36 @@
                 @endforeach
             </select>
         </div>
+        <div class="field">
+            <label for="from">From</label>
+            <input type="date" name="from" id="from" value="{{ $from }}">
+        </div>
+        <div class="field">
+            <label for="to">To</label>
+            <input type="date" name="to" id="to" value="{{ $to }}">
+        </div>
         <button type="submit" class="btn">Filter</button>
-        @if ($search !== '' || $status !== '')
+        @if ($search !== '' || $status !== '' || $eventId !== null || $from || $to)
             <a class="btn btn-outline" href="{{ route('dashboard.orders.index') }}">Clear</a>
         @endif
     </form>
+
+    @php
+        // Carry the active filters through to the export links so the file
+        // matches exactly what is on screen.
+        $exportQuery = array_filter([
+            'q' => $search,
+            'event' => $eventId,
+            'status' => $status,
+            'from' => $from,
+            'to' => $to,
+        ], fn ($v) => $v !== null && $v !== '');
+    @endphp
+    <div class="orders-export">
+        <span class="orders-export__label">Export{{ $orders->total() > 0 ? ' '.number_format($orders->total()).' '.\Illuminate\Support\Str::plural('order', $orders->total()) : '' }}:</span>
+        <a class="btn btn-outline btn-sm" href="{{ route('dashboard.orders.export', $exportQuery) }}" download>CSV</a>
+        <a class="btn btn-outline btn-sm" href="{{ route('dashboard.orders.export', array_merge($exportQuery, ['format' => 'xlsx'])) }}" download>Excel</a>
+    </div>
 
     <div class="panel">
         @if ($orders->isEmpty())

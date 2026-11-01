@@ -357,6 +357,48 @@ main.public-main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; min-h
 }
 .app-header .logout-btn:hover { color: #fff; border-color: var(--dark-text); }
 
+/* ---- Quick order search in the top app bar ----
+   Sits in the header before the user chip. A pill input + submit button,
+   styled to read on the dark header. The visually-hidden label keeps it
+   accessible without taking space. On narrow screens the input collapses
+   and only the magnifier button shows, expanding on focus. */
+.header-search {
+    display: flex; align-items: center; margin-right: 0.85rem;
+    background: var(--dark-2); border: 1px solid var(--dark-border);
+    border-radius: var(--radius-chip);
+    overflow: hidden; transition: border-color 0.15s ease;
+}
+.header-search:focus-within { border-color: var(--dark-text); }
+.header-search__label {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.header-search__input {
+    background: transparent; border: none; color: #fff;
+    font-size: 0.85rem; padding: 0.4rem 0.2rem 0.4rem 0.75rem;
+    width: 15rem; max-width: 30vw; outline: none;
+}
+.header-search__input::placeholder { color: var(--dark-text-dim); }
+.header-search__btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: transparent; border: none; color: var(--dark-text);
+    cursor: pointer; padding: 0 0.6rem; height: 100%;
+}
+.header-search__btn:hover { color: #fff; }
+.header-search__btn .icon { width: 18px; height: 18px; }
+
+@media (max-width: 860px) {
+    /* Collapse to a magnifier-only control; expand when focused/typing so the
+       top bar stays uncluttered on phones. */
+    .header-search__input {
+        width: 0; padding-left: 0; padding-right: 0;
+        transition: width 0.18s ease, padding 0.18s ease;
+    }
+    .header-search:focus-within .header-search__input {
+        width: 9rem; padding-left: 0.65rem;
+    }
+}
+
 /* Hamburger (mobile only). 44x44 touch target with a centred icon. */
 .nav-toggle {
     display: none; background: transparent; border: none; color: #fff;
@@ -2406,4 +2448,142 @@ body.pub-menu-open { overflow: hidden; }
     .mkt .mkt-cta__actions .mkt-btn { width: 100%; }
     .mkt .mkt-price-preview { grid-template-columns: 1fr; text-align: left; }
     .pub-footer__cols { grid-template-columns: 1fr; }
+}
+
+/* =============================================================================
+   Reusable charts (dependency-free): line chart, horizontal bar chart, word
+   cloud. Used by the dashboard, the reports surfaces and the question-answer
+   report. Shared here so every chart looks consistent across the dashboard.
+   ============================================================================= */
+
+.chart-empty { color: var(--muted); font-style: italic; padding: 0.75rem 0; }
+
+/* Line chart (inline SVG) ---------------------------------------------------- */
+.line-chart { margin: 0; color: var(--ink); }
+.line-chart__svg { display: block; width: 100%; }
+.line-chart__legend {
+    display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin-bottom: 0.6rem;
+    font-size: 0.82rem; color: var(--muted);
+}
+.line-chart__legend-item { display: inline-flex; align-items: center; gap: 0.4rem; }
+.line-chart__swatch { width: 0.7rem; height: 0.7rem; border-radius: 2px; display: inline-block; }
+
+/* Horizontal bar chart (CSS) ------------------------------------------------- */
+.bar-chart { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.bar-chart__row {
+    display: grid; grid-template-columns: minmax(80px, 30%) 1fr auto;
+    align-items: center; gap: 0.75rem;
+}
+.bar-chart__label {
+    font-size: 0.88rem; color: var(--ink); overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.bar-chart__track {
+    position: relative; height: 0.85rem; background: var(--surface-2, #f3f4f6);
+    border-radius: 999px; overflow: hidden;
+}
+.bar-chart__fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; min-width: 2px; }
+.bar-chart__value {
+    font-size: 0.85rem; color: var(--ink); font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.bar-chart__pct { color: var(--muted); margin-left: 0.25rem; }
+
+/* Word cloud ----------------------------------------------------------------- */
+.word-cloud {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 0.75rem;
+    padding: 0.5rem 0; line-height: 1.2;
+}
+.word-cloud__term { color: var(--brand); font-weight: 600; }
+
+/* Chart panel body spacing when a chart sits directly inside a .panel. */
+.panel .chart-body { padding: 1.1rem 1.25rem; }
+
+@media (max-width: 640px) {
+    .bar-chart__row { grid-template-columns: minmax(70px, 40%) 1fr auto; }
+}
+
+/* Question-answer report ----------------------------------------------------- */
+.report-question {
+    padding: 1.25rem 0; border-top: 1px solid var(--border);
+}
+.report-question:first-of-type { border-top: none; }
+.report-question h3 { font-size: 1.05rem; margin: 0 0 0.15rem; }
+.report-question__subhead {
+    font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em;
+    color: var(--muted); margin: 1rem 0 0.5rem; font-weight: 600;
+}
+.report-numeric {
+    display: grid; gap: 0.75rem; margin: 0.75rem 0 0.25rem;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+}
+.report-numeric__stat {
+    background: var(--surface-2, #f7f7f9); border-radius: 0.6rem; padding: 0.6rem 0.8rem;
+    display: flex; flex-direction: column; gap: 0.15rem;
+}
+.report-numeric__label {
+    font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted);
+}
+.report-numeric__value {
+    font-size: 1.25rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums;
+}
+
+/* Report filter + event-comparison picker forms ----------------------------- */
+.report-filter {
+    display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end;
+    margin-bottom: 1.5rem;
+}
+.report-filter .field { margin: 0; }
+.report-filter label {
+    display: block; font-size: 0.78rem; text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--muted); margin-bottom: 0.25rem;
+}
+.report-filter input,
+.report-filter select {
+    padding: 0.5rem 0.7rem; border: 1px solid var(--border); border-radius: 0.5rem;
+    min-width: 180px; background: #fff;
+}
+.report-filter__actions { display: flex; gap: 0.5rem; }
+.compare-picker select { min-width: 200px; }
+
+/* =============================================================================
+   Print styles. Turn any dashboard report page into a clean printable sheet
+   (and "Save as PDF" from the browser print dialog) by stripping the app chrome
+   — sidebar, header, action buttons and anything marked .no-print — and letting
+   the main content flow full width. Charts (inline SVG / CSS) print as-is.
+   ============================================================================= */
+.no-print { }
+
+@media print {
+    .app-header,
+    .app-sidebar,
+    .sidebar-backdrop,
+    .nav-toggle,
+    .page-header__actions,
+    .report-filter,
+    .pager,
+    .orders-export,
+    .no-print {
+        display: none !important;
+    }
+
+    .app-shell,
+    .app-body,
+    .app-content { display: block !important; margin: 0 !important; padding: 0 !important; }
+
+    .dashboard-main { padding: 0 !important; max-width: none !important; }
+
+    .panel {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+        break-inside: avoid;
+    }
+
+    body { background: #fff !important; }
+
+    /* Expand any mobile/desktop split so the full table prints. */
+    .only-desktop { display: table !important; }
+    .only-mobile { display: none !important; }
+
+    a[href]::after { content: ''; } /* don't append URLs after links */
 }

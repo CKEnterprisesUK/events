@@ -484,6 +484,12 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
         // are scoped to the authenticated user's Company by the
         // `dashboard.tenant` group (foreign Orders 404). (Requirements 10.1, 10.5, 17.1)
         Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+        // Export the filtered Orders list (CSV or, with ?format=xlsx, a real
+        // Excel workbook). Honours the same search/status/event/date filters as
+        // the index so the file matches what's on screen. Declared BEFORE the
+        // `/orders/{order}` route so the literal `export` segment is not
+        // swallowed by route-model binding. (Admin-gated via ACTION_MANAGE_ORDERS.)
+        Route::get('/orders/export', [OrderController::class, 'export'])->name('orders.export');
         Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
         Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
         Route::post('/orders/{order}/refund', [OrderController::class, 'refund'])->name('orders.refund');
@@ -552,6 +558,12 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
         // the Admin gates and is denied, leaving data unchanged. (Requirements
         // 21.1, 21.2, 21.3, 3.5, 3.7)
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+        // Side-by-side comparison of two or three of the Company's Events: the
+        // sales lead-up (on a shared "days before the event" axis) and sales by
+        // time of day. READ-ONLY, same ACTION_VIEW_REPORTS gate and tenant scope
+        // as the rest of reporting. Declared before the export routes; events are
+        // chosen via repeatable `events[]` query ids.
+        Route::get('/reports/compare', [ReportController::class, 'compare'])->name('reports.compare');
         Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
         // PDF payout statement — the same figures/range as the CSV, formatted for
         // filing or handing to a bookkeeper. (Report export types)

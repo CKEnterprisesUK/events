@@ -112,19 +112,20 @@
                 $chart = $salesChart;
                 $points = $chart['points'];
                 $count = count($points);
-                // Build an SVG polyline across a 100 x 32 viewBox. Guard the
-                // single-point and flat-line cases against divide-by-zero.
-                $w = 100; $h = 32; $pad = 2;
-                $max = max(1, $chart['max_minor']);
-                $stepX = $count > 1 ? ($w - $pad * 2) / ($count - 1) : 0;
-                $coords = [];
-                foreach ($points as $i => $p) {
-                    $x = $pad + $stepX * $i;
-                    $y = $h - $pad - (($p['total_minor'] / $max) * ($h - $pad * 2));
-                    $coords[] = round($x, 2) . ',' . round($y, 2);
-                }
-                $polyline = implode(' ', $coords);
                 $delta = $chart['delta_pct'];
+                // Shape the daily points for the shared line-chart partial, with
+                // money formatted in major units via the view's $money helper.
+                // Values stay in minor units so the $money formatter (which
+                // divides by 100 and adds the currency symbol) renders the axis
+                // and tooltips correctly.
+                $chartSeries = [[
+                    'name' => 'Gross sales',
+                    'color' => 'var(--brand)',
+                    'points' => array_map(fn ($p) => [
+                        'label' => $p['label'],
+                        'value' => $p['total_minor'],
+                    ], $points),
+                ]];
             @endphp
             <div class="panel">
                 <div class="panel__head">
@@ -145,27 +146,13 @@
                         </span>
                     @endif
                 </div>
-                <div class="sales-chart">
-                    <p class="sr-only">
-                        Gross sales over the last 30 days totalled {{ $money($chart['current_total_minor']) }}
-                        (from {{ $points[0]['label'] }} to {{ $points[$count - 1]['label'] }}),
-                        @if ($delta !== null)
-                            {{ $delta >= 0 ? 'up' : 'down' }} {{ number_format(abs($delta), 1) }}%
-                            versus {{ $money($chart['previous_total_minor']) }} in the previous 30 days.
-                        @else
-                            with no sales in the previous 30 days to compare against.
-                        @endif
-                    </p>
-                    <svg viewBox="0 0 {{ $w }} {{ $h }}" preserveAspectRatio="none" role="img"
-                         aria-label="Gross sales for each of the last 30 days, {{ $points[0]['label'] }} to {{ $points[$count - 1]['label'] }}.">
-                        <polyline fill="none" stroke="var(--brand)" stroke-width="1.2"
-                                  stroke-linejoin="round" stroke-linecap="round"
-                                  points="{{ $polyline }}" />
-                    </svg>
-                    <div class="sales-chart__axis" aria-hidden="true">
-                        <span>{{ $points[0]['label'] }}</span>
-                        <span>{{ $points[$count - 1]['label'] }}</span>
-                    </div>
+                <div class="chart-body">
+                    @include('dashboard.partials.line-chart', [
+                        'series' => $chartSeries,
+                        'formatY' => $money,
+                        'height' => 240,
+                        'yLabel' => 'gross sales',
+                    ])
                 </div>
             </div>
         @endcan
@@ -392,13 +379,6 @@
     .trend--down { color: #b91c1c; }
     .trend--flat { color: var(--muted); font-weight: 600; }
     .trend__note { font-size: 0.72rem; font-weight: 500; color: var(--muted); }
-
-    .sales-chart { padding: 1.1rem 1.25rem 0.9rem; }
-    .sales-chart svg { display: block; width: 100%; height: 72px; }
-    .sales-chart__axis {
-        display: flex; justify-content: space-between;
-        font-size: 0.72rem; color: var(--muted); margin-top: 0.35rem;
-    }
 
     .sell-through { display: inline-flex; flex-direction: column; gap: 0.2rem; min-width: 84px; font-variant-numeric: tabular-nums; }
     .sell-through__count { font-size: 0.85rem; font-weight: 600; color: var(--ink); }

@@ -42,3 +42,4 @@ yarn-error.log
 #   /public/storage  the storage symlink — recreated on the host (a committed
 #                    symlink breaks across machines); see DEPLOYMENT.md
 /public/storage
+/public/.htaccess

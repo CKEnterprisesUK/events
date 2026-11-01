@@ -169,6 +169,29 @@
 
         <div class="header-spacer"></div>
 
+        {{-- Quick order lookup. Jumps straight into the Orders list with the
+             typed term pre-applied as the free-text search (reference / customer
+             name / email), reusing OrderController::index's existing `q` filter.
+             Only shown to users who can manage orders; hidden on the Orders list
+             itself, which has its own richer filter bar. --}}
+        @can('orders')
+            @unless (request()->routeIs('dashboard.orders.index'))
+                <form class="header-search" method="GET" action="{{ route('dashboard.orders.index') }}" role="search">
+                    <label class="header-search__label" for="headerOrderSearch">Search orders</label>
+                    <input type="search" name="q" id="headerOrderSearch"
+                           class="header-search__input"
+                           placeholder="Search orders…"
+                           value="{{ request()->routeIs('dashboard.orders.*') ? request()->query('q') : '' }}"
+                           autocomplete="off"
+                           enterkeyhint="search"
+                           aria-label="Search orders by reference, name or email">
+                    <button type="submit" class="header-search__btn" aria-label="Search">
+                        <x-icon name="search" aria-hidden="true" />
+                    </button>
+                </form>
+            @endunless
+        @endcan
+
         @php
             // Compact initials for the avatar chip.
             $initials = collect(preg_split('/\s+/', trim((string) $user?->name)))

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Event;
 use App\Models\Order;
 use App\Models\Ticket;
+use App\Services\EventComparisonService;
 use App\Services\EventReportService;
 use App\Services\RoleAuthorization;
 use App\Services\SimpleXlsxWriter;
@@ -100,15 +101,135 @@ class ReportController extends Controller
 
         [$from, $to] = $this->dateRange($request);
         $ranged = $from !== null || $to !== null;
-        $confirmedOrders = $this->confirmedOrders($from, $to);
+
+        // Optional single-event filter: narrow every figure on the page to one
+        // Event. An absent/unknown id shows the whole Company as before.
+        $eventId = $request->query('event');
+        $eventId = is_numeric($eventId) ? (int) $eventId : null;
+
+        $confirmedOrders = $this->confirmedOrders($from, $to, $eventId);
 
         return view('dashboard.reports.index', [
             'totals' => $this->companyTotals($confirmedOrders),
             'perEvent' => $this->perEventBreakdown($confirmedOrders, $ranged),
+            'salesTimeline' => $this->salesTimeline($confirmedOrders),
             'currency' => $this->currency(),
             'from' => $from?->toDateString(),
             'to' => $to?->toDateString(),
+            'events' => $this->companyEvents(),
+            'eventId' => $eventId,
         ]);
+    }
+
+    /**
+     * A daily gross-sales timeline over the covered period, for the reports
+     * page's trend chart: one zero-filled point per calendar day from the first
+     * to the last confirmed order in the set, each the sum of
+     * `ticket_subtotal_minor` (gross sales) placed that day. Built from the SAME
+     * confirmed-Orders collection the tables use, so the chart agrees with the
+     * figures beside it. Returns an empty list when there are no sales to plot.
+     *
+     * The series is capped at a sensible number of days so an all-time report
+     * doesn't render thousands of points: when the span exceeds the cap it is
+     * aggregated by week instead of by day.
+     *
+     * @param  Collection<int, Order>  $confirmedOrders
+     * @return list<array{label:string, value:int}>
+     */
+    private function salesTimeline($confirmedOrders): array
+    {
+        $dated = $confirmedOrders->filter(fn (Order $o) => $o->created_at !== null);
+
+        if ($dated->isEmpty()) {
+            return [];
+        }
+
+        $start = $dated->min(fn (Order $o) => $o->created_at)->copy()->startOfDay();
+        $end = $dated->max(fn (Order $o) => $o->created_at)->copy()->startOfDay();
+
+        // Decide day vs. week granularity by the span so the chart stays legible.
+        $spanDays = (int) $start->diffInDays($end) + 1;
+        $byWeek = $spanDays > 120;
+
+        // Sum gross sales into day or ISO-week buckets.
+        $buckets = [];
+        foreach ($dated as $order) {
+            $key = $byWeek
+                ? $order->created_at->copy()->startOfWeek()->toDateString()
+                : $order->created_at->copy()->startOfDay()->toDateString();
+            $buckets[$key] = ($buckets[$key] ?? 0) + (int) $order->ticket_subtotal_minor;
+        }
+
+        // Zero-fill across the whole span so gaps read as "no sales", not
+        // missing data, and the x-axis is evenly spaced.
+        $points = [];
+        $cursor = $byWeek ? $start->copy()->startOfWeek() : $start->copy();
+        $stepDays = $byWeek ? 7 : 1;
+
+        while ($cursor->lessThanOrEqualTo($end)) {
+            $key = $cursor->toDateString();
+            $points[] = [
+                'label' => $cursor->format('j M'),
+                'value' => $buckets[$key] ?? 0,
+            ];
+            $cursor->addDays($stepDays);
+        }
+
+        return $points;
+    }
+
+    /**
+     * Compare two (or more) of the Company's Events side by side: how sales
+     * built up in the lead-up to each Event (on a shared "days before the
+     * event" axis so differently-dated Events align), and how sales are spread
+     * across the hours of the day. Gated on `ACTION_VIEW_REPORTS` and scoped to
+     * the acting Company — foreign Events simply don't resolve. Read-only.
+     *
+     * Events are chosen via repeatable `events[]` query ids (2–3). With fewer
+     * than two valid Events the page renders the picker and a prompt rather than
+     * an empty chart.
+     */
+    public function compare(Request $request, EventComparisonService $comparison): View
+    {
+        Gate::authorize(RoleAuthorization::ACTION_VIEW_REPORTS);
+
+        // Resolve up to three requested events, tenant-scoped, preserving the
+        // requested order so the first pick is always the first series.
+        $requestedIds = collect((array) $request->query('events', []))
+            ->filter(fn ($id) => is_numeric($id))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->take(3)
+            ->values();
+
+        $events = $requestedIds->isEmpty()
+            ? collect()
+            : Event::query()
+                ->whereIn('id', $requestedIds->all())
+                ->get()
+                ->sortBy(fn (Event $e) => $requestedIds->search($e->getKey()))
+                ->values();
+
+        return view('dashboard.reports.compare', [
+            'events' => $this->companyEvents(),
+            'selected' => $events,
+            'selectedIds' => $events->pluck('id')->all(),
+            'comparison' => $events->count() >= 2 ? $comparison->compare($events) : null,
+            'currency' => $this->currency(),
+        ]);
+    }
+
+    /**
+     * The Company's Events for the report filter and comparison pickers, newest
+     * first and keyed id => name. Tenant-scoped via the global company scope.
+     *
+     * @return Collection<int, string>
+     */
+    private function companyEvents()
+    {
+        return Event::query()
+            ->orderByDesc('id')
+            ->pluck('name', 'id');
     }
 
     /**
@@ -126,7 +247,7 @@ class ReportController extends Controller
 
         [$from, $to] = $this->dateRange($request);
         $ranged = $from !== null || $to !== null;
-        $confirmedOrders = $this->confirmedOrders($from, $to);
+        $confirmedOrders = $this->confirmedOrders($from, $to, $this->eventIdFrom($request));
         $totals = $this->companyTotals($confirmedOrders);
         $perEvent = $this->perEventBreakdown($confirmedOrders, $ranged);
         $currency = $this->currency();
@@ -196,7 +317,7 @@ class ReportController extends Controller
 
         [$from, $to] = $this->dateRange($request);
         $ranged = $from !== null || $to !== null;
-        $confirmedOrders = $this->confirmedOrders($from, $to);
+        $confirmedOrders = $this->confirmedOrders($from, $to, $this->eventIdFrom($request));
 
         $company = $this->tenantContext->company() ?? Auth::user()?->company;
 
@@ -229,7 +350,7 @@ class ReportController extends Controller
 
         [$from, $to] = $this->dateRange($request);
         $ranged = $from !== null || $to !== null;
-        $confirmedOrders = $this->confirmedOrders($from, $to);
+        $confirmedOrders = $this->confirmedOrders($from, $to, $this->eventIdFrom($request));
         $totals = $this->companyTotals($confirmedOrders);
         $perEvent = $this->perEventBreakdown($confirmedOrders, $ranged);
         $currency = $this->currency();
@@ -366,12 +487,24 @@ class ReportController extends Controller
      *
      * @return Collection<int, Order>
      */
-    private function confirmedOrders(?Carbon $from = null, ?Carbon $to = null)
+    /**
+     * The optional single-event filter id from the request, or null when absent
+     * or non-numeric (so a bad param simply widens to the whole Company).
+     */
+    private function eventIdFrom(Request $request): ?int
+    {
+        $eventId = $request->query('event');
+
+        return is_numeric($eventId) ? (int) $eventId : null;
+    }
+
+    private function confirmedOrders(?Carbon $from = null, ?Carbon $to = null, ?int $eventId = null)
     {
         return Order::query()
             ->whereIn('status', self::CONFIRMED_STATUSES)
             ->when($from !== null, fn ($q) => $q->where('created_at', '>=', $from))
             ->when($to !== null, fn ($q) => $q->where('created_at', '<=', $to))
+            ->when($eventId !== null, fn ($q) => $q->where('event_id', $eventId))
             ->get();
     }
 
