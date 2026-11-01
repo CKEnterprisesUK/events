@@ -313,9 +313,13 @@ class ScanController extends Controller
         $order = Order::query()->where('order_reference', $reference)->first();
 
         if ($order === null) {
+            // The tenant scope means this covers both a reference that matches
+            // no Order at all (e.g. a mistyped manual entry) and one belonging
+            // to another Company — the scope hides the difference on purpose, so
+            // a single "not found" message fits both without leaking either.
             return [
                 'status' => 'rejected',
-                'message' => 'Rejected. This ticket does not belong to your organisation.',
+                'message' => 'Ticket not found.',
             ];
         }
 

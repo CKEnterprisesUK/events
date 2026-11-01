@@ -169,7 +169,7 @@ class ScanCheckInTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertSee('Rejected');
+        $response->assertSee('Ticket not found');
     }
 
     public function test_tampered_token_is_rejected_as_invalid(): void
@@ -214,7 +214,9 @@ class ScanCheckInTest extends TestCase
 
         $response->assertStatus(200);
         // 16.6 — foreign Order is not found under the scanning Company's scope.
-        $response->assertSee('does not belong to your organisation');
+        // The scope hides the difference between "not yours" and "no such
+        // order", so both surface as a single "Ticket not found".
+        $response->assertSee('Ticket not found');
 
         // Untouched.
         $this->assertNull($foreignOrder->fresh()->scanned_at);
