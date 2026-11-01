@@ -3,19 +3,19 @@
     Event. (Live event dashboard)
 
     Deliberately a STANDALONE page (it does NOT extend layouts/dashboard) so it
-    can own the whole black screen with no app chrome. Two phases, switched
+    owns the whole black screen with no app chrome. Two phases, switched
     client-side off the polled feed:
 
-      BEFORE doors open → a large centred countdown to the doors-opening time
-        (the Event's start time) on black.
-      AFTER doors open  → a 2:1 split: the left two-thirds carry the headline
-        scan stats (total scanned, % of sold, total sold) above a per-operator
-        bar graph; the right third is the live feed of scanned tickets, newest
-        first, prepended as each check-in lands.
+      BEFORE doors open → a very large countdown to the doors-opening time (the
+        Event's start time), laid out like a venue display board.
+      AFTER doors open  → a 2:1 split: the left two-thirds lead with one huge
+        "scanned" figure plus the % of sold and total sold, above a per-operator
+        bar graph; the right third is the live feed of EVERY scan — successes,
+        duplicates and errors — newest first.
 
     A slim top bar offers "Return to platform"; the company/event logo sits
-    bottom-right. The page never needs a manual refresh — it polls
-    `dashboard.events.live.feed` on an interval and reconciles the DOM.
+    bottom-right. The page polls `dashboard.events.live.feed` and reconciles the
+    DOM, so it stays live without a manual refresh.
 
     Supplied by EventLiveController::show():
       $event    — the Event.
@@ -26,13 +26,12 @@
 @php
     use Illuminate\Support\Facades\Storage;
 
-    $accent = $branding->hasPrimaryColour() ? $branding->primaryColour : '#2dd4bf';
+    $accent = $branding->hasPrimaryColour() ? $branding->primaryColour : '#e8b54d';
     $logoUrl = $branding->hasLogo()
         ? Storage::disk('public')->url($branding->logoPath)
         : null;
     $feedUrl = route('dashboard.events.live.feed', $event);
     $platformUrl = route('dashboard.events.show', $event);
-    // Doors target as an epoch (ms) for the client countdown; 0 = no target set.
     $doorsAtMs = $doorsAt !== null ? $doorsAt->getTimestampMs() : 0;
 @endphp
 <!DOCTYPE html>
@@ -46,158 +45,203 @@
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    {{-- A grotesque for text + a mono for the big numerals, so the figures read
+         like a scoreboard/departure board rather than generic card UI. --}}
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Cabin+Sketch:wght@700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --accent: {{ $accent }};
-            --bg: #000;
-            --panel: #0b0b0d;
-            --panel-2: #121216;
-            --border: #1f1f25;
-            --text: #f5f5f7;
-            --text-dim: #8a8a94;
+            --bg: #050506;
+            --ink: #f4f3ef;
+            --ink-dim: #6f6e6a;
+            --hair: rgba(255,255,255,.08);
+            --ok: #4ba36a;
+            --dup: #d2a53a;
+            --err: #c0493f;
+            --mono: 'Space Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+            --sans: 'Archivo', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
         }
         * { box-sizing: border-box; }
         html, body {
-            margin: 0; padding: 0; height: 100%;
-            background: var(--bg); color: var(--text);
-            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-            overflow: hidden;
-        }
-        a { color: inherit; }
-
-        .live {
-            display: flex; flex-direction: column;
-            height: 100vh; width: 100vw;
+            margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+            font-family: var(--sans); overflow: hidden;
+            -webkit-font-smoothing: antialiased;
         }
 
-        /* Top bar */
-        .live-topbar {
-            flex: 0 0 auto;
-            display: flex; align-items: center; justify-content: space-between;
-            padding: .75rem 1.25rem;
-            border-bottom: 1px solid var(--border);
-            background: linear-gradient(180deg, rgba(255,255,255,.02), transparent);
-        }
-        .live-topbar .event-name {
-            font-weight: 700; font-size: 1.05rem; letter-spacing: .01em;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60vw;
-        }
-        .live-topbar .back {
-            display: inline-flex; align-items: center; gap: .5rem;
-            text-decoration: none; color: var(--text-dim);
-            border: 1px solid var(--border); border-radius: 999px;
-            padding: .4rem .9rem; font-size: .85rem; font-weight: 600;
-            transition: color .15s, border-color .15s, background .15s;
-        }
-        .live-topbar .back:hover { color: var(--text); border-color: var(--accent); background: rgba(255,255,255,.03); }
-        .live-topbar .back svg { width: 15px; height: 15px; }
+        .live { display: flex; flex-direction: column; height: 100vh; width: 100vw; }
 
-        /* Body fills the space between top bar and bottom; relative so the logo
-           can anchor bottom-right over whichever phase is showing. */
-        .live-body { flex: 1 1 auto; position: relative; min-height: 0; }
+        /* ---- Top bar: a thin ruled strip, not a floating pill ---- */
+        .topbar {
+            flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between;
+            padding: .85rem 1.75rem; border-bottom: 1px solid var(--hair);
+        }
+        .topbar .mark { display: flex; align-items: baseline; gap: .9rem; min-width: 0; }
+        .topbar .live-tag {
+            font-family: var(--mono); font-size: .68rem; font-weight: 700; letter-spacing: .32em;
+            text-transform: uppercase; color: var(--bg); background: var(--accent);
+            padding: .25rem .5rem .2rem; border-radius: 2px; white-space: nowrap;
+        }
+        .topbar .event-name {
+            font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .topbar .back {
+            display: inline-flex; align-items: center; gap: .55rem; text-decoration: none;
+            color: var(--ink-dim); font-size: .82rem; font-weight: 600; letter-spacing: .02em;
+            white-space: nowrap; transition: color .15s;
+        }
+        .topbar .back:hover { color: var(--ink); }
+        .topbar .back svg { width: 15px; height: 15px; }
 
-        /* --- Countdown phase --- */
+        .body { flex: 1 1 auto; position: relative; min-height: 0; }
+
+        /* ---- Countdown phase ---- */
         .countdown {
-            position: absolute; inset: 0;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            gap: 1.5rem; text-align: center; padding: 2rem;
+            position: absolute; inset: 0; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 2.5rem; padding: 2rem;
         }
-        .countdown .label { color: var(--text-dim); text-transform: uppercase; letter-spacing: .28em; font-size: .95rem; font-weight: 600; }
-        .countdown .clock {
-            display: flex; gap: 1.75rem; align-items: flex-start;
-            font-variant-numeric: tabular-nums;
+        .countdown .eyebrow {
+            font-family: var(--mono); font-size: 1rem; letter-spacing: .5em; text-transform: uppercase;
+            color: var(--ink-dim); padding-left: .5em;
         }
-        .countdown .unit { display: flex; flex-direction: column; align-items: center; gap: .5rem; }
-        .countdown .unit .num {
-            font-size: clamp(3.5rem, 13vw, 11rem); font-weight: 800; line-height: .9;
-            color: var(--text);
+        .clock { display: flex; align-items: stretch; gap: clamp(.75rem, 2.5vw, 2.5rem); }
+        .clock .unit { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+        .clock .num {
+            font-family: var(--mono); font-weight: 700; font-variant-numeric: tabular-nums;
+            font-size: clamp(4rem, 18vw, 17rem); line-height: .82; letter-spacing: -.02em;
+            color: var(--ink);
         }
-        .countdown .unit .cap { font-size: .8rem; letter-spacing: .22em; text-transform: uppercase; color: var(--text-dim); }
-        .countdown .colon { font-size: clamp(2.5rem, 9vw, 7rem); font-weight: 300; color: var(--accent); line-height: 1.1; align-self: center; }
-        .countdown .doors-at { color: var(--text-dim); font-size: 1rem; }
-        .countdown .doors-open-msg { font-size: clamp(2rem, 6vw, 4rem); font-weight: 800; color: var(--accent); }
+        .clock .cap {
+            font-size: clamp(.7rem, 1vw, .85rem); letter-spacing: .3em; text-transform: uppercase;
+            color: var(--ink-dim); font-weight: 600;
+        }
+        .clock .sep {
+            align-self: flex-start; font-family: var(--mono); font-weight: 700; color: var(--accent);
+            font-size: clamp(3rem, 12vw, 12rem); line-height: .9;
+        }
+        .countdown .when { font-size: clamp(1rem, 1.6vw, 1.35rem); color: var(--ink-dim); letter-spacing: .02em; }
+        .countdown .open-now {
+            font-size: clamp(2.5rem, 7vw, 6rem); font-weight: 900; letter-spacing: -.02em;
+            color: var(--accent); text-transform: uppercase;
+        }
 
-        /* --- Live phase: 2:1 split --- */
-        .live-grid {
-            position: absolute; inset: 0;
-            display: grid; grid-template-columns: 2fr 1fr;
-            gap: 1rem; padding: 1rem;
+        /* ---- Live phase: 2:1 split ---- */
+        .grid {
+            position: absolute; inset: 0; display: grid; grid-template-columns: 2fr 1fr;
+        }
+        .left {
+            display: flex; flex-direction: column; min-height: 0;
+            padding: clamp(1.25rem, 2.5vw, 2.75rem);
+            border-right: 1px solid var(--hair);
         }
 
-        /* Left column: stats on top, operator graph below. */
-        .live-left { display: flex; flex-direction: column; gap: 1rem; min-height: 0; }
+        /* Headline: the scanned number dominates everything. */
+        .headline { display: flex; align-items: flex-end; gap: clamp(2rem, 5vw, 5rem); flex-wrap: wrap; }
+        .scanned { display: flex; flex-direction: column; }
+        .scanned .k {
+            font-size: clamp(.8rem, 1vw, 1rem); letter-spacing: .28em; text-transform: uppercase;
+            color: var(--ink-dim); font-weight: 600; margin-bottom: .4rem;
+        }
+        .scanned .n {
+            font-family: var(--mono); font-weight: 700; font-variant-numeric: tabular-nums;
+            font-size: clamp(5.5rem, 17vw, 18rem); line-height: .78; letter-spacing: -.03em;
+            color: var(--ink);
+        }
+        .scanned .sub { margin-top: .6rem; color: var(--ink-dim); font-size: clamp(.85rem, 1.1vw, 1.05rem); font-weight: 500; }
+        .scanned .sub b { color: var(--ink); font-weight: 700; }
 
-        .stats {
-            display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 1rem;
+        /* Two secondary figures stacked beside the big number. */
+        .side { display: flex; flex-direction: column; gap: 1.75rem; padding-bottom: .5rem; }
+        .figure .k {
+            font-size: .72rem; letter-spacing: .24em; text-transform: uppercase; color: var(--ink-dim);
+            font-weight: 600; margin-bottom: .25rem;
         }
-        .stat {
-            background: var(--panel); border: 1px solid var(--border); border-radius: 1rem;
-            padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: .35rem;
+        .figure .v {
+            font-family: var(--mono); font-weight: 700; font-variant-numeric: tabular-nums;
+            font-size: clamp(2rem, 4vw, 3.5rem); line-height: 1;
         }
-        .stat .stat-label { color: var(--text-dim); text-transform: uppercase; letter-spacing: .14em; font-size: .72rem; font-weight: 600; }
-        .stat .stat-value { font-size: clamp(2.25rem, 5vw, 4.5rem); font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
-        .stat .stat-sub { color: var(--text-dim); font-size: .85rem; }
-        .stat--scanned .stat-value { color: var(--accent); }
-        .stat--percent .stat-value { color: var(--text); }
+        .figure--pct .v { color: var(--accent); }
+        .figure .bar { height: 6px; width: clamp(140px, 16vw, 240px); background: rgba(255,255,255,.07); margin-top: .7rem; overflow: hidden; }
+        .figure .bar > i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .7s cubic-bezier(.2,.7,.2,1); }
+        .figure--issues .v { color: var(--ink); }
+        .figure--issues.has-issues .v { color: var(--err); }
 
-        /* A thin progress bar under the % card showing scanned/sold. */
-        .progress { height: 10px; border-radius: 999px; background: var(--panel-2); overflow: hidden; margin-top: .35rem; }
-        .progress > span { display: block; height: 100%; width: 0; background: var(--accent); transition: width .6s ease; }
+        /* Operator graph fills the rest of the left column. */
+        .graph { margin-top: auto; padding-top: clamp(1.5rem, 3vw, 2.75rem); display: flex; flex-direction: column; min-height: 0; }
+        .graph .h {
+            display: flex; align-items: baseline; justify-content: space-between;
+            font-size: .72rem; letter-spacing: .24em; text-transform: uppercase; color: var(--ink-dim);
+            font-weight: 600; margin-bottom: 1.1rem; border-top: 1px solid var(--hair); padding-top: 1rem;
+        }
+        .bars { display: flex; flex-direction: column; gap: .9rem; overflow-y: auto; }
+        .bar-row { display: grid; grid-template-columns: minmax(80px, 20%) 1fr auto; align-items: center; gap: 1rem; }
+        .bar-row .nm { font-weight: 600; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .bar-row .trk { height: 14px; background: rgba(255,255,255,.06); overflow: hidden; }
+        .bar-row .fil { height: 100%; background: var(--accent); min-width: 2px; transition: width .7s cubic-bezier(.2,.7,.2,1); }
+        .bar-row .vl { font-family: var(--mono); font-weight: 700; font-variant-numeric: tabular-nums; font-size: 1.05rem; min-width: 2.75rem; text-align: right; }
+        .empty { color: var(--ink-dim); font-size: .95rem; padding: 1rem 0; }
 
-        .graph-card {
-            flex: 1 1 auto; min-height: 0;
-            background: var(--panel); border: 1px solid var(--border); border-radius: 1rem;
-            padding: 1.25rem 1.5rem; display: flex; flex-direction: column;
+        /* ---- Right column: live feed ---- */
+        .feed-col { display: flex; flex-direction: column; min-height: 0; padding: clamp(1.25rem, 2vw, 2rem) clamp(1rem, 1.5vw, 1.5rem) 0; }
+        .feed-col .h {
+            display: flex; align-items: center; gap: .6rem; font-size: .72rem; letter-spacing: .24em;
+            text-transform: uppercase; color: var(--ink-dim); font-weight: 600; margin-bottom: 1.1rem;
         }
-        .graph-card h2 { margin: 0 0 1rem; font-size: .9rem; text-transform: uppercase; letter-spacing: .14em; color: var(--text-dim); font-weight: 600; }
-        .bars { flex: 1 1 auto; overflow-y: auto; display: flex; flex-direction: column; gap: .85rem; padding-right: .25rem; }
-        .bar-row { display: grid; grid-template-columns: minmax(90px, 22%) 1fr auto; align-items: center; gap: .85rem; }
-        .bar-row .bar-name { font-weight: 600; font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .bar-row .bar-track { height: 18px; border-radius: 999px; background: var(--panel-2); overflow: hidden; }
-        .bar-row .bar-fill { height: 100%; background: var(--accent); border-radius: 999px; min-width: 2px; transition: width .6s ease; }
-        .bar-row .bar-val { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1rem; min-width: 2.5rem; text-align: right; }
-        .graph-empty, .feed-empty { color: var(--text-dim); font-size: .95rem; margin: auto 0; text-align: center; }
+        .feed-col .h .beat { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; animation: beat 1.6s ease-in-out infinite; }
+        @keyframes beat { 0%,100% { opacity: .35; transform: scale(.8); } 50% { opacity: 1; transform: scale(1); } }
+        .feed { flex: 1 1 auto; overflow-y: auto; display: flex; flex-direction: column; padding-bottom: 5rem; }
 
-        /* Right column: live feed. */
-        .feed-card {
-            background: var(--panel); border: 1px solid var(--border); border-radius: 1rem;
-            padding: 1.25rem 1.25rem .5rem; display: flex; flex-direction: column; min-height: 0;
+        /* Feed rows are ruled lines, not floating cards — reads like a ticker. */
+        .row {
+            display: grid; grid-template-columns: 4px 1fr auto; gap: .9rem; align-items: start;
+            padding: .8rem .25rem; border-bottom: 1px solid var(--hair);
+            animation: rowin .35s ease;
         }
-        .feed-card h2 {
-            margin: 0 0 .9rem; font-size: .9rem; text-transform: uppercase; letter-spacing: .14em; color: var(--text-dim); font-weight: 600;
-            display: flex; align-items: center; gap: .55rem;
-        }
-        .feed-card h2 .dot { width: 9px; height: 9px; border-radius: 999px; background: var(--accent); box-shadow: 0 0 0 0 var(--accent); animation: pulse 1.8s infinite; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent); } 70% { box-shadow: 0 0 0 10px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
-        .feed { flex: 1 1 auto; overflow-y: auto; display: flex; flex-direction: column; gap: .6rem; padding-bottom: .75rem; }
-        .feed-item {
-            background: var(--panel-2); border: 1px solid var(--border); border-left: 3px solid var(--accent);
-            border-radius: .7rem; padding: .7rem .85rem;
-            display: flex; flex-direction: column; gap: .2rem;
-            animation: slidein .4s ease;
-        }
-        @keyframes slidein { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
-        .feed-item .fi-top { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; }
-        .feed-item .fi-name { font-weight: 700; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .feed-item .fi-time { color: var(--text-dim); font-size: .78rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
-        .feed-item .fi-meta { color: var(--text-dim); font-size: .82rem; display: flex; gap: .5rem; flex-wrap: wrap; }
-        .feed-item .fi-tickets { color: var(--accent); font-weight: 600; }
+        @keyframes rowin { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+        .row .tick { align-self: stretch; background: var(--ink-dim); }
+        .row.is-success .tick { background: var(--ok); }
+        .row.is-duplicate .tick { background: var(--dup); }
+        .row.is-error .tick { background: var(--err); }
+        .row .main { min-width: 0; }
+        .row .name { font-weight: 700; font-size: 1.02rem; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .row .meta { color: var(--ink-dim); font-size: .82rem; margin-top: .2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .row .flag { font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-top: .3rem; display: inline-block; }
+        .row.is-duplicate .flag { color: var(--dup); }
+        .row.is-error .flag { color: var(--err); }
+        .row .aside { display: flex; flex-direction: column; align-items: flex-end; gap: .25rem; }
+        .row .at { font-family: var(--mono); font-size: .76rem; color: var(--ink-dim); white-space: nowrap; }
+        .row .count { font-family: var(--mono); font-weight: 700; font-size: 1.15rem; line-height: 1; }
+        .row.is-success .count { color: var(--ok); }
+        .row .count--none { color: var(--ink-dim); }
 
-        /* Logo, anchored bottom-right over the body. */
-        .live-logo {
+        .logo {
             position: absolute; bottom: 1.25rem; right: 1.5rem; z-index: 5;
-            max-height: 56px; max-width: 220px; opacity: .9;
-            filter: drop-shadow(0 2px 8px rgba(0,0,0,.6));
-            pointer-events: none;
+            max-height: 52px; max-width: 200px; opacity: .85; pointer-events: none;
+            filter: drop-shadow(0 2px 10px rgba(0,0,0,.7));
         }
-        .live-grid + .live-logo { bottom: .5rem; }
+
+        /* "Events by CK Enterprises" wordmark fallback, bottom-right, when no
+           event/company logo is uploaded. Mirrors the dashboard header lockup:
+           Cabin Sketch for "Events"/"CK Enterprises", a small uppercase "by"
+           between them. */
+        .wordmark {
+            position: absolute; bottom: 1.4rem; right: 1.75rem; z-index: 5;
+            display: inline-flex; align-items: baseline; gap: .4rem;
+            font-family: 'Cabin Sketch', cursive; font-weight: 700; line-height: 1;
+            opacity: .9; pointer-events: none; user-select: none;
+        }
+        .wordmark .events { font-size: 1.6rem; color: #2dd4bf; }
+        .wordmark .by {
+            font-family: var(--sans); font-weight: 500; font-size: .72rem; letter-spacing: .06em;
+            text-transform: uppercase; color: var(--ink-dim);
+        }
+        .wordmark .ck { font-size: 1.6rem; color: var(--ink); }
 
         [hidden] { display: none !important; }
 
         @media (max-width: 900px) {
-            .live-grid { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
-            .stats { grid-template-columns: 1fr 1fr; }
+            .grid { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+            .left { border-right: none; border-bottom: 1px solid var(--hair); }
         }
     </style>
 </head>
@@ -207,72 +251,86 @@
      data-doors-at="{{ $doorsAtMs }}"
      data-doors-open="{{ $snapshot['doorsOpen'] ? '1' : '0' }}">
 
-    <div class="live-topbar">
-        <span class="event-name">{{ $event->name }}</span>
+    <header class="topbar">
+        <div class="mark">
+            <span class="live-tag">Live</span>
+            <span class="event-name">{{ $event->name }}</span>
+        </div>
         <a class="back" href="{{ $platformUrl }}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
             Return to platform
         </a>
-    </div>
+    </header>
 
-    <div class="live-body">
+    <div class="body">
         {{-- Countdown phase --}}
-        <div class="countdown" id="countdown" @if($snapshot['doorsOpen']) hidden @endif>
-            <div class="label">Doors open in</div>
+        <section class="countdown" id="countdown" @if($snapshot['doorsOpen']) hidden @endif>
+            <div class="eyebrow">Doors open in</div>
             <div class="clock" id="clock">
                 <div class="unit"><span class="num" data-cd="days">00</span><span class="cap">Days</span></div>
-                <span class="colon">:</span>
+                <span class="sep">:</span>
                 <div class="unit"><span class="num" data-cd="hours">00</span><span class="cap">Hours</span></div>
-                <span class="colon">:</span>
-                <div class="unit"><span class="num" data-cd="mins">00</span><span class="cap">Mins</span></div>
-                <span class="colon">:</span>
-                <div class="unit"><span class="num" data-cd="secs">00</span><span class="cap">Secs</span></div>
+                <span class="sep">:</span>
+                <div class="unit"><span class="num" data-cd="mins">00</span><span class="cap">Minutes</span></div>
+                <span class="sep">:</span>
+                <div class="unit"><span class="num" data-cd="secs">00</span><span class="cap">Seconds</span></div>
             </div>
             @if ($doorsAt !== null)
-                <div class="doors-at">{{ $doorsAt->format('l j F Y, H:i') }}</div>
+                <div class="when">{{ $doorsAt->format('l j F Y · H:i') }}</div>
             @else
-                <div class="doors-at">Doors time not set</div>
+                <div class="when">Doors time not set</div>
             @endif
-            <div class="doors-open-msg" id="doorsOpenMsg" hidden>Doors are open</div>
-        </div>
+            <div class="open-now" id="openNow" hidden>Doors are open</div>
+        </section>
 
-        {{-- Live phase: 2:1 split --}}
-        <div class="live-grid" id="liveGrid" @unless($snapshot['doorsOpen']) hidden @endunless>
-            <div class="live-left">
-                <div class="stats">
-                    <div class="stat stat--scanned">
-                        <span class="stat-label">Tickets scanned</span>
-                        <span class="stat-value" id="statScanned">{{ number_format($snapshot['stats']['scanned']) }}</span>
-                        <span class="stat-sub"><span id="statOrders">{{ number_format($snapshot['stats']['checkedInOrders']) }}</span> orders checked in</span>
+        {{-- Live phase --}}
+        <section class="grid" id="grid" @unless($snapshot['doorsOpen']) hidden @endunless>
+            <div class="left">
+                <div class="headline">
+                    <div class="scanned">
+                        <span class="k">Tickets scanned</span>
+                        <span class="n" id="statScanned">{{ number_format($snapshot['stats']['scanned']) }}</span>
+                        <span class="sub"><b id="statOrders">{{ number_format($snapshot['stats']['checkedInOrders']) }}</b> orders through the door</span>
                     </div>
-                    <div class="stat stat--percent">
-                        <span class="stat-label">Of tickets sold</span>
-                        <span class="stat-value" id="statPercent">{{ $snapshot['stats']['percent'] === null ? '—' : $snapshot['stats']['percent'].'%' }}</span>
-                        <div class="progress"><span id="statProgress" style="width: {{ $snapshot['stats']['percent'] ?? 0 }}%"></span></div>
-                    </div>
-                    <div class="stat stat--sold">
-                        <span class="stat-label">Total sold</span>
-                        <span class="stat-value" id="statSold">{{ number_format($snapshot['stats']['sold']) }}</span>
-                        <span class="stat-sub">tickets</span>
+                    <div class="side">
+                        <div class="figure figure--pct">
+                            <span class="k">Of sold</span>
+                            <span class="v" id="statPercent">{{ $snapshot['stats']['percent'] === null ? '—' : $snapshot['stats']['percent'].'%' }}</span>
+                            <span class="bar"><i id="statProgress" style="width: {{ $snapshot['stats']['percent'] ?? 0 }}%"></i></span>
+                        </div>
+                        <div class="figure">
+                            <span class="k">Total sold</span>
+                            <span class="v" id="statSold">{{ number_format($snapshot['stats']['sold']) }}</span>
+                        </div>
+                        <div class="figure figure--issues {{ $snapshot['stats']['issues'] > 0 ? 'has-issues' : '' }}" id="issuesFigure">
+                            <span class="k">Issues</span>
+                            <span class="v" id="statIssues">{{ number_format($snapshot['stats']['issues']) }}</span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="graph-card">
-                    <h2>Scanned by operator</h2>
-                    <div class="bars" id="operatorBars"></div>
-                    <div class="graph-empty" id="operatorEmpty" hidden>No check-ins yet</div>
+                <div class="graph">
+                    <div class="h"><span>Scanned by operator</span></div>
+                    <div class="bars" id="bars"></div>
+                    <div class="empty" id="barsEmpty" hidden>No check-ins yet.</div>
                 </div>
             </div>
 
-            <div class="feed-card">
-                <h2><span class="dot"></span> Live scan feed</h2>
+            <div class="feed-col">
+                <div class="h"><span class="beat"></span> Live feed</div>
                 <div class="feed" id="feed"></div>
-                <div class="feed-empty" id="feedEmpty" hidden>Waiting for the first scan…</div>
+                <div class="empty" id="feedEmpty" hidden>Waiting for the first scan…</div>
             </div>
-        </div>
+        </section>
 
         @if ($logoUrl)
-            <img class="live-logo" src="{{ $logoUrl }}" alt="{{ $event->name }}">
+            <img class="logo" src="{{ $logoUrl }}" alt="{{ $event->name }}">
+        @else
+            <span class="wordmark" aria-label="Events by CK Enterprises">
+                <span class="events">Events</span>
+                <span class="by">by</span>
+                <span class="ck">CK Enterprises</span>
+            </span>
         @endif
     </div>
 </div>
@@ -281,13 +339,13 @@
 (function () {
     var root = document.querySelector('.live');
     var FEED_URL = root.dataset.feedUrl;
-    var doorsAt = parseInt(root.dataset.doorsAt, 10) || 0;      // epoch ms, 0 = none
+    var doorsAt = parseInt(root.dataset.doorsAt, 10) || 0;   // epoch ms, 0 = none
     var doorsOpen = root.dataset.doorsOpen === '1';
-    var POLL_MS = 4000;
+    var POLL_MS = 2500;
 
     var elCountdown = document.getElementById('countdown');
-    var elGrid = document.getElementById('liveGrid');
-    var elDoorsOpenMsg = document.getElementById('doorsOpenMsg');
+    var elGrid = document.getElementById('grid');
+    var elOpenNow = document.getElementById('openNow');
     var elClock = document.getElementById('clock');
     var cd = {
         days: elCountdown.querySelector('[data-cd="days"]'),
@@ -301,23 +359,19 @@
     var elPercent = document.getElementById('statPercent');
     var elProgress = document.getElementById('statProgress');
     var elSold = document.getElementById('statSold');
-    var elBars = document.getElementById('operatorBars');
-    var elBarsEmpty = document.getElementById('operatorEmpty');
+    var elIssues = document.getElementById('statIssues');
+    var elIssuesFig = document.getElementById('issuesFigure');
+    var elBars = document.getElementById('bars');
+    var elBarsEmpty = document.getElementById('barsEmpty');
     var elFeed = document.getElementById('feed');
     var elFeedEmpty = document.getElementById('feedEmpty');
 
-    // Track the newest scan we've rendered so we only animate truly new rows.
-    var lastTopRef = null;
+    var lastTopId = null;
 
     function pad(n) { return n < 10 ? '0' + n : '' + n; }
     function nf(n) { return (n || 0).toLocaleString(); }
-    function esc(s) {
-        var d = document.createElement('div');
-        d.textContent = s == null ? '' : String(s);
-        return d.innerHTML;
-    }
+    function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
 
-    // ---- Countdown ----
     function showPhase(open) {
         doorsOpen = open;
         elCountdown.hidden = open;
@@ -325,89 +379,93 @@
     }
 
     function tickCountdown() {
-        if (doorsOpen) return;
-        if (!doorsAt) { return; }            // no target: stay on countdown shell
+        if (doorsOpen || !doorsAt) return;
         var diff = doorsAt - Date.now();
         if (diff <= 0) {
-            cd.days.textContent = '00'; cd.hours.textContent = '00';
-            cd.mins.textContent = '00'; cd.secs.textContent = '00';
+            cd.days.textContent = cd.hours.textContent = cd.mins.textContent = cd.secs.textContent = '00';
             elClock.hidden = true;
-            elDoorsOpenMsg.hidden = false;
-            // The feed poll flips us to the live phase; this is the visual cue
-            // in the gap before the next poll lands.
+            elOpenNow.hidden = false;
             return;
         }
-        var secs = Math.floor(diff / 1000);
-        var days = Math.floor(secs / 86400); secs -= days * 86400;
-        var hours = Math.floor(secs / 3600); secs -= hours * 3600;
-        var mins = Math.floor(secs / 60); secs -= mins * 60;
-        cd.days.textContent = pad(days);
-        cd.hours.textContent = pad(hours);
-        cd.mins.textContent = pad(mins);
-        cd.secs.textContent = pad(secs);
+        var s = Math.floor(diff / 1000);
+        var d = Math.floor(s / 86400); s -= d * 86400;
+        var h = Math.floor(s / 3600);  s -= h * 3600;
+        var m = Math.floor(s / 60);    s -= m * 60;
+        cd.days.textContent = pad(d);
+        cd.hours.textContent = pad(h);
+        cd.mins.textContent = pad(m);
+        cd.secs.textContent = pad(s);
     }
 
-    // ---- Render feed figures ----
-    function renderStats(stats) {
-        elScanned.textContent = nf(stats.scanned);
-        elOrders.textContent = nf(stats.checkedInOrders);
-        elSold.textContent = nf(stats.sold);
-        elPercent.textContent = stats.percent == null ? '—' : stats.percent + '%';
-        elProgress.style.width = (stats.percent == null ? 0 : Math.min(100, stats.percent)) + '%';
+    function renderStats(st) {
+        elScanned.textContent = nf(st.scanned);
+        elOrders.textContent = nf(st.checkedInOrders);
+        elSold.textContent = nf(st.sold);
+        elPercent.textContent = st.percent == null ? '—' : st.percent + '%';
+        elProgress.style.width = (st.percent == null ? 0 : Math.min(100, st.percent)) + '%';
+        elIssues.textContent = nf(st.issues);
+        elIssuesFig.classList.toggle('has-issues', (st.issues || 0) > 0);
     }
 
     function renderOperators(rows) {
-        if (!rows || !rows.length) {
-            elBars.innerHTML = '';
-            elBarsEmpty.hidden = false;
-            return;
-        }
+        if (!rows || !rows.length) { elBars.innerHTML = ''; elBarsEmpty.hidden = false; return; }
         elBarsEmpty.hidden = true;
         var max = rows.reduce(function (m, r) { return Math.max(m, r.tickets || 0); }, 0) || 1;
-        var html = rows.map(function (r) {
+        elBars.innerHTML = rows.map(function (r) {
             var pct = Math.round(((r.tickets || 0) / max) * 100);
             return '<div class="bar-row">'
-                + '<span class="bar-name" title="' + esc(r.name) + '">' + esc(r.name) + '</span>'
-                + '<span class="bar-track"><span class="bar-fill" style="width:' + pct + '%"></span></span>'
-                + '<span class="bar-val">' + nf(r.tickets) + '</span>'
-                + '</div>';
+                + '<span class="nm" title="' + esc(r.name) + '">' + esc(r.name) + '</span>'
+                + '<span class="trk"><span class="fil" style="width:' + pct + '%"></span></span>'
+                + '<span class="vl">' + nf(r.tickets) + '</span></div>';
         }).join('');
-        elBars.innerHTML = html;
     }
 
-    function feedItemHtml(s) {
-        var meta = [];
-        if (s.tickets) meta.push('<span class="fi-tickets">' + nf(s.tickets) + (s.tickets === 1 ? ' ticket' : ' tickets') + '</span>');
-        if (s.breakdown) meta.push('<span>' + esc(s.breakdown) + '</span>');
-        meta.push('<span>' + esc(s.operator) + '</span>');
-        return '<div class="feed-item" data-ref="' + esc(s.reference) + '">'
-            + '<div class="fi-top"><span class="fi-name">' + esc(s.name) + '</span>'
-            + '<span class="fi-time">' + esc(s.atLabel) + '</span></div>'
-            + '<div class="fi-meta">' + meta.join('') + '</div>'
+    // Outcome → row class + display. Duplicates and errors read differently
+    // from a clean check-in so the door team spots problems at a glance.
+    function outcomeClass(o) {
+        if (o === 'success') return 'is-success';
+        if (o === 'duplicate') return 'is-duplicate';
+        return 'is-error';
+    }
+
+    function rowHtml(s) {
+        var cls = outcomeClass(s.outcome);
+        var title = s.name || s.reference || 'Unknown ticket';
+        var metaBits = [];
+        if (s.breakdown) metaBits.push(esc(s.breakdown));
+        metaBits.push(esc(s.operator));
+        var meta = metaBits.join('  ·  ');
+
+        var flag = '';
+        if (s.outcome === 'duplicate') flag = '<span class="flag">Duplicate · ' + esc(s.message) + '</span>';
+        else if (s.outcome !== 'success') flag = '<span class="flag">' + esc(s.message) + '</span>';
+
+        var count = s.outcome === 'success' && s.tickets
+            ? '<span class="count">+' + nf(s.tickets) + '</span>'
+            : '<span class="count count--none">·</span>';
+
+        return '<div class="row ' + cls + '" data-id="' + s.id + '">'
+            + '<span class="tick"></span>'
+            + '<span class="main"><span class="name">' + esc(title) + '</span>'
+            + '<span class="meta">' + meta + '</span>' + flag + '</span>'
+            + '<span class="aside">' + count + '<span class="at">' + esc(s.atLabel) + '</span></span>'
             + '</div>';
     }
 
     function renderFeed(recent) {
         if (!recent || !recent.length) {
-            if (!elFeed.children.length) { elFeedEmpty.hidden = false; }
+            if (!elFeed.children.length) elFeedEmpty.hidden = false;
             return;
         }
         elFeedEmpty.hidden = true;
-
-        // Rebuild the feed in server order (newest first). Cheap at <=30 rows
-        // and keeps the list exactly in sync with the source of truth. New top
-        // rows animate in via the CSS keyframe on fresh nodes.
-        var topRef = recent[0].reference;
-        if (topRef === lastTopRef && elFeed.children.length) {
-            return; // nothing newer since last poll
-        }
-        lastTopRef = topRef;
-        elFeed.innerHTML = recent.map(feedItemHtml).join('');
+        var topId = recent[0].id;
+        if (topId === lastTopId && elFeed.children.length) return;  // nothing new
+        lastTopId = topId;
+        elFeed.innerHTML = recent.map(rowHtml).join('');
     }
 
     function apply(data) {
-        if (data.doorsOpen && !doorsOpen) { showPhase(true); }
-        if (!data.doorsOpen && doorsOpen) { showPhase(false); }
+        if (data.doorsOpen !== doorsOpen) showPhase(data.doorsOpen);
         if (data.doorsOpen) {
             renderStats(data.stats);
             renderOperators(data.byOperator);
@@ -419,21 +477,17 @@
         fetch(FEED_URL, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (data) { if (data) apply(data); })
-            .catch(function () { /* transient network error: keep the last good view, retry next tick */ });
+            .catch(function () { /* transient error: keep last good view, retry next tick */ });
     }
 
-    // Embedded first-paint snapshot already rendered server-side; prime the
-    // feed figures + start the loops.
     @if ($snapshot['doorsOpen'])
         renderStats(@json($snapshot['stats']));
         renderOperators(@json($snapshot['byOperator']));
         renderFeed(@json($snapshot['recent']));
     @endif
 
-    setInterval(tickCountdown, 1000);
-    tickCountdown();
-    setInterval(poll, POLL_MS);
-    poll();
+    setInterval(tickCountdown, 1000); tickCountdown();
+    setInterval(poll, POLL_MS); poll();
 })();
 </script>
 </body>

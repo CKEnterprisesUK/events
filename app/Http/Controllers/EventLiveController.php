@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Event;
-use App\Models\Order;
+use App\Models\ScanEvent;
 use App\Models\Ticket;
 use App\Services\Branding\BrandingResolver;
 use App\Services\EventReportService;
@@ -11,7 +11,6 @@ use App\Services\RoleAuthorization;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
@@ -20,16 +19,23 @@ use Illuminate\Support\Facades\Gate;
  * an Event. (Live event dashboard)
  *
  * Two surfaces:
- *   - {@see show()} renders a chrome-free, black full-screen page: a countdown
- *     to doors opening before the Event starts, then a 2:1 split — the left two
- *     thirds carry the headline scan stats (total scanned, % of sold, total
- *     sold) over a per-operator bar graph, and the right third is a live feed
- *     of scanned tickets as they come in. A top bar offers "return to platform"
- *     and the company/event logo sits bottom-right. The page never needs a
- *     manual refresh; it polls {@see feed()}.
+ *   - {@see show()} renders a chrome-free, black full-screen page: a big
+ *     countdown to doors opening before the Event starts, then a 2:1 split —
+ *     the left two thirds carry the headline scan stats (a very large
+ *     scanned-tickets figure, the % of sold, and the total sold) over a
+ *     per-operator bar graph, and the right third is a live feed of every scan
+ *     as it happens, including duplicates and errors. A top bar offers "return
+ *     to platform" and the company/event logo sits bottom-right. The page never
+ *     needs a manual refresh; it polls {@see feed()}.
  *   - {@see feed()} is the lightweight JSON endpoint the page polls on an
- *     interval. It returns the current figures and the most recent check-ins so
- *     the display updates live without a full reload.
+ *     interval. It returns the current figures and the most recent scans so the
+ *     display updates live without a full reload.
+ *
+ * The headline counts (scanned / sold / %) come from the shared
+ * {@see EventReportService} and {@see Event::sellThrough()} so they never
+ * diverge from the reports. The live FEED and the issue tally come from the
+ * `scan_events` breadcrumb table, which — unlike `orders.scanned_at` — records
+ * every operator's attempts, successes and failures alike.
  *
  * Both are gated on ACTION_VIEW_REPORTS (Owner/Admin/Accountant; Super_Admins
  * bypass) and resolve the Event through the `dashboard.tenant` scope, so an
@@ -39,10 +45,10 @@ use Illuminate\Support\Facades\Gate;
 class EventLiveController extends Controller
 {
     /**
-     * How many of the most recent check-ins the live feed carries. Enough to
-     * fill the feed column on a large display without bloating each poll.
+     * How many of the most recent scans the live feed carries. Enough to fill
+     * the feed column on a large display without bloating each poll.
      */
-    private const FEED_LIMIT = 30;
+    private const FEED_LIMIT = 40;
 
     public function __construct(
         private readonly EventReportService $reports,
@@ -74,8 +80,8 @@ class EventLiveController extends Controller
 
     /**
      * The JSON snapshot the live page polls. Returns the headline figures, the
-     * per-operator breakdown for the graph, and the most recent check-ins for
-     * the feed. (Live event dashboard)
+     * per-operator breakdown for the graph, the issue tally, and the most
+     * recent scans for the feed. (Live event dashboard)
      */
     public function feed(Request $request, Event $event): JsonResponse
     {
@@ -86,16 +92,13 @@ class EventLiveController extends Controller
 
     /**
      * Build the live figures for an Event in the exact shape both the embedded
-     * first paint and the polled JSON use. Scan counts come from the shared
-     * {@see EventReportService} (the single attendance source of truth) and the
-     * sold total from the same `ticket_types.sold_count` figure used across the
-     * app, so these numbers never diverge from the reports.
+     * first paint and the polled JSON use.
      *
      * @return array{
      *     doorsOpen: bool,
-     *     stats: array{scanned:int, sold:int, percent:float|null, checkedInOrders:int, confirmedOrders:int},
+     *     stats: array{scanned:int, sold:int, percent:float|null, checkedInOrders:int, confirmedOrders:int, issues:int},
      *     byOperator: list<array{name:string, tickets:int, orders:int}>,
-     *     recent: list<array{reference:string, name:string, operator:string, tickets:int, at:string, atLabel:string, breakdown:string}>,
+     *     recent: list<array{id:int, outcome:string, reference:?string, name:?string, operator:string, tickets:int, at:string, atLabel:string, breakdown:string, message:string}>,
      *     generatedAt: string
      * }
      */
@@ -111,6 +114,13 @@ class EventLiveController extends Controller
         // nothing has sold, so the view can show an em dash rather than 0%.
         $percent = $sold > 0 ? round(min(100, $scanned / $sold * 100), 1) : null;
 
+        // Count of problem scans for this event (duplicates + errors), from the
+        // breadcrumb table — the figure behind the "issues" chip.
+        $issues = ScanEvent::query()
+            ->where('event_id', $event->getKey())
+            ->whereIn('outcome', ScanEvent::PROBLEM_OUTCOMES)
+            ->count();
+
         return [
             'doorsOpen' => $event->starts_at === null || now()->gte($event->starts_at),
             'stats' => [
@@ -119,6 +129,7 @@ class EventLiveController extends Controller
                 'percent' => $percent,
                 'checkedInOrders' => $attendance->checkedInOrders,
                 'confirmedOrders' => $attendance->confirmedOrders,
+                'issues' => $issues,
             ],
             'byOperator' => $attendance->byStaff,
             'recent' => $this->recentScans($event),
@@ -127,65 +138,80 @@ class EventLiveController extends Controller
     }
 
     /**
-     * The most recent check-ins for this Event, newest first, with the operator
-     * name and a ticket-type breakdown — the live feed rows. Built from the
-     * `scanned_at`/`scanned_by` stamps the door scanner writes. Tenant-scoped
-     * via the Event relation.
+     * The most recent scans for this Event, newest first — successes,
+     * duplicates and errors alike — from the `scan_events` breadcrumb table.
+     * Each row carries the operator, outcome and (for scans that matched an
+     * Order) a ticket-type breakdown. Tenant-scoped via the global company
+     * scope on {@see ScanEvent}; `event_id` narrows to this Event.
      *
-     * @return list<array{reference:string, name:string, operator:string, tickets:int, at:string, atLabel:string, breakdown:string}>
+     * @return list<array{id:int, outcome:string, reference:?string, name:?string, operator:string, tickets:int, at:string, atLabel:string, breakdown:string, message:string}>
      */
     private function recentScans(Event $event): array
     {
-        /** @var \Illuminate\Support\Collection<int, Order> $orders */
-        $orders = $event->orders()
-            ->whereNotNull('scanned_at')
-            ->with('scannedBy:id,name')
-            ->orderByDesc('scanned_at')
+        /** @var \Illuminate\Support\Collection<int, ScanEvent> $scans */
+        $scans = ScanEvent::query()
+            ->where('event_id', $event->getKey())
+            ->orderByDesc('id')
             ->limit(self::FEED_LIMIT)
             ->get();
 
-        if ($orders->isEmpty()) {
+        if ($scans->isEmpty()) {
             return [];
         }
 
-        $orderIds = $orders->pluck('id')->all();
+        // One query for a ticket-type breakdown across all the orders the feed
+        // references, so each successful/duplicate row can show which types the
+        // order covers without an N+1.
+        $orderIds = $scans->pluck('order_id')->filter()->unique()->all();
 
-        // Valid-ticket count + a ticket-type breakdown per order, in one query
-        // each, so the feed shows "how many" and "which types" without N+1.
-        $ticketCounts = Ticket::query()
-            ->whereIn('order_id', $orderIds)
-            ->where('status', Ticket::STATUS_VALID)
-            ->selectRaw('order_id, COUNT(*) as qty')
-            ->groupBy('order_id')
-            ->pluck('qty', 'order_id');
+        $breakdowns = $orderIds === []
+            ? collect()
+            : DB::table('tickets')
+                ->join('ticket_types', 'tickets.ticket_type_id', '=', 'ticket_types.id')
+                ->whereIn('tickets.order_id', $orderIds)
+                ->where('tickets.status', Ticket::STATUS_VALID)
+                ->selectRaw('tickets.order_id as order_id, ticket_types.name as name, COUNT(*) as qty')
+                ->groupBy('tickets.order_id', 'ticket_types.id', 'ticket_types.name')
+                ->orderBy('ticket_types.name')
+                ->get()
+                ->groupBy('order_id');
 
-        $breakdowns = DB::table('tickets')
-            ->join('ticket_types', 'tickets.ticket_type_id', '=', 'ticket_types.id')
-            ->whereIn('tickets.order_id', $orderIds)
-            ->where('tickets.status', Ticket::STATUS_VALID)
-            ->selectRaw('tickets.order_id as order_id, ticket_types.name as name, COUNT(*) as qty')
-            ->groupBy('tickets.order_id', 'ticket_types.id', 'ticket_types.name')
-            ->orderBy('ticket_types.name')
-            ->get()
-            ->groupBy('order_id');
-
-        return $orders->map(function (Order $order) use ($ticketCounts, $breakdowns): array {
-            $rows = $breakdowns->get($order->id, collect());
+        return $scans->map(function (ScanEvent $scan) use ($breakdowns): array {
+            $rows = $scan->order_id ? $breakdowns->get($scan->order_id, collect()) : collect();
             $breakdown = $rows
                 ->map(fn ($r): string => (int) $r->qty.'× '.$r->name)
                 ->implode(', ');
 
-            $scannedAt = Carbon::parse($order->scanned_at);
+            $at = $scan->created_at ?? now();
 
             return [
-                'reference' => (string) $order->order_reference,
-                'name' => (string) $order->customer_name,
-                'operator' => (string) ($order->scannedBy?->name ?? 'Unknown'),
-                'tickets' => (int) ($ticketCounts[$order->id] ?? 0),
-                'at' => $scannedAt->toIso8601String(),
-                'atLabel' => $scannedAt->format('H:i:s'),
+                'id' => (int) $scan->id,
+                'outcome' => (string) $scan->outcome,
+                'reference' => $scan->reference,
+                'name' => $scan->customer_name,
+                'operator' => (string) ($scan->operator_name ?? 'Unknown'),
+                'tickets' => (int) $scan->tickets,
+                'at' => $at->toIso8601String(),
+                'atLabel' => $at->format('H:i:s'),
                 'breakdown' => $breakdown,
+                'message' => $this->outcomeMessage($scan->outcome),
             ];
         })->all();
+    }
+
+    /**
+     * A short human label for a scan outcome, shown on error/duplicate feed
+     * rows where there is no customer context to lean on.
+     */
+    private function outcomeMessage(string $outcome): string
+    {
+        return match ($outcome) {
+            ScanEvent::OUTCOME_SUCCESS => 'Checked in',
+            ScanEvent::OUTCOME_DUPLICATE => 'Already scanned',
+            ScanEvent::OUTCOME_REJECTED => 'Wrong event / organisation',
+            ScanEvent::OUTCOME_FAILED => 'Ticket no longer valid',
+            ScanEvent::OUTCOME_UNREADABLE => 'Unreadable code',
+            default => 'Invalid code',
+        };
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\ScanEvent;
 use App\Services\QrService;
 use App\Services\RoleAuthorization;
 use Illuminate\Contracts\View\View;
@@ -109,6 +110,7 @@ class ScanController extends Controller
         $result = $this->resolve($payload);
 
         $this->remember($request, $result);
+        $this->logScanEvent($result);
 
         return view('dashboard.scan.index', [
             'result' => $result,
@@ -154,6 +156,52 @@ class ScanController extends Controller
         $history = array_slice($history, 0, self::HISTORY_LIMIT);
 
         $request->session()->put(self::HISTORY_KEY, $history);
+    }
+
+    /**
+     * Record this scan outcome centrally in `scan_events` so the live event
+     * dashboard can show the whole door team's activity — successful check-ins
+     * AND problems (duplicates, unreadable/invalid/foreign codes, void tickets)
+     * — in real time, not just this operator's own session recap.
+     *
+     * This is a best-effort operational breadcrumb: the authoritative check-in
+     * state is still `orders.scanned_at`, written in {@see resolve()}. A failure
+     * to log here must never fail the scan itself, so it is swallowed.
+     */
+    private function logScanEvent(array $result): void
+    {
+        // Map the resolve() status to a ScanEvent outcome. An "unreadable" and a
+        // verified-but-unknown code both carry no Order; the rest carry one.
+        $outcome = match ($result['status']) {
+            'checked_in' => ScanEvent::OUTCOME_SUCCESS,
+            'already_scanned' => ScanEvent::OUTCOME_DUPLICATE,
+            'rejected' => ScanEvent::OUTCOME_REJECTED,
+            'failed' => ScanEvent::OUTCOME_FAILED,
+            'unreadable' => ScanEvent::OUTCOME_UNREADABLE,
+            default => ScanEvent::OUTCOME_INVALID,
+        };
+
+        /** @var Order|null $order */
+        $order = $result['order'] ?? null;
+
+        try {
+            ScanEvent::create([
+                // company_id is auto-filled from the tenant context by
+                // BelongsToCompany; set event_id from the resolved Order.
+                'event_id' => $order?->event_id,
+                'order_id' => $order?->getKey(),
+                'operator_id' => Auth::id(),
+                'operator_name' => Auth::user()?->name,
+                'outcome' => $outcome,
+                'reference' => $order?->order_reference,
+                'customer_name' => $order?->customer_name,
+                'tickets' => (int) collect($result['breakdown'] ?? [])->sum('quantity'),
+                'created_at' => now(),
+            ]);
+        } catch (\Throwable) {
+            // Never let logging break the door. The session recap and the
+            // authoritative orders.scanned_at are already written.
+        }
     }
 
     /**
