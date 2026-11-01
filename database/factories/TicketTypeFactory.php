@@ -15,6 +15,24 @@ class TicketTypeFactory extends Factory
     protected $model = TicketType::class;
 
     /**
+     * Believable admission tiers for community fundraising events, so seeded
+     * ticket types read like real ones ("Adult", "Family", etc.) rather than
+     * faker word pairs.
+     *
+     * @var list<string>
+     */
+    public const TICKET_TYPE_NAMES = [
+        'Adult',
+        'Child (under 16)',
+        'Family (2 adults + 2 children)',
+        'Concession',
+        'Early Bird',
+        'VIP Table',
+        'Team of 6',
+        'Entry + Raffle Ticket',
+    ];
+
+    /**
      * Define the model's default state.
      *
      * Defaults to a paid Ticket_Type with an open sale window and no sold or
@@ -31,7 +49,7 @@ class TicketTypeFactory extends Factory
         return [
             'company_id' => $company,
             'event_id' => Event::factory()->for($company),
-            'name' => fake()->words(2, true),
+            'name' => fake()->randomElement(self::TICKET_TYPE_NAMES),
             'price_minor' => fake()->numberBetween(500, 50_000),
             'capacity' => fake()->numberBetween(10, 1_000),
             'capacity_mode' => TicketType::MODE_CAPPED,
