@@ -14,6 +14,7 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmbedController;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\EventLiveController;
 use App\Http\Controllers\EventPageController;
 use App\Http\Controllers\EventQuestionController;
 use App\Http\Controllers\EventReportController;
@@ -436,6 +437,16 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
         // `dashboard.tenant` group (foreign Events 404). (Attendance report)
         Route::get('/events/{event}/attendance', [EventReportController::class, 'attendance'])->name('events.attendance');
         Route::get('/events/{event}/attendance/export', [EventReportController::class, 'attendanceExport'])->name('events.attendance.export');
+
+        // Full-screen "live event" dashboard for display at the door. `live`
+        // renders the chrome-free black screen (countdown → live scan feed +
+        // stats + per-operator graph), and `live.feed` is the JSON endpoint it
+        // polls so the display stays live without a manual refresh. Both are
+        // READ-ONLY and gated on ACTION_VIEW_REPORTS in the controller, scoped
+        // to the user's Company by the `dashboard.tenant` group (foreign Events
+        // 404). (Live event dashboard)
+        Route::get('/events/{event}/live', [EventLiveController::class, 'show'])->name('events.live');
+        Route::get('/events/{event}/live/feed', [EventLiveController::class, 'feed'])->name('events.live.feed');
 
         // Ticket_Type management (Admin-gated in the controller), nested under
         // an Event. Create/update are scoped to the authenticated user's

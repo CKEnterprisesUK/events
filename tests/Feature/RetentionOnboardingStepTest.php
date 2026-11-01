@@ -36,6 +36,20 @@ class RetentionOnboardingStepTest extends TestCase
         ], $overrides);
     }
 
+    public function test_privacy_tab_points_data_subject_requests_to_the_customers_page(): void
+    {
+        $owner = User::factory()->owner()->create();
+
+        $response = $this->actingAs($owner)->get(route('dashboard.branding.edit'));
+
+        $response->assertOk();
+        // The dedicated Privacy & data section exists and directs erasure /
+        // export (access) requests to the individual customer page rather than
+        // duplicating the tools in settings.
+        $response->assertSee('data-tab="privacy"', false);
+        $response->assertSee(route('dashboard.customers.index'), false);
+    }
+
     public function test_retention_step_is_incomplete_until_explicitly_confirmed(): void
     {
         // A company with the default window but no explicit confirmation: the
@@ -89,6 +103,29 @@ class RetentionOnboardingStepTest extends TestCase
         $this->actingAs($owner)->put(route('dashboard.branding.update'), $this->orgFields([
             'retention_months' => 1,
         ]))->assertSessionHasErrors('retention_months');
+    }
+
+    public function test_retention_above_the_ceiling_is_rejected(): void
+    {
+        $owner = User::factory()->owner()->create();
+
+        // Above the 1200-month (100-year) ceiling — rejected.
+        $this->actingAs($owner)->put(route('dashboard.branding.update'), $this->orgFields([
+            'retention_months' => Company::RETENTION_MONTHS_MAX + 1,
+        ]))->assertSessionHasErrors('retention_months');
+    }
+
+    public function test_an_arbitrary_custom_month_value_is_accepted(): void
+    {
+        $owner = User::factory()->owner()->create();
+
+        // Not one of any preset list — a free value between the floor and
+        // ceiling is accepted and stored exactly.
+        $this->actingAs($owner)->put(route('dashboard.branding.update'), $this->orgFields([
+            'retention_months' => 17,
+        ]))->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame(17, $owner->company->fresh()->retention_months);
     }
 
     public function test_retention_confirmation_time_is_preserved_across_saves(): void

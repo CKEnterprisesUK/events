@@ -209,5 +209,6 @@ class CompanyLegalDetailsTest extends TestCase
         $response->assertSee('data-tab="organisation"', false);
         $response->assertSee('data-tab="address"', false);
         $response->assertSee('data-tab="contact"', false);
+        $response->assertSee('data-tab="privacy"', false);
     }
 }

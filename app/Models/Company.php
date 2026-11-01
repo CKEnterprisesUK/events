@@ -149,7 +149,10 @@ class Company extends Model
 
     public const RETENTION_MONTHS_MIN = 6;
 
-    public const RETENTION_MONTHS_MAX = 120;
+    // 100 years. A ceiling rather than "forever" so the column stays bounded
+    // and the sweep's cutoff arithmetic never overflows; 100 years is well
+    // beyond any realistic retention policy.
+    public const RETENTION_MONTHS_MAX = 1200;
 
     /**
      * @var list<string>

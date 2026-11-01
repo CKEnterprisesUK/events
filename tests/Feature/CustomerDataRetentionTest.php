@@ -69,7 +69,7 @@ class CustomerDataRetentionTest extends TestCase
         // Even a stored value below the floor / above the ceiling is clamped, so
         // a bad row can never drive the sweep outside the safe band.
         $tooSmall = Company::factory()->create(['retention_months' => 1]);
-        $tooLarge = Company::factory()->create(['retention_months' => 999]);
+        $tooLarge = Company::factory()->create(['retention_months' => 5000]);
 
         $this->assertSame(Company::RETENTION_MONTHS_MIN, $tooSmall->effectiveRetentionMonths());
         $this->assertSame(Company::RETENTION_MONTHS_MAX, $tooLarge->effectiveRetentionMonths());
