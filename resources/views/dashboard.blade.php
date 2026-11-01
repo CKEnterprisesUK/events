@@ -179,9 +179,9 @@
                     </thead>
                     <tbody>
                         @foreach ($upcomingEvents as $event)
-                            <tr>
+                            <tr class="row-nav">
                                 <td>
-                                    <a class="cell-strong" href="{{ route('dashboard.events.show', $event) }}">{{ $event->name }}</a>
+                                    <a class="cell-strong row-link" href="{{ route('dashboard.events.show', $event) }}">{{ $event->name }}</a>
                                     @if ($event->venue)
                                         <span class="cell-dim">{{ $event->venue }}</span>
                                     @endif
@@ -198,7 +198,9 @@
                                 <td>@include('dashboard.partials.sell-through', ['sellThrough' => $event->sell_through])</td>
                                 <td class="num">{{ number_format($event->confirmed_orders_count) }}</td>
                                 <td class="num">
-                                    <a class="panel__link" href="{{ route('dashboard.events.show', $event) }}">Open</a>
+                                    <a class="row-go row-action" href="{{ route('dashboard.events.show', $event) }}" aria-label="Open {{ $event->name }}">
+                                        <x-icon name="chevron" />
+                                    </a>
                                 </td>
                             </tr>
                         @endforeach
@@ -239,9 +241,9 @@
                     </thead>
                     <tbody>
                         @foreach ($recentEvents as $event)
-                            <tr>
+                            <tr class="row-nav">
                                 <td>
-                                    <a class="cell-strong" href="{{ route('dashboard.events.show', $event) }}">{{ $event->name }}</a>
+                                    <a class="cell-strong row-link" href="{{ route('dashboard.events.show', $event) }}">{{ $event->name }}</a>
                                     @if ($event->venue)
                                         <span class="cell-dim">{{ $event->venue }}</span>
                                     @endif
@@ -255,7 +257,9 @@
                                 <td>@include('dashboard.partials.sell-through', ['sellThrough' => $event->sell_through])</td>
                                 <td class="num">{{ number_format($event->confirmed_orders_count) }}</td>
                                 <td class="num">
-                                    <a class="panel__link" href="{{ route('dashboard.events.show', $event) }}">Open</a>
+                                    <a class="row-go row-action" href="{{ route('dashboard.events.show', $event) }}" aria-label="Open {{ $event->name }}">
+                                        <x-icon name="chevron" />
+                                    </a>
                                 </td>
                             </tr>
                         @endforeach

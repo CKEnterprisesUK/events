@@ -11,10 +11,8 @@
     }
     .filter-bar label { display: block; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 0.25rem; }
     .pager { display: flex; justify-content: center; padding: 1rem; }
-    .pill--paid, .pill--free_confirmed { background: #ecfdf5; color: #047857; }
-    .pill--reserved { background: #eff6ff; color: #1d4ed8; }
-    .pill--refunded, .pill--disputed { background: #fef2f2; color: #b91c1c; }
-    .pill--cancelled, .pill--expired, .pill--voided { background: #f3f4f6; color: #6b7280; }
+    /* Order-status pill colours are now provided by the shared dashboard theme
+       layer in app.css (softly-filled badges). No local palette needed. */
     .orders-export { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
     .orders-export__label { font-size: 0.82rem; color: var(--muted); }
 </style>
@@ -107,8 +105,8 @@
                 </thead>
                 <tbody>
                     @foreach ($orders as $order)
-                        <tr>
-                            <td><a class="cell-strong" href="{{ route('dashboard.orders.show', $order) }}">{{ $order->order_reference }}</a></td>
+                        <tr class="row-nav">
+                            <td><a class="cell-strong cell-ref row-link" href="{{ route('dashboard.orders.show', $order) }}">{{ $order->order_reference }}</a></td>
                             <td>
                                 {{ $order->customer_name }}
                                 <span class="cell-dim">{{ $order->customer_email }}</span>
@@ -117,7 +115,11 @@
                             <td>{{ $order->created_at?->format('j M Y, H:i') ?? '—' }}</td>
                             <td><span class="pill pill--{{ $order->status }}">{{ ucfirst(str_replace('_', ' ', $order->status)) }}</span></td>
                             <td class="num">£{{ number_format($order->order_total_minor / 100, 2) }}</td>
-                            <td class="num"><a class="panel__link" href="{{ route('dashboard.orders.show', $order) }}">View</a></td>
+                            <td class="num">
+                                <a class="row-go row-action" href="{{ route('dashboard.orders.show', $order) }}" aria-label="Open order {{ $order->order_reference }}">
+                                    <x-icon name="chevron" />
+                                </a>
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -126,9 +128,9 @@
             {{-- Mobile: stacked order records. --}}
             <div class="only-mobile record-list" style="padding: 1rem 1.25rem;">
                 @foreach ($orders as $order)
-                    <div class="record-card">
+                    <div class="record-card row-nav">
                         <div class="record-card__body">
-                            <a class="record-card__title cell-strong" href="{{ route('dashboard.orders.show', $order) }}">{{ $order->order_reference }}</a>
+                            <a class="record-card__title cell-strong cell-ref row-link" href="{{ route('dashboard.orders.show', $order) }}">{{ $order->order_reference }}</a>
                             <span class="record-card__meta record-card__meta--strong">{{ $order->customer_name }}</span>
                             <span class="record-card__meta">{{ $order->customer_email }}</span>
                             <span class="record-card__meta">{{ $order->event?->name ?? '—' }} · {{ $order->created_at?->format('j M Y, H:i') ?? '—' }}</span>
@@ -137,7 +139,7 @@
                                 · £{{ number_format($order->order_total_minor / 100, 2) }}
                             </span>
                         </div>
-                        <a class="btn btn-outline btn-sm record-card__action" href="{{ route('dashboard.orders.show', $order) }}">View</a>
+                        <a class="btn btn-outline btn-sm record-card__action row-action" href="{{ route('dashboard.orders.show', $order) }}">View</a>
                     </div>
                 @endforeach
             </div>
