@@ -213,7 +213,37 @@ class ScanController extends Controller
      */
     private function resolve(string $payload): array
     {
-        // 16.3 — an undecodable payload (wrong shape) is unreadable.
+        $payload = trim($payload);
+
+        // Two kinds of input reach this method:
+        //   1. A scanned QR payload — the `reference.token` shape {@see
+        //      QrService::payload()} produces. It carries a `.` and is always
+        //      HMAC-verified (16.4, 16.5) so a tampered/foreign token is caught.
+        //   2. A manually typed Order_Reference — the door fallback for when a
+        //      QR won't scan (damaged print, dead screen, bad light). An
+        //      Order_Reference is 12 uppercase [A-Z0-9] chars and never contains
+        //      a `.`, so the separator cleanly tells the two apart.
+        //
+        // The manual-reference path skips the HMAC: a typed reference was never
+        // a token, so there is nothing to recompute. It stays safe because the
+        // Order lookup below runs through the tenant scope — an operator can
+        // only ever check in their own Company's Orders, exactly as with a scan.
+        if (! str_contains($payload, QrService::SEPARATOR)) {
+            $reference = $this->normaliseReference($payload);
+
+            // 16.3 — nothing usable typed/scanned at all is still unreadable.
+            if ($reference === '') {
+                return [
+                    'status' => 'unreadable',
+                    'message' => 'Unreadable code. Please try scanning again.',
+                ];
+            }
+
+            return $this->checkIn($reference);
+        }
+
+        // 16.3 — a payload carrying a `.` but not the `reference.token` shape
+        // (e.g. an empty side) is undecodable and unreadable.
         if ($this->qr->decode($payload) === null) {
             return [
                 'status' => 'unreadable',
@@ -231,6 +261,32 @@ class ScanController extends Controller
                 'message' => 'Invalid code. This ticket could not be verified.',
             ];
         }
+
+        return $this->checkIn($reference);
+    }
+
+    /**
+     * Normalise a manually typed Order_Reference to the stored form: trimmed
+     * and uppercased, since references are generated uppercase but a tired
+     * operator may type them in any case. Returns '' when nothing usable
+     * remains.
+     */
+    private function normaliseReference(string $input): string
+    {
+        return strtoupper(trim($input));
+    }
+
+    /**
+     * The shared tail of {@see resolve()} from the verified/typed
+     * Order_Reference onward: tenant-scoped load (16.6), confirmed-state check
+     * (16.10), already-scanned check (16.9) and the atomic single check-in
+     * (16.7, 16.8). Both the scanned-payload and manual-reference paths funnel
+     * through here so they behave identically once a reference is in hand.
+     *
+     * @return array{status: string, message: string, order?: Order, scanned_at?: \Illuminate\Support\Carbon, breakdown?: array<int, array{name: string, quantity: int}>}
+     */
+    private function checkIn(string $reference): array
+    {
 
         // 16.6 — load through the tenant scope: an Order of another Company (or
         // no such Order) never matches and is rejected.

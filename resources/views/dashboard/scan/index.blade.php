@@ -50,9 +50,14 @@
             </button>
 
             <div id="scan-manual" class="field scanner__manual" hidden>
-                <label for="scan-payload-manual">Scanned code</label>
+                <label for="scan-payload-manual">Order reference</label>
                 <input type="text" id="scan-payload-manual" autocomplete="off"
-                       autocapitalize="off" autocorrect="off" spellcheck="false" />
+                       autocapitalize="characters" autocorrect="off" spellcheck="false"
+                       placeholder="e.g. A1B2C3D4E5F6" />
+                <p class="scanner__manual-hint">
+                    Type the order reference from the ticket if the QR code
+                    won't scan.
+                </p>
                 <button type="submit" class="btn">Check in</button>
             </div>
         </form>
@@ -144,6 +149,11 @@
             cursor: pointer;
         }
         .scanner__manual { margin-top: 0.75rem; }
+        .scanner__manual-hint {
+            margin: 0.35rem 0 0.5rem;
+            color: #6b7280;
+            font-size: 0.8rem;
+        }
         .scanner-camera {
             position: relative;
             width: 100%;

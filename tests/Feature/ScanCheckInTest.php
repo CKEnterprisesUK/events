@@ -93,13 +93,83 @@ class ScanCheckInTest extends TestCase
     {
         $scanner = User::factory()->scanner()->create();
 
-        // 16.3 — a payload that is not `reference.token` cannot be decoded.
+        // 16.3 — a payload carrying the `.` separator but not the
+        // `reference.token` shape (empty token side) cannot be decoded. A
+        // dot-less string is now treated as a manually typed Order_Reference
+        // (see the manual-entry tests below), so an unreadable payload must be
+        // one that looks like a scanned code yet decodes to nothing.
         $response = $this->actingAs($scanner)->post('/dashboard/scan', [
-            'payload' => 'not-a-valid-payload',
+            'payload' => 'ABC123.',
         ]);
 
         $response->assertStatus(200);
         $response->assertSee('Unreadable code');
+    }
+
+    public function test_blank_payload_is_unreadable(): void
+    {
+        $scanner = User::factory()->scanner()->create();
+
+        // 16.3 — nothing scanned/typed at all is unreadable, not a reference
+        // lookup for the empty string.
+        $response = $this->actingAs($scanner)->post('/dashboard/scan', [
+            'payload' => '   ',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertSee('Unreadable code');
+    }
+
+    // ---- Manual Order_Reference entry (door fallback for an unscannable QR) --
+
+    public function test_manual_order_reference_checks_in_without_a_token(): void
+    {
+        $scanner = User::factory()->scanner()->create();
+        $order = $this->confirmedOrderFor($scanner);
+
+        // A typed Order_Reference carries no `.` and no token — it is looked up
+        // directly (tenant-scoped) and checked in, the door fallback for a QR
+        // that won't scan.
+        $response = $this->actingAs($scanner)->post('/dashboard/scan', [
+            'payload' => $order->order_reference,
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertSee('Checked in');
+
+        $this->assertNotNull($order->fresh()->scanned_at);
+        $this->assertSame($scanner->id, $order->fresh()->scanned_by);
+    }
+
+    public function test_manual_order_reference_is_case_insensitive(): void
+    {
+        $scanner = User::factory()->scanner()->create();
+        $order = $this->confirmedOrderFor($scanner);
+
+        // References are stored uppercase; an operator typing lowercase still
+        // matches.
+        $response = $this->actingAs($scanner)->post('/dashboard/scan', [
+            'payload' => strtolower($order->order_reference),
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertSee('Checked in');
+        $this->assertNotNull($order->fresh()->scanned_at);
+    }
+
+    public function test_manual_unknown_order_reference_is_rejected(): void
+    {
+        $scanner = User::factory()->scanner()->create();
+
+        // A reference with no matching Order (or one of another Company) is not
+        // found through the tenant scope and is rejected — the same outcome as
+        // a scanned foreign code.
+        $response = $this->actingAs($scanner)->post('/dashboard/scan', [
+            'payload' => 'NOSUCHREF0001',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertSee('Rejected');
     }
 
     public function test_tampered_token_is_rejected_as_invalid(): void
