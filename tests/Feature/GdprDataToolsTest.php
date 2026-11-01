@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\CustomerController;
 use App\Models\Company;
 use App\Models\Event;
 use App\Models\Order;
@@ -9,7 +10,6 @@ use App\Models\OrderConsent;
 use App\Models\Ticket;
 use App\Models\TicketType;
 use App\Models\User;
-use App\Http\Controllers\CustomerController;
 use App\Services\GdprService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -258,6 +258,74 @@ class GdprDataToolsTest extends TestCase
         $foreign = Order::withoutGlobalScopes()->find($otherOrder->id);
         $this->assertSame('Foreign Customer', $foreign->customer_name);
         $this->assertSame('shared@example.com', $foreign->customer_email);
+    }
+
+    // ---- Export: retention + marketing summary ------------------------------
+
+    public function test_export_includes_the_retention_deletion_date_and_window(): void
+    {
+        $owner = User::factory()->owner()->create();
+        $company = Company::find($owner->company_id);
+        $company->update(['retention_months' => 24]);
+        $event = Event::factory()->for($company)->unlimitedCapacity()->create();
+
+        // Pin the last-order date so the deletion-due date is deterministic.
+        $order = $this->customerOrder($event, 'jo@example.com', name: 'Jo Bloggs');
+        $order->forceFill(['created_at' => now()->subMonths(6)->startOfDay()])->save();
+
+        $token = CustomerController::tokenFor('jo@example.com');
+        $payload = $this->actingAs($owner)->post("/dashboard/customers/{$token}/export")->json();
+
+        $this->assertSame(24, $payload['retention']['retention_months']);
+        $this->assertNotNull($payload['retention']['last_order_at']);
+        $this->assertNotNull($payload['retention']['deletion_due_at']);
+
+        // deletion_due_at = last_order_at + retention window.
+        $expected = now()->subMonths(6)->startOfDay()->addMonths(24)->toIso8601String();
+        $this->assertSame($expected, $payload['retention']['deletion_due_at']);
+    }
+
+    public function test_export_surfaces_the_latest_marketing_preference(): void
+    {
+        $owner = User::factory()->owner()->create();
+        $company = Company::find($owner->company_id);
+        $event = Event::factory()->for($company)->unlimitedCapacity()->create();
+
+        // customerOrder() captures marketing = false. Add a newer order whose
+        // marketing consent is accepted; the LATEST preference must win.
+        $this->customerOrder($event, 'optin@example.com', name: 'Opt In');
+        $newer = Order::factory()->forEvent($event)->create([
+            'customer_name' => 'Opt In',
+            'customer_email' => 'optin@example.com',
+            'status' => Order::STATUS_PAID,
+            'created_at' => now(),
+        ]);
+        OrderConsent::factory()->forOrder($newer)->key('marketing', true)
+            ->create(['captured_at' => now()]);
+
+        $token = CustomerController::tokenFor('optin@example.com');
+        $payload = $this->actingAs($owner)->post("/dashboard/customers/{$token}/export")->json();
+
+        $this->assertTrue($payload['marketing_preference']);
+    }
+
+    public function test_export_marketing_preference_is_null_when_never_captured(): void
+    {
+        $owner = User::factory()->owner()->create();
+        $company = Company::find($owner->company_id);
+        $event = Event::factory()->for($company)->unlimitedCapacity()->create();
+
+        // An order with only terms/privacy consents — no marketing consent.
+        $order = Order::factory()->forEvent($event)->create([
+            'customer_email' => 'no-marketing@example.com',
+            'status' => Order::STATUS_PAID,
+        ]);
+        OrderConsent::factory()->forOrder($order)->key('terms', true)->create();
+
+        $token = CustomerController::tokenFor('no-marketing@example.com');
+        $payload = $this->actingAs($owner)->post("/dashboard/customers/{$token}/export")->json();
+
+        $this->assertNull($payload['marketing_preference']);
     }
 
     // ---- Customer addressing -------------------------------------------------

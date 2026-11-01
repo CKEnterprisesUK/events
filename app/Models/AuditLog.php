@@ -191,6 +191,8 @@ class AuditLog extends Model
 
     public const GDPR_CUSTOMER_ANONYMISED = 'gdpr.customer_anonymised';
 
+    public const GDPR_RETENTION_SWEEP = 'gdpr.retention_sweep';
+
     // System (no actor)
     public const WEBHOOK_PAYMENT_CONFIRMED = 'webhook.payment_confirmed';
 
@@ -266,6 +268,7 @@ class AuditLog extends Model
         self::GDPR_CUSTOMER_EXPORTED => ['category' => self::CATEGORY_PRIVACY, 'label' => 'Exported customer data'],
         self::GDPR_CUSTOMERS_EXPORTED => ['category' => self::CATEGORY_PRIVACY, 'label' => 'Exported the customer list'],
         self::GDPR_CUSTOMER_ANONYMISED => ['category' => self::CATEGORY_PRIVACY, 'label' => 'Anonymised customer data'],
+        self::GDPR_RETENTION_SWEEP => ['category' => self::CATEGORY_PRIVACY, 'label' => 'Auto-anonymised customer data past retention'],
 
         self::WEBHOOK_PAYMENT_CONFIRMED => ['category' => self::CATEGORY_SYSTEM, 'label' => 'Payment confirmed'],
         self::WEBHOOK_REFUND_PROCESSED => ['category' => self::CATEGORY_SYSTEM, 'label' => 'Refund processed'],

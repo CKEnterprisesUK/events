@@ -7,6 +7,7 @@ use App\Services\EventReadiness;
 use App\Services\EventReportService;
 use App\Services\Reporting\ReportDateRange;
 use App\Services\RoleAuthorization;
+use App\Support\PlatformBrand;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -136,6 +137,10 @@ class EventReportController extends Controller
             foreach ($report->timeline as $row) {
                 fputcsv($out, [$row['hour'], $row['orders'], $row['tickets']]);
             }
+
+            // Platform attribution footer.
+            fputcsv($out, []);
+            fputcsv($out, [PlatformBrand::line()]);
 
             fclose($out);
         }, $filename, [

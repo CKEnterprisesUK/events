@@ -159,9 +159,13 @@
              event, otherwise the current page title, so a user always knows
              where they are without the sidebar visible. --}}
         @php
+            // Mobile top-bar context label. Prefer the event name, then the
+            // layout's page_title (when a page uses the layout heading), then a
+            // `mobile_context` section for pages that render their OWN in-page
+            // heading (so they don't set page_title and get a duplicate <h1>).
             $mobileContext = (isset($event) && $event instanceof \App\Models\Event)
                 ? $event->name
-                : trim($__env->yieldContent('page_title', ''));
+                : (trim($__env->yieldContent('page_title', '')) ?: trim($__env->yieldContent('mobile_context', '')));
         @endphp
         @if ($mobileContext !== '')
             <span class="app-header__context" aria-hidden="true">{{ $mobileContext }}</span>

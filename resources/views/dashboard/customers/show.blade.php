@@ -50,6 +50,19 @@
                 <div class="detail__label">Confirmed spend</div>
                 <div class="detail__value">{{ $money($confirmedSpendMinor) }}</div>
             </div>
+            <div>
+                <div class="detail__label">Data retention</div>
+                <div class="detail__value">
+                    @if ($retentionDeletionAt)
+                        {{ $retentionDeletionAt->format('j M Y') }}
+                    @else
+                        —
+                    @endif
+                </div>
+                <div class="detail__label" style="text-transform: none; letter-spacing: 0; margin-top: 0.25rem;">
+                    Personal data auto-anonymised after {{ $retentionMonths }} months (from last order).
+                </div>
+            </div>
         </div>
     </div>
 

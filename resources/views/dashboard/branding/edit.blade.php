@@ -10,7 +10,7 @@
         'storefront' => ['about_text', 'facebook_url', 'instagram_url', 'x_url', 'linkedin_url'],
         'organisation' => ['legal_name', 'trading_name', 'organisation_type', 'company_number', 'charity_number', 'website', 'email', 'phone'],
         'address' => ['address_line_1', 'address_line_2', 'city', 'postcode', 'country'],
-        'contact' => ['support_email', 'gdpr_contact_email'],
+        'contact' => ['support_email', 'gdpr_contact_email', 'retention_months'],
     ];
 
     $errorTab = 'appearance';
@@ -287,6 +287,28 @@
                            value="{{ old('gdpr_contact_email', $company->gdpr_contact_email) }}" placeholder="privacy@yourcompany.com">
                     <span class="field-hint">Where data-subject and privacy requests are handled.</span>
                     @error('gdpr_contact_email')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="field">
+                    <label for="retention_months">Customer data retention</label>
+                    <select name="retention_months" id="retention_months">
+                        @php
+                            // Offer sensible windows between the platform floor
+                            // and ceiling; preselect the company's current value
+                            // or the default.
+                            $options = [6 => '6 months', 12 => '1 year', 24 => '2 years (recommended)', 36 => '3 years', 60 => '5 years', 84 => '7 years'];
+                            $selected = (int) old('retention_months', $company->retention_months ?? \App\Models\Company::RETENTION_MONTHS_DEFAULT);
+                        @endphp
+                        @foreach ($options as $months => $label)
+                            <option value="{{ $months }}" @selected($selected === $months)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    <span class="field-hint">
+                        How long customer personal data (name, email) is kept after their last order
+                        before it is automatically anonymised. Transactional records (order references,
+                        amounts, fees) are always kept for your accounts.
+                    </span>
+                    @error('retention_months')<p class="error">{{ $message }}</p>@enderror
                 </div>
             </div>
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Order;
 use App\Support\Money;
+use App\Support\PlatformBrand;
 use Illuminate\Contracts\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -130,6 +131,10 @@ class TransactionController extends Controller
                     $order->stripe_fee_minor === null ? '' : $major((int) $order->stripe_fee_minor),
                 ]);
             }
+
+            // Platform attribution footer.
+            fputcsv($out, []);
+            fputcsv($out, [PlatformBrand::line()]);
 
             fclose($out);
         }, $filename, [

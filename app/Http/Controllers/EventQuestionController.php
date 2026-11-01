@@ -11,6 +11,7 @@ use App\Services\EventReadiness;
 use App\Services\EventReportService;
 use App\Services\Reporting\ReportDateRange;
 use App\Services\RoleAuthorization;
+use App\Support\PlatformBrand;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\RedirectResponse;
@@ -179,6 +180,10 @@ class EventQuestionController extends Controller
 
                 fputcsv($out, $row);
             }
+
+            // Platform attribution footer.
+            fputcsv($out, []);
+            fputcsv($out, [PlatformBrand::line()]);
 
             fclose($out);
         }, $filename, [

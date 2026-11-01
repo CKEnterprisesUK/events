@@ -5,6 +5,7 @@ namespace App\Models;
 use Database\Factories\CompanyFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 /**
  * A Company is a tenant on the Platform. It is identified internally by its
@@ -49,6 +50,8 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $privacy_text
  * @property string|null $support_email
  * @property string|null $gdpr_contact_email
+ * @property int|null $retention_months
+ * @property Carbon|null $retention_confirmed_at
  */
 class Company extends Model
 {
@@ -131,6 +134,24 @@ class Company extends Model
     ];
 
     /**
+     * Customer-data retention: how long the Company keeps a Customer's
+     * identifiable personal data (name/email on their Orders) after that
+     * Customer's LAST order, before the daily sweep anonymises it. The
+     * transactional records are always retained — only the personal data is
+     * scrubbed. The window is chosen by the Owner during onboarding.
+     *
+     * The DEFAULT (24 months) applies until the Owner confirms a value, keeping
+     * behaviour safe out of the box. The MINIMUM (6 months) is a floor so a
+     * Company cannot set a window short enough to scrub data that is still
+     * inside the refund/dispute/chargeback horizon.
+     */
+    public const RETENTION_MONTHS_DEFAULT = 24;
+
+    public const RETENTION_MONTHS_MIN = 6;
+
+    public const RETENTION_MONTHS_MAX = 120;
+
+    /**
      * @var list<string>
      */
     protected $fillable = [
@@ -171,6 +192,8 @@ class Company extends Model
         'privacy_text',
         'support_email',
         'gdpr_contact_email',
+        'retention_months',
+        'retention_confirmed_at',
     ];
 
     /**
@@ -199,7 +222,39 @@ class Company extends Model
             'stripe_details_submitted' => 'boolean',
             'stripe_requirements' => 'array',
             'company_fee_percent' => 'decimal:2',
+            'retention_months' => 'integer',
+            'retention_confirmed_at' => 'datetime',
         ];
+    }
+
+    /**
+     * The retention window actually in force for this Company: the Owner's
+     * chosen value, or the Platform default when none has been set yet. This is
+     * the single source of truth the anonymisation sweep and the customer
+     * export both read, so an unconfigured Company still has a safe,
+     * well-defined retention policy (the 24-month default) rather than no
+     * policy at all.
+     */
+    public function effectiveRetentionMonths(): int
+    {
+        $months = $this->retention_months ?? self::RETENTION_MONTHS_DEFAULT;
+
+        // Defensive clamp: never let a stored value drive the sweep below the
+        // floor or above the ceiling, even if a bad value ever reached the row.
+        return max(
+            self::RETENTION_MONTHS_MIN,
+            min(self::RETENTION_MONTHS_MAX, $months),
+        );
+    }
+
+    /**
+     * Whether the Owner has explicitly confirmed a customer-data retention
+     * choice. Drives the onboarding checklist step — a silent default does not
+     * count as a deliberate decision.
+     */
+    public function hasConfirmedRetention(): bool
+    {
+        return $this->retention_confirmed_at !== null;
     }
 
     /**

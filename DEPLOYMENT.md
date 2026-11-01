@@ -44,6 +44,16 @@ so it works whether or not `schedule:run` is usable:
 0 3 * * * cd /home/USER/events.domain && php artisan audit:prune >> /dev/null 2>&1
 ```
 
+**Customer-data retention (daily).** Each Company's customer personal data is
+anonymised once a Customer's last order has aged past that Company's retention
+window (default 24 months, chosen during onboarding). The transactional records
+are always kept. Like `audit:prune`, it runs synchronously so it works whether
+or not `schedule:run` is usable:
+
+```
+0 2 * * * cd /home/USER/events.domain && php artisan customers:anonymise-expired >> /dev/null 2>&1
+```
+
 Because `queue:work` is invoked by the scheduler rather than run as a daemon,
 the cron line above is the only thing that must be configured on the host.
 

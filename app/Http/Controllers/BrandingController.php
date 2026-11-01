@@ -101,6 +101,18 @@ class BrandingController extends Controller
             'support_email' => ['nullable', 'string', 'email', 'max:254'],
             'gdpr_contact_email' => ['nullable', 'string', 'email', 'max:254'],
 
+            // Customer-data retention window (months). Floored at the Platform
+            // minimum so it can never be set short enough to scrub data still
+            // inside the refund/dispute horizon, capped at the maximum. Required
+            // so saving the GDPR/contacts section is an explicit retention
+            // decision — the onboarding step completes only once it is set.
+            'retention_months' => [
+                'required',
+                'integer',
+                'min:'.Company::RETENTION_MONTHS_MIN,
+                'max:'.Company::RETENTION_MONTHS_MAX,
+            ],
+
             // Public storefront profile: about-the-company blurb and external
             // links (social profiles + the organiser's own legal pages).
             'about_text' => ['nullable', 'string', 'max:5000'],
@@ -145,6 +157,11 @@ class BrandingController extends Controller
             'privacy_text' => $data['privacy_text'] ?? null,
             'support_email' => $data['support_email'] ?? null,
             'gdpr_contact_email' => $data['gdpr_contact_email'] ?? null,
+            // Saving the retention window IS the explicit confirmation; stamp
+            // the confirmation time the first time (preserve it thereafter) so
+            // the onboarding checklist step reports complete.
+            'retention_months' => $data['retention_months'],
+            'retention_confirmed_at' => $company->retention_confirmed_at ?? now(),
             'about_text' => $data['about_text'] ?? null,
             'facebook_url' => $data['facebook_url'] ?? null,
             'instagram_url' => $data['instagram_url'] ?? null,

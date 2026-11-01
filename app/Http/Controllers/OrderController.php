@@ -15,6 +15,7 @@ use App\Services\RoleAuthorization;
 use App\Services\SimpleXlsxWriter;
 use App\Services\TenantContext;
 use App\Services\TicketPdfService;
+use App\Support\PlatformBrand;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -188,6 +189,10 @@ class OrderController extends Controller
                 fputcsv($out, $this->exportRow($order, $money));
             }
 
+            // Platform attribution footer.
+            fputcsv($out, []);
+            fputcsv($out, [PlatformBrand::line()]);
+
             fclose($out);
         }, $filename, [
             'Content-Type' => 'text/csv; charset=UTF-8',
@@ -212,6 +217,10 @@ class OrderController extends Controller
         foreach ($orders as $order) {
             $writer->addRow($this->exportRow($order, $money));
         }
+
+        // Platform attribution footer.
+        $writer->addBlankRow();
+        $writer->addRow([PlatformBrand::line()]);
 
         try {
             $bytes = $writer->build();

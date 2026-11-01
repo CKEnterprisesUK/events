@@ -10,6 +10,7 @@ use App\Services\EventReportService;
 use App\Services\RoleAuthorization;
 use App\Services\SimpleXlsxWriter;
 use App\Services\TenantContext;
+use App\Support\PlatformBrand;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
@@ -297,6 +298,10 @@ class ReportController extends Controller
                 ]);
             }
 
+            // Platform attribution footer.
+            fputcsv($out, []);
+            fputcsv($out, [PlatformBrand::line()]);
+
             fclose($out);
         }, $filename, [
             'Content-Type' => 'text/csv; charset=UTF-8',
@@ -393,6 +398,10 @@ class ReportController extends Controller
                 $this->majorFloat($row['net_payout_minor']),
             ]);
         }
+
+        // Platform attribution footer.
+        $writer->addBlankRow();
+        $writer->addRow([PlatformBrand::line()]);
 
         $filename = 'sales-report-'.$this->filenameRange($from, $to).'.xlsx';
 
