@@ -45,27 +45,43 @@
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    {{-- A grotesque for text + a mono for the big numerals, so the figures read
-         like a scoreboard/departure board rather than generic card UI. --}}
-    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Cabin+Sketch:wght@700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    {{-- VT323 is a clean DOS/terminal bitmap-style face with dotless zeros — it
+         drives the whole screen for the simple console look. Cabin Sketch is
+         only for the "Events by CK Enterprises" wordmark lockup. --}}
+    <link href="https://fonts.googleapis.com/css2?family=Cabin+Sketch:wght@700&family=VT323&display=swap" rel="stylesheet">
     <style>
         :root {
             --accent: {{ $accent }};
-            --bg: #050506;
-            --ink: #f4f3ef;
-            --ink-dim: #6f6e6a;
-            --hair: rgba(255,255,255,.08);
-            --ok: #4ba36a;
-            --dup: #d2a53a;
-            --err: #c0493f;
-            --mono: 'Space Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
-            --sans: 'Archivo', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            --bg: #000;
+            --ink: #e8e6df;
+            --ink-dim: #7a786f;
+            --hair: rgba(255,255,255,.1);
+            --ok: #5fd98a;
+            --dup: #e6c15a;
+            --err: #e05a4f;
+            --mono: 'VT323', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+            --sans: 'VT323', ui-monospace, Menlo, monospace;
         }
         * { box-sizing: border-box; }
         html, body {
             margin: 0; height: 100%; background: var(--bg); color: var(--ink);
-            font-family: var(--sans); overflow: hidden;
-            -webkit-font-smoothing: antialiased;
+            font-family: var(--mono); overflow: hidden;
+            -webkit-font-smoothing: none;
+        }
+        /* Everything is the terminal face; VT323 renders crisp at large sizes. */
+
+        /* Faint CRT scanlines over the whole screen for the console feel. Kept
+           very subtle so the figures stay legible on a wall display. */
+        body::after {
+            content: ''; position: fixed; inset: 0; z-index: 50; pointer-events: none;
+            background: repeating-linear-gradient(
+                to bottom,
+                rgba(0,0,0,0) 0,
+                rgba(0,0,0,0) 2px,
+                rgba(0,0,0,.18) 3px,
+                rgba(0,0,0,.18) 3px
+            );
+            mix-blend-mode: multiply; opacity: .5;
         }
 
         .live { display: flex; flex-direction: column; height: 100vh; width: 100vw; }
@@ -77,51 +93,52 @@
         }
         .topbar .mark { display: flex; align-items: baseline; gap: .9rem; min-width: 0; }
         .topbar .live-tag {
-            font-family: var(--mono); font-size: .68rem; font-weight: 700; letter-spacing: .32em;
-            text-transform: uppercase; color: var(--bg); background: var(--accent);
-            padding: .25rem .5rem .2rem; border-radius: 2px; white-space: nowrap;
+            font-size: 1rem; letter-spacing: .2em; text-transform: uppercase;
+            color: var(--bg); background: var(--accent);
+            padding: .05rem .5rem; white-space: nowrap;
         }
         .topbar .event-name {
-            font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em;
+            font-size: 1.4rem; letter-spacing: .02em;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .topbar .back {
-            display: inline-flex; align-items: center; gap: .55rem; text-decoration: none;
-            color: var(--ink-dim); font-size: .82rem; font-weight: 600; letter-spacing: .02em;
-            white-space: nowrap; transition: color .15s;
+            display: inline-flex; align-items: center; gap: .5rem; text-decoration: none;
+            color: var(--ink-dim); font-size: 1.2rem; letter-spacing: .04em;
+            white-space: nowrap; transition: color .15s; text-transform: uppercase;
         }
         .topbar .back:hover { color: var(--ink); }
-        .topbar .back svg { width: 15px; height: 15px; }
+        .topbar .back svg { width: 16px; height: 16px; }
 
         .body { flex: 1 1 auto; position: relative; min-height: 0; }
 
         /* ---- Countdown phase ---- */
         .countdown {
             position: absolute; inset: 0; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; gap: 2.5rem; padding: 2rem;
+            align-items: center; justify-content: center; gap: 1.75rem; padding: 1.5rem;
         }
         .countdown .eyebrow {
-            font-family: var(--mono); font-size: 1rem; letter-spacing: .5em; text-transform: uppercase;
-            color: var(--ink-dim); padding-left: .5em;
+            font-size: 1.5rem; letter-spacing: .5em; text-transform: uppercase;
+            color: var(--accent); padding-left: .5em;
         }
-        .clock { display: flex; align-items: stretch; gap: clamp(.75rem, 2.5vw, 2.5rem); }
-        .clock .unit { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+        /* The clock must never overflow: four units + three separators share the
+           width. Sizing with min(vw, cap) keeps it on one line at any size. */
+        .clock { display: flex; align-items: baseline; gap: min(3vw, 2rem); max-width: 100vw; }
+        .clock .unit { display: flex; flex-direction: column; align-items: center; gap: .5rem; }
         .clock .num {
-            font-family: var(--mono); font-weight: 700; font-variant-numeric: tabular-nums;
-            font-size: clamp(4rem, 18vw, 17rem); line-height: .82; letter-spacing: -.02em;
-            color: var(--ink);
+            font-size: min(16vw, 13rem); line-height: .85; color: var(--ink);
+            letter-spacing: .02em;
         }
         .clock .cap {
-            font-size: clamp(.7rem, 1vw, .85rem); letter-spacing: .3em; text-transform: uppercase;
-            color: var(--ink-dim); font-weight: 600;
+            font-size: min(2.2vw, 1.1rem); letter-spacing: .35em; text-transform: uppercase;
+            color: var(--ink-dim);
         }
         .clock .sep {
-            align-self: flex-start; font-family: var(--mono); font-weight: 700; color: var(--accent);
-            font-size: clamp(3rem, 12vw, 12rem); line-height: .9;
+            align-self: center; color: var(--accent);
+            font-size: min(12vw, 9rem); line-height: .85;
         }
-        .countdown .when { font-size: clamp(1rem, 1.6vw, 1.35rem); color: var(--ink-dim); letter-spacing: .02em; }
+        .countdown .when { font-size: 1.6rem; color: var(--ink-dim); letter-spacing: .05em; }
         .countdown .open-now {
-            font-size: clamp(2.5rem, 7vw, 6rem); font-weight: 900; letter-spacing: -.02em;
+            font-size: min(9vw, 6rem); letter-spacing: .04em;
             color: var(--accent); text-transform: uppercase;
         }
 
@@ -137,58 +154,54 @@
 
         /* Headline: the scanned number dominates everything. */
         .headline { display: flex; align-items: flex-end; gap: clamp(2rem, 5vw, 5rem); flex-wrap: wrap; }
-        .scanned { display: flex; flex-direction: column; }
+        .scanned { display: flex; flex-direction: column; min-width: 0; }
         .scanned .k {
-            font-size: clamp(.8rem, 1vw, 1rem); letter-spacing: .28em; text-transform: uppercase;
-            color: var(--ink-dim); font-weight: 600; margin-bottom: .4rem;
+            font-size: 1.15rem; letter-spacing: .25em; text-transform: uppercase;
+            color: var(--ink-dim); margin-bottom: .2rem;
         }
         .scanned .n {
-            font-family: var(--mono); font-weight: 700; font-variant-numeric: tabular-nums;
-            font-size: clamp(5.5rem, 17vw, 18rem); line-height: .78; letter-spacing: -.03em;
+            font-size: min(15vw, 13rem); line-height: .8; letter-spacing: .01em;
             color: var(--ink);
         }
-        .scanned .sub { margin-top: .6rem; color: var(--ink-dim); font-size: clamp(.85rem, 1.1vw, 1.05rem); font-weight: 500; }
-        .scanned .sub b { color: var(--ink); font-weight: 700; }
+        .scanned .sub { margin-top: .4rem; color: var(--ink-dim); font-size: 1.2rem; }
+        .scanned .sub b { color: var(--ink); font-weight: normal; }
 
         /* Two secondary figures stacked beside the big number. */
-        .side { display: flex; flex-direction: column; gap: 1.75rem; padding-bottom: .5rem; }
+        .side { display: flex; flex-direction: column; gap: 1.4rem; padding-bottom: .5rem; }
         .figure .k {
-            font-size: .72rem; letter-spacing: .24em; text-transform: uppercase; color: var(--ink-dim);
-            font-weight: 600; margin-bottom: .25rem;
+            font-size: 1rem; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-dim);
+            margin-bottom: .1rem;
         }
-        .figure .v {
-            font-family: var(--mono); font-weight: 700; font-variant-numeric: tabular-nums;
-            font-size: clamp(2rem, 4vw, 3.5rem); line-height: 1;
-        }
+        .figure .v { font-size: min(5vw, 3.25rem); line-height: 1; }
         .figure--pct .v { color: var(--accent); }
-        .figure .bar { height: 6px; width: clamp(140px, 16vw, 240px); background: rgba(255,255,255,.07); margin-top: .7rem; overflow: hidden; }
+        .figure .bar { height: 6px; width: clamp(140px, 16vw, 240px); background: rgba(255,255,255,.08); margin-top: .5rem; overflow: hidden; }
         .figure .bar > i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .7s cubic-bezier(.2,.7,.2,1); }
         .figure--issues .v { color: var(--ink); }
         .figure--issues.has-issues .v { color: var(--err); }
 
         /* Operator graph fills the rest of the left column. */
-        .graph { margin-top: auto; padding-top: clamp(1.5rem, 3vw, 2.75rem); display: flex; flex-direction: column; min-height: 0; }
+        .graph { margin-top: auto; padding-top: clamp(1rem, 2.5vw, 2rem); display: flex; flex-direction: column; min-height: 0; }
         .graph .h {
             display: flex; align-items: baseline; justify-content: space-between;
-            font-size: .72rem; letter-spacing: .24em; text-transform: uppercase; color: var(--ink-dim);
-            font-weight: 600; margin-bottom: 1.1rem; border-top: 1px solid var(--hair); padding-top: 1rem;
+            font-size: 1rem; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-dim);
+            margin-bottom: .8rem; border-top: 1px solid var(--hair); padding-top: .8rem;
         }
-        .bars { display: flex; flex-direction: column; gap: .9rem; overflow-y: auto; }
+        .bars { display: flex; flex-direction: column; gap: .7rem; overflow-y: auto; }
         .bar-row { display: grid; grid-template-columns: minmax(80px, 20%) 1fr auto; align-items: center; gap: 1rem; }
-        .bar-row .nm { font-weight: 600; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .bar-row .trk { height: 14px; background: rgba(255,255,255,.06); overflow: hidden; }
+        .bar-row .nm { font-size: 1.3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .bar-row .trk { height: 14px; background: rgba(255,255,255,.07); overflow: hidden; }
         .bar-row .fil { height: 100%; background: var(--accent); min-width: 2px; transition: width .7s cubic-bezier(.2,.7,.2,1); }
-        .bar-row .vl { font-family: var(--mono); font-weight: 700; font-variant-numeric: tabular-nums; font-size: 1.05rem; min-width: 2.75rem; text-align: right; }
-        .empty { color: var(--ink-dim); font-size: .95rem; padding: 1rem 0; }
+        .bar-row .vl { font-size: 1.4rem; min-width: 2.75rem; text-align: right; }
+        .empty { color: var(--ink-dim); font-size: 1.2rem; padding: 1rem 0; }
 
         /* ---- Right column: live feed ---- */
         .feed-col { display: flex; flex-direction: column; min-height: 0; padding: clamp(1.25rem, 2vw, 2rem) clamp(1rem, 1.5vw, 1.5rem) 0; }
         .feed-col .h {
-            display: flex; align-items: center; gap: .6rem; font-size: .72rem; letter-spacing: .24em;
-            text-transform: uppercase; color: var(--ink-dim); font-weight: 600; margin-bottom: 1.1rem;
+            display: flex; align-items: center; gap: .6rem; font-size: 1rem; letter-spacing: .2em;
+            text-transform: uppercase; color: var(--ink-dim); margin-bottom: .8rem;
         }
-        .feed-col .h .beat { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; animation: beat 1.6s ease-in-out infinite; }
-        @keyframes beat { 0%,100% { opacity: .35; transform: scale(.8); } 50% { opacity: 1; transform: scale(1); } }
+        .feed-col .h .beat { width: 10px; height: 10px; background: var(--accent); animation: beat 1.1s steps(1) infinite; }
+        @keyframes beat { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
         .feed { flex: 1 1 auto; overflow-y: auto; display: flex; flex-direction: column; padding-bottom: 5rem; }
 
         /* Feed rows are ruled lines, not floating cards — reads like a ticker. */
@@ -203,14 +216,14 @@
         .row.is-duplicate .tick { background: var(--dup); }
         .row.is-error .tick { background: var(--err); }
         .row .main { min-width: 0; }
-        .row .name { font-weight: 700; font-size: 1.02rem; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .row .meta { color: var(--ink-dim); font-size: .82rem; margin-top: .2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .row .flag { font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-top: .3rem; display: inline-block; }
+        .row .name { font-size: 1.35rem; letter-spacing: .01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .row .meta { color: var(--ink-dim); font-size: 1.05rem; margin-top: .05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .row .flag { font-size: 1rem; letter-spacing: .06em; text-transform: uppercase; margin-top: .1rem; display: inline-block; }
         .row.is-duplicate .flag { color: var(--dup); }
         .row.is-error .flag { color: var(--err); }
-        .row .aside { display: flex; flex-direction: column; align-items: flex-end; gap: .25rem; }
-        .row .at { font-family: var(--mono); font-size: .76rem; color: var(--ink-dim); white-space: nowrap; }
-        .row .count { font-family: var(--mono); font-weight: 700; font-size: 1.15rem; line-height: 1; }
+        .row .aside { display: flex; flex-direction: column; align-items: flex-end; gap: .1rem; }
+        .row .at { font-size: 1.05rem; color: var(--ink-dim); white-space: nowrap; }
+        .row .count { font-size: 1.5rem; line-height: 1; }
         .row.is-success .count { color: var(--ok); }
         .row .count--none { color: var(--ink-dim); }
 
@@ -230,12 +243,12 @@
             font-family: 'Cabin Sketch', cursive; font-weight: 700; line-height: 1;
             opacity: .9; pointer-events: none; user-select: none;
         }
-        .wordmark .events { font-size: 1.6rem; color: #2dd4bf; }
+        .wordmark .events { font-size: 1.75rem; color: #2dd4bf; }
         .wordmark .by {
-            font-family: var(--sans); font-weight: 500; font-size: .72rem; letter-spacing: .06em;
+            font-family: 'VT323', monospace; font-size: 1rem; letter-spacing: .1em;
             text-transform: uppercase; color: var(--ink-dim);
         }
-        .wordmark .ck { font-size: 1.6rem; color: var(--ink); }
+        .wordmark .ck { font-size: 1.75rem; color: var(--ink); }
 
         [hidden] { display: none !important; }
 
