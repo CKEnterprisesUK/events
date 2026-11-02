@@ -86,6 +86,51 @@ final class AuthStore: UnauthorizedHandling {
         box.target = self
     }
 
+    // MARK: - Session restore
+
+    /// Restore a previously persisted session on launch (Requirement 12.1 —
+    /// the Keychain token is meant to survive relaunches).
+    ///
+    /// - When the Keychain holds no token, route straight to sign-in.
+    /// - When a token is present, treat it as a candidate session and fetch
+    ///   `me` to rehydrate the user, memberships and permitted actions, then
+    ///   advance exactly as a fresh sign-in would (company picker, or auto-
+    ///   select for a single membership).
+    /// - When the stored token is stale/revoked/bound to another device, the
+    ///   `me` request returns 401; `APIClient` has already cleared the token and
+    ///   called `didReceiveUnauthorized()`, which returns us to sign-in. Any
+    ///   other error (e.g. offline) also falls back to sign-in so the app is
+    ///   never stuck on the loading screen.
+    ///
+    /// Must be called with `appState.phase == .loading`; it owns the single
+    /// transition out of that initial phase.
+    func restoreSession() async {
+        guard tokenStore.read() != nil else {
+            appState.didSignOut()
+            return
+        }
+
+        do {
+            let me: MeResponseDTO = try await client.send(.me)
+            appState.applyMe(
+                name: me.user.name,
+                email: me.user.email,
+                permittedActions: me.permittedActions,
+                memberships: me.companies.map {
+                    AppState.Membership(id: $0.id, name: $0.name, role: $0.role)
+                }
+            )
+            appState.didAuthenticate()
+        } catch {
+            // A 401 already cleared the token and signed out via the
+            // unauthorized handler. For any other failure, fall back to
+            // sign-in rather than leaving the app on `.loading`.
+            if appState.phase == .loading {
+                appState.didSignOut()
+            }
+        }
+    }
+
     // MARK: - Sign-in flow
 
     /// Submit credentials + `device_id` to `POST /api/auth/login`.

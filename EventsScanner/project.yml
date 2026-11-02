@@ -22,6 +22,12 @@ options:
   deploymentTarget:
     iOS: "17.0"
   bundleIdPrefix: com.events.scanner
+  # Stamp the generated project as validated against the current Xcode
+  # toolchain (Xcode 27). Without this the generated project carries an older
+  # upgrade marker and Xcode shows the yellow "Update to recommended settings"
+  # banner on open. Bumping it (plus the recommended build settings in
+  # `settings.base` below) clears that banner.
+  xcodeVersion: "2700"
 
 # Per-environment build configurations (task 15.4).
 #
@@ -45,6 +51,12 @@ settings:
     IPHONEOS_DEPLOYMENT_TARGET: "17.0"
     MARKETING_VERSION: "1.0"
     CURRENT_PROJECT_VERSION: "1"
+    # Xcode 27 "recommended settings". Enabling script sandboxing is the item
+    # the recommended-settings audit flags for a project at this upgrade level;
+    # setting it here (project-wide) clears the "Update to recommended
+    # settings" banner. The app runs no build scripts, so sandboxing them is
+    # safe and has no functional effect.
+    ENABLE_USER_SCRIPT_SANDBOXING: "YES"
     # Keep the executable/product name stable even though the user-facing
     # display name is "Events by CK Enterprises" (set via CFBundleDisplayName
     # in Info.plist). PRODUCT_NAME drives the binary name, not the home-screen
@@ -83,6 +95,18 @@ targets:
         # because XcodeGen rewrites Info.plist on every generate; a key added
         # straight to the plist by the installer would be lost otherwise.
         UILaunchStoryboardName: LaunchScreen
+        # Supported orientations. EventsScanner is a one-handed QR scanner, so
+        # iPhone is locked to portrait. iPad advertises the full set of four so
+        # the "all interface orientations must be supported unless the app
+        # requires full screen" warning is satisfied without forcing full-screen.
+        # Declared here because XcodeGen rewrites Info.plist on every generate.
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
     settings:
       base:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
@@ -114,12 +138,42 @@ targets:
         excludes:
           - "**/.gitkeep"
     dependencies:
+      # Host-based (hosted) unit test bundle: it is injected into the running
+      # EventsScanner app (see TEST_HOST / BUNDLE_LOADER below), which is also
+      # the module the tests `@testable import`. The dependency is declared only
+      # to order the build (app first) — it must NOT link or embed the app:
+      # linking an `.app` as a framework is what made Xcode try to copy the
+      # app's `.swiftmodule` into the test target's object dir ("Multiple
+      # commands produce … EventsScanner.swiftmodule"). `@testable import`
+      # resolves at test-injection time via BUNDLE_LOADER, not by linking.
       - target: EventsScanner
+        embed: false
+        link: false
     settings:
       base:
         # One bundle id for the test bundle under both Debug and Release so the
         # EventsScannerTests target builds and runs against either app config.
         PRODUCT_BUNDLE_IDENTIFIER: com.events.scanner.EventsScannerTests
+        # Give the test bundle its own product/module name. The project-level
+        # `settings.base.PRODUCT_NAME: EventsScanner` is inherited by every
+        # target, so without this override the test target also produced an
+        # `EventsScanner.swiftmodule` into the shared products dir — colliding
+        # with the app target's module ("Multiple commands produce …
+        # EventsScanner.swiftmodule"). A distinct name keeps the two modules
+        # separate while `@testable import EventsScanner` still resolves against
+        # the app via BUNDLE_LOADER.
+        PRODUCT_NAME: EventsScannerTests
+        PRODUCT_MODULE_NAME: EventsScannerTests
+        # Generate the test bundle's Info.plist automatically. Without this (and
+        # with no INFOPLIST_FILE), the test target has no Info.plist and code
+        # signing fails: "the target does not have an Info.plist file and one is
+        # not being generated automatically."
+        GENERATE_INFOPLIST_FILE: YES
+        # Inject the tests into the EventsScanner app (the host). This wires
+        # TEST_HOST / BUNDLE_LOADER so `@testable import EventsScanner` resolves
+        # against the real app module at test time.
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/EventsScanner.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/EventsScanner"
+        BUNDLE_LOADER: "$(TEST_HOST)"
 
 schemes:
   EventsScanner:

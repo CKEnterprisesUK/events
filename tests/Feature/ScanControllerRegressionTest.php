@@ -151,8 +151,14 @@ class ScanControllerRegressionTest extends TestCase
         $response->assertJsonPath('status', 'already_scanned');
 
         $data = $response->json();
-        $this->assertStringContainsString('Already scanned.', $data['resultHtml']);
+        // Re-scanning the SAME ticket immediately after checking it in is an
+        // accidental quick re-scan: the banner warns "you just scanned this"
+        // instead of the generic "Already scanned." headline. The outcome is
+        // still an already_scanned (warn) result that attributes the original
+        // check-in to the operator and timestamp.
+        $this->assertStringContainsString('You just scanned this ticket.', $data['resultHtml']);
         $this->assertStringContainsString('scan-result--warn', $data['resultHtml']);
+        $this->assertStringContainsString('scan-result--just-scanned', $data['resultHtml']);
         $this->assertStringContainsString($scanner->name, $data['resultHtml']);
         $this->assertStringContainsString($firstScannedAt->format('Y-m-d H:i:s'), $data['resultHtml']);
 

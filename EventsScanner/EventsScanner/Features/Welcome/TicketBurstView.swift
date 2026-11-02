@@ -1,8 +1,9 @@
 import SwiftUI
 import UIKit
 
-/// A short (~0.7s), non-interactive post-login flourish: the welcome ticket
-/// zooms forward while an emerald brand-colour shockwave fills the screen.
+/// A short (~1.5s), non-interactive post-login flourish: the welcome ticket
+/// holds for a beat so it reads, then zooms forward while an emerald
+/// brand-colour shockwave opens behind it.
 ///
 /// Presented as a transient overlay by `ObservableRootView` only when the
 /// session transitions INTO `.ready` (a fully authenticated, company-scoped
@@ -18,8 +19,11 @@ struct TicketBurstView: View {
     @State private var ticketLaunched = false
     @State private var burstExpanded = false
 
-    private let navy = Color(red: 7 / 255, green: 20 / 255, blue: 92 / 255)
-    private let emerald = Color(red: 0, green: 221 / 255, blue: 179 / 255)
+    // Use the shared brand tokens so the flourish always matches the rest of
+    // the app (sign-in backdrop, scan accents, status colours) rather than
+    // drifting with its own hardcoded values.
+    private let navy = Brand.navy
+    private let emerald = Brand.emerald
 
     var body: some View {
         GeometryReader { geometry in
@@ -93,10 +97,12 @@ struct TicketBurstView: View {
 
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
 
-            withAnimation(.spring(response: 0.23, dampingFraction: 0.67)) {
+            // Hold the "WELCOME" ticket on screen for a beat so it reads first,
+            // then launch it forward and let the brand shockwave open behind it.
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.7).delay(0.6)) {
                 ticketLaunched = true
             }
-            withAnimation(.easeOut(duration: 0.42).delay(0.18)) {
+            withAnimation(.easeOut(duration: 0.6).delay(0.75)) {
                 burstExpanded = true
             }
         }

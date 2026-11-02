@@ -80,14 +80,17 @@ struct RootView: View {
             }
 
             // Overlay the already-routed main tabs; routing is not delayed.
-            withAnimation(.easeIn(duration: 0.15)) {
-                showTicketBurst = true
-            }
+            // Show it instantly (no fade-in) so the ticket/shockwave animation
+            // begins the moment the session is ready, instead of lagging behind
+            // a 150ms opacity ramp.
+            showTicketBurst = true
 
             ticketBurstTask = Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(700))
+                // Longer dwell so the welcome ticket reads first, then launches
+                // and the brand shockwave opens, before we fade the overlay out.
+                try? await Task.sleep(for: .milliseconds(1500))
                 guard !Task.isCancelled else { return }
-                withAnimation(.easeOut(duration: 0.2)) {
+                withAnimation(.easeOut(duration: 0.25)) {
                     showTicketBurst = false
                 }
             }
@@ -134,8 +137,12 @@ struct RootView: View {
         }
 
         do {
-            auth = try AuthStore(appState: appState, baseURL: url)
-            appState.phase = .signedOut
+            let store = try AuthStore(appState: appState, baseURL: url)
+            auth = store
+            // Keep the phase at `.loading` and attempt to restore a persisted
+            // session. If a valid token is in the Keychain, this routes into the
+            // company picker / main tabs; otherwise it falls back to sign-in.
+            Task { await store.restoreSession() }
         } catch APIError.insecureBaseURL {
             setupError = APIError.insecureBaseURL.userMessage
         } catch {

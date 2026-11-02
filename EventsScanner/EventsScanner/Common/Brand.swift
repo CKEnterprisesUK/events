@@ -26,8 +26,18 @@ struct BrandTitle: View {
                 .clipShape(RoundedRectangle(cornerRadius: 6))
                 .accessibilityHidden(true)
             if !compact {
-                Text("Events")
-                    .font(.headline.weight(.semibold))
+                // The full "Events by CK Enterprises" wordmark, styled so
+                // "Events" reads as the product name and "by CK Enterprises"
+                // as a lighter attribution beside it.
+                (
+                    Text("Events")
+                        .font(.headline.weight(.semibold))
+                    + Text(" by CK Enterprises")
+                        .font(.subheadline.weight(.regular))
+                        .foregroundColor(.secondary)
+                )
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             }
         }
         .accessibilityElement(children: .ignore)

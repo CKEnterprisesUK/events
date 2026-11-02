@@ -158,7 +158,7 @@ class CustomerController extends Controller
         $email = $this->decodeEmail($customer);
 
         $orders = Order::query()
-            ->with(['event', 'tickets.ticketType', 'consents'])
+            ->with(['event', 'tickets.ticketType', 'consents', 'scannedBy'])
             ->where('customer_email', $email)
             ->latest()
             ->get();

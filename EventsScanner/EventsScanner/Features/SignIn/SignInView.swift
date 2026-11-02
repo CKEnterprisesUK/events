@@ -79,14 +79,22 @@ struct SignInView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Branded backdrop so the screen flows out of the launch/welcome
-                // navy rather than dropping onto a flat system background.
-                LinearGradient(
-                    colors: [Brand.navy, Brand.navy.opacity(0.82)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
+                // Branded backdrop that mirrors the post-login flourish: the
+                // same navy base the TicketBurst uses, warmed with a subtle
+                // emerald wash toward the bottom so the welcome animation's
+                // colours flow straight into the sign-in screen.
+                ZStack {
+                    Brand.navy.ignoresSafeArea()
+                    LinearGradient(
+                        colors: [
+                            Brand.emerald.opacity(0.0),
+                            Brand.emerald.opacity(0.18)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .ignoresSafeArea()
+                }
 
                 ScrollView {
                     VStack(spacing: 24) {
@@ -119,9 +127,6 @@ struct SignInView: View {
                 .font(.title2.bold())
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
-            Text("Secure event check-in")
-                .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.7))
         }
         .padding(.top, 24)
     }

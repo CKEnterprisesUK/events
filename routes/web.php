@@ -768,6 +768,15 @@ Route::middleware(['auth', 'super.admin', 'session.timeout', 'migrations.pending
         // recovers a single order. (Reservation-vs-payment race fix)
         Route::post('/ops/reconcile-paid', [SuperAdminOpsController::class, 'reconcilePaid'])->name('ops.reconcile-paid');
 
+        // App Review / TestFlight demo tenant: stand up (up) or remove (down) a
+        // self-contained demo company + users + event + bookings so Apple's
+        // reviewer can sign in on PRODUCTION. Both actions only ever touch the
+        // demo tenant's own rows (matched by its fixed slug / demo emails), so
+        // they are safe to run in production — which is where the reviewer's
+        // account must live. Idempotent either way.
+        Route::post('/ops/app-review-demo/up', [SuperAdminOpsController::class, 'seedAppReviewDemo'])->name('ops.app-review-demo.up');
+        Route::post('/ops/app-review-demo/down', [SuperAdminOpsController::class, 'teardownAppReviewDemo'])->name('ops.app-review-demo.down');
+
         // Destructive sample-data rebuild: non-production only (defence in depth
         // with the controller's own production guard).
         if (app()->environment(['local', 'staging', 'preprod', 'development'])) {
