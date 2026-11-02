@@ -2,7 +2,7 @@
 
 @section('title', 'Compare events')
 
-@section('page_title', 'Compare events')
+@section('mobile_context', 'Compare events')
 
 @section('content')
     @php

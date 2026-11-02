@@ -50,8 +50,11 @@ class PreprodSeeder extends Seeder
 
         // A primary company with a known Owner login for day-to-day testing,
         // fully Stripe-ready so it can take payments and publish paid events.
+        // Named like a real community fundraising organiser so the demo data
+        // reads believably.
         $primary = Company::factory()->stripeReady()->create([
-            'name' => 'Preprod Demo Co',
+            'name' => 'Hope & Hearts Children\'s Hospice',
+            'legal_name' => 'Hope & Hearts Children\'s Hospice',
         ]);
         User::factory()->owner()->for($primary)->create([
             'name' => 'Preprod Owner',

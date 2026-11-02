@@ -167,6 +167,7 @@ class CompanyLegalDetailsTest extends TestCase
             'city' => 'Manchester',
             'postcode' => 'M1 2AB',
             'country' => 'gb',
+            'retention_months' => 24,
         ])->assertRedirect(route('dashboard.branding.edit'));
 
         $company = $owner->company->fresh();
@@ -208,5 +209,6 @@ class CompanyLegalDetailsTest extends TestCase
         $response->assertSee('data-tab="organisation"', false);
         $response->assertSee('data-tab="address"', false);
         $response->assertSee('data-tab="contact"', false);
+        $response->assertSee('data-tab="privacy"', false);
     }
 }

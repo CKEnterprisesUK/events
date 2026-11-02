@@ -80,6 +80,13 @@
 
         .brandmark { margin-top: 20px; text-align: center; }
         .brandmark img { max-height: 48px; }
+
+        /* Platform attribution printed on every ticket, beneath the ticket
+           card. This is the CK Enterprises platform brand, distinct from the
+           organiser's own logo above. */
+        .platform-brand { margin-top: 18px; text-align: center; color: #6b7280; font-size: 10px; line-height: 1.5; }
+        .platform-brand__name { font-weight: bold; color: #374151; }
+        .platform-brand__link { color: #6b7280; text-decoration: none; }
     </style>
 </head>
 <body>
@@ -172,6 +179,13 @@
                 @endforeach
             </div>
         @endif
+
+        {{-- Platform attribution: the CK Enterprises wordmark + link, printed
+             on every ticket regardless of the organiser's own branding. --}}
+        <div class="platform-brand">
+            <div class="platform-brand__name">{{ \App\Support\PlatformBrand::NAME }}</div>
+            <a class="platform-brand__link" href="{{ \App\Support\PlatformBrand::url() }}">{{ \App\Support\PlatformBrand::url() }}</a>
+        </div>
     </div>
 </body>
 </html>

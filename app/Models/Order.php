@@ -135,6 +135,19 @@ class Order extends Model
     }
 
     /**
+     * The User (operator) who scanned this Order in at the door, or null when
+     * the Order has not been checked in (or the scanner's account was since
+     * deleted — `scanned_by` is nullOnDelete). Read via the live dashboard and
+     * attendance surfaces to attribute each check-in. (Live event dashboard)
+     *
+     * @return BelongsTo<\App\Models\User, $this>
+     */
+    public function scannedBy(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'scanned_by');
+    }
+
+    /**
      * The Tickets making up this Order — one row per purchased/claimed ticket.
      * (Requirement 10.5)
      *

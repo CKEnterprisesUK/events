@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\AnonymiseExpiredCustomerDataJob;
 use App\Jobs\BackfillStripeFeesJob;
 use App\Jobs\PruneAuditLogsJob;
 use App\Jobs\RefreshStripeAccountStateJob;
@@ -41,6 +42,29 @@ Artisan::command('audit:prune', function () {
     $deleted = dispatch_sync(new PruneAuditLogsJob);
     $this->info("Pruned {$deleted} audit log row(s) past retention.");
 })->purpose('Delete audit-log records older than the retention window');
+
+// Enforce each Company's customer-data retention policy: anonymise the personal
+// data of Customers whose LAST order has aged past that Company's retention
+// window (default 24 months, chosen during onboarding), keeping the
+// transactional records. Runs SYNCHRONOUSLY, like the sweepers above, for the
+// same proc_open reason. A DAILY cron is ample — the windows move slowly:
+//
+//   0 2 * * * cd /home/<user>/<app> && /opt/cpanel/ea-php85/root/usr/bin/php \
+//       artisan customers:anonymise-expired >> /dev/null 2>&1
+//
+// (Requirement 22.2 — customer-data retention; data-minimisation)
+Artisan::command('customers:anonymise-expired', function () {
+    // Run the job in-process and read its per-run summary off the same instance
+    // (dispatch_sync can serialize the job, which would blank our local copy).
+    $job = new AnonymiseExpiredCustomerDataJob;
+    app()->call([$job, 'handle']);
+    $s = $job->summary;
+
+    $this->info(
+        "Anonymised customer data on {$s['orders_anonymised']} order(s) across "
+        ."{$s['companies_swept']} company(ies) past their retention window."
+    );
+})->purpose('Anonymise customer personal data past each company\'s retention window');
 
 // Backfill the ACTUAL Stripe processing fee onto paid Orders where it is still
 // unknown, by reading each charge's balance transaction from the Company's

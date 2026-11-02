@@ -11,6 +11,7 @@
         'organisation' => ['legal_name', 'trading_name', 'organisation_type', 'company_number', 'charity_number', 'website', 'email', 'phone'],
         'address' => ['address_line_1', 'address_line_2', 'city', 'postcode', 'country'],
         'contact' => ['support_email', 'gdpr_contact_email'],
+        'privacy' => ['retention_months'],
     ];
 
     $errorTab = 'appearance';
@@ -29,7 +30,7 @@
         <div class="page-header">
             <div class="page-header__text">
                 <h1>Settings</h1>
-                <p class="page-header__desc">Your branding, organisation details and contact info.</p>
+                <p class="page-header__desc">Your branding, organisation details, contact info and privacy settings.</p>
             </div>
         </div>
 
@@ -51,6 +52,7 @@
                 <button type="button" class="tab-btn" role="tab" data-tab="organisation">Organisation<span class="tab-flag" aria-hidden="true"></span></button>
                 <button type="button" class="tab-btn" role="tab" data-tab="address">Address<span class="tab-flag" aria-hidden="true"></span></button>
                 <button type="button" class="tab-btn" role="tab" data-tab="contact">Contact<span class="tab-flag" aria-hidden="true"></span></button>
+                <button type="button" class="tab-btn" role="tab" data-tab="privacy">Privacy &amp; data<span class="tab-flag" aria-hidden="true"></span></button>
             </div>
 
             {{-- =================== Branding (appearance) =================== --}}
@@ -287,6 +289,50 @@
                            value="{{ old('gdpr_contact_email', $company->gdpr_contact_email) }}" placeholder="privacy@yourcompany.com">
                     <span class="field-hint">Where data-subject and privacy requests are handled.</span>
                     @error('gdpr_contact_email')<p class="error">{{ $message }}</p>@enderror
+                </div>
+            </div>
+
+            {{-- =================== Privacy & data =================== --}}
+            <div class="tab-panel" role="tabpanel" data-tab-panel="privacy" hidden>
+                <p class="field-hint" style="margin-bottom: 0.75rem;">
+                    How long you keep customer personal data, and where to action data-subject requests.
+                </p>
+
+                {{-- Customer-data retention window, in whole months. A free
+                     number input between the platform floor (6 months) and
+                     ceiling (100 years), so a company can set any policy that
+                     suits it rather than picking from fixed options. --}}
+                @php
+                    $retentionMonths = (int) old('retention_months', $company->retention_months ?? \App\Models\Company::RETENTION_MONTHS_DEFAULT);
+                @endphp
+                <div class="field">
+                    <label for="retention_months">Customer data retention (months)</label>
+                    <input type="number" name="retention_months" id="retention_months"
+                           value="{{ $retentionMonths }}"
+                           min="{{ \App\Models\Company::RETENTION_MONTHS_MIN }}"
+                           max="{{ \App\Models\Company::RETENTION_MONTHS_MAX }}"
+                           step="1" inputmode="numeric">
+                    <span class="field-hint">
+                        How many months customer personal data (name, email) is kept after their
+                        last order before it is automatically anonymised. Transactional records
+                        (order references, amounts, fees) are always kept for your accounts.
+                        Between {{ \App\Models\Company::RETENTION_MONTHS_MIN }} months and
+                        {{ \App\Models\Company::RETENTION_MONTHS_MAX }} months (100 years).
+                    </span>
+                    @error('retention_months')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                {{-- Where to action data-subject requests: point the Owner at
+                     the individual customer page rather than duplicating the
+                     export/erase tools here. --}}
+                <div class="field field--wide">
+                    <label>Data-subject requests</label>
+                    <span class="field-hint">
+                        To export a customer's record (a subject access request) or to erase
+                        their personal data (a right-to-erasure request), open the
+                        <a href="{{ route('dashboard.customers.index') }}">Customers</a> page,
+                        select the person, and use the export or erase tools on their page.
+                    </span>
                 </div>
             </div>
 

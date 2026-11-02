@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\ScanEvent;
 use App\Services\QrService;
 use App\Services\RoleAuthorization;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -100,7 +102,7 @@ class ScanController extends Controller
      * the live scanner page with a structured `result` describing the outcome.
      * (Requirements 16.3–16.10)
      */
-    public function scan(Request $request): View
+    public function scan(Request $request): View|JsonResponse
     {
         Gate::authorize(RoleAuthorization::ACTION_CHECK_IN);
 
@@ -109,10 +111,30 @@ class ScanController extends Controller
         $result = $this->resolve($payload);
 
         $this->remember($request, $result);
+        $this->logScanEvent($result);
+
+        $history = $this->history($request);
+
+        // The live scanner POSTs in the background (fetch) so the camera keeps
+        // running: it wants just the pieces it swaps in — the result banner it
+        // shows as a dismissible overlay, and the refreshed recent-scan list —
+        // not a whole new page. A plain (no-JS) POST still gets the full page,
+        // so the scanner degrades gracefully when JavaScript is unavailable.
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'status' => $result['status'],
+                'resultHtml' => view('dashboard.scan._result', [
+                    'result' => $result,
+                ])->render(),
+                'historyHtml' => view('dashboard.scan._history', [
+                    'history' => $history,
+                ])->render(),
+            ]);
+        }
 
         return view('dashboard.scan.index', [
             'result' => $result,
-            'history' => $this->history($request),
+            'history' => $history,
         ]);
     }
 
@@ -157,15 +179,91 @@ class ScanController extends Controller
     }
 
     /**
+     * Record this scan outcome centrally in `scan_events` so the live event
+     * dashboard can show the whole door team's activity — successful check-ins
+     * AND problems (duplicates, unreadable/invalid/foreign codes, void tickets)
+     * — in real time, not just this operator's own session recap.
+     *
+     * This is a best-effort operational breadcrumb: the authoritative check-in
+     * state is still `orders.scanned_at`, written in {@see resolve()}. A failure
+     * to log here must never fail the scan itself, so it is swallowed.
+     */
+    private function logScanEvent(array $result): void
+    {
+        // Map the resolve() status to a ScanEvent outcome. An "unreadable" and a
+        // verified-but-unknown code both carry no Order; the rest carry one.
+        $outcome = match ($result['status']) {
+            'checked_in' => ScanEvent::OUTCOME_SUCCESS,
+            'already_scanned' => ScanEvent::OUTCOME_DUPLICATE,
+            'rejected' => ScanEvent::OUTCOME_REJECTED,
+            'failed' => ScanEvent::OUTCOME_FAILED,
+            'unreadable' => ScanEvent::OUTCOME_UNREADABLE,
+            default => ScanEvent::OUTCOME_INVALID,
+        };
+
+        /** @var Order|null $order */
+        $order = $result['order'] ?? null;
+
+        try {
+            ScanEvent::create([
+                // company_id is auto-filled from the tenant context by
+                // BelongsToCompany; set event_id from the resolved Order.
+                'event_id' => $order?->event_id,
+                'order_id' => $order?->getKey(),
+                'operator_id' => Auth::id(),
+                'operator_name' => Auth::user()?->name,
+                'outcome' => $outcome,
+                'reference' => $order?->order_reference,
+                'customer_name' => $order?->customer_name,
+                'tickets' => (int) collect($result['breakdown'] ?? [])->sum('quantity'),
+                'created_at' => now(),
+            ]);
+        } catch (\Throwable) {
+            // Never let logging break the door. The session recap and the
+            // authoritative orders.scanned_at are already written.
+        }
+    }
+
+    /**
      * The decision tree of Requirement 16.3–16.10, returning a structured
      * result the view renders. Keeping it pure of HTTP concerns keeps the
      * outcomes easy to assert directly in tests.
      *
-     * @return array{status: string, message: string, order?: Order, scanned_at?: \Illuminate\Support\Carbon, breakdown?: array<int, array{name: string, quantity: int}>}
+     * @return array{status: string, message: string, order?: Order, scanned_at?: \Illuminate\Support\Carbon, scanned_by_name?: ?string, breakdown?: array<int, array{name: string, quantity: int}>}
      */
     private function resolve(string $payload): array
     {
-        // 16.3 — an undecodable payload (wrong shape) is unreadable.
+        $payload = trim($payload);
+
+        // Two kinds of input reach this method:
+        //   1. A scanned QR payload — the `reference.token` shape {@see
+        //      QrService::payload()} produces. It carries a `.` and is always
+        //      HMAC-verified (16.4, 16.5) so a tampered/foreign token is caught.
+        //   2. A manually typed Order_Reference — the door fallback for when a
+        //      QR won't scan (damaged print, dead screen, bad light). An
+        //      Order_Reference is 12 uppercase [A-Z0-9] chars and never contains
+        //      a `.`, so the separator cleanly tells the two apart.
+        //
+        // The manual-reference path skips the HMAC: a typed reference was never
+        // a token, so there is nothing to recompute. It stays safe because the
+        // Order lookup below runs through the tenant scope — an operator can
+        // only ever check in their own Company's Orders, exactly as with a scan.
+        if (! str_contains($payload, QrService::SEPARATOR)) {
+            $reference = $this->normaliseReference($payload);
+
+            // 16.3 — nothing usable typed/scanned at all is still unreadable.
+            if ($reference === '') {
+                return [
+                    'status' => 'unreadable',
+                    'message' => 'Unreadable code. Please try scanning again.',
+                ];
+            }
+
+            return $this->checkIn($reference);
+        }
+
+        // 16.3 — a payload carrying a `.` but not the `reference.token` shape
+        // (e.g. an empty side) is undecodable and unreadable.
         if ($this->qr->decode($payload) === null) {
             return [
                 'status' => 'unreadable',
@@ -184,14 +282,44 @@ class ScanController extends Controller
             ];
         }
 
+        return $this->checkIn($reference);
+    }
+
+    /**
+     * Normalise a manually typed Order_Reference to the stored form: trimmed
+     * and uppercased, since references are generated uppercase but a tired
+     * operator may type them in any case. Returns '' when nothing usable
+     * remains.
+     */
+    private function normaliseReference(string $input): string
+    {
+        return strtoupper(trim($input));
+    }
+
+    /**
+     * The shared tail of {@see resolve()} from the verified/typed
+     * Order_Reference onward: tenant-scoped load (16.6), confirmed-state check
+     * (16.10), already-scanned check (16.9) and the atomic single check-in
+     * (16.7, 16.8). Both the scanned-payload and manual-reference paths funnel
+     * through here so they behave identically once a reference is in hand.
+     *
+     * @return array{status: string, message: string, order?: Order, scanned_at?: \Illuminate\Support\Carbon, scanned_by_name?: ?string, breakdown?: array<int, array{name: string, quantity: int}>}
+     */
+    private function checkIn(string $reference): array
+    {
+
         // 16.6 — load through the tenant scope: an Order of another Company (or
         // no such Order) never matches and is rejected.
         $order = Order::query()->where('order_reference', $reference)->first();
 
         if ($order === null) {
+            // The tenant scope means this covers both a reference that matches
+            // no Order at all (e.g. a mistyped manual entry) and one belonging
+            // to another Company — the scope hides the difference on purpose, so
+            // a single "not found" message fits both without leaking either.
             return [
                 'status' => 'rejected',
-                'message' => 'Rejected. This ticket does not belong to your organisation.',
+                'message' => 'Ticket not found.',
             ];
         }
 
@@ -205,14 +333,10 @@ class ScanController extends Controller
             ];
         }
 
-        // 16.9 — an already-scanned Order reports its original scanned_at.
+        // 16.9 — an already-scanned Order reports its original scanned_at, plus
+        // who checked it in, so a second operator sees it wasn't them.
         if ($order->scanned_at !== null) {
-            return [
-                'status' => 'already_scanned',
-                'message' => 'Already scanned.',
-                'order' => $order,
-                'scanned_at' => $order->scanned_at,
-            ];
+            return $this->alreadyScanned($order);
         }
 
         // 16.8 — atomic single check-in. The WHERE ... scanned_at IS NULL guard
@@ -229,15 +353,10 @@ class ScanController extends Controller
 
         if ($affected !== 1) {
             // Lost the race: another scan checked this Order in first. Report
-            // the already-scanned result with the winner's scanned_at.
+            // the already-scanned result with the winner's scanned_at and name.
             $order->refresh();
 
-            return [
-                'status' => 'already_scanned',
-                'message' => 'Already scanned.',
-                'order' => $order,
-                'scanned_at' => $order->scanned_at,
-            ];
+            return $this->alreadyScanned($order);
         }
 
         $order->refresh();
@@ -249,6 +368,35 @@ class ScanController extends Controller
             'order' => $order,
             'scanned_at' => $order->scanned_at,
             'breakdown' => $this->breakdown($order),
+        ];
+    }
+
+    /**
+     * The already-scanned result for an Order that was checked in earlier.
+     * Alongside the original `scanned_at`, it carries the name of the operator
+     * who scanned it so a second operator at the door can see it was a prior
+     * check-in (and by whom), not their own. The name is null when the Order
+     * was never scanned by a still-existing user (e.g. the operator's account
+     * was deleted — `scanned_by` is nullOnDelete) or predates attribution.
+     * (Requirement 16.9)
+     *
+     * @return array{status: string, message: string, order: Order, scanned_at: \Illuminate\Support\Carbon, scanned_by_name: ?string}
+     */
+    private function alreadyScanned(Order $order): array
+    {
+        // Load the operator through the relationship if it isn't already set.
+        // scanned_by is nullOnDelete, so a since-deleted operator yields null
+        // and we simply omit the name rather than inventing one.
+        $operator = $order->relationLoaded('scannedBy')
+            ? $order->scannedBy
+            : $order->scannedBy()->first();
+
+        return [
+            'status' => 'already_scanned',
+            'message' => 'Already scanned.',
+            'order' => $order,
+            'scanned_at' => $order->scanned_at,
+            'scanned_by_name' => $operator?->name,
         ];
     }
 

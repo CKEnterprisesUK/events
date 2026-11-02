@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Event;
+use App\Models\Ticket;
 use App\Services\CapacityReservationService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -118,6 +119,17 @@ class ReleaseExpiredReservationsJob implements ShouldQueue
             DB::table('orders')
                 ->whereIn('id', $orderIds)
                 ->update(['status' => 'expired', 'updated_at' => now()]);
+
+            // Mirror the terminal Order state onto its Tickets, the same way
+            // OrderCancellationService voids Tickets when an Order reaches a
+            // terminal status. The sweeper has already released the held
+            // capacity above, so this ONLY updates ticket status — it must not
+            // route through the cancellation path or the hold would be released
+            // twice. Keeps `tickets.status` consistent with the `expired` Order
+            // rather than leaving stale `valid` rows under a dead reservation.
+            Ticket::withoutGlobalScopes()
+                ->whereIn('order_id', $orderIds)
+                ->update(['status' => Ticket::STATUS_VOIDED]);
         });
     }
 

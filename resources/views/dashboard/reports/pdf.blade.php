@@ -35,6 +35,9 @@
         .events .num { text-align: right; font-variant-numeric: tabular-nums; }
         .note { color: #555; font-size: 10px; margin-top: 16px; line-height: 1.5; }
         .empty { color: #777; font-style: italic; }
+        .platform-brand { border-top: 1px solid #ddd; margin-top: 20px; padding-top: 10px; text-align: center; color: #777; font-size: 10px; line-height: 1.5; }
+        .platform-brand .name { font-weight: bold; color: #444; }
+        .platform-brand a { color: #777; text-decoration: none; }
     </style>
 </head>
 <body>
@@ -103,6 +106,11 @@
             payout subtracts both, so it reflects what reaches your bank. Stripe fees are read from each
             settled charge; a very recent sale may show a zero fee until Stripe finalises it.
         </p>
+
+        <div class="platform-brand">
+            <div class="name">{{ \App\Support\PlatformBrand::NAME }}</div>
+            <a href="{{ \App\Support\PlatformBrand::url() }}">{{ \App\Support\PlatformBrand::url() }}</a>
+        </div>
     </div>
 </body>
 </html>

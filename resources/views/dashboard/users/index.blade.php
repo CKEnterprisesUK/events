@@ -19,47 +19,6 @@
     @error('role') <p class="alert-error">{{ $message }}</p> @enderror
     @error('user') <p class="alert-error">{{ $message }}</p> @enderror
 
-    {{-- Role capabilities --}}
-    <div class="panel">
-        <div class="panel__head"><h2>What each role can do</h2></div>
-        <p class="role-matrix__intro">
-            Only Owners and Admins can handle GDPR requests and connect Stripe for
-            payments. Owners alone manage company settings, Stripe fees, billing
-            and the team. Box office staff run events, ticketing and orders without
-            access to company settings.
-        </p>
-        <div class="role-matrix__scroll">
-            <table class="data-table role-matrix">
-                <thead>
-                    <tr>
-                        <th>Capability</th>
-                        @foreach (\App\Models\User::ROLES as $role)
-                            <th class="num" title="{{ \App\Models\User::ROLE_META[$role]['description'] ?? '' }}">
-                                {{ \App\Models\User::roleLabel($role) }}
-                            </th>
-                        @endforeach
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($capabilityMatrix as $capability)
-                        <tr>
-                            <td><span class="cell-strong">{{ $capability['label'] }}</span></td>
-                            @foreach (\App\Models\User::ROLES as $role)
-                                <td class="num">
-                                    @if ($capability['roles'][$role])
-                                        <span class="role-matrix__yes" title="Allowed" aria-label="Allowed">&#10003;</span>
-                                    @else
-                                        <span class="role-matrix__no" title="Not allowed" aria-label="Not allowed">&ndash;</span>
-                                    @endif
-                                </td>
-                            @endforeach
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-    </div>
-
     {{-- Invite form --}}
     <div class="panel form-panel" id="invite" @if (! $errors->has('email')) hidden @endif>
         <div class="panel__head"><h2>Invite a user</h2></div>
@@ -166,6 +125,48 @@
                 </tbody>
             </table>
         @endif
+    </div>
+
+    {{-- Role capabilities — reference material, so it sits at the bottom below
+         the actionable Members and Pending invitations panels. --}}
+    <div class="panel">
+        <div class="panel__head"><h2>What each role can do</h2></div>
+        <p class="role-matrix__intro">
+            Only Owners and Admins can handle GDPR requests and connect Stripe for
+            payments. Owners alone manage company settings, Stripe fees, billing
+            and the team. Box office staff run events, ticketing and orders without
+            access to company settings.
+        </p>
+        <div class="role-matrix__scroll">
+            <table class="data-table role-matrix">
+                <thead>
+                    <tr>
+                        <th>Capability</th>
+                        @foreach (\App\Models\User::ROLES as $role)
+                            <th class="num" title="{{ \App\Models\User::ROLE_META[$role]['description'] ?? '' }}">
+                                {{ \App\Models\User::roleLabel($role) }}
+                            </th>
+                        @endforeach
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($capabilityMatrix as $capability)
+                        <tr>
+                            <td><span class="cell-strong">{{ $capability['label'] }}</span></td>
+                            @foreach (\App\Models\User::ROLES as $role)
+                                <td class="num">
+                                    @if ($capability['roles'][$role])
+                                        <span class="role-matrix__yes" title="Allowed" aria-label="Allowed">&#10003;</span>
+                                    @else
+                                        <span class="role-matrix__no" title="Not allowed" aria-label="Not allowed">&ndash;</span>
+                                    @endif
+                                </td>
+                            @endforeach
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
     </div>
 @endsection
 

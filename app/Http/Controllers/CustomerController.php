@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\Company;
 use App\Models\Event;
 use App\Models\Order;
 use App\Models\OrderConsent;
 use App\Services\AuditLogger;
 use App\Services\GdprService;
 use App\Services\RoleAuthorization;
+use App\Services\TenantContext;
+use App\Support\PlatformBrand;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -38,6 +41,7 @@ class CustomerController extends Controller
     public function __construct(
         private readonly GdprService $gdpr,
         private readonly AuditLogger $audit,
+        private readonly TenantContext $tenantContext,
     ) {}
 
     /**
@@ -163,6 +167,14 @@ class CustomerController extends Controller
             throw new NotFoundHttpException;
         }
 
+        // The acting Company (the tenant bound by `dashboard.tenant`, honouring
+        // super-admin impersonation). Since the orders are tenant-scoped they
+        // all share this company_id; fall back to loading it from the first
+        // order so the retention figures always resolve. Drives the
+        // retention-policy figures shown on this page.
+        $company = $this->tenantContext->company()
+            ?? Company::withoutGlobalScopes()->find($orders->first()->company_id);
+
         return view('dashboard.customers.show', [
             'email' => $email,
             'token' => $customer,
@@ -172,6 +184,14 @@ class CustomerController extends Controller
                 ->whereIn('status', [Order::STATUS_PAID, Order::STATUS_FREE_CONFIRMED])
                 ->sum('order_total_minor'),
             'canManageGdpr' => Gate::allows(RoleAuthorization::ACTION_MANAGE_GDPR),
+            // When this customer's personal data is due to be auto-anonymised
+            // under the acting Company's retention policy (last order + window),
+            // and the window itself, so the detail page states the retention
+            // outcome explicitly.
+            'retentionMonths' => $company->effectiveRetentionMonths(),
+            'retentionDeletionAt' => optional($orders->max('created_at'))
+                ->copy()
+                ->addMonths($company->effectiveRetentionMonths()),
         ]);
     }
 
@@ -257,6 +277,10 @@ class CustomerController extends Controller
                     $customer->last_order_at,
                 ]);
             }
+
+            // Platform attribution footer.
+            fputcsv($out, []);
+            fputcsv($out, [PlatformBrand::line()]);
 
             fclose($out);
         }, $filename, [

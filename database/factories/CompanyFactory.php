@@ -14,13 +14,41 @@ class CompanyFactory extends Factory
     protected $model = Company::class;
 
     /**
+     * Believable names for the kinds of organisations that run community
+     * fundraising events — charities, clubs, PTAs and community groups — so
+     * seeded companies read like real organisers rather than faker corporate
+     * names. There are enough here to cover the preprod dataset without the
+     * factory's `unique()` modifier running dry.
+     *
+     * @var list<string>
+     */
+    public const ORGANISATION_NAMES = [
+        'Hope & Hearts Children\'s Hospice',
+        'Marlow Rotary Club',
+        'St Mary\'s Church PTA',
+        'Riverside Community Trust',
+        'Paws & Claws Animal Rescue',
+        'Harrogate Round Table',
+        'The Oakfield School Association',
+        'Shrewsbury Lions Club',
+        'Helping Hands Food Bank',
+        'Devizes Scout Group',
+        'The Air Ambulance Appeal',
+        'Taunton Stroke Support Group',
+        'Bright Futures Youth Charity',
+        'The Village Hall Committee',
+        'Coastal Mind Wellbeing',
+        'Age Together Befriending',
+    ];
+
+    /**
      * Define the model's default state.
      *
      * @return array<string, mixed>
      */
     public function definition(): array
     {
-        $name = fake()->unique()->company();
+        $name = fake()->unique()->randomElement(self::ORGANISATION_NAMES);
 
         return [
             'name' => $name,

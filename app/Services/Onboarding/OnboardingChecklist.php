@@ -12,8 +12,9 @@ use App\Models\Event;
  *
  *   1. Connect Stripe so the Company can get paid.
  *   2. Set the support and GDPR/data-protection contacts.
- *   3. Sort the Company branding.
- *   4. Create the first Event.
+ *   3. Choose the customer-data retention window.
+ *   4. Sort the Company branding.
+ *   5. Create the first Event.
  *
  * Each step's completion is derived from the Company's own persisted state, so
  * the checklist reflects reality without any separate progress flags to keep in
@@ -47,6 +48,14 @@ class OnboardingChecklist
                 complete: $this->hasContacts($company),
                 routeName: 'dashboard.branding.edit',
                 actionLabel: 'Add contacts',
+            ),
+            new OnboardingStep(
+                key: 'retention',
+                title: 'Set data retention',
+                description: 'Choose how long you keep customer personal data before it is automatically anonymised.',
+                complete: $this->hasConfirmedRetention($company),
+                routeName: 'dashboard.branding.edit',
+                actionLabel: 'Set retention',
             ),
             new OnboardingStep(
                 key: 'branding',
@@ -83,6 +92,18 @@ class OnboardingChecklist
     {
         return $this->filled($company->support_email)
             && $this->filled($company->gdpr_contact_email);
+    }
+
+    /**
+     * Retention is considered set once the Owner has EXPLICITLY confirmed a
+     * customer-data retention choice (a stamped `retention_confirmed_at`). The
+     * column defaults to a safe 24-month window, so completion deliberately
+     * keys off the explicit confirmation rather than the mere presence of a
+     * value — a silent default is not a deliberate decision.
+     */
+    private function hasConfirmedRetention(Company $company): bool
+    {
+        return $company->hasConfirmedRetention();
     }
 
     /**

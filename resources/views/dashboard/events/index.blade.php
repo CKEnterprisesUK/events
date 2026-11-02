@@ -2,7 +2,10 @@
 
 @section('title', 'Events')
 
-@section('page_title', 'Events')
+{{-- This page renders its own .page-header <h1>, so it sets mobile_context
+     (for the mobile top-bar label) instead of page_title to avoid a duplicate
+     heading on desktop. --}}
+@section('mobile_context', 'Events')
 
 @push('head')
 <style>
@@ -19,6 +22,27 @@
     /* Mobile card actions: keep the two buttons side by side. */
     .record-card__actions { display: flex; gap: 0.5rem; align-items: center; }
     .record-card__actions form { margin: 0; }
+
+    /* Per-event colour accent. A small, stable swatch that aids scanning
+       without shouting; derived from the event id (see $colourOf). */
+    .cell-event { display: flex; align-items: center; gap: 0.7rem; min-width: 0; }
+    .event-colour {
+        flex: none; width: 4px; align-self: stretch; min-height: 2.2rem;
+        border-radius: 999px; background: var(--event-colour, var(--ck-brand, #2349e8));
+    }
+    /* Mobile card: colour accent down the left edge. */
+    .record-card--accent { border-left: 3px solid var(--event-colour, var(--ck-brand, #2349e8)); }
+
+    /* Headline-metric segmented toggle in the toolbar. */
+    .metric-toggle { display: inline-flex; border: 1px solid #d4d8e3; border-radius: 7px; overflow: hidden; background: #fff; }
+    .metric-toggle__btn {
+        appearance: none; border: 0; background: transparent; cursor: pointer;
+        font: inherit; font-size: 0.8125rem; font-weight: 500; color: var(--ck-text-2, #667085);
+        padding: 0 0.75rem; height: 38px; line-height: 38px;
+    }
+    .metric-toggle__btn + .metric-toggle__btn { border-left: 1px solid #d4d8e3; }
+    .metric-toggle__btn.is-active { background: color-mix(in srgb, var(--ck-brand, #2349e8) 10%, #fff); color: var(--ck-brand, #2349e8); }
+    .metric-toggle__btn:hover:not(.is-active) { background: #f3f5f8; }
 </style>
 @endpush
 
@@ -63,6 +87,15 @@
                     <option value="cancelled">Cancelled</option>
                 </select>
             </div>
+
+            {{-- Headline-metric toggle: show a single figure column (Orders or
+                 Ticket sales) so the table isn't as wide. Pure client-side; the
+                 full data is always in the DOM, so it degrades to showing Orders
+                 when JS is off. Choice is remembered in localStorage. --}}
+            <div class="toolbar__control metric-toggle" role="group" aria-label="Headline metric" data-events-metric>
+                <button type="button" class="metric-toggle__btn is-active" data-metric="orders" aria-pressed="true">Orders</button>
+                <button type="button" class="metric-toggle__btn" data-metric="tickets" aria-pressed="false">Ticket sales</button>
+            </div>
         </div>
 
         @php
@@ -70,6 +103,10 @@
                 if ($event->isCancelled()) return 'cancelled';
                 return $event->isPublished() ? 'published' : 'draft';
             };
+            // Deterministic colour per event so each event reads with a stable
+            // accent across reloads. Derived from the id, no backend change.
+            $eventPalette = ['#2349e8', '#0ea5a4', '#7c3aed', '#db2777', '#f59e0b', '#0f766e', '#4f46e5', '#b45309'];
+            $colourOf = fn ($event) => $eventPalette[(int) $event->id % count($eventPalette)];
         @endphp
 
         {{-- Desktop table: clickable rows, uses the full container width. --}}
@@ -80,8 +117,8 @@
                         <th scope="col">Event</th>
                         <th scope="col">Date &amp; time</th>
                         <th scope="col">Status</th>
-                        <th scope="col" class="num">Tickets sold</th>
-                        <th scope="col" class="num">Orders</th>
+                        <th scope="col" class="num metric-col metric-col--tickets" hidden>Tickets sold</th>
+                        <th scope="col" class="num metric-col metric-col--orders">Orders</th>
                         <th scope="col"><span class="sr-only">Actions</span></th>
                     </tr>
                 </thead>
@@ -97,6 +134,7 @@
                             data-status="{{ $status }}">
                             <td>
                                 <div class="cell-event">
+                                    <span class="event-colour" style="--event-colour: {{ $colourOf($event) }};" aria-hidden="true"></span>
                                     @if ($poster)
                                         <img class="cell-thumb"
                                              src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($poster) }}"
@@ -116,8 +154,8 @@
                                     {{ ucfirst($status) }}
                                 </span>
                             </td>
-                            <td class="num">{{ isset($event->sell_through) ? number_format($sold) : '—' }}</td>
-                            <td class="num">{{ isset($event->confirmed_orders_count) ? number_format($event->confirmed_orders_count) : '—' }}</td>
+                            <td class="num metric-col metric-col--tickets" hidden>{{ isset($event->sell_through) ? number_format($sold) : '—' }}</td>
+                            <td class="num metric-col metric-col--orders">{{ isset($event->confirmed_orders_count) ? number_format($event->confirmed_orders_count) : '—' }}</td>
                             <td class="num">
                                 <span class="row-actions">
                                     <a class="panel__link row-action" href="{{ route('dashboard.events.show', $event) }}">Manage</a>
@@ -143,7 +181,8 @@
                     $sold = (int) ($event->sell_through['sold'] ?? 0);
                     $orders = (int) ($event->confirmed_orders_count ?? 0);
                 @endphp
-                <div class="record-card" data-event-row
+                <div class="record-card record-card--accent" data-event-row
+                     style="--event-colour: {{ $colourOf($event) }};"
                      data-name="{{ \Illuminate\Support\Str::lower($event->name) }}"
                      data-status="{{ $status }}">
                     @if ($poster)
@@ -209,6 +248,38 @@
 
         if (search) search.addEventListener('input', apply);
         if (status) status.addEventListener('change', apply);
+    })();
+
+    // Headline-metric toggle: show one figure column (orders | tickets) so the
+    // desktop table stays narrow. Remembers the choice in localStorage.
+    (function () {
+        var group = document.querySelector('[data-events-metric]');
+        if (!group) return;
+        var STORE = 'ck.events.metric';
+        var buttons = Array.prototype.slice.call(group.querySelectorAll('.metric-toggle__btn'));
+
+        function setMetric(metric) {
+            // Toggle the per-column cells (header + body) across the table.
+            document.querySelectorAll('.metric-col').forEach(function (cell) {
+                var isOrders = cell.classList.contains('metric-col--orders');
+                var show = (metric === 'orders') ? isOrders : !isOrders;
+                cell.hidden = !show;
+            });
+            buttons.forEach(function (b) {
+                var on = b.getAttribute('data-metric') === metric;
+                b.classList.toggle('is-active', on);
+                b.setAttribute('aria-pressed', on ? 'true' : 'false');
+            });
+            try { localStorage.setItem(STORE, metric); } catch (e) {}
+        }
+
+        buttons.forEach(function (b) {
+            b.addEventListener('click', function () { setMetric(b.getAttribute('data-metric')); });
+        });
+
+        var saved = null;
+        try { saved = localStorage.getItem(STORE); } catch (e) {}
+        setMetric(saved === 'tickets' ? 'tickets' : 'orders');
     })();
 </script>
 @endpush

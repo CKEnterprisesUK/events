@@ -45,7 +45,7 @@ class QrService
      * payload. `.` never appears in an Order_Reference (uppercase [A-Z0-9]), so
      * the payload splits unambiguously back into (reference, token).
      */
-    private const SEPARATOR = '.';
+    public const SEPARATOR = '.';
 
     /**
      * Compute the QR_Token for an Order_Reference: HMAC-SHA256 of the reference

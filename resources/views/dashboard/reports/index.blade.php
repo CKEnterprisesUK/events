@@ -2,7 +2,7 @@
 
 @section('title', 'Reports & Payouts')
 
-@section('page_title', 'Reports & Payouts')
+@section('mobile_context', 'Reports & Payouts')
 
 @section('content')
     @php

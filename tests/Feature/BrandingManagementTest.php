@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\SuperAdmin\ImpersonationController;
 use App\Models\Company;
 use App\Models\Event;
 use App\Models\User;
@@ -47,6 +48,9 @@ class BrandingManagementTest extends TestCase
             'city' => 'London',
             'postcode' => 'EC1A 1BB',
             'country' => 'GB',
+            // Customer-data retention is a required field on the branding form
+            // (the GDPR/contacts section), so every save carries it.
+            'retention_months' => 24,
         ], $overrides);
     }
 
@@ -231,7 +235,7 @@ class BrandingManagementTest extends TestCase
         ]);
 
         $response = $this->actingAs($superAdmin)
-            ->withSession([\App\Http\Controllers\SuperAdmin\ImpersonationController::SESSION_KEY => $company->id])
+            ->withSession([ImpersonationController::SESSION_KEY => $company->id])
             ->get(route('dashboard.branding.edit'));
 
         $response->assertOk();
@@ -247,7 +251,7 @@ class BrandingManagementTest extends TestCase
         $company = Company::factory()->create(['primary_colour' => null]);
 
         $this->actingAs($superAdmin)
-            ->withSession([\App\Http\Controllers\SuperAdmin\ImpersonationController::SESSION_KEY => $company->id])
+            ->withSession([ImpersonationController::SESSION_KEY => $company->id])
             ->put(route('dashboard.branding.update'), $this->orgFields([
                 'primary_colour' => '#123456',
                 'terms_text' => 'Tenant terms.',

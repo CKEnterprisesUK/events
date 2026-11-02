@@ -50,76 +50,47 @@
             </button>
 
             <div id="scan-manual" class="field scanner__manual" hidden>
-                <label for="scan-payload-manual">Scanned code</label>
+                <label for="scan-payload-manual">Order reference</label>
                 <input type="text" id="scan-payload-manual" autocomplete="off"
-                       autocapitalize="off" autocorrect="off" spellcheck="false" />
+                       autocapitalize="characters" autocorrect="off" spellcheck="false"
+                       placeholder="e.g. A1B2C3D4E5F6" />
+                <p class="scanner__manual-hint">
+                    Type the order reference from the ticket if the QR code
+                    won't scan.
+                </p>
                 <button type="submit" class="btn">Check in</button>
             </div>
         </form>
 
+        {{--
+            No-JS fallback: a plain POST re-renders the page with the result
+            inline. The JS path never renders this — it shows the same banner
+            in the overlay below instead, keeping the camera alive.
+        --}}
         @isset($result)
-            @php
-                // Map every outcome onto one of three door signals so the whole
-                // banner reads as a single colour the operator can act on at a
-                // glance: green = let them in, yellow = already scanned, red =
-                // do not admit.
-                $signal = match ($result['status']) {
-                    'checked_in' => 'good',
-                    'already_scanned' => 'warn',
-                    default => 'bad',
-                };
-
-                // Total tickets on the order, summed from the type breakdown so
-                // the door can confirm how many people this one code admits.
-                $ticketCount = collect($result['breakdown'] ?? [])->sum('quantity');
-            @endphp
-
-            <div class="scan-result scan-result--{{ $signal }}" role="status" aria-live="polite">
-                <p class="scan-result__message">{{ $result['message'] }}</p>
-
-                @if ($result['status'] === 'checked_in')
-                    {{-- Headline: how many tickets this code admits. --}}
-                    <p class="scan-result__count">
-                        <span class="scan-result__count-num">{{ $ticketCount }}</span>
-                        {{ $ticketCount === 1 ? 'ticket' : 'tickets' }}
-                    </p>
-
-                    @isset($result['order'])
-                        <p class="scan-result__ref">
-                            Order {{ $result['order']->order_reference }}
-                            &middot; {{ $result['order']->customer_name }}
-                        </p>
-                    @endisset
-
-                    @if (! empty($result['breakdown']))
-                        {{-- Per-level breakdown: which ticket type(s) and how
-                             many of each, so the door knows the access level. --}}
-                        <ul class="scan-result__levels">
-                            @foreach ($result['breakdown'] as $line)
-                                <li class="scan-result__level">
-                                    <span class="scan-result__level-name">{{ $line['name'] }}</span>
-                                    <span class="scan-result__level-qty">&times;{{ $line['quantity'] }}</span>
-                                </li>
-                            @endforeach
-                        </ul>
-                    @endif
-
-                    <p class="scan-result__meta">
-                        Checked in at {{ $result['scanned_at']->format('Y-m-d H:i:s') }}.
-                    </p>
-                @endif
-
-                @if ($result['status'] === 'already_scanned' && isset($result['scanned_at']))
-                    <p class="scan-result__meta">
-                        Previously scanned at
-                        {{ $result['scanned_at']->format('Y-m-d H:i:s') }}.
-                    </p>
-                @endif
-            </div>
+            @include('dashboard.scan._result', ['result' => $result])
         @endisset
 
+        {{--
+            The dismissible result overlay for the JS path. It sits above the
+            running camera; its body is filled from the scan response and the
+            "Scan next" button hides it and re-arms the decoder. Hidden until a
+            scan completes.
+        --}}
+        <div id="scan-overlay" class="scan-overlay" hidden role="dialog"
+             aria-modal="true" aria-label="Scan result">
+            <div class="scan-overlay__panel">
+                <div id="scan-overlay-body"></div>
+                <button type="button" id="scan-dismiss" class="btn scan-overlay__dismiss">
+                    Scan next
+                </button>
+            </div>
+        </div>
+
         {{-- Recent-scan recap (session-backed, last few scans). --}}
-        @include('dashboard.scan._history', ['history' => $history ?? []])
+        <div id="scan-history-region">
+            @include('dashboard.scan._history', ['history' => $history ?? []])
+        </div>
     </section>
 @endsection
 
@@ -144,6 +115,11 @@
             cursor: pointer;
         }
         .scanner__manual { margin-top: 0.75rem; }
+        .scanner__manual-hint {
+            margin: 0.35rem 0 0.5rem;
+            color: #6b7280;
+            font-size: 0.8rem;
+        }
         .scanner-camera {
             position: relative;
             width: 100%;
@@ -216,16 +192,50 @@
             opacity: 0.85;
             font-size: 0.85rem;
         }
+
+        /* The dismissible result overlay sits above the running camera so the
+           operator sees the outcome without the camera tearing down. "Scan
+           next" closes it and re-arms the decoder. */
+        .scan-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            background: rgba(17, 24, 39, 0.6);
+        }
+        .scan-overlay[hidden] { display: none; }
+        .scan-overlay__panel {
+            width: 100%;
+            max-width: 420px;
+            background: #fff;
+            border-radius: 0.9rem;
+            padding: 1rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+        /* The banner already carries its own colour; inside the panel it needs
+           no extra top margin. */
+        .scan-overlay__panel .scan-result { margin-top: 0; }
+        .scan-overlay__dismiss {
+            display: block;
+            width: 100%;
+            margin-top: 1rem;
+        }
     </style>
 @endpush
 
 @push('scripts')
     {{--
         A QR decoder library is loaded client-side (no server build/bundle
-        step). On decode, the payload is written into the hidden field and the
-        form is submitted to the server, which performs the authoritative
-        verify + atomic check-in. If camera permission is denied, we reveal the
-        "camera access required" message and never attempt a scan.
+        step). On decode we POST the payload in the BACKGROUND (fetch) so the
+        camera keeps running, then show the server's authoritative result in a
+        dismissible overlay. "Scan next" closes the overlay and re-arms the
+        decoder for the next person — no page reload, no camera restart. If
+        JavaScript is unavailable the form still submits normally and the server
+        re-renders the page with the result inline. If camera permission is
+        denied we reveal the "camera access required" message and never scan.
     --}}
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script>
@@ -238,7 +248,97 @@
             var manualToggleEl = document.getElementById('scan-manual-toggle');
             var manualEl = document.getElementById('scan-manual');
             var manualInputEl = document.getElementById('scan-payload-manual');
-            var submitted = false;
+            var overlayEl = document.getElementById('scan-overlay');
+            var overlayBodyEl = document.getElementById('scan-overlay-body');
+            var dismissEl = document.getElementById('scan-dismiss');
+            var historyRegionEl = document.getElementById('scan-history-region');
+
+            // Guards the whole result cycle: true from the moment a payload is
+            // sent until the operator dismisses the overlay, so a code lingering
+            // in frame (or a double tap) cannot fire a second scan.
+            var busy = false;
+            var scanner = null;
+            var scanning = false;
+
+            // Pause the live decoder while a result is on screen so the camera
+            // isn't firing onDecoded behind the overlay. Best-effort: if pause
+            // isn't supported the busy flag still blocks re-entry.
+            function pauseDecoder() {
+                if (scanner && scanning) {
+                    try { scanner.pause(true); } catch (e) { /* ignore */ }
+                }
+            }
+
+            function resumeDecoder() {
+                if (scanner && scanning) {
+                    try { scanner.resume(); } catch (e) { /* ignore */ }
+                }
+            }
+
+            function showOverlay(resultHtml) {
+                if (!overlayEl || !overlayBodyEl) { return; }
+                overlayBodyEl.innerHTML = resultHtml;
+                overlayEl.hidden = false;
+                if (dismissEl) { dismissEl.focus(); }
+            }
+
+            function dismissOverlay() {
+                if (overlayEl) { overlayEl.hidden = true; }
+                if (overlayBodyEl) { overlayBodyEl.innerHTML = ''; }
+                busy = false;
+                resumeDecoder();
+                if (statusEl) { statusEl.textContent = 'Scanning…'; }
+            }
+
+            if (dismissEl) {
+                dismissEl.addEventListener('click', dismissOverlay);
+            }
+
+            // Read the CSRF token the form already carries so the background
+            // POST is accepted just like a normal form submit.
+            function csrfToken() {
+                var field = formEl ? formEl.querySelector('input[name="_token"]') : null;
+                return field ? field.value : '';
+            }
+
+            // POST the payload in the background and show the result overlay.
+            // Falls back to a normal navigation submit if fetch is unavailable.
+            function submitPayload(payload) {
+                if (!payload) { return; }
+                busy = true;
+                pauseDecoder();
+                if (statusEl) { statusEl.textContent = 'Checking…'; }
+
+                if (!window.fetch) {
+                    payloadEl.value = payload;
+                    formEl.submit();
+                    return;
+                }
+
+                var body = new FormData();
+                body.append('_token', csrfToken());
+                body.append('payload', payload);
+
+                fetch(formEl.action, {
+                    method: 'POST',
+                    body: body,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                    credentials: 'same-origin'
+                })
+                    .then(function (res) { return res.json(); })
+                    .then(function (data) {
+                        showOverlay(data.resultHtml || '');
+                        if (historyRegionEl && typeof data.historyHtml === 'string') {
+                            historyRegionEl.innerHTML = data.historyHtml;
+                        }
+                    })
+                    .catch(function () {
+                        // Network/parse failure: fall back to a full submit so
+                        // the operator still gets an authoritative result.
+                        payloadEl.value = payload;
+                        formEl.submit();
+                    });
+            }
 
             // Manual entry is opt-in: the keyboard only appears once the
             // operator taps "Enter code manually". Until then the payload field
@@ -249,12 +349,18 @@
                     manualToggleEl.hidden = true;
                     manualInputEl.focus();
                 });
+            }
 
-                // Mirror the typed value into the hidden payload the server
-                // reads, so manual submits post exactly like a decoded scan.
-                formEl.addEventListener('submit', function () {
-                    if (!manualEl.hidden) {
-                        payloadEl.value = manualInputEl.value;
+            // Intercept the submit so a manual entry goes through the same
+            // background flow as a scan. preventDefault only runs when JS is
+            // alive, so a no-JS browser still posts and gets the inline result.
+            if (formEl) {
+                formEl.addEventListener('submit', function (e) {
+                    if (busy) { e.preventDefault(); return; }
+                    var manual = (manualEl && !manualEl.hidden) ? manualInputEl.value : '';
+                    if (manual) {
+                        e.preventDefault();
+                        submitPayload(manual);
                     }
                 });
             }
@@ -267,10 +373,8 @@
             }
 
             function onDecoded(decodedText) {
-                if (submitted) { return; }
-                submitted = true;
-                payloadEl.value = decodedText;
-                formEl.submit();
+                if (busy) { return; }
+                submitPayload(decodedText);
             }
 
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -286,13 +390,14 @@
                     if (statusEl) { statusEl.textContent = 'Scanning…'; }
 
                     if (window.Html5Qrcode) {
-                        var scanner = new window.Html5Qrcode('scanner-camera');
+                        scanner = new window.Html5Qrcode('scanner-camera');
                         scanner.start(
                             { facingMode: 'environment' },
                             { fps: 10, qrbox: 180 },
                             onDecoded,
                             function () { /* per-frame decode failures are ignored */ }
-                        ).catch(showPermissionDenied);
+                        ).then(function () { scanning = true; })
+                         .catch(showPermissionDenied);
                     }
                 })
                 .catch(showPermissionDenied);

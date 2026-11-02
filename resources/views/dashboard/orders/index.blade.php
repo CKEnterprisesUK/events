@@ -2,6 +2,8 @@
 
 @section('title', 'Orders')
 
+@php use App\Http\Controllers\CustomerController; @endphp
+
 @push('head')
 <style>
     .filter-bar { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: flex-end; margin-bottom: 1.25rem; }
@@ -18,7 +20,9 @@
 </style>
 @endpush
 
-@section('page_title', 'Orders')
+{{-- Renders its own .page-header <h1>; mobile_context feeds the mobile top-bar
+     label without producing a duplicate heading. --}}
+@section('mobile_context', 'Orders')
 
 @section('content')
     <div class="page-header">
@@ -108,7 +112,11 @@
                         <tr class="row-nav">
                             <td><a class="cell-strong cell-ref row-link" href="{{ route('dashboard.orders.show', $order) }}">{{ $order->order_reference }}</a></td>
                             <td>
-                                {{ $order->customer_name }}
+                                @if ($order->customer_email)
+                                    <a class="cell-strong row-action" href="{{ route('dashboard.customers.show', CustomerController::tokenFor($order->customer_email)) }}">{{ $order->customer_name }}</a>
+                                @else
+                                    <span class="cell-strong">{{ $order->customer_name }}</span>
+                                @endif
                                 <span class="cell-dim">{{ $order->customer_email }}</span>
                             </td>
                             <td>{{ $order->event?->name ?? '—' }}</td>
@@ -131,7 +139,13 @@
                     <div class="record-card row-nav">
                         <div class="record-card__body">
                             <a class="record-card__title cell-strong cell-ref row-link" href="{{ route('dashboard.orders.show', $order) }}">{{ $order->order_reference }}</a>
-                            <span class="record-card__meta record-card__meta--strong">{{ $order->customer_name }}</span>
+                            <span class="record-card__meta record-card__meta--strong">
+                                @if ($order->customer_email)
+                                    <a class="row-action" href="{{ route('dashboard.customers.show', CustomerController::tokenFor($order->customer_email)) }}">{{ $order->customer_name }}</a>
+                                @else
+                                    {{ $order->customer_name }}
+                                @endif
+                            </span>
                             <span class="record-card__meta">{{ $order->customer_email }}</span>
                             <span class="record-card__meta">{{ $order->event?->name ?? '—' }} · {{ $order->created_at?->format('j M Y, H:i') ?? '—' }}</span>
                             <span class="record-card__meta">
