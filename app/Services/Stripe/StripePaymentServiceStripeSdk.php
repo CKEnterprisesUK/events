@@ -159,6 +159,7 @@ class StripePaymentServiceStripeSdk implements StripePaymentService
         string $cancelUrl,
         array $metadata = [],
         ?string $customerEmail = null,
+        ?int $expiresAt = null,
     ): StripeCheckoutSession {
         // Direct charge on the connected account: the request is made on the
         // connected account (Stripe-Account header) and the Platform takes its
@@ -172,6 +173,7 @@ class StripePaymentServiceStripeSdk implements StripePaymentService
             $cancelUrl,
             $metadata,
             $customerEmail,
+            $expiresAt,
         ): StripeCheckoutSession {
             $params = [
                 'mode' => 'payment',
@@ -192,6 +194,16 @@ class StripePaymentServiceStripeSdk implements StripePaymentService
                     'application_fee_amount' => $applicationFeeMinor,
                 ],
             ];
+
+            // Align the Session's payment window with the Order's reservation
+            // hold: the seat is held for exactly as long as Stripe will accept
+            // the money, so a slow-but-successful payment can never land after
+            // the seat was handed away. Stripe requires expires_at to be at
+            // least 30 min in the future, so a shorter request is clamped up.
+            // (Reservation-vs-payment race fix)
+            if ($expiresAt !== null) {
+                $params['expires_at'] = max($expiresAt, time() + 1800);
+            }
 
             // Pre-fill the email on the hosted Checkout page so the Customer
             // doesn't have to re-enter the address they already gave us. Only
@@ -284,6 +296,64 @@ class StripePaymentServiceStripeSdk implements StripePaymentService
                 feeMinor: (int) $balanceTransaction->fee,
                 currency: (string) ($balanceTransaction->currency ?? ''),
             );
+        });
+    }
+
+    public function retrieveCheckoutSessionStatus(
+        string $connectedAccountId,
+        string $sessionId,
+    ): StripeSessionStatus {
+        // Read the Session on the connected account (direct charges live there).
+        // Any failure resolves to UNKNOWN so the caller fails safe and keeps the
+        // seat held — never release a seat whose payment we could not confirm.
+        // (Reservation-vs-payment race fix; interface contract: never throw.)
+        return $this->withoutStripeNoticeEscalation(function () use ($connectedAccountId, $sessionId): StripeSessionStatus {
+            try {
+                $session = $this->client->checkout->sessions->retrieve(
+                    $sessionId,
+                    [],
+                    ['stripe_account' => $connectedAccountId],
+                );
+            } catch (Throwable $e) {
+                Log::warning('Could not retrieve Stripe Checkout Session status; failing safe (not releasing hold).', [
+                    'session' => $sessionId,
+                    'connected_account' => $connectedAccountId,
+                    'error' => $e->getMessage(),
+                ]);
+
+                return new StripeSessionStatus(StripeSessionStatus::UNKNOWN);
+            }
+
+            $paymentIntentId = null;
+            $pi = $session->payment_intent ?? null;
+            if (is_string($pi) && $pi !== '') {
+                $paymentIntentId = $pi;
+            } elseif (is_object($pi) && isset($pi->id)) {
+                $paymentIntentId = (string) $pi->id;
+            }
+
+            $paymentStatus = (string) ($session->payment_status ?? '');
+            $sessionStatus = (string) ($session->status ?? '');
+
+            // A paid Session must never have its seat released — it has to be
+            // confirmed instead. Stripe marks a successful payment either via
+            // payment_status === 'paid' or a 'complete' session.
+            if ($paymentStatus === 'paid' || $sessionStatus === 'complete') {
+                return new StripeSessionStatus(StripeSessionStatus::PAID, $paymentIntentId);
+            }
+
+            // Only a Session Stripe reports as 'expired' is safe to release.
+            if ($sessionStatus === 'expired') {
+                return new StripeSessionStatus(StripeSessionStatus::EXPIRED, $paymentIntentId);
+            }
+
+            // Still open/payable (or anything we can't positively classify as
+            // expired): keep holding.
+            if ($sessionStatus === 'open') {
+                return new StripeSessionStatus(StripeSessionStatus::OPEN, $paymentIntentId);
+            }
+
+            return new StripeSessionStatus(StripeSessionStatus::UNKNOWN, $paymentIntentId);
         });
     }
 

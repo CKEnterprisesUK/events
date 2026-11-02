@@ -260,10 +260,12 @@ struct SessionsResponseDTO: Codable, Equatable {
 // norm.
 
 /// A single customer row from the search. `confirmedSpendMinor` is in minor
-/// currency units (e.g. pence); the view formats it for display.
+/// currency units (e.g. pence); the view formats it for display. `token` is the
+/// base64url email id used to open the customer's detail (orders) screen.
 struct CustomerDTO: Codable, Equatable, Identifiable {
     let name: String?
     let email: String
+    let token: String
     let ordersCount: Int
     let confirmedSpendMinor: Int
 
@@ -274,6 +276,7 @@ struct CustomerDTO: Codable, Equatable, Identifiable {
     enum CodingKeys: String, CodingKey {
         case name
         case email
+        case token
         case ordersCount = "orders_count"
         case confirmedSpendMinor = "confirmed_spend_minor"
     }
@@ -302,4 +305,139 @@ struct CustomerSearchMetaDTO: Codable, Equatable {
 struct CustomersResponseDTO: Codable, Equatable {
     let customers: [CustomerDTO]
     let meta: CustomerSearchMetaDTO
+}
+
+// MARK: - Events
+//
+// `GET /api/events` (see `EventApiController::index()`). The app's landing tab:
+// the Active_Company's events with a tickets-sold count and the public web URL
+// a staff member opens to buy tickets. The chosen event's id scopes scanning
+// and the live dashboard.
+
+/// One event row for the Events tab.
+struct EventDTO: Codable, Equatable, Identifiable {
+    let id: Int
+    let name: String
+    let venue: String?
+    let startsAt: String?
+    let isPublished: Bool
+    let isCancelled: Bool
+    let capacity: Int?
+    let ticketsSold: Int
+
+    /// The public storefront URL for the event (buy tickets / share). Null only
+    /// when the company somehow has no slug.
+    let webURL: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case venue
+        case startsAt = "starts_at"
+        case isPublished = "is_published"
+        case isCancelled = "is_cancelled"
+        case capacity
+        case ticketsSold = "tickets_sold"
+        case webURL = "web_url"
+    }
+}
+
+/// `GET /api/events` → `{ events: [...], web_dashboard_url: "…" }`. The
+/// dashboard URL is where an operator with no events is sent to create one (the
+/// "click here to start your event" empty state).
+struct EventsResponseDTO: Codable, Equatable {
+    let events: [EventDTO]
+    let webDashboardURL: String
+
+    enum CodingKeys: String, CodingKey {
+        case events
+        case webDashboardURL = "web_dashboard_url"
+    }
+}
+
+// MARK: - Customer detail (orders)
+//
+// `GET /api/customers/{token}` (see `CustomerApiController::show()`). One
+// customer's orders, newest first, with the fields the door team needs to
+// decide a manual check-in.
+
+/// One order in a customer's order list.
+struct CustomerOrderDTO: Codable, Equatable, Identifiable {
+    let id: Int
+    let reference: String?
+    let eventId: Int?
+    let eventName: String?
+    let status: String
+    let isConfirmed: Bool
+    let ticketsCount: Int
+    let scannedAt: String?
+    let orderTotalMinor: Int
+
+    /// Whether this order has already been checked in.
+    var isScanned: Bool { scannedAt != nil }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case reference
+        case eventId = "event_id"
+        case eventName = "event_name"
+        case status
+        case isConfirmed = "is_confirmed"
+        case ticketsCount = "tickets_count"
+        case scannedAt = "scanned_at"
+        case orderTotalMinor = "order_total_minor"
+    }
+}
+
+/// The customer identity inside a detail payload.
+struct CustomerIdentityDTO: Codable, Equatable {
+    let name: String?
+    let email: String
+    let token: String
+}
+
+/// `GET /api/customers/{token}` → `{ customer: {...}, orders: [...] }`.
+struct CustomerDetailDTO: Codable, Equatable {
+    let customer: CustomerIdentityDTO
+    let orders: [CustomerOrderDTO]
+}
+
+// MARK: - Order detail
+//
+// `GET /api/orders/{order}` (see `OrderApiController::show()`). One order's
+// full detail, including the ticket-type breakdown and current check-in state.
+// `POST /api/orders/{order}/check-in` returns the shared `ScanOutcomeDTO`.
+
+/// One order's full detail.
+struct OrderDetailDTO: Codable, Equatable, Identifiable {
+    let id: Int
+    let reference: String?
+    let customerName: String?
+    let customerEmail: String?
+    let eventId: Int?
+    let eventName: String?
+    let status: String
+    let isConfirmed: Bool
+    let orderTotalMinor: Int
+    let scannedAt: String?
+    let scannedBy: String?
+    let breakdown: [ScanBreakdownRow]
+
+    /// Whether this order has already been checked in.
+    var isScanned: Bool { scannedAt != nil }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case reference
+        case customerName = "customer_name"
+        case customerEmail = "customer_email"
+        case eventId = "event_id"
+        case eventName = "event_name"
+        case status
+        case isConfirmed = "is_confirmed"
+        case orderTotalMinor = "order_total_minor"
+        case scannedAt = "scanned_at"
+        case scannedBy = "scanned_by"
+        case breakdown
+    }
 }

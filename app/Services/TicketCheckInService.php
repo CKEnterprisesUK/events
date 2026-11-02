@@ -37,10 +37,16 @@ final class TicketCheckInService
      * Resolve a scanned QR_Payload OR a manually typed Order_Reference to a
      * {@see ScanResult}, performing the atomic single check-in when valid and
      * recording a Scan_Event for the outcome. (Requirements 5.3–5.10, 6.1, 6.2)
+     *
+     * When $expectedEventId is non-null the scan is scoped to that Event: an
+     * Order belonging to any other Event of the same Company resolves to
+     * `rejected` (the door operator chose which event they are scanning for, so
+     * a ticket for a different event is "not for this door"). A null value keeps
+     * the prior behaviour of accepting any confirmed Order of the Company.
      */
-    public function resolve(string $payload, Operator $operator): ScanResult
+    public function resolve(string $payload, Operator $operator, ?int $expectedEventId = null): ScanResult
     {
-        $result = $this->decide($payload, $operator);
+        $result = $this->decide($payload, $operator, $expectedEventId);
 
         $this->logScanEvent($result, $operator);
 
@@ -52,7 +58,7 @@ final class TicketCheckInService
      * {@see ScanResult} the caller renders. Kept pure of HTTP concerns and of
      * the Scan_Event side effect so the outcomes stay easy to assert directly.
      */
-    private function decide(string $payload, Operator $operator): ScanResult
+    private function decide(string $payload, Operator $operator, ?int $expectedEventId = null): ScanResult
     {
         $payload = trim($payload);
 
@@ -77,7 +83,7 @@ final class TicketCheckInService
                 return ScanResult::unreadable();
             }
 
-            return $this->checkIn($reference, $operator);
+            return $this->checkIn($reference, $operator, $expectedEventId);
         }
 
         // 5.3 — a payload carrying a `.` but not the `reference.token` shape
@@ -94,7 +100,7 @@ final class TicketCheckInService
             return ScanResult::invalid();
         }
 
-        return $this->checkIn($reference, $operator);
+        return $this->checkIn($reference, $operator, $expectedEventId);
     }
 
     /**
@@ -115,7 +121,7 @@ final class TicketCheckInService
      * and manual-reference paths funnel through here so they behave identically
      * once a reference is in hand.
      */
-    private function checkIn(string $reference, Operator $operator): ScanResult
+    private function checkIn(string $reference, Operator $operator, ?int $expectedEventId = null): ScanResult
     {
         // 5.5 — load through the tenant scope: an Order of another Company (or
         // no such Order) never matches and is rejected.
@@ -127,6 +133,14 @@ final class TicketCheckInService
             // to another Company — the scope hides the difference on purpose, so
             // a single "not found" message fits both without leaking either.
             return ScanResult::rejected();
+        }
+
+        // Event scoping: the operator chose which Event this door is scanning
+        // for, so a valid Order for a DIFFERENT Event of the same Company is
+        // "not for this door" and is rejected. Null means no event was chosen
+        // (accept any of the Company's Orders, the prior behaviour).
+        if ($expectedEventId !== null && (int) $order->event_id !== $expectedEventId) {
+            return ScanResult::wrongEvent($order);
         }
 
         // 5.6 — a voided Order (and any non-confirmed Order: reserved, expired,

@@ -75,6 +75,24 @@ struct SignInView: View {
         NavigationStack {
             Form {
                 Section {
+                    VStack(spacing: 10) {
+                        Image("BrandLogo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 94, height: 94)
+                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                            .accessibilityHidden(true)
+                        Text("Events by CK Enterprises")
+                            .font(.title2.bold())
+                            .multilineTextAlignment(.center)
+                        Text("Secure event check-in")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                }
+                Section {
                     TextField("Email", text: $model.email)
                         .textContentType(.username)
                         .keyboardType(.emailAddress)

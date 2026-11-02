@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// The behaviour the scan screen needs from the networking layer: submit a
 /// decoded QR `payload` or a manually typed `reference` and get back a decoded
@@ -116,6 +117,9 @@ final class ScanViewModel: ObservableObject {
         do {
             let result = try await operation()
             outcome = result
+            if result.status == .checkedIn {
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            }
         } catch let error as APIError {
             // Offline or any API failure: show the message, keep no success.
             outcome = nil
@@ -133,6 +137,7 @@ final class ScanViewModel: ObservableObject {
 /// Scan_Outcome for the most recent submission.
 @available(iOS 17.0, *)
 struct ScanView: View {
+    @Environment(AppState.self) private var appState
     @StateObject private var model: ScanViewModel
     @State private var showingManualEntry = false
 
@@ -147,20 +152,20 @@ struct ScanView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                cameraRegion
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 320)
-                    .background(Color.black.opacity(0.9))
-                    .clipped()
-
-                outcomeRegion
+            Group {
+                if appState.selectedEvent == nil {
+                    noEventSelected
+                } else {
+                    scanner
+                }
             }
             .navigationTitle("Scan")
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button("Enter reference") { showingManualEntry = true }
-                        .accessibilityIdentifier("scan.manualEntry")
+                if appState.selectedEvent != nil {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button("Enter reference") { showingManualEntry = true }
+                            .accessibilityIdentifier("scan.manualEntry")
+                    }
                 }
             }
             .sheet(isPresented: $showingManualEntry) {
@@ -170,6 +175,63 @@ struct ScanView: View {
             }
         }
         .task { await model.onAppear() }
+    }
+
+    /// The scanner itself, with a banner naming the event being scanned for.
+    private var scanner: some View {
+        VStack(spacing: 0) {
+            if let event = appState.selectedEvent {
+                selectedEventBanner(event)
+            }
+
+            cameraRegion
+                .frame(maxWidth: .infinity)
+                .frame(height: 320)
+                .background(Color.black.opacity(0.9))
+                .clipped()
+
+            outcomeRegion
+        }
+    }
+
+    /// A slim banner showing which event this door is scanning for, with a
+    /// quick way to change it (clears the selection, returning to the prompt).
+    private func selectedEventBanner(_ event: EventDTO) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Scanning for")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Text(event.name)
+                    .font(.subheadline.weight(.semibold))
+            }
+            Spacer()
+            Button("Change") { appState.clearSelectedEvent() }
+                .font(.footnote)
+                .accessibilityIdentifier("scan.changeEvent")
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .background(.thinMaterial)
+    }
+
+    /// Shown when no event is selected: scanning is scoped to a chosen event, so
+    /// the operator picks one on the Events tab first.
+    private var noEventSelected: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "calendar.badge.exclamationmark")
+                .font(.largeTitle)
+                .foregroundStyle(.secondary)
+            Text("Choose an event to scan")
+                .font(.headline)
+            Text("Open the Events tab and tap “Scan this event” to pick which event you’re checking people in for.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityIdentifier("scan.noEvent")
     }
 
     /// The camera (granted) or the "camera access is required" state (denied),
@@ -252,7 +314,7 @@ struct ScanOutcomeCard: View {
                     .font(.headline)
                 Spacer()
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(outcome.status == .checkedIn || outcome.status == .alreadyScanned ? Brand.navy : .white)
             .padding()
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(statusColor)
@@ -321,9 +383,9 @@ struct ScanOutcomeCard: View {
     /// door operator reads the result at a glance.
     private var statusColor: Color {
         switch outcome.status {
-        case .checkedIn: return .green
-        case .alreadyScanned: return .orange
-        case .rejected, .failed, .invalid, .unreadable: return .red
+        case .checkedIn: return Brand.emerald
+        case .alreadyScanned: return Brand.amber
+        case .rejected, .failed, .invalid, .unreadable: return Brand.danger
         }
     }
 

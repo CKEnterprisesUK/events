@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Jobs\ReleaseExpiredReservationsJob;
 use App\Models\Event;
 use App\Models\TicketType;
-use App\Services\CapacityReservationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -41,6 +40,18 @@ class ReleaseExpiredReservationsJobTest extends TestCase
     private function job(): ReleaseExpiredReservationsJob
     {
         return new ReleaseExpiredReservationsJob;
+    }
+
+    /**
+     * Run the sweep with its dependencies resolved from the container (the job
+     * now also needs OrderFulfilmentService + StripePaymentService). Orders
+     * seeded here carry no `stripe_session_id`, so they are treated as
+     * free/no-session holds and released on the timer exactly as before — the
+     * Stripe-checked path only applies to paid orders with a session.
+     */
+    private function runSweep(): void
+    {
+        app()->call([$this->job(), 'handle']);
     }
 
     /**
@@ -95,7 +106,7 @@ class ReleaseExpiredReservationsJobTest extends TestCase
             'reserved_count' => 20,
         ]);
 
-        $this->job()->handle(app(CapacityReservationService::class));
+        $this->runSweep();
 
         // With no expired reservations, held capacity is left untouched.
         $this->assertSame(20, $type->fresh()->reserved_count);
@@ -116,7 +127,7 @@ class ReleaseExpiredReservationsJobTest extends TestCase
         $orderId = $this->expiredReservation($event, $type, 8);
         $this->assertSame(8, $type->fresh()->reserved_count);
 
-        $this->job()->handle(app(CapacityReservationService::class));
+        $this->runSweep();
 
         // Requirement 10.7/10.12 — held capacity returns to its
         // pre-reservation value; sold is untouched.
@@ -176,7 +187,7 @@ class ReleaseExpiredReservationsJobTest extends TestCase
         $type->increment('reserved_count', 4);
         $this->assertSame(7, $type->fresh()->reserved_count);
 
-        $this->job()->handle(app(CapacityReservationService::class));
+        $this->runSweep();
 
         // Only the expired 3 are released; the active 4 remain held.
         $this->assertSame(4, $type->fresh()->reserved_count);
@@ -203,8 +214,8 @@ class ReleaseExpiredReservationsJobTest extends TestCase
 
         // Requirement 10.7 — running the sweep twice releases the hold once;
         // reserved_count never goes negative and stays at the released value.
-        $this->job()->handle(app(CapacityReservationService::class));
-        $this->job()->handle(app(CapacityReservationService::class));
+        $this->runSweep();
+        $this->runSweep();
 
         $this->assertSame(0, $type->fresh()->reserved_count);
     }
@@ -226,7 +237,7 @@ class ReleaseExpiredReservationsJobTest extends TestCase
         $this->expiredReservation($eventA, $typeA, 5);
         $this->expiredReservation($eventB, $typeB, 9);
 
-        $this->job()->handle(app(CapacityReservationService::class));
+        $this->runSweep();
 
         // Each Event's expired holds are swept independently. (10.7)
         $this->assertSame(0, $typeA->fresh()->reserved_count);

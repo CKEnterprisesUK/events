@@ -90,6 +90,21 @@ final readonly class ScanResult
     }
 
     /**
+     * A valid Order that belongs to a DIFFERENT Event of the same Company than
+     * the one the operator is scanning for. Reported as `rejected` (the client
+     * already handles that status) but with a message that makes the mismatch
+     * clear so the operator knows it is the wrong door, not an unknown ticket.
+     */
+    public static function wrongEvent(Order $order): self
+    {
+        return new self(
+            status: self::STATUS_REJECTED,
+            message: 'This ticket is for a different event.',
+            order: $order,
+        );
+    }
+
+    /**
      * A resolved Order that is not confirmed (reserved, expired, cancelled,
      * refunded, disputed, voided). (Requirement 5.6)
      */

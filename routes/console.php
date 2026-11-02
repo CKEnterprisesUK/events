@@ -3,6 +3,7 @@
 use App\Jobs\AnonymiseExpiredCustomerDataJob;
 use App\Jobs\BackfillStripeFeesJob;
 use App\Jobs\PruneAuditLogsJob;
+use App\Jobs\ReconcilePaidOrdersJob;
 use App\Jobs\RefreshStripeAccountStateJob;
 use App\Jobs\ReleaseExpiredReservationsJob;
 use Illuminate\Foundation\Inspiring;
@@ -83,6 +84,42 @@ Artisan::command('stripe:backfill-fees', function () {
     $captured = dispatch_sync(new BackfillStripeFeesJob);
     $this->info("Captured Stripe fees for {$captured} order(s).");
 })->purpose('Backfill actual Stripe processing fees onto paid orders missing them');
+
+// Reconcile Orders against Stripe to recover any whose payment SUCCEEDED but
+// which were never confirmed (the money-in/no-tickets case): for each matching
+// Order whose Stripe Checkout Session reports PAID, run the same authoritative
+// confirmation the webhook uses — mark paid, un-void tickets, re-commit
+// capacity (honouring the seats), and send the ticket email.
+//
+// Pass an order_reference to recover ONE order (the manual tool for a specific
+// customer); omit it to sweep all unconfirmed paid-capable orders (a standing
+// safety net in case a webhook is ever missed). Runs SYNCHRONOUSLY, like the
+// other sweepers, for the same proc_open reason.
+//
+//   php artisan orders:reconcile-paid                    # sweep all
+//   php artisan orders:reconcile-paid L5NWIX9B5PHP       # one order
+//
+// A reconciliation cron is a sensible safety net once validated:
+//   */15 * * * * cd /home/<user>/<app> && /opt/cpanel/ea-php85/root/usr/bin/php \
+//       artisan orders:reconcile-paid >> /dev/null 2>&1
+//
+// (Reservation-vs-payment race fix)
+Artisan::command('orders:reconcile-paid {order_reference? : Recover a single order by reference; omit to sweep all}', function () {
+    $reference = $this->argument('order_reference');
+
+    $job = new ReconcilePaidOrdersJob($reference);
+    app()->call([$job, 'handle']);
+    $s = $job->summary;
+
+    $this->info(
+        "Reconcile complete: examined {$s['examined']}, recovered {$s['recovered']}, skipped {$s['skipped']}."
+        .($reference !== null ? " (order {$reference})" : '')
+    );
+
+    if ($reference !== null && $s['examined'] === 0) {
+        $this->warn("No order found with reference '{$reference}'.");
+    }
+})->purpose('Reconcile orders against Stripe and recover any paid-but-unconfirmed order');
 
 // Refresh the connected-account onboarding/verification snapshot for every
 // Company that has a connected Stripe account, by re-reading the account from

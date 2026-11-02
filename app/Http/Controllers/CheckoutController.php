@@ -335,6 +335,11 @@ class CheckoutController extends Controller
             // Pre-fill the email the Customer just entered so Stripe's hosted
             // page doesn't ask them for it a second time.
             customerEmail: $order->customer_email,
+            // Align the Stripe payment window with our reservation hold: the
+            // seat is held for exactly as long as Stripe will accept the money,
+            // so a slow payment can't land after the seat is released.
+            // (Reservation-vs-payment race fix)
+            expiresAt: $reservedUntil->getTimestamp(),
         );
 
         $order->stripe_session_id = $session->id;

@@ -42,6 +42,24 @@ class FakeStripePaymentService implements StripePaymentService
     public array $refundCalls = [];
 
     /**
+     * Recorded {@see retrieveCheckoutSessionStatus()} calls, for assertions.
+     *
+     * @var list<array{connected_account_id: string, session_id: string}>
+     */
+    public array $sessionStatusCalls = [];
+
+    /**
+     * Per-Session status the next {@see retrieveCheckoutSessionStatus()} reports,
+     * keyed by Session id. Absent => UNKNOWN (the fail-safe the real boundary
+     * returns when Stripe cannot be read). Tests arrange a paid/open/expired
+     * Session with {@see setCheckoutSessionStatus()}.
+     * (Reservation-vs-payment race fix)
+     *
+     * @var array<string, StripeSessionStatus>
+     */
+    private array $sessionStatuses = [];
+
+    /**
      * Per-account charges-enabled flags reported by capability reads. Keyed by
      * account id; defaults to false (a freshly connected account is not yet
      * charges-enabled).
@@ -241,6 +259,7 @@ class FakeStripePaymentService implements StripePaymentService
         string $cancelUrl,
         array $metadata = [],
         ?string $customerEmail = null,
+        ?int $expiresAt = null,
     ): StripeCheckoutSession {
         // Simulate a failed direct charge: the session is never created, so no
         // charge is made and no funds move. The failure fires once, then the
@@ -263,6 +282,7 @@ class FakeStripePaymentService implements StripePaymentService
             'cancel_url' => $cancelUrl,
             'metadata' => $metadata,
             'customer_email' => $customerEmail,
+            'expires_at' => $expiresAt,
             'id' => $id,
         ];
 
@@ -270,6 +290,38 @@ class FakeStripePaymentService implements StripePaymentService
             id: $id,
             url: 'https://checkout.stripe.test/session/'.$id,
         );
+    }
+
+    /**
+     * Arrange the status the next {@see retrieveCheckoutSessionStatus()} for the
+     * given Session id reports. A Session with no arranged status reports
+     * UNKNOWN — the same fail-safe the real boundary returns when it cannot read
+     * the Session — so a test that forgets to arrange one still exercises the
+     * "keep the hold" path. Returns $this for fluent setup.
+     * (Reservation-vs-payment race fix)
+     */
+    public function setCheckoutSessionStatus(
+        string $sessionId,
+        string $status,
+        ?string $paymentIntentId = null,
+    ): static {
+        $this->sessionStatuses[$sessionId] = new StripeSessionStatus($status, $paymentIntentId);
+
+        return $this;
+    }
+
+    public function retrieveCheckoutSessionStatus(
+        string $connectedAccountId,
+        string $sessionId,
+    ): StripeSessionStatus {
+        $this->sessionStatusCalls[] = [
+            'connected_account_id' => $connectedAccountId,
+            'session_id' => $sessionId,
+        ];
+
+        // No arranged status => UNKNOWN, the fail-safe the real boundary returns
+        // when Stripe cannot be reached, so the caller keeps the seat held.
+        return $this->sessionStatuses[$sessionId] ?? new StripeSessionStatus(StripeSessionStatus::UNKNOWN);
     }
 
     public function refundCharge(
