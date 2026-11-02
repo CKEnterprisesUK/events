@@ -10,8 +10,8 @@
         'storefront' => ['about_text', 'facebook_url', 'instagram_url', 'x_url', 'linkedin_url'],
         'organisation' => ['legal_name', 'trading_name', 'organisation_type', 'company_number', 'charity_number', 'website', 'email', 'phone'],
         'address' => ['address_line_1', 'address_line_2', 'city', 'postcode', 'country'],
-        'contact' => ['support_email', 'gdpr_contact_email'],
-        'privacy' => ['retention_months'],
+        'contact' => ['support_email'],
+        'privacy' => ['retention_months', 'gdpr_contact_email'],
     ];
 
     $errorTab = 'appearance';
@@ -282,14 +282,6 @@
                     <span class="field-hint">Shown to customers who need help with their order.</span>
                     @error('support_email')<p class="error">{{ $message }}</p>@enderror
                 </div>
-
-                <div class="field">
-                    <label for="gdpr_contact_email">GDPR / data-protection contact email</label>
-                    <input type="email" name="gdpr_contact_email" id="gdpr_contact_email"
-                           value="{{ old('gdpr_contact_email', $company->gdpr_contact_email) }}" placeholder="privacy@yourcompany.com">
-                    <span class="field-hint">Where data-subject and privacy requests are handled.</span>
-                    @error('gdpr_contact_email')<p class="error">{{ $message }}</p>@enderror
-                </div>
             </div>
 
             {{-- =================== Privacy & data =================== --}}
@@ -320,6 +312,14 @@
                         {{ \App\Models\Company::RETENTION_MONTHS_MAX }} months (100 years).
                     </span>
                     @error('retention_months')<p class="error">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="field">
+                    <label for="gdpr_contact_email">GDPR / data-protection contact email</label>
+                    <input type="email" name="gdpr_contact_email" id="gdpr_contact_email"
+                           value="{{ old('gdpr_contact_email', $company->gdpr_contact_email) }}" placeholder="privacy@yourcompany.com">
+                    <span class="field-hint">Where data-subject and privacy requests are handled.</span>
+                    @error('gdpr_contact_email')<p class="error">{{ $message }}</p>@enderror
                 </div>
 
                 {{-- Where to action data-subject requests: point the Owner at
