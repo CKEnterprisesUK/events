@@ -222,7 +222,7 @@ class AnnouncementController extends Controller
             'name' => $sampleName,
             'company' => $sampleCompany,
             'platform' => (string) config('app.name'),
-            'dashboard_url' => route('dashboard.index'),
+            'dashboard_url' => route('dashboard.home'),
         ]);
 
         return view('emails.announcement', [

@@ -82,7 +82,7 @@ class AnnouncementRenderer
             'name' => $recipient->name,
             'company' => $recipient->company?->name ?? '',
             'platform' => (string) config('app.name'),
-            'dashboard_url' => route('dashboard.index'),
+            'dashboard_url' => route('dashboard.home'),
         ];
     }
 
