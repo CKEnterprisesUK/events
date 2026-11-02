@@ -1,29 +1,31 @@
 import SwiftUI
 
 /// The main tab container shown once the user is authenticated and scoped to a
-/// company (`AppState.phase == .ready`). Tab visibility is entirely
-/// server-driven: it reads `AppState.permittedActions`, which is filled from
-/// `/api/auth/me` `permitted_actions` (and refreshed on company select), so the
-/// app never has to encode the role→action matrix itself.
+/// company (`AppState.phase == .ready`).
 ///
-/// Visibility rules (Requirements 8.4, 8.5):
-///   - Scan + Dashboard   shown when `check_in` is present (`canCheckIn`).
-///   - Customer Search     shown ONLY when `orders` is present
-///                         (`canSearchCustomers`); hidden otherwise.
-///   - Sessions (team)     the team-management portion is shown only when
-///                         `users` is present (`canManageTeamSessions`); the
-///                         self-sessions screen itself is always available.
+/// Tab layout (left → right), with Scan deliberately in the CENTRE:
 ///
-/// A role with `check_in` but not `orders` therefore sees Scan + Dashboard and
-/// no Customer Search tab (Requirement 8.5) — the gating is purely additive and
-/// driven by the server's permitted actions.
+///   Events · Customers · Scan · Dashboard · Profile
 ///
-/// NOTE ON SIBLING TABS: the Scan (task 18.1), Dashboard (task 19.1), and
-/// Sessions (task 21.1) screens are built in their own tasks. Until each lands,
-/// its tab renders a small `ComingSoonTab` placeholder so this container
-/// compiles and the visibility logic is exercisable now. Replace each
-/// placeholder with the real view when that task completes — the surrounding
-/// `if` conditions and tab ordering stay the same.
+/// - Events    the app's landing tab (always shown). Lists the company's
+///             events with tickets-sold counts and a buy-tickets web link, and
+///             is where the operator chooses which event to scan for. When the
+///             company has no events it shows a "start your event" link to the
+///             web app.
+/// - Customers shown only when `orders` is present (`canSearchCustomers`).
+///             Search by name / email / order reference, drill into a customer's
+///             orders, and (for check-in roles) mark an order as entered.
+/// - Scan      the centre tab, shown when `check_in` is present (`canCheckIn`).
+///             Scans are scoped to the event chosen on the Events tab.
+/// - Dashboard shown when `check_in` is present (`canCheckIn`). Live attendance
+///             for the selected event.
+/// - Profile   the signed-in user's identity and the sign-out control (always
+///             shown). Replaces the old Sessions tab — team-member session
+///             management moved to the web admin.
+///
+/// Visibility is server-driven from `AppState.permittedActions` (filled from
+/// `/api/auth/me` and refreshed on company select), so the app never encodes
+/// the role→action matrix itself.
 ///
 /// Requires iOS 17 because it reads the `@Observable` `AppState` from the
 /// environment — consistent with the rest of the app (see README).
@@ -37,29 +39,31 @@ struct MainTabView: View {
 
     var body: some View {
         TabView {
-            // Scan + Dashboard — shown when the role may check in (Req 8.5).
-            if appState.canCheckIn {
-                ScanView(auth: auth)
-                    .tabItem { Label("Scan", systemImage: "qrcode.viewfinder") }
+            // Events — the landing tab, always available. Also the place the
+            // operator chooses which event to scan for.
+            EventsView(auth: auth)
+                .tabItem { Label("Events", systemImage: "calendar") }
 
-                DashboardView(auth: auth)
-                    .tabItem { Label("Dashboard", systemImage: "chart.bar") }
-            }
-
-            // Customer Search — shown ONLY when the role may manage orders;
-            // hidden otherwise (Requirements 8.4, 8.5). This is the tab this
-            // task wires end-to-end.
+            // Customers — shown ONLY when the role may manage orders.
             if appState.canSearchCustomers {
                 CustomerSearchView(auth: auth)
                     .tabItem { Label("Customers", systemImage: "person.2") }
             }
 
-            // Sessions — the self-sessions screen is always available; the
-            // team-management portion is gated inside the screen on the
-            // server-driven `users` ability (`canManageTeamSessions`),
-            // consistent with the customer-search gating above.
-            SessionsView(auth: auth, canManageTeamSessions: appState.canManageTeamSessions)
-                .tabItem { Label("Sessions", systemImage: "key") }
+            // Scan — the CENTRE tab, shown when the role may check in. Scoped to
+            // the event chosen on the Events tab.
+            if appState.canCheckIn {
+                ScanView(auth: auth)
+                    .tabItem { Label("Scan", systemImage: "qrcode.viewfinder") }
+
+                // Dashboard — live attendance for the selected event.
+                DashboardView(auth: auth)
+                    .tabItem { Label("Dashboard", systemImage: "chart.bar") }
+            }
+
+            // Profile — identity + sign out, always available.
+            ProfileView(auth: auth)
+                .tabItem { Label("Profile", systemImage: "person.crop.circle") }
         }
     }
 }

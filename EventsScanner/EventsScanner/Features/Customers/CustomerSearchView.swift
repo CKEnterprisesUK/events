@@ -61,8 +61,10 @@ final class CustomerSearchViewModel: ObservableObject {
 @available(iOS 17.0, *)
 struct CustomerSearchView: View {
     @StateObject private var model: CustomerSearchViewModel
+    private let auth: AuthStore
 
     init(auth: AuthStore) {
+        self.auth = auth
         _model = StateObject(wrappedValue: CustomerSearchViewModel(auth: auth))
     }
 
@@ -93,12 +95,20 @@ struct CustomerSearchView: View {
                     }
                 } else {
                     ForEach(model.customers) { customer in
-                        CustomerRow(customer: customer)
+                        NavigationLink {
+                            CustomerDetailView(
+                                auth: auth,
+                                token: customer.token,
+                                fallbackName: customer.name
+                            )
+                        } label: {
+                            CustomerRow(customer: customer)
+                        }
                     }
                 }
             }
             .navigationTitle("Customers")
-            .searchable(text: $model.query, prompt: "Name or email")
+            .searchable(text: $model.query, prompt: "Name, email or order reference")
             .onSubmit(of: .search) {
                 Task { await model.search() }
             }

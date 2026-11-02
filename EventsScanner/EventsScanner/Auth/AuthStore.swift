@@ -167,7 +167,10 @@ final class AuthStore: UnauthorizedHandling {
     /// outcome. A transport failure surfaces `APIError.offline` to the caller,
     /// which must never be reported as a successful check-in (Requirement 9.2).
     func submitScan(payload: String) async throws -> ScanOutcomeDTO {
-        try await client.send(.scan, body: ScanRequest(payload: payload, reference: nil))
+        try await client.send(
+            .scan,
+            body: ScanRequest(payload: payload, reference: nil, eventId: appState.selectedEvent?.id)
+        )
     }
 
     /// Submit a manually typed Order_Reference to `POST /api/scan` and return
@@ -175,7 +178,10 @@ final class AuthStore: UnauthorizedHandling {
     /// always-available fallback to the camera: a manual reference and its
     /// scanned payload resolve to the same outcome server-side.
     func submitManual(reference: String) async throws -> ScanOutcomeDTO {
-        try await client.send(.scan, body: ScanRequest(payload: nil, reference: reference))
+        try await client.send(
+            .scan,
+            body: ScanRequest(payload: nil, reference: reference, eventId: appState.selectedEvent?.id)
+        )
     }
 
     // MARK: - Company selection
@@ -202,7 +208,51 @@ final class AuthStore: UnauthorizedHandling {
     /// (Requirements 3.2, 3.3). The caller (DashboardViewModel) decodes the
     /// attendance figures and recent scan feed.
     func liveSnapshot() async throws -> LiveSnapshotDTO {
-        try await client.send(.dashboardLive)
+        try await client.send(.dashboardLive(eventId: appState.selectedEvent?.id))
+    }
+
+    // MARK: - Events
+
+    /// List the Active_Company's events for the Events tab via `GET /api/events`.
+    func listEvents() async throws -> EventsResponseDTO {
+        try await client.send(.events)
+    }
+
+    // MARK: - Customer detail & orders
+
+    /// Fetch one customer's orders via `GET /api/customers/{token}`.
+    func customerDetail(token: String) async throws -> CustomerDetailDTO {
+        try await client.send(.customerDetail(token: token))
+    }
+
+    /// Fetch one order's detail via `GET /api/orders/{id}`.
+    func orderDetail(id: Int) async throws -> OrderDetailDTO {
+        try await client.send(.order(id: id))
+    }
+
+    /// Manually mark an order as entered via `POST /api/orders/{id}/check-in`.
+    /// Returns the same Scan_Outcome contract as a camera scan. The server gates
+    /// this on `check_in`, so an accountant who can view orders cannot check in.
+    func checkInOrder(id: Int) async throws -> ScanOutcomeDTO {
+        try await client.send(.orderCheckIn(id: id), body: EmptyBody())
+    }
+
+    // MARK: - Logout
+
+    /// Revoke the current token server-side via `POST /api/auth/logout`, then
+    /// clear the Keychain token and return to sign-in. Unlike the 401 path, this
+    /// actively revokes the token on the server so it can never be reused. A
+    /// transport failure still signs the user out locally — we never want a
+    /// "stuck signed in" state, and the token will expire regardless.
+    func logout() async {
+        do {
+            try await client.send(.logout, body: EmptyBody())
+        } catch {
+            // Best effort: even if the revoke call fails (offline), clear local
+            // state below so the user is signed out of the app.
+        }
+        try? tokenStore.delete()
+        appState.didSignOut()
     }
 
     // MARK: - Sessions (self)
@@ -222,23 +272,9 @@ final class AuthStore: UnauthorizedHandling {
         try await client.send(.revokeSession(id: id))
     }
 
-    // MARK: - Sessions (team / super-admin)
-
-    /// List a team member's active Sessions via
-    /// `GET /api/users/{user}/sessions` (Requirement 14.3). Gated server-side on
-    /// the `users` ability; a non-privileged actor or a non-member target is a
-    /// 403, surfaced here as `APIError.forbidden`.
-    func listUserSessions(userId: Int) async throws -> [SessionDTO] {
-        let response: SessionsResponseDTO = try await client.send(.userSessions(userId: userId))
-        return response.sessions
-    }
-
-    /// Revoke one of a team member's Sessions via
-    /// `DELETE /api/users/{user}/sessions/{id}` (Requirement 14.3). Same gating
-    /// as the team list.
-    func revokeUserSession(userId: Int, sessionId: Int) async throws {
-        try await client.send(.revokeUserSession(userId: userId, sessionId: sessionId))
-    }
+    // Team-member session management was removed from the app (it is a
+    // web-admin responsibility). The self-session calls above remain; the
+    // Profile screen uses `logout()` rather than revoking individual sessions.
 
     // MARK: - Customer search
 
@@ -277,6 +313,7 @@ final class AuthStore: UnauthorizedHandling {
         let me: MeResponseDTO = try await client.send(.me)
         appState.applyMe(
             name: me.user.name,
+            email: me.user.email,
             permittedActions: me.permittedActions,
             memberships: me.companies.map {
                 AppState.Membership(id: $0.id, name: $0.name, role: $0.role)
@@ -343,15 +380,25 @@ struct TwoFactorRequest: Encodable, Equatable {
 struct ScanRequest: Encodable, Equatable {
     let payload: String?
     let reference: String?
+    /// The chosen event to scope this scan to. When present the server rejects
+    /// an order for a different event as "wrong event". Omitted from the JSON
+    /// when nil (no event selected).
+    let eventId: Int?
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         if let payload { try container.encode(payload, forKey: .payload) }
         if let reference { try container.encode(reference, forKey: .reference) }
+        if let eventId { try container.encode(eventId, forKey: .eventId) }
     }
 
     enum CodingKeys: String, CodingKey {
         case payload
         case reference
+        case eventId = "event_id"
     }
 }
+
+/// An empty JSON body (`{}`) for POST endpoints that take no parameters (manual
+/// check-in, logout). Lets those calls reuse the body-carrying `send` overload.
+struct EmptyBody: Encodable, Equatable {}

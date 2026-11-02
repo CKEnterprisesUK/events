@@ -51,6 +51,12 @@ class ScanApiController extends Controller
         $data = $request->validate([
             'payload' => ['nullable', 'string'],
             'reference' => ['nullable', 'string'],
+            // The Event the operator chose to scan for (iOS Events tab). When
+            // present the scan is scoped to it: an Order for a different Event
+            // of the same Company is rejected as "wrong event". Optional for
+            // backwards compatibility — a missing value accepts any of the
+            // Company's Orders as before.
+            'event_id' => ['nullable', 'integer'],
         ]);
 
         // Accept either a scanned QR payload or a manual Order_Reference. Both
@@ -59,7 +65,13 @@ class ScanApiController extends Controller
         // neither is supplied an empty string resolves to `unreadable` (6.2).
         $input = (string) ($data['payload'] ?? $data['reference'] ?? '');
 
-        $result = $this->checkIn->resolve($input, Operator::fromUser($request->user()));
+        $expectedEventId = isset($data['event_id']) ? (int) $data['event_id'] : null;
+
+        $result = $this->checkIn->resolve(
+            $input,
+            Operator::fromUser($request->user()),
+            $expectedEventId,
+        );
 
         return response()->json($this->serialise($result));
     }

@@ -231,15 +231,11 @@ struct DashboardView: View {
 
     private var idle: some View {
         VStack(spacing: 12) {
-            Image(systemName: "calendar.badge.clock")
-                .font(.largeTitle)
-                .foregroundStyle(.secondary)
-            Text("No active event")
-                .font(.headline)
-            Text("The live dashboard will populate when an event is in progress.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+            BrandEmptyState(
+                symbol: "calendar.badge.clock",
+                title: "No active event",
+                message: "The live dashboard will populate when an event is in progress."
+            )
 
             if let errorMessage = model.errorMessage {
                 Text(errorMessage)
