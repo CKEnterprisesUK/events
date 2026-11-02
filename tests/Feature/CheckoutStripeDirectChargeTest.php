@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\Company;
 use App\Models\Event;
 use App\Models\Order;
-use App\Models\Ticket;
 use App\Models\TicketType;
 use App\Services\Stripe\FakeStripePaymentService;
 use App\Services\Stripe\StripePaymentService;
@@ -116,6 +115,13 @@ class CheckoutStripeDirectChargeTest extends TestCase
         $this->assertNotNull($order->stripe_session_id);
         $this->assertSame($call['id'], $order->stripe_session_id);
         $this->assertSame(Order::STATUS_RESERVED, $order->status);
+
+        // The Stripe payment window is aligned with the reservation hold: the
+        // Session's expires_at matches the Order's reserved_until, so the seat
+        // is held for exactly as long as Stripe will accept the payment.
+        // (Reservation-vs-payment race fix)
+        $this->assertNotNull($call['expires_at']);
+        $this->assertSame($order->reserved_until->getTimestamp(), $call['expires_at']);
     }
 
     public function test_pass_on_mode_charges_total_including_booking_fee_with_matching_application_fee(): void

@@ -34,9 +34,11 @@ use Illuminate\Support\Facades\DB;
  *   6.8, 10.6, 5.6)
  *
  * Reservation window:
- *   A successful reserve returns the `reserved_until` instant — now + 900s. The
- *   caller snapshots this on the Order; the scheduled release job (task 8.2)
- *   releases reservations whose window has elapsed. (Requirements 10.6, 10.7)
+ *   A successful reserve returns the `reserved_until` instant — now +
+ *   RESERVATION_WINDOW_SECONDS (1 hour), aligned with the Stripe Checkout
+ *   Session's payment window. The caller snapshots this on the Order; the
+ *   scheduled release job releases reservations whose window has elapsed AND
+ *   whose Stripe Session is confirmed dead. (Requirements 10.6, 10.7)
  *
  * Release:
  *   `release()` returns held units back to `reserved_count` and is idempotent —
@@ -49,9 +51,17 @@ class CapacityReservationService
     /**
      * The reservation window, in seconds. A reserve holds capacity for this
      * long before it must be confirmed (paid/free-confirmed) or released.
-     * (Requirements 10.6, 10.7)
+     *
+     * Set to 3600s (1 hour) and deliberately aligned with the Stripe Checkout
+     * Session's `expires_at`: the seat is held for exactly as long as Stripe
+     * will still accept the payment. A slow-but-successful payment (bank
+     * 3-D Secure delays, a customer who dawdles on the hosted page) can no
+     * longer land AFTER its seat was handed back, which is what produced the
+     * money-in/no-tickets state. The sweeper additionally verifies with Stripe
+     * before releasing, so even an elapsed window never releases a seat whose
+     * payment succeeded. (Requirements 10.6, 10.7; reservation-vs-payment race fix)
      */
-    public const RESERVATION_WINDOW_SECONDS = 900;
+    public const RESERVATION_WINDOW_SECONDS = 3600;
 
     /**
      * Reserve capacity for the given quantities against an Event, atomically.
@@ -217,6 +227,71 @@ class CapacityReservationService
                         'sold_count' => DB::raw("sold_count + {$commit}"),
                     ]);
             }
+        });
+    }
+
+    /**
+     * Directly add units to `sold_count` for an Order whose hold has ALREADY
+     * been released — the recovery case where a reserved Order was swept to
+     * `expired` (its `reserved_count` decremented) and only later confirmed as
+     * paid by Stripe. There is nothing left in `reserved_count` to move, so
+     * {@see commit()} (which clamps at the held units) would commit zero and
+     * leave `sold_count` wrong. This path bumps `sold_count` straight up
+     * instead.
+     *
+     * Capacity policy: payment is authoritative, so the seats are ALWAYS
+     * committed — even if the Event is now at or over capacity because the held
+     * seats were resold in the gap. When that happens the commit is still
+     * applied and `true` is returned via `$oversold`, so the caller can log /
+     * alert rather than silently oversell. This can only tip over capacity in
+     * the genuinely-simultaneous last-seat case, which the aligned window +
+     * Stripe-checked sweeper otherwise prevent. (Reservation-vs-payment race fix)
+     *
+     * @param  array<int, int>  $quantities  Map of Ticket_Type id => quantity to add to sold.
+     * @return bool True when committing these units pushed any Ticket_Type (or the Event overall) past capacity.
+     */
+    public function commitSoldDirect(Event $event, array $quantities): bool
+    {
+        $quantities = $this->normalizeQuantities($quantities);
+
+        if ($quantities === []) {
+            return false;
+        }
+
+        return DB::transaction(function () use ($event, $quantities): bool {
+            $lockedEvent = $this->lockEvent($event);
+            $ticketTypes = $this->lockTicketTypes($lockedEvent, array_keys($quantities));
+
+            $oversold = false;
+
+            foreach ($quantities as $ticketTypeId => $qty) {
+                $ticketType = $ticketTypes[$ticketTypeId];
+
+                // Detect a per-type overshoot (capped types only) for alerting;
+                // we honour the payment regardless.
+                if ($ticketType->isCapped()) {
+                    $availableAfter = $ticketType->capacity - $ticketType->sold_count - $ticketType->reserved_count - $qty;
+
+                    if ($availableAfter < 0) {
+                        $oversold = true;
+                    }
+                }
+
+                TicketType::withoutGlobalScopes()
+                    ->whereKey($ticketTypeId)
+                    ->update(['sold_count' => DB::raw("sold_count + {$qty}")]);
+            }
+
+            // Event-overall overshoot (when the Event sets a cap). The sold_count
+            // increments above have already been applied in this transaction, so
+            // this fresh sum reflects the POST-commit committed+reserved total —
+            // compare it directly against the Event capacity.
+            if ($lockedEvent->capacity !== null
+                && $this->eventCommittedAndReserved($lockedEvent) > $lockedEvent->capacity) {
+                $oversold = true;
+            }
+
+            return $oversold;
         });
     }
 

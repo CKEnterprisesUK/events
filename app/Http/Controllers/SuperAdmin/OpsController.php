@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\ReconcilePaidOrdersJob;
 use App\Services\PendingMigrations;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -184,6 +185,51 @@ class OpsController extends Controller
         }
 
         return back()->with('ops_status', trim(Artisan::output()) ?: 'Stripe account state refreshed.');
+    }
+
+    /**
+     * Reconcile Orders against Stripe and recover any whose payment SUCCEEDED
+     * but which were never confirmed (the money-in/no-tickets case), in-process.
+     *
+     * This is the browser-driven equivalent of the `orders:reconcile-paid` cron
+     * command, for a host with no SSH/terminal. For each unconfirmed
+     * paid-capable Order it reads the Checkout Session status from Stripe and,
+     * when Stripe reports the payment PAID, confirms the Order through the same
+     * authoritative path the webhook uses — marking it paid, un-voiding its
+     * tickets, re-committing capacity (honouring the seats), and sending the
+     * ticket email. An optional order reference recovers just that one Order.
+     *
+     * NON-DESTRUCTIVE in the sense that matters here: it only CONFIRMS orders
+     * Stripe reports as genuinely paid (it never cancels, refunds, or voids),
+     * reads from Stripe without mutating anything there, and is idempotent — an
+     * already-paid Order is left untouched, so it is safe to run in every
+     * environment, production included, and safe to re-run. (Reservation-vs-
+     * payment race fix)
+     */
+    public function reconcilePaid(Request $request): RedirectResponse
+    {
+        $reference = trim((string) $request->input('order_reference')) ?: null;
+
+        try {
+            // Run inline (dispatch_sync) so it works on the no-queue-worker
+            // cPanel host, and read the structured per-run summary straight off
+            // the instance we hold.
+            $job = new ReconcilePaidOrdersJob($reference);
+            app()->call([$job, 'handle']);
+        } catch (\Throwable $e) {
+            return back()->with('ops_error', 'Reconcile failed: '.$e->getMessage());
+        }
+
+        $s = $job->summary;
+        $message = $reference !== null
+            ? "Reconcile complete for order {$reference}: examined {$s['examined']}, recovered {$s['recovered']}, skipped {$s['skipped']}."
+            : "Reconcile complete: examined {$s['examined']}, recovered {$s['recovered']}, skipped {$s['skipped']}.";
+
+        if ($reference !== null && $s['examined'] === 0) {
+            $message .= "\nNo order found with that reference.";
+        }
+
+        return back()->with('ops_status', $message);
     }
 
     /**
