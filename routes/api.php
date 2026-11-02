@@ -4,6 +4,8 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CompanyController;
 use App\Http\Controllers\Api\CustomerApiController;
 use App\Http\Controllers\Api\DashboardApiController;
+use App\Http\Controllers\Api\EventApiController;
+use App\Http\Controllers\Api\OrderApiController;
 use App\Http\Controllers\Api\ScanApiController;
 use App\Http\Controllers\Api\SessionController;
 use Illuminate\Support\Facades\Route;
@@ -83,6 +85,23 @@ Route::post('/scan', [ScanApiController::class, 'scan'])
 
 /*
 |--------------------------------------------------------------------------
+| Events
+|--------------------------------------------------------------------------
+|
+| The Active_Company's Events for the app's landing tab: name/venue/start,
+| tickets-sold counts, and the public web URL a staff member opens to buy
+| tickets. The operator chooses which Event to scan for here, and that id is
+| then passed to `/scan` (`event_id`) and `/dashboard/live` (`?event=`). Gated
+| on `ACTION_CHECK_IN` (the door authority — Owner/Admin/Box_Office/Scanner),
+| so an Accountant is denied; runs under `api.tenant` so only this Company's
+| Events are ever returned.
+|
+*/
+Route::get('/events', [EventApiController::class, 'index'])
+    ->middleware(['auth:sanctum', 'api.tenant']);
+
+/*
+|--------------------------------------------------------------------------
 | Live dashboard
 |--------------------------------------------------------------------------
 |
@@ -113,6 +132,42 @@ Route::get('/dashboard/live', [DashboardApiController::class, 'live'])
 */
 Route::get('/customers', [CustomerApiController::class, 'index'])
     ->middleware(['auth:sanctum', 'api.tenant']);
+
+/*
+|--------------------------------------------------------------------------
+| Customer detail & orders
+|--------------------------------------------------------------------------
+|
+| One Customer's orders (addressed by the base64url email token from the
+| search), and a single Order's detail. Both are read-only and gated on
+| `ACTION_MANAGE_ORDERS` (Owner/Admin/Box_Office/Accountant), tenant-scoped via
+| `api.tenant`. The order-detail page is where the operator can trigger a manual
+| check-in below.
+|
+*/
+Route::get('/customers/{token}', [CustomerApiController::class, 'show'])
+    ->middleware(['auth:sanctum', 'api.tenant']);
+
+Route::get('/orders/{order}', [OrderApiController::class, 'show'])
+    ->middleware(['auth:sanctum', 'api.tenant'])
+    ->whereNumber('order');
+
+/*
+|--------------------------------------------------------------------------
+| Manual check-in
+|--------------------------------------------------------------------------
+|
+| Mark one Order as entered from the Customers flow (a staffed check-in rather
+| than a camera scan). Gated on `ACTION_CHECK_IN` — which the role matrix grants
+| to Owner/Admin/Box_Office/Scanner but NOT the Accountant — so "box office and
+| above, not accountants" is enforced by the existing matrix. Resolves through
+| the shared TicketCheckInService scoped to the Order's own Event and returns
+| the Scan_Outcome contract, so it behaves identically to a scan.
+|
+*/
+Route::post('/orders/{order}/check-in', [OrderApiController::class, 'checkIn'])
+    ->middleware(['auth:sanctum', 'api.tenant', 'throttle:scan'])
+    ->whereNumber('order');
 
 /*
 |--------------------------------------------------------------------------
@@ -148,6 +203,11 @@ Route::delete('/sessions/{id}', [SessionController::class, 'destroy'])
 | non-privileged actor or non-member target → 403 with tokens unchanged.
 | Binding the tenant here also gives the `TOKEN_REVOKED` Audit_Entry its
 | `company_id`. (Requirements 14.3, 14.4, 14.5, 14.6, 14.7, 16.2)
+|
+| NOTE: the native iOS app no longer surfaces team-session management (the
+| "type a user id to revoke" screen was removed — that is a web-admin job). The
+| endpoints remain for the web/super-admin surface and the committed revocation
+| property tests; the app simply stops calling them.
 |
 */
 Route::get('/users/{user}/sessions', [SessionController::class, 'teamIndex'])

@@ -24,11 +24,13 @@ enum HTTPMethod: String {
 ///   POST   /api/companies/{id}/select
 ///   POST   /api/scan
 ///   GET    /api/dashboard/live
+///   GET    /api/events
 ///   GET    /api/customers?q=…
+///   GET    /api/customers/{token}
+///   GET    /api/orders/{order}
+///   POST   /api/orders/{order}/check-in
 ///   GET    /api/sessions
 ///   DELETE /api/sessions/{id}
-///   GET    /api/users/{user}/sessions
-///   DELETE /api/users/{user}/sessions/{id}
 struct Endpoint: Equatable {
     let method: HTTPMethod
 
@@ -73,13 +75,27 @@ struct Endpoint: Equatable {
     /// Submit a scanned `payload` or a manual `reference` for check-in.
     static let scan = Endpoint(.post, "/api/scan")
 
-    /// The live door snapshot for the Active_Event.
-    static let dashboardLive = Endpoint(.get, "/api/dashboard/live")
+    /// The live door snapshot. With `eventId` the snapshot is pinned to that
+    /// chosen Event (`?event=`); without it the server resolves its own
+    /// Active_Event (the prior behaviour).
+    static func dashboardLive(eventId: Int?) -> Endpoint {
+        guard let eventId else {
+            return Endpoint(.get, "/api/dashboard/live")
+        }
+        return Endpoint(.get, "/api/dashboard/live?event=\(eventId)")
+    }
 
-    // MARK: - Customer search
+    // MARK: - Events
+
+    /// List the Active_Company's events (the app's landing tab). Carries
+    /// tickets-sold counts and the public web URL per event.
+    static let events = Endpoint(.get, "/api/events")
+
+    // MARK: - Customer search & detail
 
     /// Search the Active_Company's customers. `query` is appended as `?q=…`
-    /// (percent-encoded); an empty/`nil` term returns the whole roster.
+    /// (percent-encoded); an empty/`nil` term returns the whole roster. The
+    /// server also matches an order reference, so a reference finds its owner.
     static func customers(query: String?) -> Endpoint {
         guard let query, !query.isEmpty else {
             return Endpoint(.get, "/api/customers")
@@ -92,7 +108,33 @@ struct Endpoint: Equatable {
         return Endpoint(.get, "/api/customers?q=\(encoded)")
     }
 
+    /// One customer's orders, addressed by the base64url email `token` the
+    /// search returns.
+    static func customerDetail(token: String) -> Endpoint {
+        let encoded = token.addingPercentEncoding(
+            withAllowedCharacters: .urlPathAllowed
+        ) ?? token
+        return Endpoint(.get, "/api/customers/\(encoded)")
+    }
+
+    // MARK: - Orders & manual check-in
+
+    /// One order's detail.
+    static func order(id: Int) -> Endpoint {
+        Endpoint(.get, "/api/orders/\(id)")
+    }
+
+    /// Manually mark one order as entered (staffed check-in). Returns the same
+    /// Scan_Outcome contract as `/api/scan`.
+    static func orderCheckIn(id: Int) -> Endpoint {
+        Endpoint(.post, "/api/orders/\(id)/check-in")
+    }
+
     // MARK: - Sessions (self)
+    //
+    // Team-member session management was removed from the app — managing other
+    // members is a web-admin job. Only the signed-in user's own sessions remain
+    // addressable (the Profile screen's "sign out" uses `logout`, not these).
 
     /// List the signed-in user's own active sessions.
     static let sessions = Endpoint(.get, "/api/sessions")
@@ -100,18 +142,6 @@ struct Endpoint: Equatable {
     /// Revoke one of the signed-in user's own sessions.
     static func revokeSession(id: Int) -> Endpoint {
         Endpoint(.delete, "/api/sessions/\(id)")
-    }
-
-    // MARK: - Sessions (team / super-admin)
-
-    /// List a team member's active sessions (requires the `users` ability).
-    static func userSessions(userId: Int) -> Endpoint {
-        Endpoint(.get, "/api/users/\(userId)/sessions")
-    }
-
-    /// Revoke one of a team member's sessions (requires the `users` ability).
-    static func revokeUserSession(userId: Int, sessionId: Int) -> Endpoint {
-        Endpoint(.delete, "/api/users/\(userId)/sessions/\(sessionId)")
     }
 }
 

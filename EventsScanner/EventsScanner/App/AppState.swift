@@ -23,11 +23,10 @@ import Observation
 /// (task 16.1); `hasToken` only reflects its presence, never its value
 /// (Requirements 12.1, 12.4).
 ///
-/// IMPORTANT: `@Observable` (the Observation framework macro) requires iOS 17.
-/// The app's deployment target is iOS 16.0 (Requirement 11.1), so this type is
-/// gated with `@available(iOS 17.0, *)`. See `EventsScanner/README.md`
-/// ("iOS 16 vs @Observable") for the reconciliation a human must make
-/// (raise the min target to 17, or switch to `ObservableObject`).
+/// `@Observable` (the Observation framework macro) requires iOS 17, which is
+/// the app's minimum deployment target, so the whole app can rely on it
+/// unconditionally. The `@available(iOS 17.0, *)` attribute is retained as a
+/// defensive annotation consistent with the rest of the feature views.
 @available(iOS 17.0, *)
 @Observable
 final class AppState {
@@ -75,6 +74,10 @@ final class AppState {
     /// The signed-in user's display name, once known (from `/api/auth/me`).
     var userName: String?
 
+    /// The signed-in user's email, once known (from `/api/auth/me`). Shown on
+    /// the Profile screen.
+    var userEmail: String?
+
     // MARK: - Company scope
 
     /// All companies the user belongs to.
@@ -82,6 +85,13 @@ final class AppState {
 
     /// The company the app is currently scoped to (the Active_Company).
     var selectedCompany: Membership?
+
+    // MARK: - Event scope
+
+    /// The event the operator chose to scan for on the Events tab. Scanning and
+    /// the live dashboard are scoped to this event's id when set; nil means no
+    /// event is selected yet (the Scan tab prompts the operator to pick one).
+    var selectedEvent: EventDTO?
 
     // MARK: - Authorization
 
@@ -112,8 +122,9 @@ final class AppState {
 
     /// Apply a `GET /api/auth/me` payload: the display name, the permitted
     /// actions, and the memberships that drive the company picker.
-    func applyMe(name: String, permittedActions actions: [String], memberships rows: [Membership]) {
+    func applyMe(name: String, email: String? = nil, permittedActions actions: [String], memberships rows: [Membership]) {
         userName = name
+        userEmail = email
         permittedActions = Set(actions.compactMap(PermittedAction.init(rawValue:)))
         memberships = rows
     }
@@ -124,7 +135,21 @@ final class AppState {
     func didSelectCompany(_ company: Membership, permittedActions actions: [String]) {
         selectedCompany = company
         permittedActions = Set(actions.compactMap(PermittedAction.init(rawValue:)))
+        // Switching company invalidates any previously chosen event — it
+        // belonged to the old company's scope.
+        selectedEvent = nil
         phase = .ready
+    }
+
+    /// Choose the event to scan for (from the Events tab). Scanning and the live
+    /// dashboard scope to this event until it is changed or cleared.
+    func selectEvent(_ event: EventDTO) {
+        selectedEvent = event
+    }
+
+    /// Clear the chosen event (e.g. "scan a different event").
+    func clearSelectedEvent() {
+        selectedEvent = nil
     }
 
     /// The token is gone (a 401 cleared it, or the user signed out). Drop all
@@ -132,8 +157,10 @@ final class AppState {
     func didSignOut() {
         hasToken = false
         userName = nil
+        userEmail = nil
         memberships = []
         selectedCompany = nil
+        selectedEvent = nil
         permittedActions = []
         phase = .signedOut
     }

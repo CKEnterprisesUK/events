@@ -57,7 +57,13 @@ class CustomerApiController extends Controller
                 $like = '%'.$search.'%';
                 $query->where(function ($q) use ($like): void {
                     $q->where('customer_name', 'like', $like)
-                        ->orWhere('customer_email', 'like', $like);
+                        ->orWhere('customer_email', 'like', $like)
+                        // Also match an Order_Reference so the door team can
+                        // find a customer by the reference printed on a ticket,
+                        // not just name/email. The reference lives on the Order
+                        // rows we are grouping, so a LIKE on it surfaces the
+                        // owning customer.
+                        ->orWhere('order_reference', 'like', $like);
                 });
             })
             ->groupBy('customer_email', 'company_id')
@@ -69,6 +75,10 @@ class CustomerApiController extends Controller
             'customers' => collect($customers->items())->map(fn (Order $customer) => [
                 'name' => $customer->customer_name,
                 'email' => $customer->customer_email,
+                // A URL-safe token for the email so the client can open the
+                // customer detail endpoint without putting the raw email in a
+                // path. Shared with the web Customers surface.
+                'token' => CustomerController::tokenFor((string) $customer->customer_email),
                 'orders_count' => (int) $customer->orders_count,
                 'confirmed_spend_minor' => (int) $customer->spend_minor,
             ])->values(),
@@ -79,5 +89,68 @@ class CustomerApiController extends Controller
                 'total' => $customers->total(),
             ],
         ]);
+    }
+
+    /**
+     * One Customer's orders for the Active_Company, newest first — the detail
+     * the operator drills into from a search result. The Customer is addressed
+     * by the URL-safe email token from {@see index()} (a base64url encoding of
+     * their email), mirroring the web {@see CustomerController::show()} route.
+     *
+     * Each order carries the fields the door team needs to decide a manual
+     * check-in: reference, event, status, ticket count and whether it has
+     * already been scanned (and when). Tenant-scoped via `api.tenant`, so an
+     * email that holds no order for THIS Company resolves to an empty list.
+     */
+    public function show(Request $request, string $token): JsonResponse
+    {
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_ORDERS);
+
+        $email = $this->decodeEmail($token);
+
+        $orders = Order::query()
+            ->with(['event', 'tickets'])
+            ->where('customer_email', $email)
+            ->latest()
+            ->get();
+
+        if ($orders->isEmpty()) {
+            abort(404);
+        }
+
+        return response()->json([
+            'customer' => [
+                'name' => $orders->first()->customer_name,
+                'email' => $email,
+                'token' => $token,
+            ],
+            'orders' => $orders->map(fn (Order $order) => [
+                'id' => (int) $order->getKey(),
+                'reference' => $order->order_reference,
+                'event_id' => $order->event_id !== null ? (int) $order->event_id : null,
+                'event_name' => $order->event?->name,
+                'status' => $order->status,
+                'is_confirmed' => $order->isConfirmed(),
+                'tickets_count' => $order->tickets->count(),
+                'scanned_at' => $order->scanned_at?->toIso8601String(),
+                'order_total_minor' => (int) $order->order_total_minor,
+            ])->values(),
+        ]);
+    }
+
+    /**
+     * Decode a base64url Customer email token back to the email, or 404 on a
+     * malformed token. Mirrors the web {@see CustomerController} decoding so the
+     * same token works on both surfaces.
+     */
+    private function decodeEmail(string $token): string
+    {
+        $decoded = base64_decode(strtr($token, '-_', '+/'), true);
+
+        if ($decoded === false || $decoded === '') {
+            abort(404);
+        }
+
+        return $decoded;
     }
 }

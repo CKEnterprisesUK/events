@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// The behaviour the scan screen needs from the networking layer: submit a
 /// decoded QR `payload` or a manually typed `reference` and get back a decoded
@@ -116,6 +117,9 @@ final class ScanViewModel: ObservableObject {
         do {
             let result = try await operation()
             outcome = result
+            if result.status == .checkedIn {
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            }
         } catch let error as APIError {
             // Offline or any API failure: show the message, keep no success.
             outcome = nil
@@ -133,8 +137,10 @@ final class ScanViewModel: ObservableObject {
 /// Scan_Outcome for the most recent submission.
 @available(iOS 17.0, *)
 struct ScanView: View {
+    @Environment(AppState.self) private var appState
     @StateObject private var model: ScanViewModel
     @State private var showingManualEntry = false
+    @State private var torchOn = false
 
     init(auth: AuthStore) {
         _model = StateObject(wrappedValue: ScanViewModel(submitter: auth))
@@ -147,29 +153,187 @@ struct ScanView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                cameraRegion
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 320)
-                    .background(Color.black.opacity(0.9))
-                    .clipped()
-
-                outcomeRegion
-            }
-            .navigationTitle("Scan")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button("Enter reference") { showingManualEntry = true }
-                        .accessibilityIdentifier("scan.manualEntry")
+            Group {
+                if let event = appState.selectedEvent {
+                    scanner(for: event)
+                } else {
+                    noEventSelected
                 }
             }
+            .navigationBarTitleDisplayMode(.inline)
+            .brandNavigationTitle()
             .sheet(isPresented: $showingManualEntry) {
                 ManualEntryView { reference in
                     await model.submitManual(reference: reference)
                 }
             }
+            .onChange(of: torchOn) { _, _ in } // keeps SwiftUI observing the toggle
+            .onDisappear { torchOn = false }
         }
         .task { await model.onAppear() }
+    }
+
+    /// The full-bleed scanner: the camera fills the screen with a reticle in the
+    /// centre, a compact event banner up top, a torch toggle, and the outcome as
+    /// a bottom card — no wasted blank space.
+    private func scanner(for event: EventDTO) -> some View {
+        ZStack {
+            Color.black.ignoresSafeArea(edges: .bottom)
+
+            cameraRegion
+                .ignoresSafeArea(edges: .bottom)
+
+            // Dim + reticle overlay, only while the live camera is up.
+            if model.isCameraActive {
+                reticleOverlay
+            }
+
+            VStack(spacing: 0) {
+                selectedEventBanner(event)
+                Spacer()
+                bottomBar
+            }
+        }
+    }
+
+    /// A translucent target square with corner marks to aim the QR into.
+    private var reticleOverlay: some View {
+        GeometryReader { geo in
+            let side = min(geo.size.width, geo.size.height) * 0.62
+            ZStack {
+                RoundedRectangle(cornerRadius: 24)
+                    .stroke(.white.opacity(0.9), lineWidth: 3)
+                    .frame(width: side, height: side)
+                    .shadow(color: .black.opacity(0.4), radius: 6)
+                RoundedRectangle(cornerRadius: 24)
+                    .stroke(Brand.emerald, lineWidth: 3)
+                    .frame(width: side, height: side)
+                    .opacity(model.isSubmitting ? 1 : 0.0)
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    /// A slim, glassy banner naming the event being scanned for, with a quick
+    /// "Change" to return to event selection.
+    private func selectedEventBanner(_ event: EventDTO) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Scanning for")
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.7))
+                Text(event.name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+            }
+            Spacer()
+            Button("Change") { appState.clearSelectedEvent() }
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Brand.emerald)
+                .accessibilityIdentifier("scan.changeEvent")
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(.ultraThinMaterial)
+    }
+
+    /// The bottom controls: either the live outcome card, or the idle prompt
+    /// with the torch toggle and manual-entry button.
+    @ViewBuilder
+    private var bottomBar: some View {
+        VStack(spacing: 12) {
+            if model.isSubmitting {
+                ProgressView("Checking in…")
+                    .tint(.white)
+                    .foregroundStyle(.white)
+            }
+
+            if let errorMessage = model.errorMessage {
+                Label(errorMessage, systemImage: "wifi.slash")
+                    .font(.callout)
+                    .foregroundStyle(.white)
+                    .padding(12)
+                    .frame(maxWidth: .infinity)
+                    .background(Brand.danger.opacity(0.9), in: RoundedRectangle(cornerRadius: 12))
+                    .accessibilityIdentifier("scan.error")
+            }
+
+            if let outcome = model.outcome {
+                ScanOutcomeCard(outcome: outcome)
+                Button {
+                    model.reset()
+                } label: {
+                    Text("Scan next")
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+                .background(Brand.emerald)
+                .foregroundStyle(Brand.navy)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .accessibilityIdentifier("scan.next")
+            } else if !model.isSubmitting && model.errorMessage == nil {
+                Text("Point the camera at a ticket QR code")
+                    .font(.callout.weight(.medium))
+                    .foregroundStyle(.white)
+            }
+
+            controlRow
+        }
+        .padding(16)
+        .background(
+            LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea(edges: .bottom)
+        )
+    }
+
+    /// Torch toggle + manual entry, side by side.
+    private var controlRow: some View {
+        HStack(spacing: 12) {
+            Button {
+                torchOn.toggle()
+            } label: {
+                Label(torchOn ? "Light on" : "Light off",
+                      systemImage: torchOn ? "flashlight.on.fill" : "flashlight.off.fill")
+                    .font(.callout.weight(.medium))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+            }
+            .background(.white.opacity(torchOn ? 0.9 : 0.15))
+            .foregroundStyle(torchOn ? Brand.navy : .white)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .accessibilityIdentifier("scan.torch")
+
+            Button {
+                showingManualEntry = true
+            } label: {
+                Label("Enter reference", systemImage: "keyboard")
+                    .font(.callout.weight(.medium))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+            }
+            .background(.white.opacity(0.15))
+            .foregroundStyle(.white)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .accessibilityIdentifier("scan.manualEntry")
+        }
+    }
+
+    /// Shown when no event is selected: scanning is scoped to a chosen event, so
+    /// the operator picks one on the Events tab first.
+    private var noEventSelected: some View {
+        VStack(spacing: 16) {
+            BrandEmptyState(
+                symbol: "calendar.badge.exclamationmark",
+                title: "Choose an event to scan",
+                message: "Open the Events tab, pick an event, and tap “Scan” to check people in for it."
+            )
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityIdentifier("scan.noEvent")
     }
 
     /// The camera (granted) or the "camera access is required" state (denied),
@@ -177,12 +341,15 @@ struct ScanView: View {
     @ViewBuilder
     private var cameraRegion: some View {
         if model.isCameraActive {
-            CameraScanner { payload in
-                Task { await model.handleDecoded(payload: payload) }
-            }
+            CameraScanner(
+                onDecode: { payload in
+                    Task { await model.handleDecoded(payload: payload) }
+                },
+                torchOn: torchOn
+            )
         } else if model.isCameraDenied {
             VStack(spacing: 12) {
-                Image(systemName: "camera.fill").font(.largeTitle)
+                Image(systemName: "camera.fill").font(.largeTitle).foregroundStyle(.white)
                 Text(ScanViewModel.cameraAccessRequiredMessage)
                     .font(.headline)
                     .foregroundStyle(.white)
@@ -193,6 +360,8 @@ struct ScanView: View {
                     .multilineTextAlignment(.center)
             }
             .padding()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.black)
         } else {
             VStack(spacing: 12) {
                 ProgressView().tint(.white)
@@ -200,39 +369,8 @@ struct ScanView: View {
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.7))
             }
-        }
-    }
-
-    /// The most recent outcome, an error line, or an idle prompt.
-    @ViewBuilder
-    private var outcomeRegion: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                if model.isSubmitting {
-                    ProgressView("Checking in…")
-                        .padding(.top)
-                }
-
-                if let errorMessage = model.errorMessage {
-                    Text(errorMessage)
-                        .font(.callout)
-                        .foregroundStyle(.red)
-                        .multilineTextAlignment(.center)
-                        .accessibilityIdentifier("scan.error")
-                }
-
-                if let outcome = model.outcome {
-                    ScanOutcomeCard(outcome: outcome)
-                    Button("Scan next") { model.reset() }
-                        .accessibilityIdentifier("scan.next")
-                } else if model.errorMessage == nil && !model.isSubmitting {
-                    Text("Point the camera at a ticket QR code.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .padding(.top)
-                }
-            }
-            .padding()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.black)
         }
     }
 }
@@ -252,7 +390,7 @@ struct ScanOutcomeCard: View {
                     .font(.headline)
                 Spacer()
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(outcome.status == .checkedIn || outcome.status == .alreadyScanned ? Brand.navy : .white)
             .padding()
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(statusColor)
@@ -321,9 +459,9 @@ struct ScanOutcomeCard: View {
     /// door operator reads the result at a glance.
     private var statusColor: Color {
         switch outcome.status {
-        case .checkedIn: return .green
-        case .alreadyScanned: return .orange
-        case .rejected, .failed, .invalid, .unreadable: return .red
+        case .checkedIn: return Brand.emerald
+        case .alreadyScanned: return Brand.amber
+        case .rejected, .failed, .invalid, .unreadable: return Brand.danger
         }
     }
 

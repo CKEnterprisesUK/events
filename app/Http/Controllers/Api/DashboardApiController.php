@@ -53,7 +53,16 @@ class DashboardApiController extends Controller
         // which gates on ACTION_VIEW_REPORTS.
         Gate::authorize(RoleAuthorization::ACTION_CHECK_IN);
 
-        $event = $this->activeEvent();
+        // The operator may pin the dashboard to a specific Event they chose on
+        // the Events tab (`?event={id}`); it is resolved tenant-scoped, so a
+        // foreign/unknown id simply falls through to the auto-resolved
+        // Active_Event. With no param we keep the prior behaviour of showing the
+        // Company's most imminent/in-progress Event.
+        $requestedId = (int) $request->query('event', 0);
+
+        $event = $requestedId > 0
+            ? (Event::query()->whereKey($requestedId)->first() ?? $this->activeEvent())
+            : $this->activeEvent();
 
         if ($event === null) {
             return response()->json([

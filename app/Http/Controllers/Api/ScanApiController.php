@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\ScanController;
+use App\Models\Event;
 use App\Services\Operator;
 use App\Services\RoleAuthorization;
 use App\Services\ScanResult;
@@ -51,6 +52,12 @@ class ScanApiController extends Controller
         $data = $request->validate([
             'payload' => ['nullable', 'string'],
             'reference' => ['nullable', 'string'],
+            // The Event the operator chose to scan for (iOS Events tab). When
+            // present the scan is scoped to it: an Order for a different Event
+            // of the same Company is rejected as "wrong event". Optional for
+            // backwards compatibility — a missing value accepts any of the
+            // Company's Orders as before.
+            'event_id' => ['nullable', 'integer'],
         ]);
 
         // Accept either a scanned QR payload or a manual Order_Reference. Both
@@ -59,7 +66,29 @@ class ScanApiController extends Controller
         // neither is supplied an empty string resolves to `unreadable` (6.2).
         $input = (string) ($data['payload'] ?? $data['reference'] ?? '');
 
-        $result = $this->checkIn->resolve($input, Operator::fromUser($request->user()));
+        $expectedEventId = isset($data['event_id']) ? (int) $data['event_id'] : null;
+
+        // Scanning is only allowed for a LIVE event — published and not
+        // cancelled. When the operator pinned an event, verify it is scannable
+        // (tenant-scoped, so a foreign id never matches) before touching any
+        // Order. A draft/cancelled/unknown event is refused with a clear
+        // message and nothing is read or written.
+        if ($expectedEventId !== null) {
+            $event = Event::query()->whereKey($expectedEventId)->first();
+
+            if ($event === null || ! $event->is_published || $event->cancelled_at !== null) {
+                return response()->json([
+                    'status' => ScanResult::STATUS_REJECTED,
+                    'message' => 'This event is not live, so tickets can’t be scanned for it.',
+                ]);
+            }
+        }
+
+        $result = $this->checkIn->resolve(
+            $input,
+            Operator::fromUser($request->user()),
+            $expectedEventId,
+        );
 
         return response()->json($this->serialise($result));
     }
