@@ -518,6 +518,10 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
         // original email/scanner use (a pure function of the order reference).
         Route::get('/orders/{order}/ticket.pdf', [OrderController::class, 'downloadTicket'])->name('orders.ticket-pdf');
         Route::post('/orders/{order}/resend', [OrderController::class, 'resend'])->name('orders.resend');
+        // Re-send the refund confirmation email for a refunded Order (gated on
+        // ACTION_REFUND_ORDER in the controller). Re-states the amount refunded
+        // and the up-to-7-working-days bank timing.
+        Route::post('/orders/{order}/resend-refund', [OrderController::class, 'resendRefund'])->name('orders.resend-refund');
 
         // Complimentary ticket issuance (Admin-gated in the controller:
         // ACTION_ISSUE_COMP). Creates a confirmed zero-money Order for the

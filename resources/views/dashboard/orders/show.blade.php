@@ -74,6 +74,17 @@
                     </form>
                 @endif
             @endcan
+            {{-- Resend the refund confirmation email — only for an order that
+                 carries a refund, gated on the refund permission. Re-states the
+                 amount refunded to date and the up-to-7-working-days bank
+                 timing. --}}
+            @if ($order->refunded_total_minor > 0 && auth()->user()->can('refund_order'))
+                <form method="POST" action="{{ route('dashboard.orders.resend-refund', $order) }}" class="inline-form"
+                      onsubmit="return confirm('Resend the refund confirmation ({{ $money($order->refunded_total_minor) }} refunded) to {{ $order->customer_email }}?');">
+                    @csrf
+                    <button type="submit" class="btn btn-outline">Resend cancellation confirmation</button>
+                </form>
+            @endif
             @if ($canManage)
                 <button type="button" class="btn btn-danger" data-open-manage>Manage order</button>
             @endif
@@ -92,7 +103,13 @@
             </div>
             <div>
                 <div class="detail__label">Customer</div>
-                <div class="detail__value">{{ $order->customer_name }}</div>
+                <div class="detail__value">
+                    @if ($order->customer_email)
+                        <a class="panel__link" href="{{ route('dashboard.customers.show', \App\Http\Controllers\CustomerController::tokenFor($order->customer_email)) }}">{{ $order->customer_name }}</a>
+                    @else
+                        {{ $order->customer_name }}
+                    @endif
+                </div>
                 <div class="cell-dim">{{ $order->customer_email }}</div>
             </div>
             <div>

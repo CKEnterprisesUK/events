@@ -4,12 +4,15 @@ namespace App\Providers;
 
 use App\Models\User;
 use App\Services\Branding\BrandingResolver;
+use App\Services\Mail\FakeRefundMailer;
 use App\Services\Mail\FakeTicketMailer;
 use App\Services\Mail\Graph\GraphMailClient;
 use App\Services\Mail\Graph\GraphMailConfig;
 use App\Services\Mail\Graph\GraphMailDiagnostics;
 use App\Services\Mail\Graph\GraphTransport;
 use App\Services\Mail\MailTransportResolver;
+use App\Services\Mail\RefundMailer;
+use App\Services\Mail\SmtpRefundMailer;
 use App\Services\Mail\SmtpTicketMailer;
 use App\Services\Mail\TicketMailer;
 use App\Services\AuditLogger;
@@ -56,6 +59,7 @@ class AppServiceProvider extends ServiceProvider
 
         $this->bindStripePaymentService();
         $this->bindTicketMailer();
+        $this->bindRefundMailer();
         $this->bindGraphMail();
 
         // The TOTP engine used by TwoFactorAuthenticationService. We only use
@@ -122,6 +126,32 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(Mailer::class),
                 $app->make(BrandingResolver::class),
                 $app->make(TicketPdfService::class),
+            );
+        });
+    }
+
+    /**
+     * Bind the refund-email boundary. Mirrors {@see self::bindTicketMailer()}:
+     * every caller depends only on the {@see RefundMailer} interface, so the
+     * transport can be swapped without touching the job/controller code. The
+     * real {@see SmtpRefundMailer} sends via the configured mailer (cPanel SMTP)
+     * in every environment except testing; the testing environment always gets
+     * the deterministic {@see FakeRefundMailer} — bound as a shared singleton so
+     * a test can inspect the same instance the job resolves — so no automated
+     * test ever sends a real refund email.
+     */
+    private function bindRefundMailer(): void
+    {
+        if ($this->app->environment('testing')) {
+            $this->app->singleton(RefundMailer::class, FakeRefundMailer::class);
+
+            return;
+        }
+
+        $this->app->singleton(RefundMailer::class, function ($app): SmtpRefundMailer {
+            return new SmtpRefundMailer(
+                $app->make(Mailer::class),
+                $app->make(BrandingResolver::class),
             );
         });
     }

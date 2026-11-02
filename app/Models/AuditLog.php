@@ -182,6 +182,8 @@ class AuditLog extends Model
 
     public const ORDER_TICKET_RESENT = 'order.ticket_resent';
 
+    public const ORDER_REFUND_EMAIL_RESENT = 'order.refund_email_resent';
+
     public const EVENT_SCANS_RESET = 'event.scans_reset';
 
     // Privacy / GDPR
@@ -263,6 +265,7 @@ class AuditLog extends Model
         self::TICKET_TYPE_DELETED => ['category' => self::CATEGORY_EVENTS, 'label' => 'Deleted a ticket type'],
         self::EVENT_QUESTIONS_UPDATED => ['category' => self::CATEGORY_EVENTS, 'label' => 'Updated attendee questions'],
         self::ORDER_TICKET_RESENT => ['category' => self::CATEGORY_EVENTS, 'label' => 'Re-sent a ticket email'],
+        self::ORDER_REFUND_EMAIL_RESENT => ['category' => self::CATEGORY_MONEY, 'label' => 'Re-sent a refund confirmation email'],
         self::EVENT_SCANS_RESET => ['category' => self::CATEGORY_EVENTS, 'label' => 'Reset event check-ins'],
 
         self::GDPR_CUSTOMER_EXPORTED => ['category' => self::CATEGORY_PRIVACY, 'label' => 'Exported customer data'],

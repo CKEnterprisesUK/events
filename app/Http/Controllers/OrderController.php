@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\InsufficientCapacityException;
+use App\Jobs\SendRefundEmailJob;
 use App\Jobs\SendTicketEmailJob;
 use App\Models\AuditLog;
 use App\Models\Event;
@@ -412,6 +413,46 @@ class OrderController extends Controller
     }
 
     /**
+     * Re-send the refund confirmation email to the customer for an Order that
+     * has been (fully or partially) refunded. Reuses the same branded email as
+     * the original refund send, re-stating the amount refunded to date and the
+     * up-to-7-working-days bank timing. Gated on `ACTION_REFUND_ORDER`; only an
+     * Order that carries a refund (`refunded_total_minor > 0`) can be resent so
+     * we never email a refund confirmation for an order that was not refunded.
+     */
+    public function resendRefund(Order $order): RedirectResponse
+    {
+        Gate::authorize(RoleAuthorization::ACTION_REFUND_ORDER);
+
+        abort_unless(
+            (int) $order->refunded_total_minor > 0,
+            403,
+            'This order has no refund to confirm.',
+        );
+
+        // Re-state the cumulative refunded total, and whether the order is now
+        // fully refunded, so a resend reflects the order's current refund state
+        // (e.g. after one or more partial refunds).
+        SendRefundEmailJob::dispatch(
+            $order->getKey(),
+            (int) $order->refunded_total_minor,
+            $order->isFullyRefunded(),
+        );
+
+        $this->audit->record(
+            action: AuditLog::ORDER_REFUND_EMAIL_RESENT,
+            auditable: $order,
+            summary: 'Re-sent the refund confirmation email for order '.$order->order_reference,
+            context: [
+                'order_reference' => $order->order_reference,
+                'refunded_total_minor' => (int) $order->refunded_total_minor,
+            ],
+        );
+
+        return back()->with('status', 'Refund confirmation email queued to '.$order->customer_email.'.');
+    }
+
+    /**
      * Whether the Order can have a ticket issued (downloaded/resent): it must be
      * confirmed (paid or free-confirmed) so it carries a valid, scannable QR.
      */
@@ -513,9 +554,13 @@ class OrderController extends Controller
                     'amount_minor' => $amountMinor,
                 ], $reason),
             );
+
+            // Email the customer confirming the refund amount and the up-to-7-
+            // working-days bank timing. A full refund is always fully refunded.
+            SendRefundEmailJob::dispatch($order->getKey(), $amountMinor, true);
         }
 
-        return back()->with('status', 'Order refunded.');
+        return back()->with('status', 'Order refunded. A confirmation email has been sent to the customer.');
     }
 
     /**
@@ -577,9 +622,14 @@ class OrderController extends Controller
                 ], $reason),
             );
 
+            // Email the customer confirming this refund amount and the up-to-7-
+            // working-days bank timing. Carries whether the order is now fully
+            // refunded (tickets voided) vs a standing partial refund.
+            SendRefundEmailJob::dispatch($order->getKey(), $amountMinor, $fullyRefunded);
+
             return back()->with('status', $fullyRefunded
-                ? 'Order fully refunded.'
-                : 'Partial refund issued.');
+                ? 'Order fully refunded. A confirmation email has been sent to the customer.'
+                : 'Partial refund issued. A confirmation email has been sent to the customer.');
         }
 
         return back()->with('status', 'Nothing left to refund on this order.');

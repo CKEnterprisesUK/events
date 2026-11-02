@@ -5,8 +5,10 @@ namespace Tests\Feature;
 use App\Jobs\ReleaseExpiredReservationsJob;
 use App\Models\Event;
 use App\Models\TicketType;
+use App\Services\CapacityReservationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
@@ -50,7 +52,7 @@ class ReleaseExpiredReservationsJobTest extends TestCase
         $orderId = DB::table('orders')->insertGetId([
             'company_id' => $event->company_id,
             'event_id' => $event->id,
-            'order_reference' => strtoupper(\Illuminate\Support\Str::random(12)),
+            'order_reference' => strtoupper(Str::random(12)),
             'customer_name' => 'Test Customer',
             'customer_email' => 'customer@example.test',
             'status' => 'reserved',
@@ -93,7 +95,7 @@ class ReleaseExpiredReservationsJobTest extends TestCase
             'reserved_count' => 20,
         ]);
 
-        $this->job()->handle(app(\App\Services\CapacityReservationService::class));
+        $this->job()->handle(app(CapacityReservationService::class));
 
         // With no expired reservations, held capacity is left untouched.
         $this->assertSame(20, $type->fresh()->reserved_count);
@@ -114,7 +116,7 @@ class ReleaseExpiredReservationsJobTest extends TestCase
         $orderId = $this->expiredReservation($event, $type, 8);
         $this->assertSame(8, $type->fresh()->reserved_count);
 
-        $this->job()->handle(app(\App\Services\CapacityReservationService::class));
+        $this->job()->handle(app(CapacityReservationService::class));
 
         // Requirement 10.7/10.12 — held capacity returns to its
         // pre-reservation value; sold is untouched.
@@ -123,6 +125,15 @@ class ReleaseExpiredReservationsJobTest extends TestCase
 
         // The swept Order is flipped out of `reserved`.
         $this->assertSame('expired', DB::table('orders')->where('id', $orderId)->value('status'));
+
+        // The swept Order's Tickets mirror the terminal state: they are voided
+        // rather than left `valid` under a dead reservation, matching how
+        // OrderCancellationService voids Tickets on a terminal transition.
+        $ticketStatuses = DB::table('tickets')->where('order_id', $orderId)->pluck('status');
+        $this->assertCount(8, $ticketStatuses);
+        foreach ($ticketStatuses as $status) {
+            $this->assertSame('voided', $status);
+        }
     }
 
     public function test_only_expired_reservations_are_released(): void
@@ -139,7 +150,7 @@ class ReleaseExpiredReservationsJobTest extends TestCase
         $activeOrderId = DB::table('orders')->insertGetId([
             'company_id' => $event->company_id,
             'event_id' => $event->id,
-            'order_reference' => strtoupper(\Illuminate\Support\Str::random(12)),
+            'order_reference' => strtoupper(Str::random(12)),
             'customer_name' => 'Test Customer',
             'customer_email' => 'customer@example.test',
             'status' => 'reserved',
@@ -165,11 +176,19 @@ class ReleaseExpiredReservationsJobTest extends TestCase
         $type->increment('reserved_count', 4);
         $this->assertSame(7, $type->fresh()->reserved_count);
 
-        $this->job()->handle(app(\App\Services\CapacityReservationService::class));
+        $this->job()->handle(app(CapacityReservationService::class));
 
         // Only the expired 3 are released; the active 4 remain held.
         $this->assertSame(4, $type->fresh()->reserved_count);
         $this->assertSame('reserved', DB::table('orders')->where('id', $activeOrderId)->value('status'));
+
+        // The still-active hold's Tickets stay `valid` — only the expired
+        // Order's Tickets are voided by the sweep.
+        $activeTicketStatuses = DB::table('tickets')->where('order_id', $activeOrderId)->pluck('status');
+        $this->assertCount(4, $activeTicketStatuses);
+        foreach ($activeTicketStatuses as $status) {
+            $this->assertSame('valid', $status);
+        }
     }
 
     public function test_sweep_is_idempotent_across_repeated_runs(): void
@@ -184,8 +203,8 @@ class ReleaseExpiredReservationsJobTest extends TestCase
 
         // Requirement 10.7 — running the sweep twice releases the hold once;
         // reserved_count never goes negative and stays at the released value.
-        $this->job()->handle(app(\App\Services\CapacityReservationService::class));
-        $this->job()->handle(app(\App\Services\CapacityReservationService::class));
+        $this->job()->handle(app(CapacityReservationService::class));
+        $this->job()->handle(app(CapacityReservationService::class));
 
         $this->assertSame(0, $type->fresh()->reserved_count);
     }
@@ -207,7 +226,7 @@ class ReleaseExpiredReservationsJobTest extends TestCase
         $this->expiredReservation($eventA, $typeA, 5);
         $this->expiredReservation($eventB, $typeB, 9);
 
-        $this->job()->handle(app(\App\Services\CapacityReservationService::class));
+        $this->job()->handle(app(CapacityReservationService::class));
 
         // Each Event's expired holds are swept independently. (10.7)
         $this->assertSame(0, $typeA->fresh()->reserved_count);
