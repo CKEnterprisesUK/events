@@ -516,7 +516,11 @@ struct ScanOutcomeCard: View {
                 labelled("Reference", reference)
             }
             if let scannedAt = outcome.scannedAt {
-                labelled("Scanned at", scannedAt)
+                // Format the ISO-8601 timestamp the API sends into a friendly,
+                // device-locale date (e.g. "Sat 2 Nov 2026, 19:27") rather than
+                // showing the raw machine string. Falls back to the raw value
+                // if it ever can't be parsed.
+                labelled("Scanned at", EventDTO.prettyDate(from: scannedAt) ?? scannedAt)
             }
             if let scannedBy = outcome.scannedBy {
                 labelled("Scanned by", scannedBy)
