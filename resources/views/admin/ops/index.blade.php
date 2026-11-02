@@ -127,6 +127,31 @@
                 <button type="submit" class="btn btn--primary">Refresh Stripe account status</button>
             </form>
 
+            <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--border)">
+
+            <p>
+                <strong>Reconcile paid orders</strong> — recovers any order whose card payment
+                succeeded at Stripe but which never got confirmed (customer charged, but the
+                order shows expired and the tickets are void with no email). It asks Stripe
+                whether each unconfirmed order was actually paid and, only when Stripe confirms
+                it, marks the order paid, restores its tickets, and sends the confirmation email.
+                It never cancels or refunds anything, so it is safe to run any time and safe to
+                re-run.
+            </p>
+            <p class="muted">
+                Leave the box empty to check every unconfirmed order. To recover one specific
+                order, enter its reference (e.g. <code>L5NWIX9B5PHP</code>).
+            </p>
+            <form method="POST" action="{{ route('admin.ops.reconcile-paid') }}">
+                @csrf
+                <label style="display:block;margin-bottom:.5rem">
+                    Order reference (optional)
+                    <input type="text" name="order_reference" placeholder="all unconfirmed orders"
+                           style="display:block;margin-top:.25rem;max-width:20rem">
+                </label>
+                <button type="submit" class="btn btn--primary">Reconcile paid orders</button>
+            </form>
+
             @if (! $reseedBlocked)
                 <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--border)">
 

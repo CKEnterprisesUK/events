@@ -1,0 +1,1070 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Install Sanctum and register the API routing + middleware groups": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631417764
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631426046
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631815593
+      }
+    ],
+    "1.2 Add the EnforceHttps middleware": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631417806
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631821246
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793632371708
+      }
+    ],
+    "1.3 Write feature test for TLS enforcement": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631417837
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793632455867
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793632617774
+      }
+    ],
+    "2.1 Create the company_user membership pivot and User::companies relation": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631417868
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631822181
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793632372585
+      }
+    ],
+    "2.2 Write feature test for membership backfill and relation": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631417897
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793632456793
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793632618797
+      }
+    ],
+    "2.3 Create the trusted_devices table and TrustedDevice model": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631417931
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631823613
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793632374026
+      }
+    ],
+    "2.4 Extend personal access tokens with current_company_id and device_id": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631417961
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631825026
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793632374993
+      }
+    ],
+    "3.1 Implement ResolveApiTenant middleware with device binding": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631417988
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793632453535
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793632620122
+      }
+    ],
+    "3.2 Write feature test for tenant isolation at the middleware layer": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418014
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793632624573
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793632803848
+      }
+    ],
+    "3.3 Write property test for token expiry and device binding": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418046
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633515430
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633660684
+      }
+    ],
+    "4.1 Extract the decision tree into TicketCheckInService": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418072
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793632454506
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793632621024
+      }
+    ],
+    "4.2 Refactor the web ScanController to call the service": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418099
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793632625841
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793632804748
+      }
+    ],
+    "4.3 Write property test for the Scan_Outcome decision tree": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418128
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793632811321
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633009663
+      }
+    ],
+    "4.4 Write property test for atomic concurrency": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418154
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793632812305
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633010996
+      }
+    ],
+    "4.5 Write property test for manual/scan equivalence": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418179
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793632813666
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633011976
+      }
+    ],
+    "4.6 Write property test for ScanEvent recording": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418204
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793632814373
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633012868
+      }
+    ],
+    "4.7 Write regression tests proving web scanner behaviour is unchanged": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418232
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633019886
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633177853
+      }
+    ],
+    "5. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418262
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633217516
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633220437
+      }
+    ],
+    "6.1 Implement DeviceTrustService": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418288
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793632626633
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793632805700
+      }
+    ],
+    "6.2 Implement AuthController login, two-factor, logout, me": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418320
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793632809939
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633008659
+      }
+    ],
+    "6.3 Write property test for token-issued-iff": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418346
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633516369
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633662136
+      }
+    ],
+    "6.4 Write property test for device trust lifecycle": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418378
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633517777
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633663034
+      }
+    ],
+    "6.5 Write property test for revoked-token rejection": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418405
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633518446
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633663950
+      }
+    ],
+    "7.1 Implement CompanyController list and select": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418436
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633225020
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633510488
+      }
+    ],
+    "7.2 Write property test for membership-respecting selection": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418463
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633672699
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633845777
+      }
+    ],
+    "8.1 Implement ScanApiController": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418511
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633225941
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633511405
+      }
+    ],
+    "8.2 Write feature tests mapping every outcome to the JSON contract": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418536
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633668452
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633842599
+      }
+    ],
+    "8.3 Write feature test for role gating on scan": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418563
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633669460
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633841233
+      }
+    ],
+    "9.1 Extract EventSnapshotService and implement DashboardApiController": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418590
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633227508
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633507185
+      }
+    ],
+    "9.2 Write feature tests for the snapshot contract and gating": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418620
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633670783
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633843611
+      }
+    ],
+    "10.1 Implement CustomerApiController": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418646
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633228328
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633509554
+      }
+    ],
+    "10.2 Write feature tests for customer search and gating": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418679
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633671767
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633844946
+      }
+    ],
+    "11.1 Add API audit action constants to AuditLog": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418712
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631825621
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793632375937
+      }
+    ],
+    "11.2 Write property test for audit-without-secrets": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418746
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633850030
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793634041237
+      }
+    ],
+    "12.1 Implement SessionController self and team routes": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418779
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633229317
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633508125
+      }
+    ],
+    "12.2 Write property test for three-level revocation authority": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418805
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633850949
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793634042266
+      }
+    ],
+    "13.1 Write feature tests for 2FA and scan rate limits": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418838
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633851933
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793634043287
+      }
+    ],
+    "14. Backend checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418865
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793634065828
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793634068753
+      }
+    ],
+    "15.1 Create the Xcode project and app state": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418898
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793634073465
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793634454029
+      }
+    ],
+    "15.2 Implement APIClient, APIError, Endpoints, and DTOs": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418930
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793634457573
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793634758400
+      }
+    ],
+    "15.3 Write XCTest for Scan_Outcome DTO decoding": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418957
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793634763648
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793635157928
+      }
+    ],
+    "16.1 Implement KeychainStore and DeviceIdentity": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631418982
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793634458506
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793634757367
+      }
+    ],
+    "16.2 Write XCTest for KeychainStore and DeviceIdentity": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631419015
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793634764583
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793635156930
+      }
+    ],
+    "17.1 Implement SignIn, TwoFactor, and CompanyPicker": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631419040
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793634765620
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793635155559
+      }
+    ],
+    "17.2 Write XCTest for single-vs-multi membership routing and 401 handling": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631419071
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793636504863
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793636662830
+      }
+    ],
+    "18.1 Implement CameraScanner, manual entry, and scan submission": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631419097
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793635162696
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793636495612
+      }
+    ],
+    "18.2 Manual/device test for camera permission and Vision QR decode": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631419128
+      }
+    ],
+    "19.1 Implement DashboardView polling the live snapshot": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631419154
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793635167150
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793636494545
+      }
+    ],
+    "20.1 Implement CustomerSearchView gated by permitted actions": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631419180
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793635166503
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793636493575
+      }
+    ],
+    "20.2 Write XCTest for role-driven tab visibility": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631419207
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793636670656
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793636907055
+      }
+    ],
+    "21.1 Implement SessionsView consuming the Sessions API": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631419237
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793635165085
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793636492193
+      }
+    ],
+    "21.2 Write XCTest for sessions list and role-driven team visibility": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631419264
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793636669698
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793636905183
+      }
+    ],
+    "22.1 Implement offline detection and error messaging": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631419296
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793635163713
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793636491357
+      }
+    ],
+    "22.2 Write XCTest for offline mapping": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631419343
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793636668729
+      },
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793636906142
+      }
+    ],
+    "22.3 Wire App Store / TestFlight distribution (manual)": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631419371
+      }
+    ],
+    "23. Final checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793631419403
+      }
+    ],
+    "1. Install and configure Sanctum and the API surface": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793632617812
+      }
+    ],
+    "2. Membership, device-trust, and token data models": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793632618832
+      }
+    ],
+    "4. Extract the shared TicketCheckInService": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633177885
+      }
+    ],
+    "3. Token-driven tenant binding": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633660725
+      }
+    ],
+    "6. Authentication, device trust, and token issuance": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633663981
+      }
+    ],
+    "8. Scan endpoint": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633842666
+      }
+    ],
+    "9. Live dashboard endpoint": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633843640
+      }
+    ],
+    "10. Customer search endpoint": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633844973
+      }
+    ],
+    "7. Company selection and switching": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793633845803
+      }
+    ],
+    "11. Audit logging constants and PII-minimised context": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793634041280
+      }
+    ],
+    "12. Session visibility and three-level token revocation": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793634042297
+      }
+    ],
+    "13. Rate limiting on sensitive endpoints": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793634043320
+      }
+    ],
+    "16. iOS secure storage and device identity": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793635156965
+      }
+    ],
+    "15. iOS app scaffold and networking core": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793635157963
+      },
+      {
+        "executionId": "296819e4-ca9f-4745-97ab-1a4896e08705",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793637649317
+      }
+    ],
+    "19. iOS dashboard feature": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793636494579
+      }
+    ],
+    "17. iOS sign-in, two-factor, and company selection flow": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793636662862
+      }
+    ],
+    "21. iOS sessions management screen": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793636905227
+      }
+    ],
+    "20. iOS customer search with server-driven role visibility": [
+      {
+        "executionId": "7b7ffe36-c35d-4b0a-b1f5-3da9c8661f08",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793636907083
+      }
+    ],
+    "15.4 Configure per-environment API base URL (preprod vs production)": [
+      {
+        "executionId": "296819e4-ca9f-4745-97ab-1a4896e08705",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793637453454
+      },
+      {
+        "executionId": "296819e4-ca9f-4745-97ab-1a4896e08705",
+        "chatSessionId": "sess_b3434d2b-0b78-438c-b144-eaa9b99a13ef",
+        "timestamp": 1793637648985
+      }
+    ]
+  }
+}

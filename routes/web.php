@@ -757,6 +757,17 @@ Route::middleware(['auth', 'super.admin', 'session.timeout', 'migrations.pending
         // connected before the requirements feature shipped. (Requirements 11.3, 11.4)
         Route::post('/ops/refresh-stripe-accounts', [SuperAdminOpsController::class, 'refreshStripeAccounts'])->name('ops.refresh-stripe-accounts');
 
+        // Reconcile orders against Stripe and recover any whose payment
+        // succeeded but which were never confirmed (money-in/no-tickets). Reads
+        // the Stripe Checkout Session status and, when Stripe reports PAID,
+        // confirms the order through the same authoritative path the webhook
+        // uses (mark paid, un-void tickets, re-commit capacity, send the ticket
+        // email). Only ever CONFIRMS Stripe-confirmed payments — never cancels,
+        // refunds, or voids — so it is non-destructive and idempotent, and runs
+        // in every environment, production included. An optional order_reference
+        // recovers a single order. (Reservation-vs-payment race fix)
+        Route::post('/ops/reconcile-paid', [SuperAdminOpsController::class, 'reconcilePaid'])->name('ops.reconcile-paid');
+
         // Destructive sample-data rebuild: non-production only (defence in depth
         // with the controller's own production guard).
         if (app()->environment(['local', 'staging', 'preprod', 'development'])) {

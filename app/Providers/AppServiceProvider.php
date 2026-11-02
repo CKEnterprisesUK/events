@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\Services\AuditLogger;
 use App\Services\Branding\BrandingResolver;
 use App\Services\Mail\FakeRefundMailer;
 use App\Services\Mail\FakeTicketMailer;
@@ -15,13 +16,12 @@ use App\Services\Mail\RefundMailer;
 use App\Services\Mail\SmtpRefundMailer;
 use App\Services\Mail\SmtpTicketMailer;
 use App\Services\Mail\TicketMailer;
-use App\Services\AuditLogger;
 use App\Services\RoleAuthorization;
-use App\Services\TicketPdfService;
 use App\Services\Stripe\FakeStripePaymentService;
 use App\Services\Stripe\StripePaymentService;
 use App\Services\Stripe\StripePaymentServiceStripeSdk;
 use App\Services\TenantContext;
+use App\Services\TicketPdfService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Mail\Mailer;
@@ -227,7 +227,7 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Register the `graph` mail transport with Laravel's mail manager so the
      * `graph` mailer in `config/mail.php` resolves to our
-     * {@see \App\Services\Mail\Graph\GraphTransport}. This only *teaches* the
+     * {@see GraphTransport}. This only *teaches* the
      * mailer how to build the transport; whether it is used is decided by
      * {@see self::applyMailTransport()}. Skipped under `testing` so no test can
      * reach the live Graph API.
@@ -271,7 +271,16 @@ class AppServiceProvider extends ServiceProvider
      *   - `login`  : credential submission — keyed on the submitted email plus
      *                the client IP so brute-force / credential-stuffing against
      *                one account is capped without letting one IP lock out every
-     *                account. 5 attempts/min.
+     *                account. Per-minute ceiling from `config/api.php`
+     *                (`throttle.login`). (Requirement 15.3)
+     *   - `2fa`    : TOTP submission on the API two-factor endpoint — keyed on
+     *                the submitted email plus the client IP to blunt code
+     *                guessing against the challenge. Per-minute ceiling from
+     *                `config/api.php` (`throttle.2fa`). (Requirement 15.1)
+     *   - `scan`   : check-in submission on the API scan endpoint — keyed on the
+     *                authenticated operator's id so one operator's abuse never
+     *                throttles another operator's door. Per-minute ceiling from
+     *                `config/api.php` (`throttle.scan`). (Requirement 15.2)
      *   - `auth`   : other unauthenticated auth actions (register, password-reset
      *                request + submit) — keyed on IP. 10 requests/min.
      *   - `public` : public storefront POSTs (checkout, ticket resend) — keyed on
@@ -293,7 +302,34 @@ class AppServiceProvider extends ServiceProvider
 
             $email = Str::lower((string) $request->input('email'));
 
-            return Limit::perMinute(5)->by($email.'|'.$request->ip());
+            return Limit::perMinute((int) config('api.throttle.login'))
+                ->by($email.'|'.$request->ip());
+        });
+
+        // TOTP submission on the API two-factor endpoint. Keyed per email+IP so
+        // code guessing against one account is capped without one IP locking
+        // out every account. (Requirement 15.1)
+        RateLimiter::for('2fa', function (Request $request) use ($unlimited): Limit {
+            if ($unlimited) {
+                return Limit::none();
+            }
+
+            $email = Str::lower((string) $request->input('email'));
+
+            return Limit::perMinute((int) config('api.throttle.2fa'))
+                ->by($email.'|'.$request->ip());
+        });
+
+        // Check-in submission on the API scan endpoint. Keyed per authenticated
+        // operator so one operator hitting the limit never throttles another
+        // operator working the same door. (Requirement 15.2)
+        RateLimiter::for('scan', function (Request $request) use ($unlimited): Limit {
+            if ($unlimited) {
+                return Limit::none();
+            }
+
+            return Limit::perMinute((int) config('api.throttle.scan'))
+                ->by((string) $request->user()?->getKey());
         });
 
         RateLimiter::for('auth', function (Request $request) use ($unlimited): Limit {

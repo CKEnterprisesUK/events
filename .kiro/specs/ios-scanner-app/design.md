@@ -374,7 +374,7 @@ EventsScanner/
 - **Role visibility** is driven entirely by the server: `/api/auth/me` returns `permitted_actions`. The app shows Scan + Dashboard when `check_in` is present and shows Customer Search only when `orders` is present, hiding it otherwise (Requirements 8.4, 8.5).
 - **Offline handling**: `Reachability` + a failed request surface an offline message and never report a successful check-in; scans are not queued (Requirements 9.1, 9.2).
 - **Flow**: SignIn → (optional TwoFactor) → (CompanyPicker only when memberships > 1) → TabView(Scan, Dashboard, [Customer Search if permitted]) (Requirements 4.2, 4.6, 8.4, 8.5).
-- **Platform/distribution**: deployment target iOS 16.0; distributed via App Store / TestFlight (Requirements 11.1, 11.2).
+- **Platform/distribution**: deployment target iOS 16.0; distributed via App Store / TestFlight (Requirements 11.1, 11.2). The API base URL is baked in per build configuration (Debug→preprod, Release→production) rather than hardcoded, so a build can only ever reach its own environment; a non-production build shows a visible environment badge (see Environments & Distribution).
 
 **Satisfies:** Requirements 3.2, 6.3, 8.4, 8.5, 9.1–9.3, 10.1–10.4, 11.1, 11.2, 12.1, 12.4.
 
@@ -727,6 +727,47 @@ For any actor and any target Staff_User, a revocation request succeeds if and on
 For any sensitive API access event — token issuance on sign-in or device trust, token revocation (self, ACTION_MANAGE_USERS actor, Super_Admin, or logout), Active_Company selection or switch, and failed sign-in or failed TOTP challenge — the AuditLogger writes exactly one Audit_Entry recording the action, the acting actor, and (where applicable) the affected Company and target Staff_User; and no Audit_Entry it writes for the API contains a password, an Access_Token value, a TOTP code, or the QR HMAC secret in its summary or context.
 
 **Validates: Requirements 16.1, 16.2, 16.3, 16.4, 16.5**
+
+## Environments & Distribution
+
+The platform runs in more than one deployment: at minimum a **preprod** (staging) environment for testing and **production** for live events. The iOS app and the backend each keep those worlds separate so a tester can exercise preprod end to end without any risk of touching production data, money, or devices.
+
+### Core guarantee
+
+The **only** thing that decides which backend an app build talks to is its API base URL. The app is otherwise environment-agnostic — tenant scoping, token/device binding, and audit logging are all driven by the data in whichever backend answers. So if a non-production build physically cannot contain the production URL, a tester cannot reach production from it. Environment selection is therefore a **build-time** decision baked into each build, not a runtime toggle a user could flip.
+
+**Satisfies:** Requirement 11.2 (distribution) and the cross-cutting intent of Requirement 12 (an insecure or wrong-target request must never carry real credentials/data).
+
+### iOS: one base URL per build configuration
+
+`APIBaseURL` already lives in `Info.plist` and is read once at launch, HTTPS-enforced in `APIClient.init` (a non-HTTPS base throws `APIError.insecureBaseURL`). The change is to source that value from a build setting instead of hardcoding it, and to define two configurations:
+
+| Configuration | API environment | `API_BASE_URL` | Bundle id | How it ships |
+|---|---|---|---|---|
+| Debug (Preprod) | preprod / staging | `https://preprod.events.ckent.uk` | `com.events.scanner.EventsScanner.preprod` | Run from Xcode onto a device; TestFlight internal group |
+| Release (Production) | production | `https://events.ckent.uk` | `com.events.scanner.EventsScanner` | App Store / TestFlight external |
+
+- In `project.yml`, each configuration sets `API_BASE_URL` (an xcconfig-style build setting), and `Info.plist` reads `APIBaseURL = $(API_BASE_URL)` instead of the current literal. Generating the project (`xcodegen generate`) bakes the per-config value into each build; no app code reads an environment name. The base URL is the **site root** (e.g. `https://preprod.events.ckent.uk`); the `/api/...` prefix lives in the `Endpoint` paths, which `APIClient` resolves against the base.
+- Distinct bundle ids per configuration let the preprod and production apps co-exist on one device, so a tester can run preprod from Xcode while keeping the production app installed from TestFlight. The `PRODUCT_BUNDLE_IDENTIFIER` differs by config; everything else (entitlements, capabilities) is shared.
+- A small, unmissable visual marker (e.g. a "PREPROD" badge in the nav bar) is shown for any non-production build so a tester always knows which world they are in. This is derived from the build config (a compile-time flag such as `ENVIRONMENT_IS_PRODUCTION`), never from server data.
+- The HTTPS guard means **preprod must be served over real TLS with a valid certificate** — the app refuses a non-HTTPS base, and `EnforceHttps` refuses non-TLS requests in every non-`local`/`testing` environment. A self-signed preprod cert would require an `ATS` exception that we deliberately do **not** ship (it would weaken the production build too); preprod should use a proper certificate.
+
+### Backend: preprod is a separate deployment
+
+Preprod is a full, independent deployment of the Laravel app — never a mode toggled inside the production instance:
+
+- Its own domain, its own database, and its own `.env` with a distinct `APP_ENV` (`staging`/`preprod`), a distinct `APP_KEY`, and its own `SANCTUM_TOKEN_EXPIRATION` / `config/api.php` throttle values. Tokens, `trusted_devices`, `company_user` memberships, `scan_events`, and audit logs are per-database, so the two environments share no state.
+- **Stripe runs in test mode** on preprod (test-mode keys and `STRIPE_WEBHOOK_SECRET`), so test scans and any order/payment flows never move real money. The `QR_HMAC_SECRET` differs per environment, so a production QR code does not verify against preprod and vice versa — a natural extra guard against cross-environment ticket use.
+- `EnforceHttps` already enforces TLS in every deployed environment (it only lifts the guard for `local`/`testing`), so preprod inherits the same transport security as production with no special casing.
+- Preprod data should be seeded/anonymised test fixtures, not a copy of production PII, consistent with the platform's existing GDPR posture.
+
+### Distribution path (manual, Xcode GUI + Apple Developer account)
+
+1. Preprod build → Xcode run onto a registered device for `18.2` (camera/Vision verification), and/or an **internal** TestFlight group for wider preprod testing.
+2. Production build → archived, signed with the distribution certificate, and submitted to App Store Connect for **external** TestFlight / App Store review.
+3. Signing, provisioning profiles, and submission require the Xcode GUI and an Apple Developer account and cannot run headless (see tasks 18.2 and 22.3).
+
+**Satisfies:** Requirements 11.1, 11.2, 12.1, 12.2.
 
 ## Testing Strategy
 

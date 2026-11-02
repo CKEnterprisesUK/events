@@ -2,32 +2,54 @@
 
 namespace App\Jobs;
 
+use App\Models\Company;
 use App\Models\Event;
+use App\Models\Order;
 use App\Models\Ticket;
 use App\Services\CapacityReservationService;
+use App\Services\OrderFulfilmentService;
+use App\Services\Stripe\StripePaymentService;
+use App\Services\Stripe\StripeSessionStatus;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Releases capacity held by reservations whose 900-second window has elapsed,
- * restoring each affected Ticket_Type's available capacity. (Requirements 10.7,
- * 10.12)
+ * Releases capacity held by reservations whose window has elapsed — but ONLY
+ * once Stripe confirms the payment did not (and can no longer) succeed, so a
+ * slow-but-successful payment never has its seat released out from under it.
+ * (Requirements 10.7, 10.12; reservation-vs-payment race fix)
  *
  * ## Why this job exists
  *
  * {@see CapacityReservationService::reserve()} holds capacity by incrementing
- * `ticket_types.reserved_count` and stamps a `reserved_until` (now + 900s) on
- * the Order. If the Customer never completes payment (abandons checkout, closes
- * the tab) the hold would otherwise linger forever and slowly starve the Event
- * of availability. This scheduled job is the sweeper that finds those stale
- * holds and hands them back via {@see CapacityReservationService::release()},
- * so availability returns to the value it held immediately before the
- * reservation. (Requirements 10.7, 10.12)
+ * `ticket_types.reserved_count` and stamps a `reserved_until` (now +
+ * RESERVATION_WINDOW_SECONDS) on the Order. If the Customer never completes
+ * payment (abandons checkout, closes the tab) the hold would otherwise linger
+ * forever and slowly starve the Event of availability. This scheduled job is
+ * the sweeper that finds those stale holds and hands them back.
+ *
+ * ## The race it must not lose
+ *
+ * A paid Order is only confirmed by the `checkout.session.completed` webhook,
+ * which can arrive LATE (bank 3-D Secure delays, Stripe processing lag) — after
+ * the reservation window has elapsed. A naive sweeper that released on the
+ * window alone would hand the seat away and void the tickets, then the late
+ * webhook (which only acts on a still-`reserved` Order) would no-op: money in,
+ * no tickets. To prevent this the sweeper NEVER releases a paid Order's seat on
+ * the timer alone — for any Order carrying a Stripe session it first asks
+ * Stripe for the Session status and only releases when Stripe positively
+ * reports the Session expired/unpaid. A Session Stripe reports PAID is confirmed
+ * here instead (the sweeper doubles as a webhook backstop); anything it cannot
+ * confirm (still open, or Stripe unreachable) keeps the hold — a held seat is
+ * recoverable, an oversold one is not. The window is also aligned with the
+ * Session's `expires_at`, so in normal operation the seat is simply held for as
+ * long as Stripe will take the money.
  *
  * ## Scheduling
  *
@@ -71,8 +93,11 @@ class ReleaseExpiredReservationsJob implements ShouldQueue
      * released in a single {@see CapacityReservationService::release()} call
      * (one locked transaction per Event), then marks the swept Orders expired.
      */
-    public function handle(CapacityReservationService $capacity): void
-    {
+    public function handle(
+        CapacityReservationService $capacity,
+        OrderFulfilmentService $fulfilment,
+        StripePaymentService $stripe,
+    ): void {
         // The orders/tickets tables are introduced in task 12.2. Until they
         // exist there is no reservation source, so the sweep is a safe no-op.
         // (Documented above: reserved_until/orders wiring completes in 12.x.)
@@ -80,107 +105,192 @@ class ReleaseExpiredReservationsJob implements ShouldQueue
             return;
         }
 
-        foreach ($this->expiredReservationsByEvent() as $eventId => $quantities) {
-            $this->releaseEvent($capacity, (int) $eventId, $quantities);
+        // Sweep per-Order, not in a single bulk update: each paid-capable Order
+        // must be checked against Stripe BEFORE its seat is released, and the
+        // outcome differs per Order (release / keep-held / confirm). We still
+        // handle one Order per transaction so a concurrent run can't double-act.
+        foreach ($this->expiredOrderIds() as $orderId) {
+            $this->sweepOrder($capacity, $fulfilment, $stripe, $orderId);
         }
     }
 
     /**
-     * Release one Event's expired holds and mark its expired Orders.
+     * Sweep one expired Order. Re-reads it `FOR UPDATE` so a concurrent/retried
+     * run that already handled it finds it no longer `reserved` and skips.
      *
-     * Wrapped in a transaction that re-reads the expired Orders `FOR UPDATE`
-     * so a concurrent/retried run cannot release the same hold twice: the
-     * second run finds the Orders already flipped out of `reserved` and skips
-     * them. Combined with the clamp-at-zero release, the whole operation is
-     * idempotent. (Requirement 10.7)
-     *
-     * @param  array<int, int>  $quantities  Ticket_Type id => quantity to release.
+     * Decision, for an Order whose reservation window has elapsed:
+     *   - A FREE order (no Stripe session) → release + expire, as before.
+     *   - A paid order WITH a Stripe session → ask Stripe for the Session
+     *     status FIRST:
+     *       · paid     → DO NOT release; confirm the Order (webhook may have
+     *                    been missed). Seat stays sold.
+     *       · expired  → safe to release + expire/void.
+     *       · open     → still payable; keep the hold (do nothing this pass).
+     *       · unknown  → Stripe unreachable/ambiguous → FAIL SAFE, keep the
+     *                    hold. A held seat is recoverable; an oversold one is not.
+     * (Reservation-vs-payment race fix)
      */
-    protected function releaseEvent(CapacityReservationService $capacity, int $eventId, array $quantities): void
-    {
-        DB::transaction(function () use ($capacity, $eventId, $quantities): void {
-            $orderIds = $this->lockExpiredOrderIdsForEvent($eventId);
+    protected function sweepOrder(
+        CapacityReservationService $capacity,
+        OrderFulfilmentService $fulfilment,
+        StripePaymentService $stripe,
+        int $orderId,
+    ): void {
+        // Resolve the Stripe decision for a paid order OUTSIDE the DB
+        // transaction — the Stripe call can be slow and must not hold a row lock.
+        $order = Order::withoutGlobalScopes()->find($orderId);
 
-            if ($orderIds === []) {
-                // Another run already swept these between our read and the lock.
+        if ($order === null || $order->status !== Order::STATUS_RESERVED) {
+            return;
+        }
+
+        $sessionStatus = null;
+
+        if ($order->stripe_session_id !== null && $order->stripe_session_id !== '') {
+            $company = Company::withoutGlobalScopes()->find($order->company_id);
+            $accountId = $company?->stripe_account_id;
+
+            if ($accountId === null || $accountId === '') {
+                // A paid order with a session but no resolvable connected
+                // account: we cannot verify payment, so fail safe and keep the
+                // hold rather than risk releasing a seat that was paid for.
+                Log::warning('Expired reservation has a Stripe session but no connected account; keeping hold (fail-safe).', [
+                    'order_reference' => $order->order_reference,
+                ]);
+
                 return;
             }
 
-            $event = Event::withoutGlobalScopes()->find($eventId);
+            $sessionStatus = $stripe->retrieveCheckoutSessionStatus($accountId, $order->stripe_session_id);
+
+            // Paid at Stripe but we lost the race: confirm instead of release.
+            if ($sessionStatus->isPaid()) {
+                $this->confirmPaidOrder($capacity, $fulfilment, $order, $sessionStatus);
+
+                return;
+            }
+
+            // Anything other than a positively-expired Session => keep holding.
+            if (! $sessionStatus->isSafeToRelease()) {
+                return;
+            }
+        }
+
+        // Either a free/no-session order, or Stripe positively confirmed the
+        // Session is expired: release the hold and mark the Order expired.
+        $this->releaseAndExpire($capacity, $orderId);
+    }
+
+    /**
+     * Release one expired Order's hold and flip it to `expired`, voiding its
+     * Tickets. Re-reads `FOR UPDATE` inside the transaction so a concurrent run
+     * that already swept it is a no-op. (Requirement 10.7)
+     */
+    protected function releaseAndExpire(CapacityReservationService $capacity, int $orderId): void
+    {
+        DB::transaction(function () use ($capacity, $orderId): void {
+            $locked = DB::table('orders')
+                ->where('id', $orderId)
+                ->where('status', 'reserved')
+                ->where('reserved_until', '<', now())
+                ->lockForUpdate()
+                ->first();
+
+            if ($locked === null) {
+                return;
+            }
+
+            $event = Event::withoutGlobalScopes()->find((int) $locked->event_id);
 
             if ($event === null) {
                 return;
             }
 
-            $capacity->release($event, $quantities);
+            $capacity->release($event, $this->quantitiesForOrder($orderId));
 
-            // Flip the swept Orders to `expired` so their hold is not released
-            // again and the Order lifecycle reflects the elapsed window. (10.7)
             DB::table('orders')
-                ->whereIn('id', $orderIds)
+                ->where('id', $orderId)
                 ->update(['status' => 'expired', 'updated_at' => now()]);
 
-            // Mirror the terminal Order state onto its Tickets, the same way
-            // OrderCancellationService voids Tickets when an Order reaches a
-            // terminal status. The sweeper has already released the held
-            // capacity above, so this ONLY updates ticket status — it must not
-            // route through the cancellation path or the hold would be released
-            // twice. Keeps `tickets.status` consistent with the `expired` Order
-            // rather than leaving stale `valid` rows under a dead reservation.
             Ticket::withoutGlobalScopes()
-                ->whereIn('order_id', $orderIds)
+                ->where('order_id', $orderId)
                 ->update(['status' => Ticket::STATUS_VOIDED]);
         });
     }
 
     /**
-     * Expired holds aggregated as: Event id => (Ticket_Type id => quantity).
-     *
-     * An expired reservation is an Order still in `reserved` status whose
-     * `reserved_until` window has elapsed. Its per-Ticket_Type quantities come
-     * from that Order's `tickets` rows. Bypasses tenant scope: this sweeper
-     * runs in the scheduler with no resolved Company and must see every
-     * Company's stale holds. (Requirements 10.7, 10.12)
-     *
-     * @return array<int, array<int, int>>
+     * Confirm an expired-window Order that Stripe reports PAID: mark it paid,
+     * capture the PaymentIntent, and hand it to fulfilment (commit capacity,
+     * QR, ticket email). This is the sweeper winning back a webhook we appear to
+     * have missed — payment is authoritative. The seat was still HELD (we only
+     * reach here because the Order is still `reserved`), so fulfilment commits
+     * the existing hold normally with no oversell risk.
      */
-    protected function expiredReservationsByEvent(): array
-    {
-        $rows = DB::table('orders')
-            ->join('tickets', 'tickets.order_id', '=', 'orders.id')
-            ->where('orders.status', 'reserved')
-            ->where('orders.reserved_until', '<', now())
-            ->groupBy('orders.event_id', 'tickets.ticket_type_id')
-            ->select(
-                'orders.event_id',
-                'tickets.ticket_type_id',
-                DB::raw('COUNT(*) as qty'),
-            )
-            ->get();
+    protected function confirmPaidOrder(
+        CapacityReservationService $capacity,
+        OrderFulfilmentService $fulfilment,
+        Order $order,
+        StripeSessionStatus $sessionStatus,
+    ): void {
+        $justPaid = DB::transaction(function () use ($order, $sessionStatus): bool {
+            $locked = Order::withoutGlobalScopes()
+                ->whereKey($order->getKey())
+                ->lockForUpdate()
+                ->first();
 
-        $byEvent = [];
+            if ($locked === null || $locked->status !== Order::STATUS_RESERVED) {
+                return false;
+            }
 
-        foreach ($rows as $row) {
-            $byEvent[(int) $row->event_id][(int) $row->ticket_type_id] = (int) $row->qty;
+            $locked->status = Order::STATUS_PAID;
+
+            if ($sessionStatus->paymentIntentId !== null && $locked->stripe_payment_intent_id === null) {
+                $locked->stripe_payment_intent_id = $sessionStatus->paymentIntentId;
+            }
+
+            $locked->save();
+
+            return true;
+        });
+
+        if ($justPaid) {
+            Log::info('Sweeper confirmed a paid order whose webhook was missed.', [
+                'order_reference' => $order->order_reference,
+            ]);
+
+            $fulfilment->fulfil($order->refresh());
         }
-
-        return $byEvent;
     }
 
     /**
-     * Re-read (and lock) the ids of the still-`reserved`, still-expired Orders
-     * for an Event so the release/flip happens atomically against concurrent
-     * sweeps. (Requirement 10.7 idempotency)
+     * Per-Ticket_Type quantities held by one Order, recovered from its tickets.
      *
      * @return array<int, int>
      */
-    protected function lockExpiredOrderIdsForEvent(int $eventId): array
+    protected function quantitiesForOrder(int $orderId): array
+    {
+        return DB::table('tickets')
+            ->where('order_id', $orderId)
+            ->groupBy('ticket_type_id')
+            ->selectRaw('ticket_type_id, COUNT(*) as qty')
+            ->pluck('qty', 'ticket_type_id')
+            ->map(fn ($qty) => (int) $qty)
+            ->all();
+    }
+
+    /**
+     * Ids of every Order still `reserved` whose window has elapsed, across all
+     * Companies (the sweeper runs with no resolved tenant). Each is then handled
+     * individually by {@see sweepOrder()}.
+     *
+     * @return array<int, int>
+     */
+    protected function expiredOrderIds(): array
     {
         return DB::table('orders')
-            ->where('event_id', $eventId)
             ->where('status', 'reserved')
             ->where('reserved_until', '<', now())
-            ->lockForUpdate()
+            ->orderBy('id')
             ->pluck('id')
             ->map(fn ($id) => (int) $id)
             ->all();

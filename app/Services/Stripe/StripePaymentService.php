@@ -57,9 +57,17 @@ interface StripePaymentService
      *
      * @param  array<string, mixed>  $metadata  Order metadata (e.g. order reference).
      * @param  string|null  $customerEmail  The Customer's email, pre-filled on
-     *                                       the hosted Checkout page so they do
-     *                                       not have to type it again. Passing
-     *                                       null leaves the email field blank.
+     *                                      the hosted Checkout page so they do
+     *                                      not have to type it again. Passing
+     *                                      null leaves the email field blank.
+     * @param  int|null  $expiresAt  Unix timestamp at which the Session stops
+     *                               accepting payment, passed straight to
+     *                               Stripe's `expires_at`. Aligned with the
+     *                               Order's reservation window so the seat is
+     *                               held for exactly as long as Stripe will take
+     *                               the money — removing the reservation-vs-
+     *                               payment race. Null leaves Stripe's default
+     *                               (24h). (Reservation-vs-payment race fix)
      */
     public function createCheckoutSession(
         string $connectedAccountId,
@@ -70,7 +78,24 @@ interface StripePaymentService
         string $cancelUrl,
         array $metadata = [],
         ?string $customerEmail = null,
+        ?int $expiresAt = null,
     ): StripeCheckoutSession;
+
+    /**
+     * Read back the payment-relevant status of a Checkout Session on a connected
+     * account, so the reservation sweeper can decide authoritatively whether a
+     * reserved Order's held capacity may be released. Returns a
+     * {@see StripeSessionStatus} classified as paid/open/expired/unknown.
+     *
+     * Implementations MUST NOT throw: any Stripe/transport failure (and anything
+     * unclassifiable) resolves to {@see StripeSessionStatus::UNKNOWN} so the
+     * caller fails safe and keeps the seat held rather than releasing a seat
+     * whose payment it could not confirm. (Reservation-vs-payment race fix)
+     */
+    public function retrieveCheckoutSessionStatus(
+        string $connectedAccountId,
+        string $sessionId,
+    ): StripeSessionStatus;
 
     /**
      * Issue a refund against a charge on a connected account. Consumed by the

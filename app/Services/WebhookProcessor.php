@@ -5,12 +5,15 @@ namespace App\Services;
 use App\Jobs\ProcessWebhookJob;
 use App\Models\AuditLog;
 use App\Models\Company;
+use App\Models\Event;
 use App\Models\Order;
 use App\Models\ProcessedWebhook;
+use App\Models\Ticket;
 use App\Services\Stripe\StripePaymentService;
 use App\Services\Stripe\StripeWebhookEvent;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Idempotent handler for verified Stripe webhook events, keyed on the Stripe
@@ -44,6 +47,7 @@ class WebhookProcessor
         private readonly OrderCancellationService $cancellation,
         private readonly AuditLogger $audit,
         private readonly StripePaymentService $stripe,
+        private readonly CapacityReservationService $capacity,
     ) {}
 
     /**
@@ -106,10 +110,13 @@ class WebhookProcessor
     }
 
     /**
-     * Mark the Order matching the completed Checkout Session paid — but only if
-     * it is still reserved, so a redelivery leaves an already-paid Order (and
-     * its money) untouched and triggers no additional charge. (Requirements
-     * 12.6, 12.7, 19.3)
+     * Mark the Order matching the completed Checkout Session paid, then fulfil
+     * it. Payment is authoritative: the Order is confirmed when it is still
+     * `reserved` (normal path) OR was swept to `expired` before this webhook
+     * arrived (recovery path — see {@see markPaid()}). Any already-terminal
+     * Order is left untouched, so a redelivery leaves an already-paid Order (and
+     * its money) alone and triggers no additional charge. (Requirements 12.6,
+     * 12.7, 19.3; reservation-vs-payment race fix)
      */
     private function handleCheckoutSessionCompleted(StripeWebhookEvent $event): void
     {
@@ -125,14 +132,38 @@ class WebhookProcessor
         // resolve the Order by PaymentIntent later.
         $paymentIntentId = $this->stringField($event->data, 'payment_intent');
 
-        $justPaid = DB::transaction(function () use ($order, $paymentIntentId): bool {
+        $transition = $this->markPaid($order, $paymentIntentId);
+
+        $this->finishConfirmation($order, $transition);
+    }
+
+    /**
+     * Flip an Order to `paid` when it is still `reserved` (normal path — seat
+     * held) or was swept to `expired` before confirmation arrived (recovery
+     * path — seat released, tickets voided). Payment is authoritative, so both
+     * are accepted; any already-terminal status is left untouched (idempotent).
+     * On the recovery path the Order's tickets are un-voided in the same
+     * transaction. Returns the PRIOR status (`reserved`/`expired`) when it
+     * flipped, or null when nothing changed. Shared by the webhook and the
+     * reconcile command. (Requirements 12.6, 12.7, 19.3; reservation-vs-payment race fix)
+     */
+    public function markPaid(Order $order, ?string $paymentIntentId): ?string
+    {
+        return DB::transaction(function () use ($order, $paymentIntentId): ?string {
             $locked = Order::withoutGlobalScopes()
                 ->whereKey($order->getKey())
                 ->lockForUpdate()
                 ->first();
 
-            if ($locked === null || $locked->status !== Order::STATUS_RESERVED) {
-                return false;
+            if ($locked === null) {
+                return null;
+            }
+
+            $from = $locked->status;
+
+            if ($from !== Order::STATUS_RESERVED && $from !== Order::STATUS_EXPIRED) {
+                // Already paid/refunded/etc. — nothing to do (idempotent).
+                return null;
             }
 
             $locked->status = Order::STATUS_PAID;
@@ -143,16 +174,61 @@ class WebhookProcessor
 
             $locked->save();
 
-            return true;
-        });
+            // Recovery path: the sweep had already voided this Order's tickets
+            // when it expired, so restore them to valid now the payment is
+            // confirmed. (Un-voiding a still-reserved order's tickets is a
+            // harmless no-op — they were never voided.)
+            if ($from === Order::STATUS_EXPIRED) {
+                Ticket::withoutGlobalScopes()
+                    ->where('order_id', $locked->getKey())
+                    ->update(['status' => Ticket::STATUS_VALID]);
+            }
 
-        // Fulfil the now-paid Order: commit capacity reserved → sold, generate
-        // the QR, and enqueue the ticket email. Only the transition that
-        // actually marked the Order paid triggers fulfilment, and fulfilment is
-        // itself idempotent — a redelivered event therefore neither re-charges
-        // nor re-fulfils. (Requirements 14.1, 14.3)
+            return $from;
+        });
+    }
+
+    /**
+     * Complete a paid-Order confirmation after its status has been flipped to
+     * `paid`: for the expired-recovery path re-commit capacity and honour the
+     * seats, then fulfil (QR + ticket email), capture the Stripe fee, and record
+     * the audit event. Shared by the webhook and the reconcile command so both
+     * converge on exactly one confirmation path. A null `$transition` (nothing
+     * flipped — already paid, or gone) is a no-op. (Reservation-vs-payment race fix)
+     *
+     * @param  string|null  $transition  The status the Order was in BEFORE this
+     *                                   confirmation (`reserved` or `expired`),
+     *                                   or null if no transition happened.
+     */
+    public function finishConfirmation(Order $order, ?string $transition): void
+    {
+        $justPaid = $transition !== null;
+        $wasExpired = $transition === Order::STATUS_EXPIRED;
+
         if ($justPaid) {
             $order = $order->refresh();
+
+            // Recovery path only: the expired sweep already RELEASED this
+            // Order's hold (reserved_count was decremented), so the normal
+            // reserved→sold commit inside fulfil() would move nothing and leave
+            // sold_count short. Add the units straight to sold_count here. This
+            // honours the paid Order even if the seats were resold in the gap;
+            // commitSoldDirect reports when that tips the Event over capacity so
+            // we can alert rather than oversell silently. (Reservation-vs-payment race fix)
+            if ($wasExpired) {
+                $event = Event::withoutGlobalScopes()->find($order->event_id);
+
+                if ($event !== null) {
+                    $oversold = $this->capacity->commitSoldDirect($event, $this->quantitiesFor($order));
+
+                    if ($oversold) {
+                        Log::warning('Recovered a paid order after its hold expired, committing OVER capacity (honoured). Review event capacity.', [
+                            'order_reference' => $order->order_reference,
+                            'event_id' => $order->event_id,
+                        ]);
+                    }
+                }
+            }
 
             $this->fulfilment->fulfil($order);
 
@@ -178,6 +254,25 @@ class WebhookProcessor
                 ],
             );
         }
+    }
+
+    /**
+     * The per-Ticket_Type quantities an Order holds, recovered from its Ticket
+     * rows. Bypasses the tenant scope — the webhook resolves no Company — and is
+     * used by the expired-recovery path to know how many units of each type to
+     * re-commit to `sold_count`. (Reservation-vs-payment race fix)
+     *
+     * @return array<int, int>
+     */
+    private function quantitiesFor(Order $order): array
+    {
+        return Ticket::withoutGlobalScopes()
+            ->where('order_id', $order->getKey())
+            ->selectRaw('ticket_type_id, COUNT(*) as qty')
+            ->groupBy('ticket_type_id')
+            ->pluck('qty', 'ticket_type_id')
+            ->map(fn ($qty) => (int) $qty)
+            ->all();
     }
 
     /**

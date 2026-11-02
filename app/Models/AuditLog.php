@@ -93,11 +93,17 @@ class AuditLog extends Model
 
     public const AUTH_MFA_RECOVERY_CODES_REGENERATED = 'auth.mfa_recovery_codes_regenerated';
 
+    public const TOKEN_ISSUED = 'token.issued';
+
+    public const TOKEN_REVOKED = 'token.revoked';
+
     public const IMPERSONATION_STARTED = 'impersonation.started';
 
     public const IMPERSONATION_STOPPED = 'impersonation.stopped';
 
     // Access changes
+    public const COMPANY_SELECTED = 'company.selected';
+
     public const USER_INVITED = 'user.invited';
 
     public const USER_ROLE_CHANGED = 'user.role_changed';
@@ -219,9 +225,12 @@ class AuditLog extends Model
         self::AUTH_MFA_CHALLENGE_FAILED => ['category' => self::CATEGORY_AUTH, 'label' => 'Failed two-factor challenge'],
         self::AUTH_MFA_RECOVERY_CODE_USED => ['category' => self::CATEGORY_AUTH, 'label' => 'Used a two-factor recovery code'],
         self::AUTH_MFA_RECOVERY_CODES_REGENERATED => ['category' => self::CATEGORY_AUTH, 'label' => 'Regenerated two-factor recovery codes'],
+        self::TOKEN_ISSUED => ['category' => self::CATEGORY_AUTH, 'label' => 'Issued an API token'],
+        self::TOKEN_REVOKED => ['category' => self::CATEGORY_AUTH, 'label' => 'Revoked an API token'],
         self::IMPERSONATION_STARTED => ['category' => self::CATEGORY_AUTH, 'label' => 'Started impersonation'],
         self::IMPERSONATION_STOPPED => ['category' => self::CATEGORY_AUTH, 'label' => 'Stopped impersonation'],
 
+        self::COMPANY_SELECTED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Selected an active company'],
         self::USER_INVITED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Invited a user'],
         self::USER_ROLE_CHANGED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Changed a user role'],
         self::USER_REMOVED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Removed a user'],
