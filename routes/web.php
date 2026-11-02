@@ -812,6 +812,7 @@ Route::middleware(['auth', 'super.admin', 'session.timeout', 'migrations.pending
         // an explicit confirmation. Delivery is fanned out to the queue.
         // (Platform communications)
         Route::get('/announcements', [SuperAdminAnnouncementController::class, 'create'])->name('announcements.create');
+        Route::post('/announcements/preview', [SuperAdminAnnouncementController::class, 'preview'])->name('announcements.preview');
         Route::post('/announcements', [SuperAdminAnnouncementController::class, 'send'])->name('announcements.send');
 
         // Cross-tenant user management: a platform-wide directory of every
