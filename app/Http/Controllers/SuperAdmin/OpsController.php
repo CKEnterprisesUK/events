@@ -233,6 +233,56 @@ class OpsController extends Controller
     }
 
     /**
+     * Seed the self-contained App Review / TestFlight demo tenant, in-process.
+     *
+     * This is the browser-driven equivalent of
+     * `php artisan db:seed --class=...AppReviewDemoSeeder`, for a host with no
+     * SSH/terminal. It creates ONE clearly-labelled demo Company with a handful
+     * of users (different roles, shared password), a published event and a
+     * couple of confirmed bookings, so Apple's reviewer can sign in and test
+     * check-in. It NEVER reads or mutates real tenants (everything is namespaced
+     * to the demo company/emails), is idempotent (re-running refreshes the same
+     * rows), and is wrapped in a transaction — so it is safe to run in
+     * production, which is exactly where the reviewer's account must live.
+     *
+     * The seeder prints the login details and the scannable QR payloads to the
+     * artisan output buffer, which we surface back on the Ops page.
+     */
+    public function seedAppReviewDemo(): RedirectResponse
+    {
+        try {
+            Artisan::call('db:seed', [
+                '--class' => \Database\Seeders\AppReviewDemoSeeder::class,
+                '--force' => true,
+            ]);
+        } catch (\Throwable $e) {
+            return back()->with('ops_error', 'App Review demo seed failed: '.$e->getMessage());
+        }
+
+        return back()->with('ops_status', trim(Artisan::output()) ?: 'App Review demo data seeded.');
+    }
+
+    /**
+     * Remove the App Review demo tenant and everything it created, in-process.
+     *
+     * The counterpart to {@see seedAppReviewDemo()}. It deletes ONLY rows scoped
+     * to the demo Company (matched by its fixed slug) and the demo users
+     * (matched by their `@app-review-demo.test` emails), so real tenants are
+     * never touched. Idempotent — a no-op when the demo tenant is absent. Run
+     * this once the app is approved to clean up.
+     */
+    public function teardownAppReviewDemo(): RedirectResponse
+    {
+        try {
+            $summary = \Database\Seeders\AppReviewDemoSeeder::teardown();
+        } catch (\Throwable $e) {
+            return back()->with('ops_error', 'App Review demo teardown failed: '.$e->getMessage());
+        }
+
+        return back()->with('ops_status', $summary);
+    }
+
+    /**
      * Returns a refusal message when we are in production, or null otherwise.
      *
      * Used ONLY by the destructive reseed action. This is an ALLOW-LIST, not a

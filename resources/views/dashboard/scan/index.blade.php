@@ -146,6 +146,9 @@
         .scan-result--good { background: #16a34a; border-color: #15803d; }
         .scan-result--warn { background: #f59e0b; border-color: #d97706; color: #1f2937; }
         .scan-result--bad  { background: #dc2626; border-color: #b91c1c; }
+        /* Accidental immediate re-scan: a stronger amber with a thicker border
+           so a quick double-scan of the same ticket is obvious at a glance. */
+        .scan-result--just-scanned { background: #fbbf24; border-color: #b45309; border-width: 3px; }
 
         .scan-result__message {
             margin: 0;

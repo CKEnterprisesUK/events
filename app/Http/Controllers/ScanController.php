@@ -55,6 +55,17 @@ class ScanController extends Controller
      */
     private const HISTORY_LIMIT = 5;
 
+    /**
+     * The Order_Reference of the single most recent scan this operator made in
+     * this browser session. Used to catch an accidental immediate re-scan of
+     * the exact ticket just scanned (a quick double-tap/double-pass of the same
+     * QR) and warn the operator distinctly — only ever the last one ticket, so
+     * scanning any other ticket in between clears it. Session-scoped (per
+     * operator, per browser), like the recap; it is a UX guard, not an audit
+     * trail.
+     */
+    private const LAST_REFERENCE_KEY = 'scan.last_reference';
+
     public function __construct(private TicketCheckInService $checkIn) {}
 
     /**
@@ -107,6 +118,15 @@ class ScanController extends Controller
         $result = $this->toArray(
             $this->checkIn->resolve($payload, Operator::fromUser(Auth::user()))
         );
+
+        // Catch an accidental immediate re-scan: if this resolved to a known
+        // Order whose reference matches the single most recent scan this
+        // operator made, flag it so the banner warns "you've just scanned this
+        // ticket" rather than the generic already-scanned message. Only the
+        // last one ticket counts — scanning any other ticket in between resets
+        // the guard. We compute this BEFORE recording the new reference so the
+        // comparison is against the prior scan, not this one.
+        $this->flagJustScanned($request, $result);
 
         $this->remember($request, $result);
 
@@ -188,9 +208,46 @@ class ScanController extends Controller
     }
 
     /**
+     * Detect an accidental immediate re-scan of the exact ticket this operator
+     * just scanned, and when found, mark the result so the banner shows a
+     * distinct "you've just scanned this ticket" warning instead of the generic
+     * already-scanned message.
+     *
+     * The guard is deliberately narrow: it fires only when the current scan
+     * resolved to a known Order whose reference equals the single most recent
+     * reference this operator scanned (stored in {@see LAST_REFERENCE_KEY}). It
+     * remembers only the LAST one ticket — scanning any other ticket overwrites
+     * the stored reference, so an older duplicate falls back to the normal
+     * already-scanned message. Mutates $result in place, adding `just_scanned`
+     * and overriding `message` when it matches.
+     */
+    private function flagJustScanned(Request $request, array &$result): void
+    {
+        /** @var Order|null $order */
+        $order = $result['order'] ?? null;
+
+        $reference = $order?->order_reference;
+
+        // Only orders can be an accidental re-scan; unreadable/invalid/unknown
+        // codes carry no reference and are never "the same ticket again".
+        if ($reference === null) {
+            return;
+        }
+
+        $lastReference = $request->session()->get(self::LAST_REFERENCE_KEY);
+
+        if ($lastReference !== null && $lastReference === $reference) {
+            $result['just_scanned'] = true;
+            $result['message'] = 'You just scanned this ticket.';
+        }
+    }
+
+    /**
      * Push one scan outcome onto the front of the session recap and trim it to
      * {@see HISTORY_LIMIT}. We store only display-safe scalars (no models) so
-     * the session payload stays small and serialisable.
+     * the session payload stays small and serialisable. Also records this
+     * scan's Order_Reference as the "last" one so the next scan can detect an
+     * accidental immediate re-scan of the same ticket.
      */
     private function remember(Request $request, array $result): void
     {
@@ -211,5 +268,13 @@ class ScanController extends Controller
         $history = array_slice($history, 0, self::HISTORY_LIMIT);
 
         $request->session()->put(self::HISTORY_KEY, $history);
+
+        // Remember the single most recent Order_Reference (only when this scan
+        // resolved to one) so the next scan can spot a quick accidental repeat
+        // of the SAME ticket. A non-order outcome (unreadable/invalid/unknown)
+        // leaves the previous reference untouched.
+        if ($order?->order_reference !== null) {
+            $request->session()->put(self::LAST_REFERENCE_KEY, $order->order_reference);
+        }
     }
 }

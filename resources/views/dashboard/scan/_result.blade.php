@@ -21,8 +21,16 @@
     $ticketCount = collect($result['breakdown'] ?? [])->sum('quantity');
 @endphp
 
-<div class="scan-result scan-result--{{ $signal }}" role="status" aria-live="polite">
+<div class="scan-result scan-result--{{ $signal }}{{ ! empty($result['just_scanned']) ? ' scan-result--just-scanned' : '' }}" role="status" aria-live="polite">
     <p class="scan-result__message">{{ $result['message'] }}</p>
+
+    @if (! empty($result['just_scanned']))
+        {{-- Accidental immediate re-scan of the ticket just scanned: a gentle
+             nudge so the operator knows it is the same one, not a new entry. --}}
+        <p class="scan-result__count" style="font-size: 1rem; font-weight: 600;">
+            This is the ticket you just scanned — no need to scan it again.
+        </p>
+    @endif
 
     @if ($result['status'] === 'checked_in')
         {{-- Headline: how many tickets this code admits. --}}

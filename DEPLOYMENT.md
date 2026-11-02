@@ -145,6 +145,37 @@ keep in sync.
   briefly. See `App\Services\PendingMigrations` and the
   `migrations.pending` middleware.
 
+### App Review / TestFlight demo data (iOS)
+
+Apple's App Review team must be able to sign in on **production** to test the
+iOS scanner, so a small, self-contained demo tenant is provided. It is driven
+from the build page (`/admin/ops`) like every other no-SSH action, with an
+**up** and a **down**:
+
+- **Seed App Review demo data (up)** — creates one clearly-labelled demo
+  company (`app-review-demo`), a few users in different roles sharing one
+  password, a published event with two ticket types, and two confirmed bookings
+  (one left unscanned for a live check-in, one already scanned). After it runs,
+  the result box prints the **login details** and the **scannable QR payloads**
+  — copy those into your App Review notes (render the payload as a QR with any
+  generator, or email the ticket from the dashboard to get the real QR image).
+- **Remove App Review demo data (down)** — deletes the demo company and only its
+  own rows (matched by the demo slug / `@app-review-demo.test` emails). Run this
+  once the app is approved.
+
+Both actions are **idempotent** and **namespaced to the demo tenant**, so they
+never read or mutate real customers/companies and are safe to run on production
+(which is where the reviewer's account must live). They are also available from
+the CLI where a terminal exists:
+
+```
+php artisan db:seed --class=Database\\Seeders\\AppReviewDemoSeeder --force   # up
+php artisan tinker --execute="Database\\Seeders\\AppReviewDemoSeeder::teardown();"  # down
+```
+
+> The demo tenant does **not** connect Stripe, so it cannot take real payments —
+> it exists only for sign-in and door check-in review.
+
 ### Fresh production database
 
 On a brand-new prod DB, the same **Run migrations** action builds the entire

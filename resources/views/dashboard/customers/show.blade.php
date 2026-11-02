@@ -75,6 +75,7 @@
                     <th scope="col">Event</th>
                     <th scope="col">Placed</th>
                     <th scope="col">Status</th>
+                    <th scope="col">Scanned</th>
                     <th scope="col" class="num">Total</th>
                     <th scope="col"></th>
                 </tr>
@@ -86,6 +87,16 @@
                         <td>{{ $order->event?->name ?? '—' }}</td>
                         <td>{{ $order->created_at?->format('j M Y, H:i') ?? '—' }}</td>
                         <td><span class="pill pill--{{ $order->status }}">{{ ucfirst(str_replace('_', ' ', $order->status)) }}</span></td>
+                        <td>
+                            @if ($order->scanned_at)
+                                <span class="cell-strong" style="font-weight: 600;">{{ $order->scanned_at->format('j M Y, H:i') }}</span>
+                                @if ($order->scannedBy)
+                                    <span class="cell-dim">by {{ $order->scannedBy->name }}</span>
+                                @endif
+                            @else
+                                <span class="cell-dim">Not scanned</span>
+                            @endif
+                        </td>
                         <td class="num">{{ $money($order->order_total_minor) }}</td>
                         <td class="num"><a class="panel__link" href="{{ route('dashboard.orders.show', $order) }}">View</a></td>
                     </tr>

@@ -45,6 +45,13 @@ final class ScanViewModel: ObservableObject {
     /// The most recent decoded Scan_Outcome, rendered below the camera.
     @Published private(set) var outcome: ScanOutcomeDTO?
 
+    /// True when the latest outcome is an accidental immediate re-scan of the
+    /// exact ticket just scanned — the same Order_Reference as the single most
+    /// recent resolved scan. Drives a distinct "you just scanned this ticket"
+    /// banner so a quick double-pass of the same QR is obvious. Only the last
+    /// one ticket counts: resolving any other reference clears the guard.
+    @Published private(set) var justScannedSameTicket: Bool = false
+
     /// A transport/permission error message (e.g. offline), shown to the
     /// operator. Distinct from a resolved-but-non-success outcome, which is a
     /// normal `ScanOutcomeDTO` the server returned.
@@ -57,6 +64,13 @@ final class ScanViewModel: ObservableObject {
     /// same QR dozens of times per second (Requirement 10.3 → one scan, one
     /// submit).
     private var lastSubmittedPayload: String?
+
+    /// The Order_Reference of the single most recent resolved scan. Kept across
+    /// `reset()` (unlike `lastSubmittedPayload`, which the duplicate-in-frame
+    /// guard clears) so that re-scanning the same ticket right after tapping
+    /// "Scan next" is still recognised as an accidental repeat. Resolving any
+    /// other reference overwrites it, so only the last one ticket is remembered.
+    private var lastResolvedReference: String?
 
     init(submitter: ScanSubmitting, authorizer: CameraAuthorizing = AVCameraAuthorizer()) {
         self.submitter = submitter
@@ -101,10 +115,13 @@ final class ScanViewModel: ObservableObject {
     }
 
     /// Clear the current outcome so the operator can scan the next ticket, and
-    /// reset the duplicate guard.
+    /// reset the in-frame duplicate guard. `lastResolvedReference` is kept on
+    /// purpose so an immediate re-scan of the same ticket after "Scan next" is
+    /// still caught; it is only overwritten when a DIFFERENT ticket resolves.
     func reset() {
         outcome = nil
         errorMessage = nil
+        justScannedSameTicket = false
         lastSubmittedPayload = nil
     }
 
@@ -117,15 +134,40 @@ final class ScanViewModel: ObservableObject {
         do {
             let result = try await operation()
             outcome = result
+
+            // Accidental immediate re-scan: an already-scanned outcome whose
+            // Order_Reference matches the single most recent resolved scan means
+            // the operator just passed the SAME ticket again. Flag it so the UI
+            // warns distinctly rather than looking like any other duplicate.
+            if result.status == .alreadyScanned,
+               let reference = result.reference,
+               reference == lastResolvedReference {
+                justScannedSameTicket = true
+            } else {
+                justScannedSameTicket = false
+            }
+
+            // Track this scan's reference as the "last" one (only when the
+            // outcome carries one) so the next scan can spot a quick repeat of
+            // the same ticket. A reference-less outcome leaves it untouched.
+            if let reference = result.reference {
+                lastResolvedReference = reference
+            }
+
             if result.status == .checkedIn {
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
+            } else if justScannedSameTicket {
+                // A softer warning haptic for the "you just scanned this" nudge.
+                UINotificationFeedbackGenerator().notificationOccurred(.warning)
             }
         } catch let error as APIError {
             // Offline or any API failure: show the message, keep no success.
             outcome = nil
+            justScannedSameTicket = false
             errorMessage = error.userMessage
         } catch {
             outcome = nil
+            justScannedSameTicket = false
             errorMessage = APIError.invalidResponse.userMessage
         }
         isSubmitting = false
@@ -140,15 +182,23 @@ struct ScanView: View {
     @Environment(AppState.self) private var appState
     @StateObject private var model: ScanViewModel
     @State private var showingManualEntry = false
+    @State private var showingEventPicker = false
     @State private var torchOn = false
+
+    /// The event source for the in-place picker. Non-nil on the real app path
+    /// (seeded with the `AuthStore`), nil on the injected test/preview path,
+    /// where the picker control is simply hidden.
+    private let eventLister: EventListing?
 
     init(auth: AuthStore) {
         _model = StateObject(wrappedValue: ScanViewModel(submitter: auth))
+        self.eventLister = auth
     }
 
     /// Test/preview seam allowing an injected submitter + authorizer.
     init(submitter: ScanSubmitting, authorizer: CameraAuthorizing) {
         _model = StateObject(wrappedValue: ScanViewModel(submitter: submitter, authorizer: authorizer))
+        self.eventLister = nil
     }
 
     var body: some View {
@@ -162,9 +212,34 @@ struct ScanView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .brandNavigationTitle()
+            .toolbar {
+                if eventLister != nil {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            showingEventPicker = true
+                        } label: {
+                            Image(systemName: "calendar")
+                        }
+                        .accessibilityLabel("Choose event")
+                        .accessibilityIdentifier("scan.pickEvent")
+                    }
+                }
+            }
             .sheet(isPresented: $showingManualEntry) {
                 ManualEntryView { reference in
                     await model.submitManual(reference: reference)
+                }
+            }
+            .sheet(isPresented: $showingEventPicker) {
+                if let eventLister {
+                    EventPickerView(
+                        lister: eventLister,
+                        selectedEventID: appState.selectedEvent?.id,
+                        onSelect: { event in
+                            appState.selectEvent(event)
+                            model.reset()
+                        }
+                    )
                 }
             }
             .onChange(of: torchOn) { _, _ in } // keeps SwiftUI observing the toggle
@@ -230,10 +305,19 @@ struct ScanView: View {
                     .lineLimit(1)
             }
             Spacer()
-            Button("Change") { appState.clearSelectedEvent() }
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(Brand.emerald)
-                .accessibilityIdentifier("scan.changeEvent")
+            Button {
+                if eventLister != nil {
+                    showingEventPicker = true
+                } else {
+                    appState.clearSelectedEvent()
+                }
+            } label: {
+                Label("Change", systemImage: "calendar")
+                    .labelStyle(.titleAndIcon)
+            }
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Brand.emerald)
+            .accessibilityIdentifier("scan.changeEvent")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -262,6 +346,16 @@ struct ScanView: View {
             }
 
             if let outcome = model.outcome {
+                if model.justScannedSameTicket {
+                    Label("You just scanned this ticket — no need to scan it again.",
+                          systemImage: "exclamationmark.arrow.triangle.2.circlepath")
+                        .font(.callout.weight(.semibold))
+                        .foregroundStyle(Brand.navy)
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Brand.amber, in: RoundedRectangle(cornerRadius: 12))
+                        .accessibilityIdentifier("scan.justScanned")
+                }
                 ScanOutcomeCard(outcome: outcome)
                 Button {
                     model.reset()
@@ -329,8 +423,23 @@ struct ScanView: View {
             BrandEmptyState(
                 symbol: "calendar.badge.exclamationmark",
                 title: "Choose an event to scan",
-                message: "Open the Events tab, pick an event, and tap “Scan” to check people in for it."
+                message: "Tap the calendar to pick the event you're checking people in for — no need to leave this screen."
             )
+
+            if eventLister != nil {
+                Button {
+                    showingEventPicker = true
+                } label: {
+                    Label("Choose event", systemImage: "calendar")
+                        .fontWeight(.semibold)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                }
+                .background(Brand.emerald)
+                .foregroundStyle(Brand.navy)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .accessibilityIdentifier("scan.noEvent.choose")
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityIdentifier("scan.noEvent")

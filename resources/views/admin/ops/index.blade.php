@@ -174,6 +174,40 @@
     </div>
 
     <div class="admin-panel">
+        <div class="admin-panel__head"><h2>App Review demo data</h2></div>
+        <div class="admin-panel__body">
+            <p>
+                Stand up (or remove) a self-contained demo tenant for Apple App Review /
+                TestFlight: one demo company, a few users in different roles sharing one
+                password, a published event, and a couple of confirmed bookings (one left
+                unscanned to check in, one already scanned). Everything is namespaced to the
+                demo company, so these actions never touch real tenants and are safe to run on
+                production. Both are idempotent.
+            </p>
+            <p class="muted">
+                After seeding, the result box above prints the login details and the scannable
+                QR payloads — copy those into your App Review notes.
+            </p>
+
+            <form method="POST" action="{{ route('admin.ops.app-review-demo.up') }}" style="margin-bottom:1rem">
+                @csrf
+                <button type="submit" class="btn btn--primary">Seed App Review demo data (up)</button>
+            </form>
+
+            <p>
+                <strong>Remove demo data</strong> — deletes the demo company, its users, event,
+                ticket types and bookings. Only ever removes the demo tenant's own rows. Run this
+                once the app is approved.
+            </p>
+            <form method="POST" action="{{ route('admin.ops.app-review-demo.down') }}"
+                  onsubmit="return confirm('Remove the App Review demo tenant and all its data now? This only deletes the demo company and its own rows.');">
+                @csrf
+                <button type="submit" class="btn">Remove App Review demo data (down)</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="admin-panel">
         <div class="admin-panel__head"><h2>Migration status</h2></div>
         <div class="admin-panel__body">
             <pre style="white-space:pre-wrap;max-height:24rem;overflow:auto">{{ $migrationStatus }}</pre>

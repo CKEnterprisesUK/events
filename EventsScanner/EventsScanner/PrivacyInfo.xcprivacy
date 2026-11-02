@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  App privacy manifest (Apple requirement for App Store submission).
+
+	  EventsScanner does no tracking and collects no data for tracking or
+	  advertising. The only sensitive hardware it uses is the camera (declared
+	  via NSCameraUsageDescription), and the only data it persists is the
+	  bearer access token, held in the Keychain on-device and never synced.
+
+	  It does not use any of Apple's "required reason" APIs (file timestamps,
+	  system boot time, disk space, UserDefaults as a required-reason category
+	  in a way that needs a reason, or active keyboard), so
+	  NSPrivacyAccessedAPITypes is intentionally empty.
+	-->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array/>
+</dict>
+</plist>
