@@ -1,9 +1,9 @@
 import SwiftUI
 
 /// Drives the Events tab — the app's landing screen. Lists the Active_Company's
-/// events with a tickets-sold count and the public web URL, lets the operator
-/// choose which event to scan for, and shows a "start your event" empty state
-/// (a link to the web app) when the company has no events yet.
+/// events; tapping one opens its detail page, from which the operator can start
+/// scanning (live events only). Shows a "start your event" empty state linking
+/// to the web app when the company has no events.
 @available(iOS 17.0, *)
 @MainActor
 final class EventsViewModel: ObservableObject {
@@ -36,22 +36,24 @@ final class EventsViewModel: ObservableObject {
     }
 }
 
-/// The Events tab: a list of the company's events (each selectable for scanning,
-/// with a link to buy tickets on the web), or the "start your event" empty
-/// state when there are none.
+/// The Events tab: a list of the company's events, each a link into its detail
+/// page, or the "start your event" empty state when there are none.
 @available(iOS 17.0, *)
 struct EventsView: View {
     @Environment(AppState.self) private var appState
     @StateObject private var model: EventsViewModel
+    private let auth: AuthStore
 
     init(auth: AuthStore) {
+        self.auth = auth
         _model = StateObject(wrappedValue: EventsViewModel(auth: auth))
     }
 
     var body: some View {
         NavigationStack {
             content
-                .navigationTitle("Events")
+                .brandNavigationTitle()
+                .navigationBarTitleDisplayMode(.inline)
                 .refreshable { await model.load() }
         }
         .task {
@@ -65,166 +67,114 @@ struct EventsView: View {
             ProgressView("Loading events…")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if model.events.isEmpty && model.hasLoaded {
-            emptyState
+            CreateEventView(webDashboardURL: model.webDashboardURL, errorMessage: model.errorMessage)
         } else {
             eventList
         }
     }
 
-    // MARK: - Event list
-
     private var eventList: some View {
         List {
             if let errorMessage = model.errorMessage {
                 Section {
-                    Text(errorMessage)
-                        .font(.callout)
-                        .foregroundStyle(.red)
+                    InlineErrorText(message: errorMessage)
                         .accessibilityIdentifier("events.error")
                 }
             }
 
             Section {
                 ForEach(model.events) { event in
-                    EventRow(
-                        event: event,
-                        isSelected: appState.selectedEvent?.id == event.id,
-                        onScan: { appState.selectEvent(event) }
-                    )
+                    NavigationLink {
+                        EventDetailView(
+                            event: event,
+                            isSelected: appState.selectedEvent?.id == event.id,
+                            onScan: { appState.selectEvent(event) }
+                        )
+                    } label: {
+                        EventRow(
+                            event: event,
+                            isSelected: appState.selectedEvent?.id == event.id
+                        )
+                    }
                 }
+            } header: {
+                Text("Your events")
             } footer: {
-                Text("Tap an event to scan for it. The Scan tab checks tickets in for your selected event.")
+                Text("Tap an event to see its details and start scanning.")
             }
         }
-    }
-
-    // MARK: - Empty state (no events)
-
-    private var emptyState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "calendar.badge.plus")
-                .font(.largeTitle)
-                .foregroundStyle(.secondary)
-            Text("No events yet")
-                .font(.headline)
-            Text("Create your first event in the web app to start selling tickets and checking people in.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-
-            if let url = model.webDashboardURL {
-                Link(destination: url) {
-                    Text("Click here to start your event")
-                        .fontWeight(.semibold)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                }
-                .buttonStyle(.borderedProminent)
-                .accessibilityIdentifier("events.startEvent")
-            }
-
-            if let errorMessage = model.errorMessage {
-                Text(errorMessage)
-                    .font(.callout)
-                    .foregroundStyle(.red)
-                    .padding(.top, 4)
-                    .accessibilityIdentifier("events.error")
-            }
-        }
-        .padding(24)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
-/// One event row: name, venue, start, status, tickets-sold, a "scan this event"
-/// action (or a "scanning" marker when selected) and a buy-tickets web link.
+/// One compact event row in the list: name, pretty date, venue, tickets sold,
+/// and a status badge (with a "Scanning" marker when it's the selected event).
 @available(iOS 17.0, *)
 private struct EventRow: View {
     let event: EventDTO
     let isSelected: Bool
-    let onScan: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(event.name)
                     .font(.headline)
+                    .lineLimit(2)
                 Spacer()
-                statusBadge
+                EventStatusBadge(event: event)
             }
 
-            if let venue = event.venue, !venue.isEmpty {
-                Label(venue, systemImage: "mappin.and.ellipse")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-
-            if let startsAt = event.startsAt {
-                Label(startsAt, systemImage: "clock")
+            if let pretty = event.prettyDate {
+                Label(pretty, systemImage: "calendar")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            Label(soldText, systemImage: "ticket")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            if let venue = event.venue, !venue.isEmpty {
+                Label(venue, systemImage: "mappin.and.ellipse")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
 
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
+                Label(soldText, systemImage: "ticket")
                 if isSelected {
-                    Label("Scanning this event", systemImage: "qrcode.viewfinder")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(Color.accentColor)
-                } else {
-                    Button {
-                        onScan()
-                    } label: {
-                        Label("Scan this event", systemImage: "qrcode.viewfinder")
-                            .font(.footnote.weight(.semibold))
-                    }
-                    .buttonStyle(.bordered)
-                    .accessibilityIdentifier("events.scanEvent.\(event.id)")
-                }
-
-                Spacer()
-
-                if let web = event.webURL, let url = URL(string: web) {
-                    Link(destination: url) {
-                        Label("Tickets", systemImage: "arrow.up.right.square")
-                            .font(.footnote)
-                    }
-                    .accessibilityIdentifier("events.tickets.\(event.id)")
+                    Label("Scanning", systemImage: "qrcode.viewfinder")
+                        .foregroundStyle(Brand.emerald)
+                        .fontWeight(.semibold)
                 }
             }
-            .padding(.top, 2)
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
         .padding(.vertical, 4)
     }
 
     private var soldText: String {
         if let capacity = event.capacity, capacity > 0 {
-            return "\(event.ticketsSold) of \(capacity) tickets sold"
+            return "\(event.ticketsSold) of \(capacity) sold"
         }
-        return "\(event.ticketsSold) tickets sold"
+        return "\(event.ticketsSold) sold"
     }
+}
 
-    @ViewBuilder
-    private var statusBadge: some View {
-        if event.isCancelled {
-            badge("Cancelled", color: .red)
-        } else if event.isPublished {
-            badge("Live", color: .green)
-        } else {
-            badge("Draft", color: .orange)
-        }
-    }
+/// The status pill: Cancelled (red), Live (emerald), or Draft (amber).
+@available(iOS 17.0, *)
+struct EventStatusBadge: View {
+    let event: EventDTO
 
-    private func badge(_ text: String, color: Color) -> some View {
-        Text(text)
+    var body: some View {
+        Text(event.statusLabel)
             .font(.caption2.weight(.semibold))
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
             .background(color.opacity(0.15))
             .foregroundStyle(color)
             .clipShape(Capsule())
+    }
+
+    private var color: Color {
+        if event.isCancelled { return Brand.danger }
+        return event.isPublished ? Brand.emerald : Brand.amber
     }
 }

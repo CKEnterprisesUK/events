@@ -61,11 +61,16 @@ final class SignInViewModel: ObservableObject {
     }
 }
 
-/// The sign-in form. Minimal by design: an email field, a secure password
-/// field, a submit button, and an inline error line.
+/// The sign-in screen. Branded navy backdrop with the logo lockup, a glassy
+/// credentials card, a prominent emerald sign-in button, and a route to the
+/// "create an account / start your events" page — so the first screen carries
+/// the product's identity rather than a bland system form.
 @available(iOS 17.0, *)
 struct SignInView: View {
     @StateObject private var model: SignInViewModel
+    @FocusState private var focusedField: Field?
+
+    private enum Field { case email, password }
 
     init(auth: AuthStore) {
         _model = StateObject(wrappedValue: SignInViewModel(auth: auth))
@@ -73,61 +78,149 @@ struct SignInView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    VStack(spacing: 10) {
-                        Image("BrandLogo")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 94, height: 94)
-                            .clipShape(RoundedRectangle(cornerRadius: 20))
-                            .accessibilityHidden(true)
-                        Text("Events by CK Enterprises")
-                            .font(.title2.bold())
-                            .multilineTextAlignment(.center)
-                        Text("Secure event check-in")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+            ZStack {
+                // Branded backdrop so the screen flows out of the launch/welcome
+                // navy rather than dropping onto a flat system background.
+                LinearGradient(
+                    colors: [Brand.navy, Brand.navy.opacity(0.82)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 24) {
+                        branding
+                        card
+                        createAccountLink
                     }
+                    .padding(24)
+                    .frame(maxWidth: 520)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 18)
                 }
-                Section {
-                    TextField("Email", text: $model.email)
-                        .textContentType(.username)
-                        .keyboardType(.emailAddress)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-
-                    SecureField("Password", text: $model.password)
-                        .textContentType(.password)
-                }
-
-                if let errorMessage = model.errorMessage {
-                    Section {
-                        Text(errorMessage)
-                            .font(.callout)
-                            .foregroundStyle(.red)
-                            .accessibilityIdentifier("signIn.error")
-                    }
-                }
-
-                Section {
-                    Button {
-                        Task { await model.submit() }
-                    } label: {
-                        if model.isSubmitting {
-                            ProgressView()
-                                .frame(maxWidth: .infinity)
-                        } else {
-                            Text("Sign In")
-                                .frame(maxWidth: .infinity)
-                        }
-                    }
-                    .disabled(!model.canSubmit)
-                }
+                .scrollDismissesKeyboard(.interactively)
             }
-            .navigationTitle("Sign In")
+            .toolbar(.hidden, for: .navigationBar)
         }
+    }
+
+    // MARK: - Branding lockup
+
+    private var branding: some View {
+        VStack(spacing: 12) {
+            Image("BrandLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 96, height: 96)
+                .clipShape(RoundedRectangle(cornerRadius: 22))
+                .shadow(color: .black.opacity(0.25), radius: 12, y: 8)
+                .accessibilityHidden(true)
+            Text("Events by CK Enterprises")
+                .font(.title2.bold())
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+            Text("Secure event check-in")
+                .font(.subheadline)
+                .foregroundStyle(.white.opacity(0.7))
+        }
+        .padding(.top, 24)
+    }
+
+    // MARK: - Credentials card
+
+    private var card: some View {
+        VStack(spacing: 16) {
+            field(icon: "envelope") {
+                TextField("Email", text: $model.email)
+                    .textContentType(.username)
+                    .keyboardType(.emailAddress)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .focused($focusedField, equals: .email)
+                    .submitLabel(.next)
+                    .onSubmit { focusedField = .password }
+            }
+
+            Divider().background(.white.opacity(0.1))
+
+            field(icon: "lock") {
+                SecureField("Password", text: $model.password)
+                    .textContentType(.password)
+                    .focused($focusedField, equals: .password)
+                    .submitLabel(.go)
+                    .onSubmit { Task { await model.submit() } }
+            }
+
+            if let errorMessage = model.errorMessage {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .foregroundStyle(Brand.danger)
+                    Text(errorMessage)
+                        .font(.callout)
+                        .foregroundStyle(.white)
+                    Spacer(minLength: 0)
+                }
+                .padding(.vertical, 4)
+                .accessibilityIdentifier("signIn.error")
+            }
+
+            Button {
+                focusedField = nil
+                Task { await model.submit() }
+            } label: {
+                Group {
+                    if model.isSubmitting {
+                        ProgressView().tint(Brand.navy)
+                    } else {
+                        Text("Sign In").fontWeight(.semibold)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+            }
+            .background(model.canSubmit ? Brand.emerald : Brand.emerald.opacity(0.4))
+            .foregroundStyle(Brand.navy)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .disabled(!model.canSubmit)
+            .accessibilityIdentifier("signIn.submit")
+        }
+        .padding(20)
+        .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 22))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22)
+                .stroke(.white.opacity(0.12), lineWidth: 1)
+        )
+    }
+
+    /// A single themed input row: an icon plus the supplied field.
+    private func field<Content: View>(icon: String, @ViewBuilder content: () -> Content) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .foregroundStyle(.white.opacity(0.6))
+                .frame(width: 20)
+                .accessibilityHidden(true)
+            content()
+                .foregroundStyle(.white)
+                .tint(Brand.emerald)
+        }
+    }
+
+    // MARK: - Create account
+
+    private var createAccountLink: some View {
+        VStack(spacing: 6) {
+            Text("New here?")
+                .font(.footnote)
+                .foregroundStyle(.white.opacity(0.6))
+            NavigationLink {
+                CreateEventView(webDashboardURL: nil)
+            } label: {
+                Text("Create an account & start your events")
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(Brand.emerald)
+            }
+            .accessibilityIdentifier("signIn.createAccount")
+        }
+        .padding(.top, 4)
     }
 }

@@ -23,11 +23,10 @@ import Observation
 /// (task 16.1); `hasToken` only reflects its presence, never its value
 /// (Requirements 12.1, 12.4).
 ///
-/// IMPORTANT: `@Observable` (the Observation framework macro) requires iOS 17.
-/// The app's deployment target is iOS 16.0 (Requirement 11.1), so this type is
-/// gated with `@available(iOS 17.0, *)`. See `EventsScanner/README.md`
-/// ("iOS 16 vs @Observable") for the reconciliation a human must make
-/// (raise the min target to 17, or switch to `ObservableObject`).
+/// `@Observable` (the Observation framework macro) requires iOS 17, which is
+/// the app's minimum deployment target, so the whole app can rely on it
+/// unconditionally. The `@available(iOS 17.0, *)` attribute is retained as a
+/// defensive annotation consistent with the rest of the feature views.
 @available(iOS 17.0, *)
 @Observable
 final class AppState {

@@ -70,10 +70,21 @@ class OrderApiController extends Controller
     {
         Gate::authorize(RoleAuthorization::ACTION_CHECK_IN);
 
-        $model = Order::query()->whereKey($order)->first();
+        $model = Order::query()->with('event')->whereKey($order)->first();
 
         if ($model === null) {
             abort(404);
+        }
+
+        // Manual check-in is only allowed for a LIVE event — published and not
+        // cancelled — exactly like a camera scan. A draft/cancelled event is
+        // refused with a clear message and nothing is mutated.
+        $event = $model->event;
+        if ($event !== null && (! $event->is_published || $event->cancelled_at !== null)) {
+            return response()->json([
+                'status' => ScanResult::STATUS_REJECTED,
+                'message' => 'This event is not live, so tickets can’t be checked in for it.',
+            ]);
         }
 
         $result = $this->checkIn->resolve(

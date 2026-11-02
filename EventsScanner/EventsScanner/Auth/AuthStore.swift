@@ -211,6 +211,12 @@ final class AuthStore: UnauthorizedHandling {
         try await client.send(.dashboardLive(eventId: appState.selectedEvent?.id))
     }
 
+    /// Fetch the live door snapshot for a SPECIFIC event id (the Dashboard's own
+    /// event picker), independent of the scan selection.
+    func liveSnapshot(eventId: Int?) async throws -> LiveSnapshotDTO {
+        try await client.send(.dashboardLive(eventId: eventId))
+    }
+
     // MARK: - Events
 
     /// List the Active_Company's events for the Events tab via `GET /api/events`.
