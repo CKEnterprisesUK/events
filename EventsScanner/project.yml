@@ -1,0 +1,103 @@
+# XcodeGen project definition for the EventsScanner iOS app.
+#
+# A .xcodeproj is a generated, machine-managed bundle that cannot be reliably
+# hand-authored, so the project is described here declaratively and generated
+# with XcodeGen (https://github.com/yonyz/XcodeGen):
+#
+#     brew install xcodegen
+#     cd EventsScanner
+#     xcodegen generate
+#     open EventsScanner.xcodeproj
+#
+# See README.md for the full open/create instructions and the iOS 16 vs
+# @Observable note.
+
+name: EventsScanner
+
+options:
+  # Requirement 11.1: minimum deployment target iOS 16.0.
+  # NOTE: AppState uses the Observation @Observable macro, which requires iOS 17
+  # at runtime. The code gates those types with @available(iOS 17.0, *). To use
+  # @Observable unconditionally, raise this to "16.0" -> "17.0". See README.
+  deploymentTarget:
+    iOS: "16.0"
+  bundleIdPrefix: com.events.scanner
+
+# Per-environment build configurations (task 15.4).
+#
+# Two configurations bake a different API environment into each build so a
+# build can only ever reach its own backend:
+#
+#   Debug   -> preprod  (https://preprod.events.ckent.uk, …EventsScanner.preprod)
+#   Release -> production(https://events.ckent.uk,         …EventsScanner)
+#
+# The environment is a compile-time choice, never read from the server. Debug
+# carries a PREPROD Swift compilation condition that drives a visible PREPROD
+# badge (see App/AppEnvironment.swift); Release has no such flag and is treated
+# as production.
+configs:
+  Debug: debug
+  Release: release
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+targets:
+  EventsScanner:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: EventsScanner
+        excludes:
+          - "**/.gitkeep"
+    info:
+      path: EventsScanner/Info.plist
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: EventsScanner/Info.plist
+      configs:
+        # Preprod / staging. Distinct bundle id so it co-exists with the
+        # production app on one device. API_HOST is the site root host only;
+        # Info.plist prepends https:// (see note below). The PREPROD compile
+        # condition drives the on-screen PREPROD badge.
+        Debug:
+          API_HOST: preprod.events.ckent.uk
+          PRODUCT_BUNDLE_IDENTIFIER: com.events.scanner.EventsScanner.preprod
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: "DEBUG PREPROD"
+        # Production. No PREPROD flag -> treated as production, no badge.
+        Release:
+          API_HOST: events.ckent.uk
+          PRODUCT_BUNDLE_IDENTIFIER: com.events.scanner.EventsScanner
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: ""
+
+  EventsScannerTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: EventsScannerTests
+        excludes:
+          - "**/.gitkeep"
+    dependencies:
+      - target: EventsScanner
+    settings:
+      base:
+        # One bundle id for the test bundle under both Debug and Release so the
+        # EventsScannerTests target builds and runs against either app config.
+        PRODUCT_BUNDLE_IDENTIFIER: com.events.scanner.EventsScannerTests
+
+schemes:
+  EventsScanner:
+    build:
+      targets:
+        EventsScanner: all
+        EventsScannerTests: [test]
+    test:
+      targets:
+        - EventsScannerTests

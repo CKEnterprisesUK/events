@@ -3,13 +3,17 @@
 namespace App\Models;
 
 use App\Notifications\VerifyEmailNow;
+use App\Services\TwoFactorAuthenticationService;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Laravel\Sanctum\HasApiTokens;
 
 /**
  * A Platform user. Either a Company_User (belonging to one Company via
@@ -42,7 +46,7 @@ use Illuminate\Support\Carbon;
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
      * The Company roles the Platform supports. (Requirement 3.1)
@@ -160,7 +164,7 @@ class User extends Authenticatable implements MustVerifyEmail
     /**
      * The two-factor columns are deliberately EXCLUDED from `$fillable`: like
      * `is_super_admin`, they are security-critical and are only ever written
-     * through the dedicated {@see \App\Services\TwoFactorAuthenticationService}
+     * through the dedicated {@see TwoFactorAuthenticationService}
      * (via `forceFill`), never from mass-assignment of request input.
      *
      * @var list<string>
@@ -227,6 +231,26 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * The Companies this user is a member of, via the `company_user` pivot.
+     *
+     * Unlike {@see company()} (the single web-resolved Company from
+     * `company_id`), this many-to-many drives the iOS app's company picker and
+     * switching: a Staff_User can belong to more than one Company and the API
+     * scopes each Access_Token to one of them (Requirement 4). The membership's
+     * per-Company `role` is carried on the pivot — role is a property of the
+     * membership, not of the user globally — and the pivot timestamps are
+     * exposed so the per-Company join date is available.
+     *
+     * @return BelongsToMany<Company, $this>
+     */
+    public function companies(): BelongsToMany
+    {
+        return $this->belongsToMany(Company::class)
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+
+    /**
      * Whether this user holds the given Company role.
      */
     public function hasRole(string $role): bool
@@ -265,8 +289,8 @@ class User extends Authenticatable implements MustVerifyEmail
      * Limit a query to active (non-disabled) users. Used when sending platform
      * communications so disabled accounts are never contacted.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder<User>  $query
-     * @return \Illuminate\Database\Eloquent\Builder<User>
+     * @param  Builder<User>  $query
+     * @return Builder<User>
      */
     public function scopeActive($query)
     {

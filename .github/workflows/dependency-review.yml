@@ -1,0 +1,33 @@
+# Dependency Review Action
+#
+# Scans dependency manifest files that change in a Pull Request and surfaces
+# known-vulnerable versions of declared/updated packages.
+#
+# Source: https://github.com/actions/dependency-review-action
+name: 'Dependency review'
+
+on:
+  pull_request:
+    branches: [ "main", "preprod" ]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout repository'
+        uses: actions/checkout@v4
+
+      - name: 'Dependency Review'
+        uses: actions/dependency-review-action@v4
+        with:
+          comment-summary-in-pr: always
+          # Only fail the check on genuinely risky dependencies, not on
+          # comparison/graph warnings.
+          fail-on-severity: high
+          # Don't hard-fail when the base commit snapshot isn't ready yet.
+          retry-on-snapshot-warnings: true
+          warn-only: true

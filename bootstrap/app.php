@@ -1,25 +1,32 @@
 <?php
 
+use App\Http\Middleware\EnforceHttps;
 use App\Http\Middleware\EnforceTenantScope;
 use App\Http\Middleware\EnsureCompanyActive;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\RedirectToBuildPageWhenMigrationsPending;
+use App\Http\Middleware\ResolveApiTenant;
 use App\Http\Middleware\ResolveDashboardTenant;
 use App\Http\Middleware\ResolveTenant;
 use App\Http\Middleware\SessionTimeout;
 use App\Http\Middleware\VerifyStripeSignature;
 use App\Services\ErrorReporter;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Middleware\SubstituteBindings;
+use Illuminate\Validation\ValidationException;
+use Laravel\Sanctum\Http\Middleware\CheckAbilities;
+use Laravel\Sanctum\Http\Middleware\CheckForAnyAbility;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
@@ -46,6 +53,25 @@ return Application::configure(basePath: dirname(__DIR__))
             ResolveDashboardTenant::class,
         ]);
 
+        // The iOS scanner JSON API. `EnforceHttps` is prepended to the whole
+        // `api` group so every API request is rejected before any handler runs
+        // unless it arrives over TLS. (Requirement 12.2)
+        $middleware->api(prepend: [
+            EnforceHttps::class,
+        ]);
+
+        // Token-driven tenant resolution + isolation for authenticated API
+        // routes. `EnforceTenantScope` wraps the request so the resolved tenant
+        // is cleared afterwards; `ResolveApiTenant` binds the Active_Company
+        // from the token (and enforces the token's device binding) so the
+        // global `company_id` scope constrains every API query to that
+        // Company. Mirrors `dashboard.tenant` but driven by the token rather
+        // than `user.company_id`. (Requirements 4.1, 4.3, 12.3, 13.4)
+        $middleware->group('api.tenant', [
+            EnforceTenantScope::class,
+            ResolveApiTenant::class,
+        ]);
+
         // Suspension guard for authenticated Company_Users. Applied via the
         // `company.active` alias alongside `auth` on authenticated route groups
         // so a suspended Company's users are logged out and denied on their
@@ -68,6 +94,15 @@ return Application::configure(basePath: dirname(__DIR__))
             'migrations.pending' => RedirectToBuildPageWhenMigrationsPending::class,
             'session.timeout' => SessionTimeout::class,
             'stripe.webhook' => VerifyStripeSignature::class,
+            // Sanctum token-ability guards for the API. `ability:` requires the
+            // resolving token to carry EVERY listed ability; `abilities:`
+            // requires ANY one. The team Session routes use `ability:users` so
+            // only a token minted with the `users` ability (the Owner/Admin
+            // ACTION_MANAGE_USERS permitted action) reaches the controller — a
+            // Super_Admin's token carries it via the same permitted-actions
+            // encoding. (Requirements 14.3, 14.4)
+            'ability' => CheckForAnyAbility::class,
+            'abilities' => CheckAbilities::class,
         ]);
 
         // Stripe posts webhooks to a fixed URL with no session/CSRF token, so
@@ -95,6 +130,10 @@ return Application::configure(basePath: dirname(__DIR__))
             before: SubstituteBindings::class,
             prepend: ResolveDashboardTenant::class,
         );
+        $middleware->prependToPriorityList(
+            before: SubstituteBindings::class,
+            prepend: ResolveApiTenant::class,
+        );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
@@ -111,8 +150,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // failure is still recorded on the audit trail (AUTH_LOGIN_FAILED),
         // which is the intended place for it.
         $exceptions->dontReport([
-            \Illuminate\Validation\ValidationException::class,
-            \Illuminate\Auth\AuthenticationException::class,
+            ValidationException::class,
+            AuthenticationException::class,
         ]);
 
         // Production error capture. With APP_DEBUG=false an uncaught 500 would
