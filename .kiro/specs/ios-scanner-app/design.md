@@ -212,9 +212,9 @@ GET  /api/auth/me             // (auth) current user + permitted actions + membe
 
 `two-factor` re-validates credentials, then `TwoFactorAuthenticationService::verifyTotp()` (or `useRecoveryCode()`). On success it trusts the device and issues a long-lived token (Requirements 2.1, 2.2); on failure it returns 422 and issues nothing (Requirement 2.3). Invalid credentials anywhere return a generic auth error and no token (Requirement 1.2). Failed login/2FA are audited via the existing `AuditLogger` actions already used by the web controllers.
 
-Token abilities encode the user's permitted actions from `RoleAuthorization::permittedActions($user->role)` (e.g. `check_in`, `orders`) plus a `company:{id}` ability naming the selected Active_Company. `logout` calls `$request->user()->currentAccessToken()->delete()` (Requirements 3.1, 3.3, 12.5).
+Token abilities encode the user's permitted actions from `RoleAuthorization::permittedActions($user->role)` (e.g. `check_in`, `orders`) plus a `company:{id}` ability naming the selected Active_Company. Every `createToken(...)` call stores the issuing `device_id` on the token row and sets its expiry to the configured Token_Lifetime, binding the token to one Device and giving it a self-expiring life (Requirements 13.1, 13.3). On every successful issuance `AuthController` writes a `TOKEN_ISSUED` Audit_Entry; on every failed login or failed TOTP it writes `AUTH_LOGIN_FAILED` / `AUTH_MFA_CHALLENGE_FAILED` (Requirements 16.1, 16.4). `logout` calls `$request->user()->currentAccessToken()->delete()` and records a `TOKEN_REVOKED` entry scoped `logout` (Requirements 3.1, 3.3, 12.5, 16.2). The login and 2FA endpoints carry `throttle:login` and `throttle:2fa` respectively (Requirements 15.1, 15.3).
 
-**Satisfies:** Requirements 1.1–1.4, 2.1–2.4, 3.1, 3.3.
+**Satisfies:** Requirements 1.1–1.4, 2.1–2.4, 3.1, 3.3, 13.1, 13.3, 15.1, 15.3, 16.1, 16.2, 16.4.
 
 #### `CompanyController`
 
@@ -223,9 +223,9 @@ GET  /api/companies            // (auth) list the user's memberships
 POST /api/companies/{id}/select  // (auth) set Active_Company; rebuild token ability -> company:{id}
 ```
 
-Memberships come from the `company_user` pivot. Selecting a company the user is **not** a member of returns 403 and leaves the Active_Company unchanged (Requirement 4.5). Selecting/switching re-mints the token's `company:{id}` ability (or updates a `current_company_id` column on the token's owning row — see Data Models) so every later request re-scopes (Requirements 4.3, 4.4). A single-membership user is handled client-side by auto-selecting without a picker (Requirement 4.6); the server still enforces membership.
+Memberships come from the `company_user` pivot. Selecting a company the user is **not** a member of returns 403 and leaves the Active_Company unchanged (Requirement 4.5). Selecting/switching re-mints the token's `company:{id}` ability (or updates a `current_company_id` column on the token's owning row — see Data Models) so every later request re-scopes (Requirements 4.3, 4.4). A single-membership user is handled client-side by auto-selecting without a picker (Requirement 4.6); the server still enforces membership. A successful select/switch records a `COMPANY_SELECTED` Audit_Entry naming the chosen Company (Requirement 16.3).
 
-**Satisfies:** Requirements 4.2–4.6.
+**Satisfies:** Requirements 4.2–4.6, 16.3.
 
 #### `ScanApiController`
 
@@ -256,6 +256,98 @@ GET /api/customers?q=term  // (auth, api.tenant, ability:orders) -> paginated cu
 Reuses `CustomerController::index`'s aggregate query (name/email search, order count, confirmed spend), gated on `ACTION_MANAGE_ORDERS` (Requirements 8.1, 8.2, 8.3). The query already runs under the tenant scope, so no cross-company rows leak (Requirement 12.3).
 
 **Satisfies:** Requirements 8.1–8.3.
+
+#### `SessionController` (new — session visibility and three-level revocation)
+
+A **Session** is exactly one `personal_access_tokens` row: its `id`, its device label (`name`), and Sanctum's `last_used_at`. No new session store is introduced — Sanctum already is the session ledger. `SessionController` exposes viewing and revocation at three authority levels, each with a distinct authorization check performed **before** any delete so a denied request changes nothing (Requirements 14.4, 14.5).
+
+```php
+// Self level — a Staff_User's own Sessions
+GET    /api/sessions            // (auth) list own tokens
+DELETE /api/sessions/{id}       // (auth) revoke one own token
+
+// Team level — another member's Sessions, gated on ACTION_MANAGE_USERS
+GET    /api/users/{user}/sessions      // (auth, ability:users) list target's tokens
+DELETE /api/users/{user}/sessions/{id} // (auth, ability:users) revoke target's token
+```
+
+**Request/response shapes.**
+
+```jsonc
+// GET /api/sessions  ->  200
+{ "sessions": [
+  { "id": 42, "device_label": "Alex's iPhone", "last_used_at": "2025-01-01T19:30:00+00:00",
+    "created_at": "2025-01-01T08:00:00+00:00", "current": true } ] }
+
+// DELETE /api/sessions/{id}  ->  204   (or 404 if the id is not one of the caller's own tokens)
+// GET /api/users/{user}/sessions  ->  200  (same `sessions` shape for the target user)
+// DELETE /api/users/{user}/sessions/{id}  ->  204
+```
+
+**Authorization per level.**
+
+1. **Self** — `GET /api/sessions` and `DELETE /api/sessions/{id}` operate only on `$request->user()->tokens()`. A token id that does not belong to the caller resolves to 404 (it is never visible), so a Staff_User can only ever see and revoke their own Sessions (Requirements 14.1, 14.2). `current` marks the token the request itself authenticated with.
+
+2. **Team** — the team routes carry `ability:users`, and the controller additionally re-checks `Gate::authorize(RoleAuthorization::ACTION_MANAGE_USERS)` (belt and braces, because abilities are minted at issue time). The target `{user}` MUST be a member of the **Active_Company**, verified against the `company_user` pivot (`companies()->whereKey(activeCompanyId)` for the target). A caller lacking `ACTION_MANAGE_USERS` → 403, tokens unchanged (Requirement 14.4); a target who is not an Active_Company member → 403, tokens unchanged (Requirement 14.5). Only when both hold does the controller delete the target token.
+
+3. **Super_Admin** — a Super_Admin is not part of the Company matrix. The existing `Gate::before` hook in `AppServiceProvider::registerRoleGates()` returns `true` for `isSuperAdmin()`, so the same `Gate::authorize(ACTION_MANAGE_USERS)` call on the team routes passes for a Super_Admin **regardless of Company**, and the Active_Company membership check is skipped for a Super_Admin actor. This reuses the platform's single super-admin bypass rather than adding a parallel path, so a Super_Admin may revoke any Staff_User's tokens cross-company (Requirement 14.6).
+
+Revocation at every level is `->delete()` on the `PersonalAccessToken` row, after which `auth:sanctum` rejects any later request bearing it (Requirement 14.7, consistent with Property 10). Each revocation and each listing that mutates nothing is recorded via `AuditLogger` (see Audit logging) capturing the acting actor and the target Staff_User.
+
+**Satisfies:** Requirements 14.1–14.7.
+
+#### Audit logging on the API (reusing `AuditLogger`)
+
+The API records sensitive access events through the existing `AuditLogger::record(...)` service — the same one the web `LoginController`, `TwoFactorChallengeController`, and `TwoFactorController` already use. `record()` resolves the acting actor, the affected Company (from `TenantContext`, which `ResolveApiTenant` has already bound), the Super_Admin/impersonation stamp, and the request IP automatically, so API call sites pass only the action key, an optional subject, a short summary, and a **PII-minimised** `context` (ids/refs only). The existing `AUTH_LOGIN_FAILED` and `AUTH_MFA_CHALLENGE_FAILED` constants are reused verbatim so the API's failed sign-in / failed TOTP entries read identically to the web ones (Requirement 16.4).
+
+**New action constants** added to `AuditLog` (and to the `ACTIONS` catalogue so the activity log groups/labels them), in the existing `subject.verb` past-tense style:
+
+| Constant | Key | Category | Written when |
+|---|---|---|---|
+| `TOKEN_ISSUED` | `token.issued` | auth | A token is minted on sign-in or on Device trust (Requirement 16.1) |
+| `TOKEN_REVOKED` | `token.revoked` | auth | A token is revoked by self, an `ACTION_MANAGE_USERS` actor, a Super_Admin, or logout (Requirement 16.2) |
+| `COMPANY_SELECTED` | `company.selected` | access | The Active_Company is selected or switched (Requirement 16.3) |
+
+Reused unchanged: `AUTH_LOGIN_FAILED`, `AUTH_MFA_CHALLENGE_FAILED` (Requirement 16.4).
+
+**Call sites and context payloads** (every payload is ids/refs only — never a token value, password, TOTP code, recovery code, or the QR HMAC secret, honouring Requirement 16.5 and the `AuditLogger` PII-minimisation contract):
+
+```php
+// AuthController::login / two-factor — on token issue (Req 16.1)
+$this->audit->record(
+    action: AuditLog::TOKEN_ISSUED,
+    auditable: $user,
+    summary: 'Issued an API access token',
+    context: ['token_id' => $accessToken->accessToken->getKey(),
+              'device_id' => $deviceId, 'trusted' => $viaTrustedDevice],
+);
+
+// AuthController::logout + SessionController revocation (Req 16.2)
+$this->audit->record(
+    action: AuditLog::TOKEN_REVOKED,
+    auditable: $targetUser,                 // the Staff_User whose Session was revoked
+    summary: 'Revoked an API access token',
+    context: ['token_id' => $tokenId,
+              'revoked_by' => $actor->getKey(),       // acting actor
+              'scope' => $scope],                      // self|admin|super_admin|logout
+);
+
+// CompanyController::select — on select/switch (Req 16.3)
+$this->audit->record(
+    action: AuditLog::COMPANY_SELECTED,
+    summary: 'Selected the active company',
+    context: ['company_id' => $company->getKey()],
+    companyId: $company->getKey(),
+);
+
+// AuthController — failed login / failed TOTP (Req 16.4), reusing existing constants
+$this->audit->record(action: AuditLog::AUTH_LOGIN_FAILED, auditable: $targetOrNull, summary: 'Failed API sign-in');
+$this->audit->record(action: AuditLog::AUTH_MFA_CHALLENGE_FAILED, auditable: $user, summary: 'Failed API two-factor challenge');
+```
+
+Because `TOKEN_REVOKED` names both the acting actor (resolved automatically as `actor_user_id`, and echoed in `context.revoked_by` for self-vs-other clarity) and the target Staff_User (the `auditable`), self-revoke, admin revoke, Super_Admin revoke, and logout are all distinguishable in the trail while sharing one action key (Requirement 16.2). The `context` never carries the plaintext token — only its integer id — so a leaked audit log can never replay a Session (Requirement 16.5).
+
+**Satisfies:** Requirements 16.1–16.5.
 
 ### iOS client
 
@@ -316,11 +408,53 @@ sequenceDiagram
         else code valid
             TOTP-->>API: true
             API->>Trust: trust(user, device_id)
-            API-->>App: 200 {token} (long-lived)
+            Note over API: createToken bound to device_id,<br/>expires_at = Token_Lifetime
+            API->>API: AuditLogger.record(TOKEN_ISSUED)
+            API-->>App: 200 {token} (long-lived, device-bound)
             App->>KC: store token
         end
     end
 ```
+
+On every authenticated call thereafter, `auth:sanctum` rejects the token once `expires_at` has elapsed (Requirement 13.2), and `ResolveApiTenant` rejects it if the request's `X-Device-Id` does not match the token's bound `device_id` (Requirement 13.4) — both before any Company query runs.
+
+### Session revocation (three levels)
+
+```mermaid
+sequenceDiagram
+    participant App as iOS App / Admin / Super_Admin
+    participant MW as auth:sanctum + ResolveApiTenant
+    participant Ctl as SessionController
+    participant Gate as Gate (RoleAuthorization + Gate::before super-admin)
+    participant Mem as company_user pivot
+    participant DB as personal_access_tokens
+
+    App->>MW: DELETE /api/sessions/{id}  OR  /api/users/{user}/sessions/{id}
+    alt self-revoke (own token)
+        MW->>Ctl: resolve current user
+        Ctl->>DB: delete token WHERE id=? AND tokenable=self
+        Note right of Ctl: id not owned -> 404 (never visible)
+        Ctl->>Ctl: AuditLogger.record(TOKEN_REVOKED, scope=self)
+        Ctl-->>App: 204
+    else team / super-admin revoke
+        MW->>Gate: authorize(ACTION_MANAGE_USERS)
+        alt Super_Admin
+            Gate-->>Ctl: allow (Gate::before bypass, any company)
+        else has ACTION_MANAGE_USERS
+            Ctl->>Mem: target is Active_Company member?
+            alt not a member
+                Ctl-->>App: 403 (tokens unchanged)
+            end
+        else lacks ACTION_MANAGE_USERS
+            Gate-->>App: 403 (tokens unchanged)
+        end
+        Ctl->>DB: delete target token
+        Ctl->>Ctl: AuditLogger.record(TOKEN_REVOKED, actor + target, scope=admin|super_admin)
+        Ctl-->>App: 204
+    end
+```
+
+**Satisfies:** Requirements 14.1–14.7, 16.2 (revocation diagram); 13.2, 13.4 (expiry/device-binding note).
 
 ### Scan to check-in
 
@@ -396,9 +530,16 @@ Requirement 4 needs a user to belong to one or more companies. `User.company_id`
 
 Unique index on `(company_id, user_id)`. `User` gains `companies(): BelongsToMany`. A data backfill seeds one membership row from each existing `(user.company_id, user.role)` so current users keep working. For the API, the token's Active_Company resolves the role from this pivot, which `RoleAuthorization` then evaluates.
 
-### Reused: `personal_access_tokens` (Sanctum)
+### Reused + extended: `personal_access_tokens` (Sanctum)
 
-Created by Sanctum's migration. We add a nullable `current_company_id` column (or encode it as a token ability) so a token carries its Active_Company; `CompanyController::select` updates it and re-mints abilities (Requirements 4.3, 4.4).
+Created by Sanctum's migration, which already ships the columns the Session concept needs: `name` (used as the human **device label**), `abilities`, `last_used_at` (Sanctum updates it on every authenticated request — no extra tracking required, Requirement 14.1), and `expires_at` (the per-token expiry Sanctum enforces in `auth:sanctum`, Requirements 13.1, 13.2). A follow-up migration adds the columns this feature needs:
+
+| Column | Type | Notes |
+|---|---|---|
+| device_id | string, indexed | the Device the token is bound to; set at issuance, compared against `X-Device-Id` by `ResolveApiTenant` (Requirements 13.3, 13.4) |
+| current_company_id | bigint null, fk → companies | the token's Active_Company; `CompanyController::select` updates it and re-mints abilities (Requirements 4.3, 4.4) |
+
+`name` is populated from the login/challenge body's device label (falling back to a generic label) and surfaced as `device_label` in the Sessions API. `expires_at` is written by Sanctum from the global `config/sanctum.php` `'expiration'` (the configurable Token_Lifetime) or from an explicit per-token `expiresAt` passed to `createToken(...)`; nothing stores the plaintext token — only Sanctum's SHA-256 `token` hash — so an audit or Session listing never exposes a usable credential (Requirement 16.5). Device binding could alternatively be encoded as a `device:{id}` ability, but a first-class indexed column keeps the `ResolveApiTenant` comparison a simple equality check and supports team/admin listings by device.
 
 ### Reused unchanged
 
@@ -413,15 +554,21 @@ Created by Sanctum's migration. We add a nullable `current_company_id` column (o
 
 | Method | Path | Auth / Gate | Request | Success | Requirements |
 |---|---|---|---|---|---|
-| POST | /api/auth/login | public, throttle:login | `email, password, device_id` | `{token}` or `{status:"2fa_required"}` | 1.1–1.4 |
-| POST | /api/auth/two-factor | public, throttle:2fa | `email, password, device_id, code` or `recovery_code` | `{token}` | 2.1–2.4 |
-| POST | /api/auth/logout | auth:sanctum | — | `204` | 3.1, 3.3 |
-| GET | /api/auth/me | auth:sanctum | — | `{user, permitted_actions[], companies[]}` | 8.4, 8.5 |
+| POST | /api/auth/login | public, throttle:login | `email, password, device_id` | `{token}` or `{status:"2fa_required"}` | 1.1–1.4, 15.3 |
+| POST | /api/auth/two-factor | public, throttle:2fa | `email, password, device_id, code` or `recovery_code` | `{token}` | 2.1–2.4, 15.1 |
+| POST | /api/auth/logout | auth:sanctum | — | `204` | 3.1, 3.3, 16.2 |
+| GET | /api/auth/me | auth:sanctum, api.tenant | — | `{user, permitted_actions[], companies[]}` | 8.4, 8.5 |
 | GET | /api/companies | auth:sanctum | — | `[{id, name, role}]` | 4.2 |
-| POST | /api/companies/{id}/select | auth:sanctum | — | `{active_company}` or `403` | 4.3–4.6 |
-| POST | /api/scan | auth:sanctum, api.tenant, ability:check_in | `payload` or `reference` | `ScanResult` | 5.1–5.10, 6.1, 6.2 |
+| POST | /api/companies/{id}/select | auth:sanctum | — | `{active_company}` or `403` | 4.3–4.6, 16.3 |
+| GET | /api/sessions | auth:sanctum | — | `{sessions[]}` (own) | 14.1 |
+| DELETE | /api/sessions/{id} | auth:sanctum | — | `204` or `404` | 14.2, 14.7 |
+| GET | /api/users/{user}/sessions | auth:sanctum, api.tenant, ability:users | — | `{sessions[]}` or `403` | 14.3–14.6 |
+| DELETE | /api/users/{user}/sessions/{id} | auth:sanctum, api.tenant, ability:users | — | `204` or `403` | 14.3–14.7, 16.2 |
+| POST | /api/scan | auth:sanctum, api.tenant, ability:check_in, throttle:scan | `payload` or `reference` | `ScanResult` | 5.1–5.10, 6.1, 6.2, 15.2 |
 | GET | /api/dashboard/live | auth:sanctum, api.tenant, ability:check_in | — | snapshot | 7.1–7.5 |
 | GET | /api/customers | auth:sanctum, api.tenant, ability:orders | `q` | paginated rows | 8.1–8.3 |
+
+Every `auth:sanctum, api.tenant` route additionally inherits **device binding**: `ResolveApiTenant` rejects the request 401 if the `X-Device-Id` header does not match the token's bound `device_id` (Requirement 13.4). The `throttle:login`, `throttle:2fa`, and `throttle:scan` limiters are the configurable named limiters declared in Middleware registration (Requirements 15.1–15.3). The team-level session routes sit behind `api.tenant` so the Active_Company is bound for the membership check (Requirement 14.5) and for audit `company_id` resolution.
 
 ### Scan_Outcome contract
 
@@ -471,12 +618,13 @@ No sales/revenue figures; Active_Event only (Requirements 7.2, 7.3, 7.4).
 
 ## Error Handling
 
-- **Authentication (401):** missing/revoked/invalid token → `401 {message}`. Sanctum handles this; `shouldRenderJsonWhen($request->is('api/*'))` already in `bootstrap/app.php` guarantees a JSON body (Requirements 3.3, 12.5).
+- **Authentication (401):** missing/revoked/**expired**/invalid token → `401 {message}`. Sanctum handles missing/revoked/expired uniformly inside `auth:sanctum`, so an elapsed Token_Lifetime is rejected exactly like a revoked token (Requirements 3.3, 12.5, 13.2). `shouldRenderJsonWhen($request->is('api/*'))` already in `bootstrap/app.php` guarantees a JSON body.
+- **Device mismatch (401):** a token whose bound `device_id` does not match the request's `X-Device-Id` → `401`, no data changed; `ResolveApiTenant` aborts before any handler or query runs (Requirement 13.4).
 - **Authorization (403):** role lacks `check_in`/`orders` → `403`, **no data changed** (Gate runs before any mutation) (Requirements 5.2, 7.5, 8.3).
 - **Membership (403):** selecting a non-member company → `403`, Active_Company unchanged (Requirement 4.5).
 - **Validation (422):** bad login/2FA/missing fields → `422` with a generic auth message (never distinguishing "no such email" from "wrong password") (Requirements 1.2, 2.3).
 - **Non-TLS (426/403):** `EnforceHttps` rejects before any handler runs (Requirement 12.2).
-- **Rate limiting (429):** `throttle:login`/`throttle:2fa` return `429` with `Retry-After` (Security).
+- **Rate limiting (429):** `throttle:login`/`throttle:2fa` (keyed per email+IP) and `throttle:scan` (keyed per authenticated operator) return `429` with `Retry-After` once the configured window limit is exceeded, until the window resets (Requirements 15.1–15.3).
 - **Scan outcomes are not errors:** `unreadable`/`invalid`/`rejected`/`failed`/`already_scanned` are `200` payloads, not HTTP errors — the door operator always gets a structured result (Requirements 5.3–5.9).
 - **iOS:** `APIError.offline` → "You're offline. Reconnect to scan." and no success reported (Requirements 9.1, 9.2); `.unauthorized` → clear Keychain, return to sign-in (Requirement 3.2); `.forbidden` → hide the feature / show "not permitted"; `.serverMessage` → surface the API message.
 
@@ -491,8 +639,12 @@ No sales/revenue figures; Active_Event only (Requirements 7.2, 7.3, 7.4).
 | Token abilities / scopes | Sanctum abilities carry `permitted_actions` + `company:{id}`; endpoints check both | 5.1, 5.2, 8.1 |
 | Tenant isolation | `ResolveApiTenant` + `TenantContext` + `BelongsToCompany` scope every query | 4.1, 12.3 |
 | Revocation | `logout` deletes the current token; `auth:sanctum` rejects it thereafter | 3.1, 3.3, 12.5 |
-| Rate limiting | Named `login`/`2fa` limiters (per email + per IP) on the auth endpoints | 1.2, 2.3 |
+| Token expiry | Configurable Token_Lifetime via `config/sanctum.php` `'expiration'` / per-token `expires_at`; expired tokens rejected by `auth:sanctum` like revoked ones | 13.1, 13.2 |
+| Device binding | Issuing `device_id` stored on the token; `ResolveApiTenant` rejects an `X-Device-Id` mismatch 401 with no data change | 13.3, 13.4 |
+| Three-level revocation | Self (own tokens only); `ACTION_MANAGE_USERS` confined to Active_Company members; Super_Admin cross-company via the `Gate::before` bypass | 14.2–14.7 |
+| Rate limiting | Named `login`/`2fa` (per email + IP) and `scan` (per operator) limiters, all configurable | 1.2, 2.3, 15.1, 15.2, 15.3 |
 | Device trust gated on TOTP | A device is trusted only after a verified challenge | 2.1 |
+| Audit logging | `AuditLogger` records token issuance/revocation (actor + target), company selection, and failed login/2FA; context is ids/refs only — never tokens, passwords, TOTP codes, or the HMAC secret | 16.1–16.5 |
 
 ## Correctness Properties
 
@@ -558,6 +710,24 @@ For any Access_Token that has been revoked, every subsequent request presenting 
 
 **Validates: Requirements 3.1, 3.3, 12.5**
 
+### Property 11: Expired or wrong-device tokens are rejected without side effects
+
+For any Access_Token issued to a device, the token carries a stored device identifier equal to the issuing device and an expiry equal to the configured Token_Lifetime; and for any authenticated request presenting that token, if the Token_Lifetime has elapsed OR the request's supplied device identifier does not equal the token's bound device identifier, the API rejects the request with an authentication error (401) in the same manner as a revoked token and leaves all data unchanged.
+
+**Validates: Requirements 13.1, 13.2, 13.3, 13.4**
+
+### Property 12: Token revocation authority is confined to the right level
+
+For any actor and any target Staff_User, a revocation request succeeds if and only if one of the following holds: the actor is revoking one of their own Sessions; the actor holds ACTION_MANAGE_USERS and the target is a member of the Active_Company; or the actor is a Super_Admin (any Company). In every other case — an actor without ACTION_MANAGE_USERS targeting another user, or an ACTION_MANAGE_USERS actor targeting a non-member of the Active_Company — the API rejects the request with an authorization error (403) and leaves all Access_Tokens unchanged; and whenever a revocation succeeds, every subsequent request presenting the revoked token is rejected.
+
+**Validates: Requirements 14.2, 14.3, 14.4, 14.5, 14.6, 14.7**
+
+### Property 13: Sensitive access events are audited without recording secrets
+
+For any sensitive API access event — token issuance on sign-in or device trust, token revocation (self, ACTION_MANAGE_USERS actor, Super_Admin, or logout), Active_Company selection or switch, and failed sign-in or failed TOTP challenge — the AuditLogger writes exactly one Audit_Entry recording the action, the acting actor, and (where applicable) the affected Company and target Staff_User; and no Audit_Entry it writes for the API contains a password, an Access_Token value, a TOTP code, or the QR HMAC secret in its summary or context.
+
+**Validates: Requirements 16.1, 16.2, 16.3, 16.4, 16.5**
+
 ## Testing Strategy
 
 ### Backend (PHPUnit feature tests, `tests/Feature`)
@@ -573,6 +743,10 @@ Mirror the existing `ScanCheckInTest` conventions (`RefreshDatabase`, factories,
 - **Auth paths**: valid login no-2FA → token; invalid creds → 422 no token; 2FA-enabled untrusted device → `2fa_required` no token; valid TOTP → token + device trusted; invalid TOTP → 422 no token; trusted device skips challenge (Properties 7, 8).
 - **Company select/switch**: member → sets Active_Company and re-scopes; non-member → 403 unchanged (Property 9).
 - **Revocation**: logout then re-use token → 401 (Property 10).
+- **Token expiry + device binding**: issue a token, assert `expires_at`/`device_id` are set; travel past expiry → 401; send a request with a mismatched `X-Device-Id` → 401 with no scan/session mutation (Property 11) — a PBT-style test over generated devices/payloads.
+- **Three-level revocation authority**: self revokes own (and a foreign id → 404); an `ACTION_MANAGE_USERS` Owner/Admin revokes a same-company member but gets 403 on a non-member; an Accountant/Scanner (no `users`) gets 403 targeting another user; a Super_Admin revokes cross-company; denials leave tokens unchanged, and a successful revoke then 401s on reuse (Property 12).
+- **Audit without secrets**: assert one `TOKEN_ISSUED`/`TOKEN_REVOKED`/`COMPANY_SELECTED`/`AUTH_LOGIN_FAILED`/`AUTH_MFA_CHALLENGE_FAILED` row per event with the right actor/company/target, and that no recorded `summary`/`context` contains the plaintext token, password, TOTP code, or HMAC secret (Property 13).
+- **Rate limiting** (example tests, not PBT — count-based middleware): exceeding `throttle:2fa` → 429 then recovery after the window; exceeding `throttle:scan` as operator A → 429 for A while operator B stays 200 (per-operator key); `throttle:login` still applies (Requirements 15.1–15.3).
 - **TLS**: non-TLS request rejected (Requirement 12.2).
 
 Property tests use ≥100 iterations and are tagged `Feature: ios-scanner-app, Property {n}: {text}`.

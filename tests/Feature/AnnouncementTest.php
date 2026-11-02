@@ -13,14 +13,15 @@ use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 /**
- * Feature: super-admin platform announcements.
+ * Feature: super-admin platform announcements — the compose → review → send
+ * flow and its additions.
  *
- * Covers the additions to the compose/send flow:
- *   - personalisation placeholders in the body ({{name}}, {{company}},
- *     {{platform}}, {{dashboard_url}}) resolve per recipient and never inject
- *     markup;
- *   - the sending super admin always receives their own copy;
- *   - the live preview renders the composed body into the real email template.
+ * Covers:
+ *   - the mandatory review step renders the real email and reports the audience;
+ *   - a send only proceeds with the review acknowledgement (never straight from
+ *     compose);
+ *   - personalisation placeholders resolve per recipient and never inject markup;
+ *   - the sending super admin always receives their own copy.
  */
 class AnnouncementTest extends TestCase
 {
@@ -31,13 +32,57 @@ class AnnouncementTest extends TestCase
         return User::factory()->superAdmin()->create(['email' => 'ops@platform.test']);
     }
 
-    public function test_sending_queues_a_job_per_recipient_and_emails_a_copy_to_the_operator(): void
+    public function test_review_step_renders_the_email_and_reports_the_audience(): void
+    {
+        $company = Company::factory()->create();
+        User::factory()->owner()->create(['company_id' => $company->id]);
+
+        $response = $this->actingAs($this->superAdmin())
+            ->post(route('admin.announcements.review'), [
+                'subject' => 'Set up data retention',
+                'body' => '**Bold** and {{name}}.',
+                'roles' => [User::ROLE_OWNER],
+            ]);
+
+        $response->assertOk();
+        $response->assertViewIs('admin.announcements.review');
+        $response->assertViewHas('recipientCount', 1);
+        // The rendered email carries the markdown, a sample placeholder value
+        // and the real template chrome.
+        $response->assertViewHas('previewHtml', function (string $html) {
+            return str_contains($html, '<strong>Bold</strong>')
+                && str_contains($html, 'Alex Taylor')
+                && str_contains($html, '<!DOCTYPE html>');
+        });
+    }
+
+    public function test_send_requires_the_review_acknowledgement(): void
     {
         Queue::fake();
         Mail::fake();
 
         $company = Company::factory()->create();
         User::factory()->owner()->create(['company_id' => $company->id]);
+
+        // A send without `reviewed` is bounced back to compose and sends nothing.
+        $this->actingAs($this->superAdmin())
+            ->post(route('admin.announcements.send'), [
+                'subject' => 'Hi',
+                'body' => 'Body {{name}}',
+                'roles' => [User::ROLE_OWNER],
+            ])
+            ->assertRedirect(route('admin.announcements.create'));
+
+        Queue::assertNothingPushed();
+        Mail::assertNothingSent();
+    }
+
+    public function test_reviewed_send_queues_a_job_per_recipient_and_copies_the_operator(): void
+    {
+        Queue::fake();
+        Mail::fake();
+
+        User::factory()->owner()->create(['company_id' => Company::factory()->create()->id]);
         User::factory()->owner()->create(['company_id' => Company::factory()->create()->id]);
 
         $operator = $this->superAdmin();
@@ -45,15 +90,14 @@ class AnnouncementTest extends TestCase
         $this->actingAs($operator)
             ->post(route('admin.announcements.send'), [
                 'subject' => 'Set up data retention',
-                'body' => 'Hi {{name}}, please visit {{dashboard_url}}.',
+                'body' => 'Hi {{name}}, visit {{dashboard_url}}.',
                 'roles' => [User::ROLE_OWNER],
+                'reviewed' => '1',
             ])
             ->assertRedirect(route('admin.announcements.create'));
 
-        // One delivery job per matching owner (super admin excluded from the audience).
         Queue::assertPushed(SendAnnouncementEmailJob::class, 2);
 
-        // The operator always gets their own copy, flagged in the subject.
         Mail::assertSent(PlatformAnnouncementMail::class, function (PlatformAnnouncementMail $mail) use ($operator) {
             return $mail->hasTo($operator->email) && str_contains($mail->subjectLine, '[Copy]');
         });
@@ -67,8 +111,7 @@ class AnnouncementTest extends TestCase
             'name' => 'Jordan Blake',
         ]);
 
-        $renderer = app(AnnouncementRenderer::class);
-        $html = $renderer->renderForUser(
+        $html = app(AnnouncementRenderer::class)->renderForUser(
             'Hello {{name}} from {{company}} on {{platform}}.',
             $user->load('company')
         );
@@ -86,35 +129,20 @@ class AnnouncementTest extends TestCase
         $html = app(AnnouncementRenderer::class)
             ->renderForUser('Company: {{company}}', $user->load('company'));
 
-        // The raw <script> tag is escaped, never emitted as live markup.
         $this->assertStringNotContainsString('<script>', $html);
         $this->assertStringContainsString('&lt;script&gt;', $html);
     }
 
-    public function test_preview_renders_the_body_into_the_email_template(): void
-    {
-        $response = $this->actingAs($this->superAdmin())
-            ->postJson(route('admin.announcements.preview'), [
-                'subject' => 'Preview subject',
-                'body' => '**Bold** and {{name}}.',
-            ]);
-
-        $response->assertOk();
-        $html = $response->json('html');
-
-        // Markdown rendered, placeholder sampled, and the real template chrome present.
-        $this->assertStringContainsString('<strong>Bold</strong>', $html);
-        $this->assertStringContainsString('Alex Taylor', $html);
-        $this->assertStringContainsString('Preview subject', $html);
-        $this->assertStringContainsString('<!DOCTYPE html>', $html);
-    }
-
-    public function test_preview_is_denied_to_non_super_admins(): void
+    public function test_review_is_denied_to_non_super_admins(): void
     {
         $user = User::factory()->owner()->create();
 
         $this->actingAs($user)
-            ->postJson(route('admin.announcements.preview'), ['body' => 'x'])
+            ->post(route('admin.announcements.review'), [
+                'subject' => 'x',
+                'body' => 'y',
+                'roles' => [User::ROLE_OWNER],
+            ])
             ->assertForbidden();
     }
 }
