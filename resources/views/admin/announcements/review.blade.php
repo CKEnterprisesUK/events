@@ -58,7 +58,7 @@
                 sandbox=""
                 srcdoc="{{ $previewHtml }}"></iframe>
             <p class="review-preview__note">
-                Placeholders show sample values (e.g. <code>{{ '{{name}}' }}</code> as “Alex Taylor”). Each recipient receives their own name and company.
+                Placeholders show sample values, for example <code>@{{name}}</code> as “Alex Taylor”. Each recipient receives their own name and company.
             </p>
         </section>
 
