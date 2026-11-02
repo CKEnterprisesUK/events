@@ -30,6 +30,26 @@ struct ProfileView: View {
                     }
                 }
 
+                // Apple requires an accessible in-app link to the privacy
+                // policy (App Review Guideline 5.1.1(i)). The URL is derived
+                // from the build's own API host so a preprod build points at
+                // preprod and a production build at production.
+                if let privacyURL {
+                    Section("Legal") {
+                        Link(destination: privacyURL) {
+                            HStack {
+                                Text("Privacy Policy")
+                                Spacer()
+                                Image(systemName: "arrow.up.right.square")
+                                    .foregroundStyle(.secondary)
+                                    .accessibilityHidden(true)
+                            }
+                        }
+                        .accessibilityIdentifier("profile.privacyPolicy")
+                        .accessibilityHint("Opens the privacy policy in your browser")
+                    }
+                }
+
                 Section {
                     Button(role: .destructive) {
                         signOut()
@@ -48,8 +68,23 @@ struct ProfileView: View {
                     .accessibilityIdentifier("profile.signOut")
                 }
             }
-            .navigationTitle("My Profile")
+            .brandNavigationTitle()
+            .navigationBarTitleDisplayMode(.inline)
         }
+    }
+
+    /// The privacy policy URL, built by appending `/privacy` to the build's
+    /// configured `APIBaseURL` (the site root). This resolves to
+    /// `https://events.ckent.uk/privacy` in production and the preprod host in
+    /// a preprod build, matching the backend's public `/privacy` page.
+    private var privacyURL: URL? {
+        guard
+            let raw = Bundle.main.object(forInfoDictionaryKey: "APIBaseURL") as? String,
+            let base = URL(string: raw)
+        else {
+            return nil
+        }
+        return base.appendingPathComponent("privacy")
     }
 
     private func signOut() {

@@ -140,6 +140,7 @@ struct ScanView: View {
     @Environment(AppState.self) private var appState
     @StateObject private var model: ScanViewModel
     @State private var showingManualEntry = false
+    @State private var torchOn = false
 
     init(auth: AuthStore) {
         _model = StateObject(wrappedValue: ScanViewModel(submitter: auth))
@@ -153,83 +154,184 @@ struct ScanView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if appState.selectedEvent == nil {
-                    noEventSelected
+                if let event = appState.selectedEvent {
+                    scanner(for: event)
                 } else {
-                    scanner
+                    noEventSelected
                 }
             }
-            .navigationTitle("Scan")
-            .toolbar {
-                if appState.selectedEvent != nil {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button("Enter reference") { showingManualEntry = true }
-                            .accessibilityIdentifier("scan.manualEntry")
-                    }
-                }
-            }
+            .navigationBarTitleDisplayMode(.inline)
+            .brandNavigationTitle()
             .sheet(isPresented: $showingManualEntry) {
                 ManualEntryView { reference in
                     await model.submitManual(reference: reference)
                 }
             }
+            .onChange(of: torchOn) { _, _ in } // keeps SwiftUI observing the toggle
+            .onDisappear { torchOn = false }
         }
         .task { await model.onAppear() }
     }
 
-    /// The scanner itself, with a banner naming the event being scanned for.
-    private var scanner: some View {
-        VStack(spacing: 0) {
-            if let event = appState.selectedEvent {
-                selectedEventBanner(event)
-            }
+    /// The full-bleed scanner: the camera fills the screen with a reticle in the
+    /// centre, a compact event banner up top, a torch toggle, and the outcome as
+    /// a bottom card — no wasted blank space.
+    private func scanner(for event: EventDTO) -> some View {
+        ZStack {
+            Color.black.ignoresSafeArea(edges: .bottom)
 
             cameraRegion
-                .frame(maxWidth: .infinity)
-                .frame(height: 320)
-                .background(Color.black.opacity(0.9))
-                .clipped()
+                .ignoresSafeArea(edges: .bottom)
 
-            outcomeRegion
+            // Dim + reticle overlay, only while the live camera is up.
+            if model.isCameraActive {
+                reticleOverlay
+            }
+
+            VStack(spacing: 0) {
+                selectedEventBanner(event)
+                Spacer()
+                bottomBar
+            }
         }
     }
 
-    /// A slim banner showing which event this door is scanning for, with a
-    /// quick way to change it (clears the selection, returning to the prompt).
+    /// A translucent target square with corner marks to aim the QR into.
+    private var reticleOverlay: some View {
+        GeometryReader { geo in
+            let side = min(geo.size.width, geo.size.height) * 0.62
+            ZStack {
+                RoundedRectangle(cornerRadius: 24)
+                    .stroke(.white.opacity(0.9), lineWidth: 3)
+                    .frame(width: side, height: side)
+                    .shadow(color: .black.opacity(0.4), radius: 6)
+                RoundedRectangle(cornerRadius: 24)
+                    .stroke(Brand.emerald, lineWidth: 3)
+                    .frame(width: side, height: side)
+                    .opacity(model.isSubmitting ? 1 : 0.0)
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    /// A slim, glassy banner naming the event being scanned for, with a quick
+    /// "Change" to return to event selection.
     private func selectedEventBanner(_ event: EventDTO) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Scanning for")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.7))
                 Text(event.name)
                     .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
             }
             Spacer()
             Button("Change") { appState.clearSelectedEvent() }
-                .font(.footnote)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Brand.emerald)
                 .accessibilityIdentifier("scan.changeEvent")
         }
-        .padding(.horizontal)
-        .padding(.vertical, 8)
-        .background(.thinMaterial)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(.ultraThinMaterial)
+    }
+
+    /// The bottom controls: either the live outcome card, or the idle prompt
+    /// with the torch toggle and manual-entry button.
+    @ViewBuilder
+    private var bottomBar: some View {
+        VStack(spacing: 12) {
+            if model.isSubmitting {
+                ProgressView("Checking in…")
+                    .tint(.white)
+                    .foregroundStyle(.white)
+            }
+
+            if let errorMessage = model.errorMessage {
+                Label(errorMessage, systemImage: "wifi.slash")
+                    .font(.callout)
+                    .foregroundStyle(.white)
+                    .padding(12)
+                    .frame(maxWidth: .infinity)
+                    .background(Brand.danger.opacity(0.9), in: RoundedRectangle(cornerRadius: 12))
+                    .accessibilityIdentifier("scan.error")
+            }
+
+            if let outcome = model.outcome {
+                ScanOutcomeCard(outcome: outcome)
+                Button {
+                    model.reset()
+                } label: {
+                    Text("Scan next")
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+                .background(Brand.emerald)
+                .foregroundStyle(Brand.navy)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .accessibilityIdentifier("scan.next")
+            } else if !model.isSubmitting && model.errorMessage == nil {
+                Text("Point the camera at a ticket QR code")
+                    .font(.callout.weight(.medium))
+                    .foregroundStyle(.white)
+            }
+
+            controlRow
+        }
+        .padding(16)
+        .background(
+            LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea(edges: .bottom)
+        )
+    }
+
+    /// Torch toggle + manual entry, side by side.
+    private var controlRow: some View {
+        HStack(spacing: 12) {
+            Button {
+                torchOn.toggle()
+            } label: {
+                Label(torchOn ? "Light on" : "Light off",
+                      systemImage: torchOn ? "flashlight.on.fill" : "flashlight.off.fill")
+                    .font(.callout.weight(.medium))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+            }
+            .background(.white.opacity(torchOn ? 0.9 : 0.15))
+            .foregroundStyle(torchOn ? Brand.navy : .white)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .accessibilityIdentifier("scan.torch")
+
+            Button {
+                showingManualEntry = true
+            } label: {
+                Label("Enter reference", systemImage: "keyboard")
+                    .font(.callout.weight(.medium))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+            }
+            .background(.white.opacity(0.15))
+            .foregroundStyle(.white)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .accessibilityIdentifier("scan.manualEntry")
+        }
     }
 
     /// Shown when no event is selected: scanning is scoped to a chosen event, so
     /// the operator picks one on the Events tab first.
     private var noEventSelected: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "calendar.badge.exclamationmark")
-                .font(.largeTitle)
-                .foregroundStyle(.secondary)
-            Text("Choose an event to scan")
-                .font(.headline)
-            Text("Open the Events tab and tap “Scan this event” to pick which event you’re checking people in for.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+        VStack(spacing: 16) {
+            BrandEmptyState(
+                symbol: "calendar.badge.exclamationmark",
+                title: "Choose an event to scan",
+                message: "Open the Events tab, pick an event, and tap “Scan” to check people in for it."
+            )
         }
-        .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityIdentifier("scan.noEvent")
     }
@@ -239,12 +341,15 @@ struct ScanView: View {
     @ViewBuilder
     private var cameraRegion: some View {
         if model.isCameraActive {
-            CameraScanner { payload in
-                Task { await model.handleDecoded(payload: payload) }
-            }
+            CameraScanner(
+                onDecode: { payload in
+                    Task { await model.handleDecoded(payload: payload) }
+                },
+                torchOn: torchOn
+            )
         } else if model.isCameraDenied {
             VStack(spacing: 12) {
-                Image(systemName: "camera.fill").font(.largeTitle)
+                Image(systemName: "camera.fill").font(.largeTitle).foregroundStyle(.white)
                 Text(ScanViewModel.cameraAccessRequiredMessage)
                     .font(.headline)
                     .foregroundStyle(.white)
@@ -255,6 +360,8 @@ struct ScanView: View {
                     .multilineTextAlignment(.center)
             }
             .padding()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.black)
         } else {
             VStack(spacing: 12) {
                 ProgressView().tint(.white)
@@ -262,39 +369,8 @@ struct ScanView: View {
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.7))
             }
-        }
-    }
-
-    /// The most recent outcome, an error line, or an idle prompt.
-    @ViewBuilder
-    private var outcomeRegion: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                if model.isSubmitting {
-                    ProgressView("Checking in…")
-                        .padding(.top)
-                }
-
-                if let errorMessage = model.errorMessage {
-                    Text(errorMessage)
-                        .font(.callout)
-                        .foregroundStyle(.red)
-                        .multilineTextAlignment(.center)
-                        .accessibilityIdentifier("scan.error")
-                }
-
-                if let outcome = model.outcome {
-                    ScanOutcomeCard(outcome: outcome)
-                    Button("Scan next") { model.reset() }
-                        .accessibilityIdentifier("scan.next")
-                } else if model.errorMessage == nil && !model.isSubmitting {
-                    Text("Point the camera at a ticket QR code.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .padding(.top)
-                }
-            }
-            .padding()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.black)
         }
     }
 }

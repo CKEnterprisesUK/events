@@ -37,6 +37,14 @@ final class DashboardViewModel: ObservableObject {
     /// The last error's user-facing message, cleared on the next success.
     @Published var errorMessage: String?
 
+    /// The events the operator can pick between (live events only). Loaded once
+    /// on appear so the picker can offer them.
+    @Published private(set) var events: [EventDTO] = []
+
+    /// The event the dashboard is currently showing. Nil means "let the server
+    /// resolve the most imminent event" (the default).
+    @Published var selectedEventId: Int?
+
     private let auth: AuthStore
 
     /// How long to wait between polls. Kept lightweight so the door view stays
@@ -50,6 +58,35 @@ final class DashboardViewModel: ObservableObject {
     init(auth: AuthStore, interval: Duration = .seconds(5)) {
         self.auth = auth
         self.interval = interval
+    }
+
+    /// The name of the currently-selected event, for the picker label.
+    var selectedEventName: String? {
+        guard let id = selectedEventId else { return nil }
+        return events.first(where: { $0.id == id })?.name
+    }
+
+    /// Load the event list (live events) so the picker has options. Also seeds
+    /// `selectedEventId` from the current scan selection if the caller passed
+    /// one in, so the dashboard opens on the event you're scanning.
+    func loadEvents(preferredId: Int?) async {
+        do {
+            let response = try await auth.listEvents()
+            events = response.events.filter { $0.scannable }
+            if selectedEventId == nil {
+                selectedEventId = preferredId ?? events.first?.id
+            }
+        } catch {
+            // Non-fatal: the picker just has no options; the snapshot still
+            // resolves the server's default event.
+        }
+    }
+
+    /// Change the shown event and refresh immediately.
+    func choose(eventId: Int?) async {
+        selectedEventId = eventId
+        snapshot = nil
+        await fetchOnce()
     }
 
     /// Convenience view of the current stats, zeroed until the first fetch and
@@ -103,7 +140,7 @@ final class DashboardViewModel: ObservableObject {
     func fetchOnce() async {
         isLoading = true
         do {
-            let latest = try await auth.liveSnapshot()
+            let latest = try await auth.liveSnapshot(eventId: selectedEventId)
             snapshot = latest
             errorMessage = nil
         } catch let error as APIError {
@@ -121,6 +158,7 @@ final class DashboardViewModel: ObservableObject {
 /// Active_Event (Requirement 7.2).
 @available(iOS 17.0, *)
 struct DashboardView: View {
+    @Environment(AppState.self) private var appState
     @StateObject private var model: DashboardViewModel
 
     init(auth: AuthStore) {
@@ -130,13 +168,47 @@ struct DashboardView: View {
     var body: some View {
         NavigationStack {
             content
-                .navigationTitle("Live")
+                .brandNavigationTitle()
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        eventPicker
+                    }
+                }
         }
         .task {
+            await model.loadEvents(preferredId: appState.selectedEvent?.id)
             model.start()
         }
         .onDisappear {
             model.stop()
+        }
+    }
+
+    /// A menu to switch which live event the dashboard shows.
+    @ViewBuilder
+    private var eventPicker: some View {
+        if model.events.isEmpty {
+            EmptyView()
+        } else {
+            Menu {
+                ForEach(model.events) { event in
+                    Button {
+                        Task { await model.choose(eventId: event.id) }
+                    } label: {
+                        if model.selectedEventId == event.id {
+                            Label(event.name, systemImage: "checkmark")
+                        } else {
+                            Text(event.name)
+                        }
+                    }
+                }
+            } label: {
+                Label(model.selectedEventName ?? "Event", systemImage: "chevron.down.circle")
+                    .font(.footnote.weight(.semibold))
+                    .lineLimit(1)
+            }
+            .accessibilityIdentifier("dashboard.eventPicker")
         }
     }
 
@@ -170,8 +242,8 @@ struct DashboardView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(event.name)
                         .font(.headline)
-                    if let startsAt = event.startsAt {
-                        Text(startsAt)
+                    if let pretty = EventDTO.prettyDate(from: event.startsAt) {
+                        Text(pretty)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

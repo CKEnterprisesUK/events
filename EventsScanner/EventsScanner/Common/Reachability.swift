@@ -21,8 +21,8 @@ import Observation
 /// which the UI must never present as a successful check-in (Requirement 9.1).
 ///
 /// Requires iOS 17 because it is `@Observable`, consistent with `AppState` and
-/// the rest of the app (see `EventsScanner/README.md`). The deployment target is
-/// iOS 16.0 (Requirement 11.1), hence the availability gate.
+/// the rest of the app (see `EventsScanner/README.md`). The deployment target
+/// is iOS 17.0; the availability gate is retained defensively.
 @available(iOS 17.0, *)
 @Observable
 final class Reachability {

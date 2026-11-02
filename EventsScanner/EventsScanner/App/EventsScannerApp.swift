@@ -6,15 +6,9 @@ import SwiftUI
 /// environment so every feature (sign-in, two-factor, company picker, scan,
 /// dashboard, customers, sessions) can read and drive shared session state.
 ///
-/// Platform: minimum deployment target iOS 16.0 (Requirement 11.1).
-///
-/// NOTE ON `@Observable`: the task and design call for an `@Observable`
-/// `AppState`. The Observation framework's `@Observable` macro requires iOS
-/// 17.0 at runtime, which is in tension with the iOS 16.0 deployment target.
-/// `AppState` is annotated with `@available(iOS 17.0, *)` and the root view is
-/// branched so the project still compiles and runs against an iOS 16 target.
-/// A human should reconcile this before shipping — see
-/// `EventsScanner/README.md` ("iOS 16 vs @Observable").
+/// Platform: minimum deployment target iOS 17.0. The app uses the Observation
+/// framework's `@Observable` macro (via `AppState`), which requires iOS 17, so
+/// the whole app targets iOS 17 unconditionally.
 @main
 struct EventsScannerApp: App {
     var body: some Scene {
@@ -26,23 +20,7 @@ struct EventsScannerApp: App {
 }
 
 /// Root view that owns the app-wide state and routes on the session phase.
-///
-/// The `@Observable` `AppState` requires iOS 17, so on iOS 16 we fall back to a
-/// clear, non-crashing placeholder. Later tasks (sign-in, tabs) build their
-/// views behind the iOS 17 branch, or the deployment target is raised — see the
-/// README for the decision a human needs to make.
 struct RootView: View {
-    var body: some View {
-        if #available(iOS 17.0, *) {
-            ObservableRootView()
-        } else {
-            UnsupportedObservationView()
-        }
-    }
-}
-
-@available(iOS 17.0, *)
-private struct ObservableRootView: View {
     @State private var appState = AppState()
 
     /// The app-wide auth stack (APIClient + Keychain + DeviceIdentity), built
@@ -51,6 +29,12 @@ private struct ObservableRootView: View {
     /// render a clear configuration error rather than a broken flow.
     @State private var auth: AuthStore?
     @State private var setupError: String?
+
+    // Presentation state only for the post-login flourish. Authentication and
+    // routing remain controlled entirely by `AppState.phase`; this overlay only
+    // decorates the transition into `.ready`.
+    @State private var showTicketBurst = false
+    @State private var ticketBurstTask: Task<Void, Never>?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -74,7 +58,44 @@ private struct ObservableRootView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .overlay {
+            if showTicketBurst {
+                TicketBurstView()
+                    .transition(.opacity)
+                    .zIndex(1)
+            }
+        }
         .task { setUpIfNeeded() }
+        .onChange(of: appState.phase) { oldPhase, newPhase in
+            // Only play the flourish when the authenticated, company-scoped
+            // session becomes ready — never for a sign-out, a 2FA prompt, or the
+            // company picker. Cancel any in-flight dismissal first so rapid
+            // phase changes can't leave the overlay stuck on.
+            ticketBurstTask?.cancel()
+            ticketBurstTask = nil
+
+            guard newPhase == .ready, oldPhase != .ready else {
+                showTicketBurst = false
+                return
+            }
+
+            // Overlay the already-routed main tabs; routing is not delayed.
+            withAnimation(.easeIn(duration: 0.15)) {
+                showTicketBurst = true
+            }
+
+            ticketBurstTask = Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(700))
+                guard !Task.isCancelled else { return }
+                withAnimation(.easeOut(duration: 0.2)) {
+                    showTicketBurst = false
+                }
+            }
+        }
+        .onDisappear {
+            ticketBurstTask?.cancel()
+            ticketBurstTask = nil
+        }
     }
 
     /// Route on the session phase to the real sign-in, two-factor, company
@@ -139,15 +160,6 @@ private struct EnvironmentBadge: View {
             .padding(.vertical, 4)
             .background(Color.orange)
             .accessibilityLabel("\(label) environment")
-    }
-}
-
-private struct UnsupportedObservationView: View {
-    var body: some View {
-        PlaceholderView(
-            title: "Update Required",
-            message: "This build uses the Observation framework (@Observable), which requires iOS 17. See README: iOS 16 vs @Observable."
-        )
     }
 }
 

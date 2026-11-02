@@ -79,6 +79,10 @@ struct CameraScanner: UIViewControllerRepresentable {
     /// Called on the main actor with each decoded QR payload string.
     let onDecode: (String) -> Void
 
+    /// Whether the device torch (flashlight) should be on. Driven by the scan
+    /// screen's torch toggle; the controller applies it to the capture device.
+    var torchOn: Bool = false
+
     func makeUIViewController(context: Context) -> CameraScannerViewController {
         let controller = CameraScannerViewController()
         controller.onDecode = onDecode
@@ -89,6 +93,7 @@ struct CameraScanner: UIViewControllerRepresentable {
         // Keep the latest closure so SwiftUI state captured by `onDecode` stays
         // current across view updates.
         controller.onDecode = onDecode
+        controller.setTorch(torchOn)
     }
 
     static func dismantleUIViewController(
@@ -114,6 +119,11 @@ final class CameraScannerViewController: UIViewController {
     private let sessionQueue = DispatchQueue(label: "com.events.scanner.camera.session")
     private let videoOutput = AVCaptureVideoDataOutput()
     private var previewLayer: AVCaptureVideoPreviewLayer?
+
+    /// The active capture device, kept so the torch can be toggled on it.
+    private var captureDevice: AVCaptureDevice?
+    /// The last requested torch state, so `setTorch` is idempotent and cheap.
+    private var torchIsOn = false
 
     /// The QR-only Vision request, built once and reused per frame.
     private lazy var barcodeRequest: VNDetectBarcodesRequest = {
@@ -161,6 +171,7 @@ final class CameraScannerViewController: UIViewController {
                 return
             }
             self.session.addInput(input)
+            self.captureDevice = device
 
             self.videoOutput.alwaysDiscardsLateVideoFrames = true
             self.videoOutput.setSampleBufferDelegate(
@@ -192,11 +203,38 @@ final class CameraScannerViewController: UIViewController {
         }
     }
 
-    /// Stop the capture session if it is running.
+    /// Stop the capture session if it is running. Also turns the torch off so it
+    /// never lingers on after the scanner closes.
     func stop() {
+        setTorch(false)
         sessionQueue.async { [weak self] in
             guard let self, self.session.isRunning else { return }
             self.session.stopRunning()
+        }
+    }
+
+    /// Turn the device torch on or off, when the device has one. Idempotent and
+    /// safe to call before the device is configured (it no-ops until then).
+    func setTorch(_ on: Bool) {
+        sessionQueue.async { [weak self] in
+            guard let self else { return }
+            guard self.torchIsOn != on else { return }
+            guard let device = self.captureDevice, device.hasTorch, device.isTorchAvailable else { return }
+
+            do {
+                try device.lockForConfiguration()
+                if on {
+                    try device.setTorchModeOn(level: AVCaptureDevice.maxAvailableTorchLevel)
+                } else {
+                    device.torchMode = .off
+                }
+                device.unlockForConfiguration()
+                self.torchIsOn = on
+            } catch {
+                // A device without a controllable torch (or a transient lock
+                // failure) simply leaves the torch as-is; the UI toggle is
+                // best-effort and never blocks scanning.
+            }
         }
     }
 }

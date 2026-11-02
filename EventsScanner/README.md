@@ -19,7 +19,7 @@ Networking, auth, and feature screens are added in tasks 15.2 → 22.
 EventsScanner/
   project.yml                 # XcodeGen project definition (generates .xcodeproj)
   EventsScanner/
-    Info.plist                # iOS 16 min OS, camera usage description
+    Info.plist                # iOS 17 min OS, camera usage description
     App/
       EventsScannerApp.swift  # @main App + root view
       AppState.swift          # @Observable app-wide state
@@ -48,7 +48,7 @@ If you prefer not to use XcodeGen, create the project by hand in Xcode:
 
 1. File → New → Project → iOS → App.
 2. Product Name `EventsScanner`, Interface **SwiftUI**, Language **Swift**.
-3. Set **Minimum Deployments** to **iOS 16.0** (Requirement 11.1).
+3. Set **Minimum Deployments** to **iOS 17.0**.
 4. Delete the generated `ContentView.swift`/`App.swift`, then add the existing
    `EventsScanner/` source folders to the target.
 5. Point the target's Info.plist at the checked-in `EventsScanner/Info.plist`
@@ -113,27 +113,19 @@ installed from TestFlight.
 > project and the Swift sources by `swiftc -parse` under both the PREPROD and
 > production compile flags.
 
-## iOS 16 vs `@Observable` (needs a human decision)
+## iOS 17 minimum and `@Observable`
 
-The spec/design call for an `@Observable` `AppState`, but the Observation
-framework's `@Observable` macro requires **iOS 17**, which conflicts with the
-**iOS 16.0** deployment target (Requirement 11.1).
+The app uses an `@Observable` `AppState` (the Observation framework macro),
+which requires **iOS 17**. The minimum deployment target is therefore set to
+**iOS 17.0** so `@Observable` and the full functional app are available
+unconditionally — there is no iOS 16 placeholder fallback.
 
-The scaffold follows the task text (uses `@Observable`) and makes the tension
-explicit instead of hiding it:
+This is configured in:
 
-- `AppState` is annotated `@available(iOS 17.0, *)`.
-- `RootView` branches on `#available(iOS 17.0, *)` and shows an
-  "Update Required" placeholder below iOS 17.
+- `project.yml` — `options.deploymentTarget.iOS`, `IPHONEOS_DEPLOYMENT_TARGET`,
+  and each target's `deploymentTarget`, all `"17.0"`.
+- `RootView` renders the real app directly; the former "Update Required"
+  placeholder for iOS 16 has been removed.
 
-Before building out the feature screens, reconcile this one way:
-
-1. **Raise the minimum to iOS 17** — simplest; drop the availability gating and
-   use `@Observable` everywhere. Update `deploymentTarget`/
-   `IPHONEOS_DEPLOYMENT_TARGET` in `project.yml` and `MinimumOSVersion` in
-   `Info.plist`. (Changes Requirement 11.1 — confirm with the product owner.)
-2. **Keep iOS 16** — replace `@Observable` with `ObservableObject` +
-   `@Published` and inject via `@StateObject`/`@EnvironmentObject`.
-
-Distribution (App Store / TestFlight, Requirement 11.2) is handled in task 22.3
-and also requires the Xcode GUI and an Apple Developer account.
+Distribution (App Store / TestFlight) also requires the Xcode GUI and an Apple
+Developer account.

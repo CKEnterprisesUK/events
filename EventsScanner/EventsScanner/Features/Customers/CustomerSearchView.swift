@@ -107,7 +107,8 @@ struct CustomerSearchView: View {
                     }
                 }
             }
-            .navigationTitle("Customers")
+            .brandNavigationTitle()
+            .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $model.query, prompt: "Name, email or order reference")
             .onSubmit(of: .search) {
                 Task { await model.search() }

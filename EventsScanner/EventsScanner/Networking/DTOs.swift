@@ -314,16 +314,37 @@ struct CustomersResponseDTO: Codable, Equatable {
 // a staff member opens to buy tickets. The chosen event's id scopes scanning
 // and the live dashboard.
 
-/// One event row for the Events tab.
+/// One ticket type on an event's detail page: its name and price (minor units).
+struct EventTicketTypeDTO: Codable, Equatable, Identifiable {
+    let id: Int
+    let name: String
+    let priceMinor: Int
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case priceMinor = "price_minor"
+    }
+}
+
+/// One event for the Events tab and its detail page.
 struct EventDTO: Codable, Equatable, Identifiable {
     let id: Int
     let name: String
+    let description: String?
     let venue: String?
+    let address: String?
     let startsAt: String?
     let isPublished: Bool
     let isCancelled: Bool
+    /// Server-authoritative "can this be scanned": published and not cancelled.
+    let scannable: Bool
     let capacity: Int?
     let ticketsSold: Int
+    let currency: String
+    /// A hero image for the detail page (event poster or company poster).
+    let imageURL: String?
+    let ticketTypes: [EventTicketTypeDTO]
 
     /// The public storefront URL for the event (buy tickets / share). Null only
     /// when the company somehow has no slug.
@@ -332,14 +353,76 @@ struct EventDTO: Codable, Equatable, Identifiable {
     enum CodingKeys: String, CodingKey {
         case id
         case name
+        case description
         case venue
+        case address
         case startsAt = "starts_at"
         case isPublished = "is_published"
         case isCancelled = "is_cancelled"
+        case scannable
         case capacity
         case ticketsSold = "tickets_sold"
+        case currency
+        case imageURL = "image_url"
+        case ticketTypes = "ticket_types"
         case webURL = "web_url"
     }
+
+    // MARK: - Display helpers
+
+    /// A short status label for a badge.
+    var statusLabel: String {
+        if isCancelled { return "Cancelled" }
+        return isPublished ? "Live" : "Draft"
+    }
+
+    /// The start time in a friendly, device-locale format
+    /// (e.g. "Sat 8 Jan 2027, 17:15"), or nil when the event has no date.
+    var prettyDate: String? {
+        EventDTO.prettyDate(from: startsAt)
+    }
+
+    /// The lowest ticket price formatted for the locale (e.g. "From £12.50"),
+    /// "Free" when every type is free, or nil when there are no ticket types.
+    var priceSummary: String? {
+        guard !ticketTypes.isEmpty else { return nil }
+        let minPrice = ticketTypes.map(\.priceMinor).min() ?? 0
+        if minPrice == 0 { return "Free" }
+        let formatted = EventDTO.money(minPrice, currency: currency)
+        return ticketTypes.count > 1 ? "From \(formatted)" : formatted
+    }
+
+    /// Parse an ISO-8601 string into a friendly medium date + short time.
+    static func prettyDate(from iso: String?) -> String? {
+        guard let iso, let date = isoParser.date(from: iso) ?? isoParserNoFraction.date(from: iso) else {
+            return nil
+        }
+        return displayFormatter.string(from: date)
+    }
+
+    /// Format a minor-unit amount as a locale currency string.
+    static func money(_ minor: Int, currency: String) -> String {
+        let major = Double(minor) / 100.0
+        return major.formatted(.currency(code: currency))
+    }
+
+    private static let isoParser: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+
+    private static let isoParserNoFraction: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
+
+    private static let displayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "EEE d MMM yyyy, HH:mm"
+        return f
+    }()
 }
 
 /// `GET /api/events` → `{ events: [...], web_dashboard_url: "…" }`. The
