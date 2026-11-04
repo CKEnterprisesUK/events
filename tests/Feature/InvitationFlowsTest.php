@@ -134,9 +134,9 @@ class InvitationFlowsTest extends TestCase
         $this->assertTrue($this->userCan($member, RoleAuthorization::ACTION_REFUND_ORDER));
         $this->assertTrue($this->userCan($member, RoleAuthorization::ACTION_CHECK_IN));
         $this->assertTrue($this->userCan($member, RoleAuthorization::ACTION_MANAGE_USERS));
-        // Admin is not an Owner: billing and settings stay denied.
+        // Admin is not an Owner: billing stays denied; settings are allowed.
         $this->assertFalse($this->userCan($member, RoleAuthorization::ACTION_MANAGE_BILLING));
-        $this->assertFalse($this->userCan($member, RoleAuthorization::ACTION_MANAGE_SETTINGS));
+        $this->assertTrue($this->userCan($member, RoleAuthorization::ACTION_MANAGE_SETTINGS));
     }
 
     // ---- 4.4 Removal revokes access -----------------------------------------

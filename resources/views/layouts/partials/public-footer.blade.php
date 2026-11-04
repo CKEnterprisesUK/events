@@ -33,7 +33,7 @@
                 <div class="pub-footer__col">
                     <h2 class="pub-footer__heading">Trust &amp; Legal</h2>
                     <a href="{{ route('trust.index') }}">Trust Centre</a>
-                    <a href="{{ route('privacy') }}">Privacy</a>
+                    <a href="{{ route('trust.show', \App\Models\LegalDocument::SLUG_PRIVACY) }}">Privacy</a>
                     <a href="{{ route('trust.show', \App\Models\LegalDocument::SLUG_TERMS) }}">Terms</a>
                 </div>
 

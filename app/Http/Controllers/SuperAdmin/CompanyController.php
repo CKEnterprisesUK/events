@@ -7,6 +7,8 @@ use App\Models\AuditLog;
 use App\Models\Company;
 use App\Services\AuditLogger;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /**
  * Super-admin controller for toggling a Company's suspension state. The
@@ -48,6 +50,48 @@ class CompanyController extends Controller
         return redirect()
             ->route('admin.clients.show', $company)
             ->with('status', __(':name suspended.', ['name' => $company->name]));
+    }
+
+    /**
+     * Update a Company's registration identity (legal name, organisation type,
+     * Companies House / Charity Commission numbers). Super_Admin only: Company
+     * users cannot edit these from their own settings.
+     */
+    public function updateRegistration(Request $request, Company $company): RedirectResponse
+    {
+        $data = $request->validate([
+            'legal_name' => ['required', 'string', 'max:255'],
+            'organisation_type' => ['required', Rule::in(array_keys(Company::ORGANISATION_TYPES))],
+            'company_number' => [
+                'nullable',
+                'string',
+                'max:50',
+                Rule::requiredIf(fn (): bool => in_array(
+                    $request->input('organisation_type'),
+                    [Company::TYPE_COMPANY, Company::TYPE_CIC],
+                    true,
+                )),
+            ],
+            // Optional even for charities (small/excepted/exempt charities).
+            'charity_number' => ['nullable', 'string', 'max:50'],
+        ]);
+
+        $company->update([
+            'legal_name' => $data['legal_name'],
+            'organisation_type' => $data['organisation_type'],
+            'company_number' => $data['company_number'] ?? null,
+            'charity_number' => $data['charity_number'] ?? null,
+        ]);
+
+        $this->audit->record(
+            action: AuditLog::COMPANY_REGISTRATION_UPDATED,
+            auditable: $company,
+            summary: 'Updated registration details for '.$company->name,
+        );
+
+        return redirect()
+            ->route('admin.clients.show', $company)
+            ->with('status', __('Registration details updated.'));
     }
 
     /**

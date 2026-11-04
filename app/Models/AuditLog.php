@@ -116,9 +116,13 @@ class AuditLog extends Model
 
     public const COMPANY_UNSUSPENDED = 'company.unsuspended';
 
+    public const COMPANY_REGISTRATION_UPDATED = 'company.registration_updated';
+
     public const RESERVED_SLUG_ADDED = 'reserved_slug.added';
 
     public const RESERVED_SLUG_REMOVED = 'reserved_slug.removed';
+    public const REFERRAL_CODE_CREATED = 'referral_code.created';
+    public const REFERRAL_CODE_DELETED = 'referral_code.deleted';
 
     public const OWNER_TRANSFERRED = 'owner.transferred';
 
@@ -237,8 +241,11 @@ class AuditLog extends Model
         self::USER_INVITE_CANCELLED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Cancelled an invitation'],
         self::COMPANY_SUSPENDED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Suspended a company'],
         self::COMPANY_UNSUSPENDED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Unsuspended a company'],
+        self::COMPANY_REGISTRATION_UPDATED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Updated company registration details'],
         self::RESERVED_SLUG_ADDED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Added a reserved slug'],
         self::RESERVED_SLUG_REMOVED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Removed a reserved slug'],
+        self::REFERRAL_CODE_CREATED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Created a referral code'],
+        self::REFERRAL_CODE_DELETED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Deleted a referral code'],
         self::OWNER_TRANSFERRED => ['category' => self::CATEGORY_ACCESS, 'label' => 'Transferred company ownership'],
         self::OWNER_PASSWORD_RESET_SENT => ['category' => self::CATEGORY_ACCESS, 'label' => 'Sent an owner password reset'],
         self::USER_VERIFICATION_RESENT => ['category' => self::CATEGORY_ACCESS, 'label' => 'Re-sent an email verification'],

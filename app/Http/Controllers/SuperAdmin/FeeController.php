@@ -37,16 +37,10 @@ class FeeController extends Controller
      * Show the Global_Fee_Percent and every Company's override + fee mode.
      * (Requirements 20.5, 20.6)
      */
-    public function index(): View
+    public function index(Request $request): View
     {
-        $setting = PlatformSetting::current();
-
-        return view('admin.fees.index', [
-            'globalFeePercent' => $setting->global_fee_percent,
-            'stripeFeePercent' => $setting->stripe_fee_percent,
-            'stripeFeeFixedMinor' => $setting->stripe_fee_fixed_minor,
-            'companies' => Company::query()->orderBy('name')->get(),
-        ]);
+        // Fees now live on the "Fees" tab of the Platform settings page.
+        return app(SettingsController::class)->show($request, 'fees');
     }
 
     /**

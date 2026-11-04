@@ -46,6 +46,7 @@ use App\Http\Controllers\SuperAdmin\ImpersonationController as SuperAdminImperso
 use App\Http\Controllers\SuperAdmin\LegalDocumentController as SuperAdminLegalDocumentController;
 use App\Http\Controllers\SuperAdmin\OpsController as SuperAdminOpsController;
 use App\Http\Controllers\SuperAdmin\ProfileController as SuperAdminProfileController;
+use App\Http\Controllers\SuperAdmin\ReferralCodeController as SuperAdminReferralCodeController;
 use App\Http\Controllers\SuperAdmin\ReservedSlugController as SuperAdminReservedSlugController;
 use App\Http\Controllers\SuperAdmin\SettingsController as SuperAdminSettingsController;
 use App\Http\Controllers\SuperAdmin\StripeAccountController as SuperAdminStripeAccountController;
@@ -818,6 +819,13 @@ Route::middleware(['auth', 'super.admin', 'session.timeout', 'migrations.pending
         Route::post('/reserved-slugs', [SuperAdminReservedSlugController::class, 'store'])->name('reserved-slugs.store');
         Route::delete('/reserved-slugs/{reservedSlug}', [SuperAdminReservedSlugController::class, 'destroy'])->name('reserved-slugs.destroy');
 
+        // Referral codes (Super_Admin only): a code used at signup sets the new
+        // Company's fee percent.
+        Route::get('/referral-codes', [SuperAdminReferralCodeController::class, 'index'])->name('referral-codes.index');
+        Route::post('/referral-codes', [SuperAdminReferralCodeController::class, 'store'])->name('referral-codes.store');
+        Route::patch('/referral-codes/{referralCode}', [SuperAdminReferralCodeController::class, 'toggle'])->name('referral-codes.toggle');
+        Route::delete('/referral-codes/{referralCode}', [SuperAdminReferralCodeController::class, 'destroy'])->name('referral-codes.destroy');
+
         // Owner / user recovery for a specific Company (from the client detail
         // page): email the Owner a password reset, re-send their verification, or
         // transfer the single Owner role to another user in the Company.
@@ -864,6 +872,10 @@ Route::middleware(['auth', 'super.admin', 'session.timeout', 'migrations.pending
         // EnsureCompanyActive) so it takes effect immediately. (20.3, 20.4)
         Route::post('/companies/{company}/suspend', [SuperAdminCompanyController::class, 'suspend'])->name('companies.suspend');
         Route::post('/companies/{company}/unsuspend', [SuperAdminCompanyController::class, 'unsuspend'])->name('companies.unsuspend');
+
+        // Registration identity (legal name, organisation type, registration
+        // numbers) is Super-Admin-managed only; Company users cannot edit it.
+        Route::put('/companies/{company}/registration', [SuperAdminCompanyController::class, 'updateRegistration'])->name('companies.registration.update');
 
         // Set the Global_Fee_Percent and per-Company Company_Fee_Percent
         // override + Fee_Handling_Mode. (20.5, 20.6)

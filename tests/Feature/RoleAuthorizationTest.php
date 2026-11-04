@@ -79,7 +79,7 @@ class RoleAuthorizationTest extends TestCase
         }
 
         $this->assertFalse($this->matrix->roleCan(User::ROLE_ADMIN, RoleAuthorization::ACTION_MANAGE_BILLING));
-        $this->assertFalse($this->matrix->roleCan(User::ROLE_ADMIN, RoleAuthorization::ACTION_MANAGE_SETTINGS));
+        $this->assertTrue($this->matrix->roleCan(User::ROLE_ADMIN, RoleAuthorization::ACTION_MANAGE_SETTINGS));
         // The Admin can SET UP Stripe but must NOT manage it once connected
         // (fee handling stays Owner-only).
         $this->assertFalse($this->matrix->roleCan(User::ROLE_ADMIN, RoleAuthorization::ACTION_MANAGE_STRIPE));

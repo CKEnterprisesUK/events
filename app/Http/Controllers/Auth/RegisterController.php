@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use App\Models\ReferralCode;
 use App\Models\User;
 use App\Rules\CompanySlug;
 use Illuminate\Contracts\View\View;
@@ -13,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rules\Password;
 
 /**
@@ -33,7 +35,16 @@ class RegisterController extends Controller
      */
     public function show(): View
     {
-        return view('auth.register');
+        // A referral code can arrive as ?ref=CODE. Remember it in the session
+        // so it survives a validation redirect or the visitor browsing away and
+        // coming back to sign up.
+        if ($ref = request()->query('ref')) {
+            session(['referral_code' => ReferralCode::normalise((string) $ref)]);
+        }
+
+        return view('auth.register', [
+            'referralCode' => old('referral_code', session('referral_code', '')),
+        ]);
     }
 
     /**
@@ -85,11 +96,35 @@ class RegisterController extends Controller
             // CK Enterprises UK before the account is created. Acceptance is
             // stamped on the Owner user below.
             'agree_terms' => ['accepted'],
+            // Optional referral code. If given it must be valid and usable.
+            'referral_code' => ['nullable', 'string', 'max:64'],
         ], [
             'agree_terms.accepted' => 'You must agree to the Terms & Conditions to create an account.',
         ]);
 
-        $user = DB::transaction(function () use ($validated): User {
+        $referral = null;
+        if (! empty($validated['referral_code'])) {
+            $referral = ReferralCode::findUsable($validated['referral_code']);
+            if ($referral === null) {
+                throw ValidationException::withMessages([
+                    'referral_code' => 'That referral code is not valid.',
+                ]);
+            }
+        }
+
+        $user = DB::transaction(function () use ($validated, $referral): User {
+            if ($referral !== null) {
+                // Lock the row and re-check so concurrent signups cannot
+                // exceed max_uses.
+                $referral = ReferralCode::query()->lockForUpdate()->find($referral->id);
+                if ($referral === null || ! $referral->isUsable()) {
+                    throw ValidationException::withMessages([
+                        'referral_code' => 'That referral code is no longer available.',
+                    ]);
+                }
+                $referral->increment('uses_count');
+            }
+
             $company = Company::create([
                 'name' => $validated['company_name'],
                 'slug' => $validated['slug'],
@@ -109,6 +144,10 @@ class RegisterController extends Controller
                 // always GB. There is no country field on the form; a
                 // Super_Admin can change it later if an org relocates.
                 'country' => 'GB',
+                // A referral code sets this Company's fee percent override.
+                'company_fee_percent' => $referral?->fee_percent,
+                'referral_code_id' => $referral?->id,
+                'referral_code' => $referral?->code,
             ]);
 
             return User::create([
@@ -133,6 +172,7 @@ class RegisterController extends Controller
         Auth::login($user);
 
         $request->session()->regenerate();
+        $request->session()->forget('referral_code');
 
         return redirect()->route('verification.notice');
     }

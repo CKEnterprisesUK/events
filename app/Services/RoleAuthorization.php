@@ -121,6 +121,9 @@ class RoleAuthorization
             self::ACTION_VIEW_AUDIT_LOG,
             self::ACTION_RESET_SCANS,
             self::ACTION_MANAGE_USERS,
+            // Company settings (branding, contact, privacy). Registration
+            // identity fields are not editable here; see BrandingController.
+            self::ACTION_MANAGE_SETTINGS,
             // The Admin can connect the Company's Stripe account (onboarding),
             // but NOT manage it afterwards (fee handling) — that stays Owner-only
             // via ACTION_MANAGE_STRIPE.

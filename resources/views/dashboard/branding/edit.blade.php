@@ -164,9 +164,7 @@
                 <div class="field-row">
                     <div class="field">
                         <label for="legal_name">Registered / legal name</label>
-                        <input type="text" name="legal_name" id="legal_name"
-                               value="{{ old('legal_name', $company->legal_name) }}" required>
-                        @error('legal_name')<p class="error">{{ $message }}</p>@enderror
+                        <input type="text" id="legal_name" value="{{ $company->legal_name }}" readonly disabled>
                     </div>
 
                     <div class="field">
@@ -180,32 +178,28 @@
 
                 <div class="field">
                     <label for="organisation_type">Organisation type</label>
-                    <select name="organisation_type" id="organisation_type" required data-org-type>
-                        @foreach (\App\Models\Company::ORGANISATION_TYPES as $value => $label)
-                            <option value="{{ $value }}" @selected(old('organisation_type', $company->organisation_type) === $value)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                    @error('organisation_type')<p class="error">{{ $message }}</p>@enderror
+                    <input type="text" id="organisation_type"
+                           value="{{ \App\Models\Company::ORGANISATION_TYPES[$company->organisation_type] ?? '' }}" readonly disabled>
                 </div>
 
-                {{-- Companies House number: relevant to Company / CIC. --}}
-                <div class="field" data-when-type="company cic">
-                    <label for="company_number">Companies House number</label>
-                    <input type="text" name="company_number" id="company_number"
-                           value="{{ old('company_number', $company->company_number) }}" data-conditional-required>
-                    <span class="field-hint">Required for companies and CICs.</span>
-                    @error('company_number')<p class="error">{{ $message }}</p>@enderror
-                </div>
+                @if (in_array($company->organisation_type, [\App\Models\Company::TYPE_COMPANY, \App\Models\Company::TYPE_CIC], true))
+                    <div class="field">
+                        <label for="company_number">Companies House number</label>
+                        <input type="text" id="company_number" value="{{ $company->company_number }}" readonly disabled>
+                    </div>
+                @endif
 
-                {{-- Charity Commission number: relevant to Charity, optional
-                     (some charities are not registered with the Commission). --}}
-                <div class="field" data-when-type="charity">
-                    <label for="charity_number">Charity Commission number</label>
-                    <input type="text" name="charity_number" id="charity_number"
-                           value="{{ old('charity_number', $company->charity_number) }}">
-                    <span class="field-hint">Leave blank if the charity isn't registered with the Charity Commission.</span>
-                    @error('charity_number')<p class="error">{{ $message }}</p>@enderror
-                </div>
+                @if ($company->organisation_type === \App\Models\Company::TYPE_CHARITY)
+                    <div class="field">
+                        <label for="charity_number">Charity Commission number</label>
+                        <input type="text" id="charity_number" value="{{ $company->charity_number }}" readonly disabled>
+                    </div>
+                @endif
+
+                <p class="field-hint">
+                    Registration details (legal name, organisation type and registration numbers) can only be changed
+                    by the platform administrators. Contact support if they need updating.
+                </p>
 
                 <div class="field-row">
                     <div class="field">

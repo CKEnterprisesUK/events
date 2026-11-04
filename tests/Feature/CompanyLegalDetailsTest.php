@@ -155,11 +155,14 @@ class CompanyLegalDetailsTest extends TestCase
     {
         $owner = User::factory()->owner()->create();
 
+        $original = $owner->company->fresh();
+
         $this->actingAs($owner)->put(route('dashboard.branding.update'), [
+            // Registration identity is Super-Admin-only: these are ignored.
             'legal_name' => 'Rebranded Events Ltd',
-            'trading_name' => 'Rebranded',
             'organisation_type' => Company::TYPE_CHARITY,
             'charity_number' => '1122334',
+            'trading_name' => 'Rebranded',
             'website' => 'https://rebranded.test',
             'email' => 'contact@rebranded.test',
             'phone' => '01234 567890',
@@ -171,10 +174,10 @@ class CompanyLegalDetailsTest extends TestCase
         ])->assertRedirect(route('dashboard.branding.edit'));
 
         $company = $owner->company->fresh();
-        $this->assertSame('Rebranded Events Ltd', $company->legal_name);
         $this->assertSame('Rebranded', $company->trading_name);
-        $this->assertSame(Company::TYPE_CHARITY, $company->organisation_type);
-        $this->assertSame('1122334', $company->charity_number);
+        $this->assertSame($original->legal_name, $company->legal_name);
+        $this->assertSame($original->organisation_type, $company->organisation_type);
+        $this->assertSame($original->charity_number, $company->charity_number);
         $this->assertSame('contact@rebranded.test', $company->email);
         $this->assertSame('99 New Road', $company->address_line_1);
         $this->assertSame('Manchester', $company->city);

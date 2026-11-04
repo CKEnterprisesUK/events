@@ -37,11 +37,10 @@ class ReservedSlugController extends Controller
      * List every reserved slug (ensuring the system defaults exist) for
      * management.
      */
-    public function index(): View
+    public function index(Request $request): View
     {
-        return view('admin.reserved-slugs.index', [
-            'slugs' => ReservedSlug::forManagement(),
-        ]);
+        // Reserved slugs now live on a tab of the Platform settings page.
+        return app(SettingsController::class)->show($request, 'reserved-slugs');
     }
 
     /**
