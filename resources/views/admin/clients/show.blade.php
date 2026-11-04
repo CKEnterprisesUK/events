@@ -142,6 +142,8 @@
         <div class="admin-panel__head"><h2>Financials</h2></div>
         <table class="admin-facts">
             <tbody>
+                <tr><th scope="row">Referral code</th><td>{{ $company->referral_code ?? '—' }}</td></tr>
+                <tr><th scope="row">Fee percent override</th><td>{{ $company->company_fee_percent !== null ? $company->company_fee_percent.'%' : 'Platform default' }}</td></tr>
                 <tr><th scope="row">Gross sales</th><td data-metric="gross_sales_minor">{{ Money::gbp($stats['gross_sales_minor']) }}</td></tr>
                 <tr><th scope="row">Booking fees</th><td data-metric="booking_fees_minor">{{ Money::gbp($stats['booking_fees_minor']) }}</td></tr>
                 <tr><th scope="row">Platform fees earned</th><td data-metric="platform_fees_minor">{{ Money::gbp($stats['platform_fees_minor']) }}</td></tr>
