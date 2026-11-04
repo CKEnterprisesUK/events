@@ -5,7 +5,9 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Mail\TestMail;
 use App\Models\AuditLog;
+use App\Models\Company;
 use App\Models\PlatformSetting;
+use App\Models\ReservedSlug;
 use App\Services\AuditLogger;
 use App\Services\Mail\Graph\GraphMailDiagnostics;
 use App\Services\Mail\Graph\GraphMailException;
@@ -47,7 +49,25 @@ class SettingsController extends Controller
      */
     public function index(Request $request): View
     {
+        return $this->show($request, null);
+    }
+
+    /**
+     * Render the tabbed settings page. `$tab` pre-selects a tab (used by the
+     * legacy /admin/fees and /admin/reserved-slugs URLs, which now live here as
+     * tabs); null lets the page restore the last-used tab client-side.
+     */
+    public function show(Request $request, ?string $tab = null): View
+    {
+        $setting = PlatformSetting::current();
+
         return view('admin.settings.index', [
+            'initialTab' => $tab,
+            'globalFeePercent' => $setting->global_fee_percent,
+            'stripeFeePercent' => $setting->stripe_fee_percent,
+            'stripeFeeFixedMinor' => $setting->stripe_fee_fixed_minor,
+            'companies' => Company::query()->orderBy('name')->get(),
+            'slugs' => ReservedSlug::forManagement(),
             'mail' => $this->mailDiagnostics(),
             'defaultTestEmail' => $request->user()?->email,
             'selectedTransport' => $this->transport->selectedTransport(),

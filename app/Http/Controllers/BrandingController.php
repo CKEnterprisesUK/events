@@ -15,7 +15,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Validation\Rule;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -24,7 +23,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * Two surfaces, gated differently by the role matrix:
  *   - Company-level branding (logo, primary colour, Terms & Conditions text, and
  *     custom ticket-info field definitions) is a Company *setting*, so it is
- *     gated on the Owner-only `ACTION_MANAGE_SETTINGS`. (Requirements 7.1–7.4)
+ *     gated on `ACTION_MANAGE_SETTINGS` (Owner and Admin). (Requirements 7.1–7.4)
  *   - Event-level branding overrides (logo, primary colour, ticket-info fields
  *     for one Event) are part of managing that Event, so they are gated on the
  *     Admin `ACTION_MANAGE_EVENTS`. (Requirement 7.5)
@@ -121,26 +120,10 @@ class BrandingController extends Controller
             'x_url' => ['nullable', 'string', 'url', 'max:255'],
             'linkedin_url' => ['nullable', 'string', 'url', 'max:255'],
 
-            // Legal/registration details maintained by the Owner after signup.
-            // The registered name, organisation type, main organisation email
-            // and registered address stay required; the rest are optional.
-            'legal_name' => ['required', 'string', 'max:255'],
+            // Registration identity (legal name, organisation type, Companies
+            // House / Charity Commission numbers) is NOT editable here; it is
+            // managed by the Super Admin. Only the trading name is editable.
             'trading_name' => ['nullable', 'string', 'max:255'],
-            'organisation_type' => ['required', Rule::in(array_keys(Company::ORGANISATION_TYPES))],
-            'company_number' => [
-                'nullable',
-                'string',
-                'max:50',
-                Rule::requiredIf(fn (): bool => in_array(
-                    $request->input('organisation_type'),
-                    [Company::TYPE_COMPANY, Company::TYPE_CIC],
-                    true,
-                )),
-            ],
-            // Optional even for charities: small charities under the
-            // registration threshold, and excepted/exempt charities, have no
-            // Charity Commission number.
-            'charity_number' => ['nullable', 'string', 'max:50'],
             'website' => ['nullable', 'string', 'url', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:254'],
             'phone' => ['nullable', 'string', 'max:50'],
@@ -167,11 +150,7 @@ class BrandingController extends Controller
             'instagram_url' => $data['instagram_url'] ?? null,
             'x_url' => $data['x_url'] ?? null,
             'linkedin_url' => $data['linkedin_url'] ?? null,
-            'legal_name' => $data['legal_name'],
             'trading_name' => $data['trading_name'] ?? null,
-            'organisation_type' => $data['organisation_type'],
-            'company_number' => $data['company_number'] ?? null,
-            'charity_number' => $data['charity_number'] ?? null,
             'website' => $data['website'] ?? null,
             'email' => $data['email'],
             'phone' => $data['phone'] ?? null,

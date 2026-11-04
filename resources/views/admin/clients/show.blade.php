@@ -101,9 +101,49 @@
     </div>
 
     <div class="admin-panel">
+        <div class="admin-panel__head"><h2>Registration details</h2></div>
+        <div class="admin-panel__body">
+            <p class="muted" style="margin-bottom: 1rem;">
+                Only Super Admins can change these. The company can edit its trading name, but not these fields.
+            </p>
+            <form method="POST" action="{{ route('admin.companies.registration.update', $company) }}" class="user-actions__panel" style="max-width: 32rem;">
+                @csrf
+                @method('PUT')
+                <div class="field">
+                    <label for="reg-legal-name">Registered / legal name</label>
+                    <input type="text" id="reg-legal-name" name="legal_name" value="{{ old('legal_name', $company->legal_name) }}" required>
+                    @error('legal_name')<p class="status status--error" role="alert">{{ $message }}</p>@enderror
+                </div>
+                <div class="field">
+                    <label for="reg-org-type">Organisation type</label>
+                    <select id="reg-org-type" name="organisation_type" required>
+                        @foreach (\App\Models\Company::ORGANISATION_TYPES as $value => $label)
+                            <option value="{{ $value }}" @selected(old('organisation_type', $company->organisation_type) === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    @error('organisation_type')<p class="status status--error" role="alert">{{ $message }}</p>@enderror
+                </div>
+                <div class="field">
+                    <label for="reg-company-number">Companies House number</label>
+                    <input type="text" id="reg-company-number" name="company_number" value="{{ old('company_number', $company->company_number) }}">
+                    @error('company_number')<p class="status status--error" role="alert">{{ $message }}</p>@enderror
+                </div>
+                <div class="field">
+                    <label for="reg-charity-number">Charity Commission number</label>
+                    <input type="text" id="reg-charity-number" name="charity_number" value="{{ old('charity_number', $company->charity_number) }}">
+                    @error('charity_number')<p class="status status--error" role="alert">{{ $message }}</p>@enderror
+                </div>
+                <button type="submit" class="btn btn-sm">Save registration details</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="admin-panel">
         <div class="admin-panel__head"><h2>Financials</h2></div>
         <table class="admin-facts">
             <tbody>
+                <tr><th scope="row">Referral code</th><td>{{ $company->referral_code ?? '—' }}</td></tr>
+                <tr><th scope="row">Fee percent override</th><td>{{ $company->company_fee_percent !== null ? $company->company_fee_percent.'%' : 'Platform default' }}</td></tr>
                 <tr><th scope="row">Gross sales</th><td data-metric="gross_sales_minor">{{ Money::gbp($stats['gross_sales_minor']) }}</td></tr>
                 <tr><th scope="row">Booking fees</th><td data-metric="booking_fees_minor">{{ Money::gbp($stats['booking_fees_minor']) }}</td></tr>
                 <tr><th scope="row">Platform fees earned</th><td data-metric="platform_fees_minor">{{ Money::gbp($stats['platform_fees_minor']) }}</td></tr>

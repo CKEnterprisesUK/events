@@ -113,10 +113,11 @@ struct ProfileView: View {
         siteBaseURL?.appendingPathComponent("trust")
     }
 
-    /// The privacy policy URL (`/privacy`), matching the backend's public
-    /// `/privacy` page.
+    /// The Privacy Notice URL (`/trust/privacy`), matching the backend's
+    /// `trust.show` route for the `privacy` document slug — the full authored
+    /// Privacy Notice, not the skeleton `/privacy` page.
     private var privacyURL: URL? {
-        siteBaseURL?.appendingPathComponent("privacy")
+        siteBaseURL?.appendingPathComponent("trust").appendingPathComponent("privacy")
     }
 
     /// The Terms & Conditions URL (`/trust/terms`), matching the backend's

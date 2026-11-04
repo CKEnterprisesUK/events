@@ -50,6 +50,8 @@ use Illuminate\Support\Carbon;
  * @property string|null $privacy_text
  * @property string|null $support_email
  * @property string|null $gdpr_contact_email
+ * @property int|null $referral_code_id
+ * @property string|null $referral_code
  * @property int|null $retention_months
  * @property Carbon|null $retention_confirmed_at
  */
@@ -197,6 +199,8 @@ class Company extends Model
         'gdpr_contact_email',
         'retention_months',
         'retention_confirmed_at',
+        'referral_code_id',
+        'referral_code',
     ];
 
     /**

@@ -136,14 +136,25 @@ class BrandingManagementTest extends TestCase
         $response->assertSee('existing.png');
     }
 
-    public function test_non_owner_cannot_manage_company_branding_and_nothing_changes(): void
+    public function test_admin_can_open_company_settings(): void
     {
-        // ACTION_MANAGE_SETTINGS is Owner-only: an Admin is denied (403).
-        $company = Company::factory()->create(['primary_colour' => null]);
+        // ACTION_MANAGE_SETTINGS is held by the Owner and Admin.
+        $company = Company::factory()->create();
         $admin = User::factory()->admin()->create(['company_id' => $company->id]);
 
-        $this->actingAs($admin)->get(route('dashboard.branding.edit'))->assertForbidden();
-        $this->actingAs($admin)->put(route('dashboard.branding.update'), [
+        $this->actingAs($admin)->get(route('dashboard.branding.edit'))->assertOk();
+    }
+
+    public function test_box_office_cannot_manage_company_branding_and_nothing_changes(): void
+    {
+        $company = Company::factory()->create(['primary_colour' => null]);
+        $boxOffice = User::factory()->create([
+            'company_id' => $company->id,
+            'role' => User::ROLE_BOX_OFFICE,
+        ]);
+
+        $this->actingAs($boxOffice)->get(route('dashboard.branding.edit'))->assertForbidden();
+        $this->actingAs($boxOffice)->put(route('dashboard.branding.update'), [
             'primary_colour' => '#000000',
         ])->assertForbidden();
 

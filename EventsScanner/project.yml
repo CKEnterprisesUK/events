@@ -49,8 +49,8 @@ settings:
   base:
     SWIFT_VERSION: "5.9"
     IPHONEOS_DEPLOYMENT_TARGET: "17.0"
-    MARKETING_VERSION: "1.0"
-    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "1.1"
+    CURRENT_PROJECT_VERSION: "2"
     # Xcode 27 "recommended settings". Enabling script sandboxing is the item
     # the recommended-settings audit flags for a project at this upgrade level;
     # setting it here (project-wide) clears the "Update to recommended
@@ -84,6 +84,13 @@ targets:
       properties:
         APIBaseURL: https://$(API_HOST)
         NSCameraUsageDescription: EventsScanner uses the camera to scan QR codes for event check-in.
+        # Version + build number. XcodeGen generates Info.plist from this block,
+        # and without these keys it writes a DEFAULT 1.0 / 1 that overrides the
+        # MARKETING_VERSION / CURRENT_PROJECT_VERSION build settings below — so
+        # a version bump never reaches the archive. Point them at the build
+        # settings so the plist always inherits the single source of truth.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         # User-facing name under the home-screen icon and in Settings. The
         # Xcode target, PRODUCT_NAME and bundle IDs stay "EventsScanner";
         # only the display name is rebranded.

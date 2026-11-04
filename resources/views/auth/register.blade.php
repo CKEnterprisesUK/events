@@ -10,7 +10,7 @@
     $stepFields = [
         1 => ['company_name', 'slug', 'legal_name', 'trading_name', 'organisation_type', 'company_number', 'charity_number', 'website', 'organisation_email', 'phone'],
         2 => ['address_line_1', 'address_line_2', 'city', 'postcode'],
-        3 => ['name', 'email', 'password', 'agree_terms'],
+        3 => ['name', 'email', 'password', 'agree_terms', 'referral_code'],
     ];
 
     $errorStep = 1;
@@ -182,6 +182,12 @@
             <fieldset class="wizard-panel" data-step="3" hidden>
                 <legend class="wizard-panel-title">Your account</legend>
                 <p class="hint">This is the Owner login for your new account.</p>
+
+                <div class="field">
+                    <label for="referral_code">Referral code <span class="hint">(optional)</span></label>
+                    <input id="referral_code" type="text" name="referral_code" value="{{ $referralCode }}" maxlength="64" autocomplete="off" spellcheck="false">
+                    @error('referral_code')<p class="error">{{ $message }}</p>@enderror
+                </div>
 
                 <div class="field-row">
                     <div class="field">
