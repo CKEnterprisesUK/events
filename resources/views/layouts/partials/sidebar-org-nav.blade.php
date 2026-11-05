@@ -25,7 +25,9 @@
     <a class="nav-link {{ $navActive('admin.payments.*') ? 'active' : '' }}" @if($navActive('admin.payments.*')) aria-current="page" @endif href="{{ route('admin.payments.index') }}"><x-icon name="payments" class="nav-ico" /> Connected accounts</a>
     <p class="nav-section">Communication</p>
     <a class="nav-link {{ $navActive('admin.announcements.*') ? 'active' : '' }}" @if($navActive('admin.announcements.*')) aria-current="page" @endif href="{{ route('admin.announcements.create') }}"><x-icon name="support" class="nav-ico" /> Announcements</a>
+    <a class="nav-link {{ $navActive('admin.templated-emails.*') ? 'active' : '' }}" @if($navActive('admin.templated-emails.*')) aria-current="page" @endif href="{{ route('admin.templated-emails.create') }}"><x-icon name="support" class="nav-ico" /> Client emails</a>
     <a class="nav-link {{ $navActive('admin.legal.*') ? 'active' : '' }}" @if($navActive('admin.legal.*')) aria-current="page" @endif href="{{ route('admin.legal.index') }}"><x-icon name="report" class="nav-ico" /> Trust &amp; Legal</a>
+    <a class="nav-link {{ $navActive('admin.help.*') ? 'active' : '' }}" @if($navActive('admin.help.*')) aria-current="page" @endif href="{{ route('admin.help.index') }}"><x-icon name="help" class="nav-ico" /> Knowledge Base</a>
     <p class="nav-section">Monitoring</p>
     <a class="nav-link {{ $navActive('admin.audit.*') ? 'active' : '' }}" @if($navActive('admin.audit.*')) aria-current="page" @endif href="{{ route('admin.audit.index') }}"><x-icon name="history" class="nav-ico" /> Audit trail</a>
     <a class="nav-link {{ $navActive('admin.errors.*') ? 'active' : '' }}" @if($navActive('admin.errors.*')) aria-current="page" @endif href="{{ route('admin.errors.index') }}"><x-icon name="warning" class="nav-ico" /> Error reports</a>

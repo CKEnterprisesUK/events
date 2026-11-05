@@ -37,6 +37,7 @@ use Laravel\Sanctum\HasApiTokens;
  * @property string $password
  * @property Carbon|null $agreed_to_terms_at
  * @property Carbon|null $last_activity_at
+ * @property Carbon|null $last_login_at
  * @property Carbon|null $disabled_at
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
@@ -154,6 +155,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'password',
         'agreed_to_terms_at',
         'last_activity_at',
+        'last_login_at',
         // Harmless UI preference (suppresses the post-login MFA nudge). Unlike
         // the `two_factor_*` secret columns — which stay OUT of `$fillable` and
         // are only written via the service's `forceFill` — this carries no
@@ -194,6 +196,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'agreed_to_terms_at' => 'datetime',
             'last_activity_at' => 'datetime',
+            'last_login_at' => 'datetime',
             'disabled_at' => 'datetime',
             'is_super_admin' => 'boolean',
             'password' => 'hashed',

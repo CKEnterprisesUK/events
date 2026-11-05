@@ -61,6 +61,7 @@ class AuditLogController extends Controller
             'filters' => $filters,
             'categoryOptions' => AuditLog::CATEGORY_LABELS,
             'actionOptions' => $this->auditActionOptions(),
+            'channelOptions' => AuditLog::CHANNEL_LABELS,
         ]);
     }
 }

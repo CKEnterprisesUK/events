@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\SuperAdmin\ImpersonationController;
 use App\Jobs\PruneAuditLogsJob;
 use App\Models\AuditLog;
@@ -12,6 +13,7 @@ use App\Models\TicketType;
 use App\Models\User;
 use App\Services\AuditLogger;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
@@ -88,6 +90,73 @@ class AuditLogTest extends TestCase
         $this->assertSame('System', $log->actor_label);
     }
 
+    // ---- Channel (app vs web vs system) -------------------------------------
+
+    public function test_record_marks_a_web_dashboard_action_as_web(): void
+    {
+        $company = Company::factory()->create();
+        $admin = User::factory()->admin()->for($company)->create();
+
+        // A plain (non-/api) request is the web dashboard surface.
+        $this->actingAs($admin);
+
+        app(AuditLogger::class)->record(
+            action: AuditLog::EVENT_UPDATED,
+            summary: 'Did a thing',
+        );
+
+        $log = AuditLog::query()->latest('id')->firstOrFail();
+
+        $this->assertSame(AuditLog::CHANNEL_WEB, $log->channel);
+        $this->assertSame('Web', $log->channelLabel());
+    }
+
+    public function test_record_marks_an_api_action_as_app(): void
+    {
+        $company = Company::factory()->create();
+        $admin = User::factory()->admin()->for($company)->create();
+
+        // Authenticate as the iOS app would (a Sanctum token) and hit a real
+        // `/api/*` route that writes an audit row (TOKEN_REVOKED on logout).
+        Sanctum::actingAs($admin);
+
+        $this->postJson('/api/auth/logout')->assertNoContent();
+
+        $log = AuditLog::query()
+            ->where('action', AuditLog::TOKEN_REVOKED)
+            ->latest('id')
+            ->firstOrFail();
+
+        $this->assertSame(AuditLog::CHANNEL_APP, $log->channel);
+        $this->assertSame('App', $log->channelLabel());
+    }
+
+    public function test_record_system_marks_the_action_as_system(): void
+    {
+        $company = Company::factory()->create();
+
+        app(AuditLogger::class)->recordSystem(
+            action: AuditLog::WEBHOOK_PAYMENT_CONFIRMED,
+            summary: 'Payment confirmed',
+            companyId: $company->id,
+        );
+
+        $log = AuditLog::query()->latest('id')->firstOrFail();
+
+        $this->assertSame(AuditLog::CHANNEL_SYSTEM, $log->channel);
+        $this->assertSame('System', $log->channelLabel());
+    }
+
+    public function test_channel_label_falls_back_to_unknown_for_legacy_rows(): void
+    {
+        $company = Company::factory()->create();
+
+        // Rows written before the channel column carry NULL.
+        $log = AuditLog::factory()->for($company)->create(['channel' => null]);
+
+        $this->assertSame('Unknown', $log->channelLabel());
+    }
+
     // ---- Write-site hooks ----------------------------------------------------
 
     public function test_impersonation_start_and_stop_are_recorded(): void
@@ -161,7 +230,7 @@ class AuditLogTest extends TestCase
         [$order] = $this->confirmedOrder($company);
 
         $email = $order->customer_email;
-        $token = \App\Http\Controllers\CustomerController::tokenFor($email);
+        $token = CustomerController::tokenFor($email);
 
         $this->actingAs($owner)
             ->post("/dashboard/customers/{$token}/export")

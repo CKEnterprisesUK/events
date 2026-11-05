@@ -27,6 +27,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $actor_user_id
  * @property string|null $actor_label
  * @property string $actor_type
+ * @property string|null $channel
  * @property bool $is_impersonated
  * @property int|null $impersonator_user_id
  * @property string $action
@@ -57,6 +58,29 @@ class AuditLog extends Model
     public const ACTOR_SYSTEM = 'system';
 
     public const ACTOR_CUSTOMER = 'customer';
+
+    // ---- Channels (the surface the action was taken on) ----------------------
+
+    /** The native iOS scanner app (a Sanctum-authenticated `/api/*` request). */
+    public const CHANNEL_APP = 'app';
+
+    /** The web dashboard (a session-authenticated request). */
+    public const CHANNEL_WEB = 'web';
+
+    /** A server-side event with no request surface (webhook/queue). */
+    public const CHANNEL_SYSTEM = 'system';
+
+    /**
+     * Human labels for the channels. Rows written before the `channel` column
+     * existed have a NULL channel and fall back to "Unknown" in the UI.
+     *
+     * @var array<string, string>
+     */
+    public const CHANNEL_LABELS = [
+        self::CHANNEL_APP => 'App',
+        self::CHANNEL_WEB => 'Web',
+        self::CHANNEL_SYSTEM => 'System',
+    ];
 
     // ---- Categories (for grouping/filtering in the UI) -----------------------
 
@@ -121,7 +145,9 @@ class AuditLog extends Model
     public const RESERVED_SLUG_ADDED = 'reserved_slug.added';
 
     public const RESERVED_SLUG_REMOVED = 'reserved_slug.removed';
+
     public const REFERRAL_CODE_CREATED = 'referral_code.created';
+
     public const REFERRAL_CODE_DELETED = 'referral_code.deleted';
 
     public const OWNER_TRANSFERRED = 'owner.transferred';
@@ -160,6 +186,10 @@ class AuditLog extends Model
     public const MAIL_TRANSPORT_CHANGED = 'mail.transport_changed';
 
     public const ANNOUNCEMENT_SENT = 'announcement.sent';
+
+    public const PRE_EVENT_INFO_SENT = 'templated_email.pre_event_info_sent';
+
+    public const SALES_REPORT_EMAIL_SENT = 'templated_email.sales_report_sent';
 
     public const STRIPE_CREDENTIALS_CHECKED = 'stripe.credentials_checked';
 
@@ -265,6 +295,8 @@ class AuditLog extends Model
         self::STRIPE_FEE_ESTIMATE_CHANGED => ['category' => self::CATEGORY_MONEY, 'label' => 'Changed the Stripe fee estimate'],
         self::MAIL_TRANSPORT_CHANGED => ['category' => self::CATEGORY_SYSTEM, 'label' => 'Changed the mail transport'],
         self::ANNOUNCEMENT_SENT => ['category' => self::CATEGORY_SYSTEM, 'label' => 'Sent a platform announcement'],
+        self::PRE_EVENT_INFO_SENT => ['category' => self::CATEGORY_SYSTEM, 'label' => 'Sent pre-event information'],
+        self::SALES_REPORT_EMAIL_SENT => ['category' => self::CATEGORY_SYSTEM, 'label' => 'Emailed an event sales report'],
         self::STRIPE_CREDENTIALS_CHECKED => ['category' => self::CATEGORY_SYSTEM, 'label' => 'Checked Stripe credentials'],
         self::STRIPE_ONBOARDING_STARTED => ['category' => self::CATEGORY_MONEY, 'label' => 'Started Stripe onboarding'],
         self::STRIPE_CHARGES_ENABLED_CHANGED => ['category' => self::CATEGORY_MONEY, 'label' => 'Stripe charges status changed'],
@@ -316,6 +348,7 @@ class AuditLog extends Model
         'actor_user_id',
         'actor_label',
         'actor_type',
+        'channel',
         'is_impersonated',
         'impersonator_user_id',
         'action',
@@ -362,6 +395,15 @@ class AuditLog extends Model
     public function actionLabel(): string
     {
         return self::ACTIONS[$this->action]['label'] ?? $this->action;
+    }
+
+    /**
+     * The human label for this row's origin surface (App / Web / System), or
+     * "Unknown" for rows written before the channel was recorded.
+     */
+    public function channelLabel(): string
+    {
+        return self::CHANNEL_LABELS[$this->channel] ?? 'Unknown';
     }
 
     /**

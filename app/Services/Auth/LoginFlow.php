@@ -100,8 +100,14 @@ class LoginFlow
 
         $request->session()->regenerate();
 
-        // Reset the idle-timeout window at sign-in. (Requirement 3.11)
-        Auth::user()->forceFill(['last_activity_at' => now()])->save();
+        // Reset the idle-timeout window at sign-in (Requirement 3.11) and
+        // record the sign-in itself. `last_login_at` is stamped only here, so —
+        // unlike `last_activity_at`, which SessionTimeout refreshes on every
+        // authenticated request — it reflects the moment of the actual login.
+        Auth::user()->forceFill([
+            'last_activity_at' => now(),
+            'last_login_at' => now(),
+        ])->save();
 
         $this->audit->record(
             action: AuditLog::AUTH_LOGIN_SUCCEEDED,

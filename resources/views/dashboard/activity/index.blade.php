@@ -11,6 +11,11 @@
     .filter-bar label { display: block; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 0.25rem; }
     .pager { display: flex; justify-content: center; padding: 1rem; }
     .badge-staff { display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 0.1rem 0.45rem; border-radius: 0.4rem; background: #fde68a; color: #713f12; margin-left: 0.4rem; }
+    .badge-source { display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 0.1rem 0.45rem; border-radius: 0.4rem; margin-left: 0.4rem; }
+    .badge-source.source-app { background: #dbeafe; color: #1e3a8a; }
+    .badge-source.source-web { background: #dcfce7; color: #14532d; }
+    .badge-source.source-system { background: #e5e7eb; color: #374151; }
+    .badge-source.source-unknown { background: #f3f4f6; color: #6b7280; }
     .audit-cat { display: inline-block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
     .audit-when { white-space: nowrap; }
     .audit-context { margin: 0.35rem 0 0; padding: 0; list-style: none; font-size: 0.82rem; color: var(--muted); }
@@ -27,8 +32,9 @@
     <p class="muted">
         A record of important actions taken on your account — orders cancelled or
         refunded, complimentary tickets issued, events published, team and settings
-        changes, and data requests. Actions performed by CK support staff on your
-        behalf are flagged.
+        changes, and data requests. Each row shows its source — whether it was
+        done in the scanner app or on the web. Actions performed by CK support
+        staff on your behalf are flagged.
     </p>
 
     <form method="GET" action="{{ route('dashboard.activity.index') }}" class="filter-bar">
@@ -47,6 +53,15 @@
                 <option value="">Any</option>
                 @foreach ($actionOptions as $value => $label)
                     <option value="{{ $value }}" @selected($filters['action'] === $value)>{{ $label }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="field">
+            <label for="channel">Source</label>
+            <select name="channel" id="channel">
+                <option value="">Any</option>
+                @foreach ($channelOptions as $value => $label)
+                    <option value="{{ $value }}" @selected($filters['channel'] === $value)>{{ $label }}</option>
                 @endforeach
             </select>
         </div>
@@ -75,6 +90,7 @@
                     <tr>
                         <th scope="col">When</th>
                         <th scope="col">Who</th>
+                        <th scope="col">Source</th>
                         <th scope="col">Action</th>
                         <th scope="col">Details</th>
                     </tr>
@@ -90,6 +106,10 @@
                                 @if ($log->is_impersonated)
                                     <span class="badge-staff" title="Performed by CK support staff acting on your account">CK staff</span>
                                 @endif
+                            </td>
+                            <td>
+                                <span class="badge-source source-{{ $log->channel ?? 'unknown' }}"
+                                    title="Where this action was taken">{{ $log->channelLabel() }}</span>
                             </td>
                             <td>
                                 <span class="audit-cat">{{ \App\Models\AuditLog::CATEGORY_LABELS[$log->category()] ?? '' }}</span><br>

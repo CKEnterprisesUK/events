@@ -18,10 +18,9 @@
     .help-article { padding: 1.1rem 1.25rem; border-top: 1px solid var(--border); }
     .help-article:first-of-type { border-top: 0; }
     .help-article h3 { margin: 0 0 0.5rem; font-size: 1.05rem; }
-    .help-article p { margin: 0 0 0.6rem; max-width: 760px; line-height: 1.55; }
-    .help-article p:last-child { margin-bottom: 0; }
-    .help-article ul { margin: 0.4rem 0 0.6rem 1.1rem; max-width: 760px; line-height: 1.5; }
-    .help-article ul li { margin-bottom: 0.3rem; }
+    .help-article .prose { max-width: 760px; }
+    .help-article .prose > :first-child { margin-top: 0; }
+    .help-article .prose p:last-child { margin-bottom: 0; }
     .help-cta {
         display: flex; flex-wrap: wrap; align-items: center; gap: 1rem;
         justify-content: space-between;
@@ -34,6 +33,7 @@
     <div class="page-head">
         <h1>Help &amp; knowledge</h1>
         <div>
+            <a class="btn btn-outline" href="{{ route('help.index') }}" target="_blank" rel="noopener">Open public Help centre</a>
             <a class="btn" href="{{ route('dashboard.support.create') }}">Contact support</a>
         </div>
     </div>
@@ -44,36 +44,39 @@
         will help.
     </p>
 
-    <nav class="help-toc" aria-label="Help topics">
-        @foreach ($sections as $section)
-            <a href="#{{ $section['key'] }}">{{ $section['title'] }}</a>
-        @endforeach
-    </nav>
-
-    @foreach ($sections as $section)
-        <section class="panel help-section" id="{{ $section['key'] }}">
-            <div class="panel__head">
-                <h2>{{ $section['title'] }}</h2>
-                <p class="muted">{{ $section['summary'] }}</p>
+    @if ($categories->isEmpty())
+        <section class="panel help-section">
+            <div class="help-article">
+                <p class="muted">Our help articles are being prepared and will appear here shortly.</p>
             </div>
-
-            @foreach ($section['articles'] as $article)
-                <article class="help-article">
-                    <h3>{{ $article['title'] }}</h3>
-                    @foreach ($article['body'] as $paragraph)
-                        <p>{{ $paragraph }}</p>
-                    @endforeach
-                    @if (! empty($article['list']))
-                        <ul>
-                            @foreach ($article['list'] as $item)
-                                <li>{{ $item }}</li>
-                            @endforeach
-                        </ul>
-                    @endif
-                </article>
-            @endforeach
         </section>
-    @endforeach
+    @else
+        <nav class="help-toc" aria-label="Help topics">
+            @foreach ($categories as $category)
+                <a href="#{{ $category->slug }}">{{ $category->title }}</a>
+            @endforeach
+        </nav>
+
+        @foreach ($categories as $category)
+            <section class="panel help-section" id="{{ $category->slug }}">
+                <div class="panel__head">
+                    <h2>{{ $category->title }}</h2>
+                    @if (filled($category->summary))
+                        <p class="muted">{{ $category->summary }}</p>
+                    @endif
+                </div>
+
+                @foreach ($category->publishedArticles as $article)
+                    <article class="help-article">
+                        <h3>{{ $article->title }}</h3>
+                        <div class="prose">
+                            {!! Str::markdown($article->body, ['html_input' => 'escape', 'allow_unsafe_links' => false]) !!}
+                        </div>
+                    </article>
+                @endforeach
+            </section>
+        @endforeach
+    @endif
 
     <section class="panel help-section">
         <div class="help-article help-cta">
