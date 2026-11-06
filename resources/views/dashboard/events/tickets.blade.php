@@ -65,6 +65,14 @@
                 <button type="submit" class="btn">Save capacity</button>
             </div>
         </form>
+        @if (($heldInCheckout ?? 0) > 0)
+            <p class="hint">
+                <strong>{{ number_format($heldInCheckout) }}</strong>
+                {{ \Illuminate\Support\Str::plural('ticket', $heldInCheckout) }} currently held by customers in checkout.
+                Held tickets are taken out of the remaining count shown here until the payment completes or the hold expires,
+                so "remaining" can be slightly lower than capacity minus the tickets sold on your Dashboard and Reports.
+            </p>
+        @endif
         {{-- Advisory comparison of the overall ceiling vs the sum of ticket-type
              capacities. Non-blocking; explains which limit binds first. --}}
         @include('dashboard.events._capacity', ['capacity' => $capacity, 'event' => $event])

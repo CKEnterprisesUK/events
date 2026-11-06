@@ -51,7 +51,7 @@
         } elseif ($ticketType->isSharedPool()) {
             $remainingLabel = $eventRemaining === null
                 ? 'Shared pool · unlimited'
-                : number_format($eventRemaining) . ' shared';
+                : number_format($eventRemaining) . ' shared remaining';
         } else {
             $available = (int) $ticketType->availabilityFor($eventRemaining);
             $remainingLabel = number_format($available) . ' / ' . number_format((int) $ticketType->capacity);
