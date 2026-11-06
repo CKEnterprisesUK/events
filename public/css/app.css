@@ -2059,6 +2059,30 @@ body.nav-locked { overflow: hidden; }
     .panel > .data-table.only-desktop tbody { display: table; width: 100%; }
 }
 
+/* Admin surface tables (.admin-table / .admin-facts) sit directly in an
+   .admin-panel, which clips overflow. On phones, make them scroll sideways
+   inside the card instead of being cut off. */
+@media (max-width: 720px) {
+    .admin-panel > .admin-table,
+    .admin-panel > .admin-facts,
+    .panel > .admin-table,
+    .panel > .admin-facts {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .admin-panel > .admin-table thead,
+    .admin-panel > .admin-table tbody,
+    .admin-panel > .admin-facts thead,
+    .admin-panel > .admin-facts tbody,
+    .panel > .admin-table thead,
+    .panel > .admin-table tbody,
+    .panel > .admin-facts thead,
+    .panel > .admin-facts tbody { display: table; width: 100%; min-width: max-content; }
+    .admin-panel > .admin-table th,
+    .admin-panel > .admin-table td { white-space: nowrap; }
+}
+
 /* Generic key/value money table used on order/customer detail pages. */
 .money-table { width: 100%; border-collapse: collapse; }
 .money-table td { padding: 0.6rem 1.25rem; border-bottom: 1px solid var(--border); }

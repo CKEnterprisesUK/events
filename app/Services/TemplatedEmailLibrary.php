@@ -106,8 +106,6 @@ class TemplatedEmailLibrary
     private function preEventInfoBody(): string
     {
         return <<<'MD'
-        Hi {{name}},
-
         Your event is coming up, so here is a quick guide for {{company}} on getting your door team set up to scan tickets.
 
         ## 1. Invite your scanner staff
@@ -169,8 +167,8 @@ class TemplatedEmailLibrary
             : $utilisation.'% of capacity';
 
         $lines = [];
-        $lines[] = 'Hi {{name}},';
-        $lines[] = '';
+        // No greeting here: the announcement email view already opens with
+        // "Hi {recipient name}," so adding one would duplicate it.
         $lines[] = 'Here is the latest sales summary for **'.$event->name.'** ('.$when.').';
         $lines[] = '';
         $lines[] = '## Headline figures';

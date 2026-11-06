@@ -86,6 +86,24 @@
         </div>
     </div>
 
+    @php
+        $initialTab = 'overview';
+        if ($errors->has('legal_name') || $errors->has('organisation_type') || $errors->has('company_number') || $errors->has('charity_number')) {
+            $initialTab = 'registration';
+        } elseif ($errors->has('user_id') || $errors->has('name') || $errors->has('email') || $errors->has('role')) {
+            $initialTab = 'team';
+        }
+    @endphp
+    <div class="tabs" id="client-tabs" data-initial-tab="{{ $initialTab }}">
+        <div class="tab-list" role="tablist" aria-label="Client sections">
+            <button type="button" class="tab-btn" role="tab" id="tab-overview" aria-controls="panel-overview" data-tab="overview">Overview</button>
+            <button type="button" class="tab-btn" role="tab" id="tab-payments" aria-controls="panel-payments" data-tab="payments">Payments</button>
+            <button type="button" class="tab-btn" role="tab" id="tab-team" aria-controls="panel-team" data-tab="team">Team &amp; access</button>
+            <button type="button" class="tab-btn" role="tab" id="tab-activity" aria-controls="panel-activity" data-tab="activity">Events &amp; support</button>
+            <button type="button" class="tab-btn" role="tab" id="tab-registration" aria-controls="panel-registration" data-tab="registration">Registration</button>
+        </div>
+
+        <div class="tab-panel" role="tabpanel" id="panel-overview" aria-labelledby="tab-overview" data-tab-panel="overview" hidden>
     <div class="admin-panel">
         <div class="admin-panel__head"><h2>Profile</h2></div>
         <table class="admin-facts">
@@ -101,44 +119,6 @@
     </div>
 
     <div class="admin-panel">
-        <div class="admin-panel__head"><h2>Registration details</h2></div>
-        <div class="admin-panel__body">
-            <p class="muted" style="margin-bottom: 1rem;">
-                Only Super Admins can change these. The company can edit its trading name, but not these fields.
-            </p>
-            <form method="POST" action="{{ route('admin.companies.registration.update', $company) }}" class="user-actions__panel" style="max-width: 32rem;">
-                @csrf
-                @method('PUT')
-                <div class="field">
-                    <label for="reg-legal-name">Registered / legal name</label>
-                    <input type="text" id="reg-legal-name" name="legal_name" value="{{ old('legal_name', $company->legal_name) }}" required>
-                    @error('legal_name')<p class="status status--error" role="alert">{{ $message }}</p>@enderror
-                </div>
-                <div class="field">
-                    <label for="reg-org-type">Organisation type</label>
-                    <select id="reg-org-type" name="organisation_type" required>
-                        @foreach (\App\Models\Company::ORGANISATION_TYPES as $value => $label)
-                            <option value="{{ $value }}" @selected(old('organisation_type', $company->organisation_type) === $value)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                    @error('organisation_type')<p class="status status--error" role="alert">{{ $message }}</p>@enderror
-                </div>
-                <div class="field">
-                    <label for="reg-company-number">Companies House number</label>
-                    <input type="text" id="reg-company-number" name="company_number" value="{{ old('company_number', $company->company_number) }}">
-                    @error('company_number')<p class="status status--error" role="alert">{{ $message }}</p>@enderror
-                </div>
-                <div class="field">
-                    <label for="reg-charity-number">Charity Commission number</label>
-                    <input type="text" id="reg-charity-number" name="charity_number" value="{{ old('charity_number', $company->charity_number) }}">
-                    @error('charity_number')<p class="status status--error" role="alert">{{ $message }}</p>@enderror
-                </div>
-                <button type="submit" class="btn btn-sm">Save registration details</button>
-            </form>
-        </div>
-    </div>
-
-    <div class="admin-panel">
         <div class="admin-panel__head"><h2>Financials</h2></div>
         <table class="admin-facts">
             <tbody>
@@ -151,7 +131,9 @@
             </tbody>
         </table>
     </div>
+        </div>
 
+        <div class="tab-panel" role="tabpanel" id="panel-payments" aria-labelledby="tab-payments" data-tab-panel="payments" hidden>
     <div class="admin-panel">
         <div class="admin-panel__head"><h2>Payments (Stripe Connect)</h2></div>
         <table class="admin-facts">
@@ -252,7 +234,9 @@
             </div>
         @endif
     </div>
+        </div>
 
+        <div class="tab-panel" role="tabpanel" id="panel-team" aria-labelledby="tab-team" data-tab-panel="team" hidden>
     <div class="admin-panel">
         <div class="admin-panel__head"><h2>Owner &amp; access</h2></div>
         <div class="admin-panel__body">
@@ -439,7 +423,9 @@
             @endif
         </div>
     </div>
+        </div>
 
+        <div class="tab-panel" role="tabpanel" id="panel-activity" aria-labelledby="tab-activity" data-tab-panel="activity" hidden>
     <div class="admin-panel">
         <div class="admin-panel__head"><h2>Recent events</h2></div>
         @if ($recentEvents->isEmpty())
@@ -497,4 +483,81 @@
             </table>
         @endif
     </div>
+        </div>
+
+        <div class="tab-panel" role="tabpanel" id="panel-registration" aria-labelledby="tab-registration" data-tab-panel="registration" hidden>
+    <div class="admin-panel">
+        <div class="admin-panel__head"><h2>Registration details</h2></div>
+        <div class="admin-panel__body">
+            <p class="muted" style="margin-bottom: 1rem;">
+                Only Super Admins can change these. The company can edit its trading name, but not these fields.
+            </p>
+            <form method="POST" action="{{ route('admin.companies.registration.update', $company) }}" class="user-actions__panel" style="max-width: 32rem;">
+                @csrf
+                @method('PUT')
+                <div class="field">
+                    <label for="reg-legal-name">Registered / legal name</label>
+                    <input type="text" id="reg-legal-name" name="legal_name" value="{{ old('legal_name', $company->legal_name) }}" required>
+                    @error('legal_name')<p class="status status--error" role="alert">{{ $message }}</p>@enderror
+                </div>
+                <div class="field">
+                    <label for="reg-org-type">Organisation type</label>
+                    <select id="reg-org-type" name="organisation_type" required>
+                        @foreach (\App\Models\Company::ORGANISATION_TYPES as $value => $label)
+                            <option value="{{ $value }}" @selected(old('organisation_type', $company->organisation_type) === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    @error('organisation_type')<p class="status status--error" role="alert">{{ $message }}</p>@enderror
+                </div>
+                <div class="field">
+                    <label for="reg-company-number">Companies House number</label>
+                    <input type="text" id="reg-company-number" name="company_number" value="{{ old('company_number', $company->company_number) }}">
+                    @error('company_number')<p class="status status--error" role="alert">{{ $message }}</p>@enderror
+                </div>
+                <div class="field">
+                    <label for="reg-charity-number">Charity Commission number</label>
+                    <input type="text" id="reg-charity-number" name="charity_number" value="{{ old('charity_number', $company->charity_number) }}">
+                    @error('charity_number')<p class="status status--error" role="alert">{{ $message }}</p>@enderror
+                </div>
+                <button type="submit" class="btn btn-sm">Save registration details</button>
+            </form>
+        </div>
+    </div>
+        </div>
+
+    </div>
 @endsection
+
+@push('scripts')
+<script>
+(function () {
+    var root = document.getElementById('client-tabs');
+    if (!root) return;
+    var buttons = [].slice.call(root.querySelectorAll('[data-tab]'));
+    var panels = [].slice.call(root.querySelectorAll('[data-tab-panel]'));
+    var names = buttons.map(function (b) { return b.getAttribute('data-tab'); });
+    function activate(name, focus) {
+        buttons.forEach(function (b) {
+            var on = b.getAttribute('data-tab') === name;
+            b.setAttribute('aria-selected', String(on));
+            b.tabIndex = on ? 0 : -1;
+            if (on && focus) b.focus();
+        });
+        panels.forEach(function (p) { p.hidden = p.getAttribute('data-tab-panel') !== name; });
+        if (history.replaceState) history.replaceState(null, '', '#' + name);
+    }
+    buttons.forEach(function (b, i) {
+        b.addEventListener('click', function () { activate(b.getAttribute('data-tab')); });
+        b.addEventListener('keydown', function (e) {
+            var n = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1 : null;
+            if (n === null) return;
+            e.preventDefault();
+            activate(names[(n + names.length) % names.length], true);
+        });
+    });
+    var h = location.hash.replace('#', '');
+    var initial = root.getAttribute('data-initial-tab');
+    activate(names.indexOf(h) > -1 ? h : (names.indexOf(initial) > -1 ? initial : names[0]));
+})();
+</script>
+@endpush

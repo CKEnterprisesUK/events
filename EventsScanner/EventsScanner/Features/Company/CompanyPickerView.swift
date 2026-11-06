@@ -91,8 +91,19 @@ struct CompanyPickerView: View {
                         }
                         .disabled(model.isSelecting)
                     }
+                } else if model.memberships.isEmpty {
+                    // No memberships: nothing to auto-select, so don't spin forever.
+                    VStack(spacing: 12) {
+                        Text("No company found")
+                            .font(.headline)
+                        Text("Your account isn't linked to a company yet. Contact your administrator.")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding()
                 } else {
-                    // Single (or zero) membership: no list; the auto-select runs
+                    // Single membership: no list; the auto-select runs
                     // in `onAppear`.
                     VStack(spacing: 12) {
                         ProgressView()
