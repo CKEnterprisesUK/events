@@ -5,7 +5,7 @@
 --
 -- Purpose:
 --   Seed the public Knowledge Base with the standard product guidance: 7
---   sections (`help_categories`) and their 18 articles (`help_articles`). This
+--   sections (`help_categories`) and their 19 articles (`help_articles`). This
 --   is the raw-SQL counterpart of `Database\Seeders\HelpContentSeeder`, for
 --   applying the default content on shared cPanel hosting (no SSH / artisan) by
 --   pasting into phpMyAdmin.
@@ -132,7 +132,31 @@ INSERT INTO `help_articles` (`help_category_id`, `slug`, `title`, `body`, `is_pu
   ((SELECT `id` FROM `help_categories` WHERE `slug` = 'privacy'), 'exporting-or-deleting-a-customers-data', 'Exporting or deleting a customer''s data',
 'Open Customers, find the person, and use the export or anonymise tools. Export gives you a JSON copy of the personal data you hold on them. Anonymising removes their personal details while keeping the transactional records your accounts need. These tools are held by the Owner as the data controller.', 1, 1, NOW(), NOW()),
   ((SELECT `id` FROM `help_categories` WHERE `slug` = 'privacy'), 'downloading-your-own-account-data', 'Downloading your own account data',
-'From Your profile you can download a JSON copy of the personal data held on your own account at any time.', 1, 2, NOW(), NOW())
+'From Your profile you can download a JSON copy of the personal data held on your own account at any time.', 1, 2, NOW(), NOW()),
+  ((SELECT `id` FROM `help_categories` WHERE `slug` = 'privacy'), 'how-customer-data-retention-works', 'How customer data retention works',
+'To keep personal data no longer than you need it, customer names and email addresses are anonymised automatically once the retention period you choose has passed. This happens every night with no action from you.
+
+**Setting your retention period**
+Open your company settings and go to the Privacy & data tab. Enter the number of months to keep customer details after their last activity. The default is 24 months, the minimum is 6 months and the maximum is 1,200 months (100 years). Changes apply to future sweeps straight away.
+
+**When the clock starts**
+Retention is counted per customer, not per order, and starts from the later of:
+- the date of their most recent order, or
+- the date of the event, if they hold a live ticket for an event that has not happened yet.
+
+So someone who buys a ticket today for an event in two years is kept until two years from now plus your retention period, not from the purchase date. A customer is only anonymised once all of their orders have passed their dates, so a returning customer is never scrubbed part way through the relationship.
+
+**What counts as a live ticket**
+Paid, free, reserved and disputed orders for an event that is still to come and has not been cancelled. Cancelled, refunded, expired and voided orders do not extend retention, and neither do orders for a cancelled event. These run from the order date.
+
+**What is anonymised, and what is kept**
+The customer''s name and email are replaced with a placeholder on every order they placed with your company. Order references, amounts, fees, ticket and check-in records and refunds are always kept so your accounts, payouts and disputes still add up. Anonymised data cannot be recovered, so a ticket email can no longer be resent to that customer.
+
+**Checking a customer**
+Open Customers and select the person. The Data retention panel shows the date their details will be anonymised. Their data export also includes this date. If someone asks for their data to be removed sooner, use the Anonymise tool on the same page (Owners and Admins).
+
+**Your own records**
+Every automatic run is recorded in the activity log as "Auto-anonymised customer data past retention", showing how many orders were affected but never any personal details.', 1, 3, NOW(), NOW())
 ON DUPLICATE KEY UPDATE `title` = VALUES(`title`), `body` = VALUES(`body`), `is_published` = VALUES(`is_published`), `sort_order` = VALUES(`sort_order`), `updated_at` = NOW();
 
 -- Troubleshooting

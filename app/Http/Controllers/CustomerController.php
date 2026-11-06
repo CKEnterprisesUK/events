@@ -189,8 +189,10 @@ class CustomerController extends Controller
             // and the window itself, so the detail page states the retention
             // outcome explicitly.
             'retentionMonths' => $company->effectiveRetentionMonths(),
-            'retentionDeletionAt' => optional($orders->max('created_at'))
-                ->copy()
+            // Event-aware: a live order for an upcoming event runs the clock from
+            // the event date, exactly as the retention sweep does.
+            'retentionDeletionAt' => $this->gdpr->lastRelevantAt($orders)
+                ?->copy()
                 ->addMonths($company->effectiveRetentionMonths()),
         ]);
     }

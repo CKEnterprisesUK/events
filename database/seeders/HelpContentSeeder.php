@@ -243,6 +243,34 @@ class HelpContentSeeder extends Seeder
                         From Your profile you can download a JSON copy of the personal data held on your own account at any time.
                         MD,
                     ],
+                    [
+                        'title' => 'How customer data retention works',
+                        'body' => <<<'MD'
+                        To keep personal data no longer than you need it, customer names and email addresses are anonymised automatically once the retention period you choose has passed. This happens every night with no action from you.
+
+                        **Setting your retention period**
+                        Open your company settings and go to the Privacy & data tab. Enter the number of months to keep customer details after their last activity. The default is 24 months, the minimum is 6 months and the maximum is 1,200 months (100 years). Changes apply to future sweeps straight away.
+
+                        **When the clock starts**
+                        Retention is counted per customer, not per order, and starts from the later of:
+                        - the date of their most recent order, or
+                        - the date of the event, if they hold a live ticket for an event that has not happened yet.
+
+                        So someone who buys a ticket today for an event in two years is kept until two years from now plus your retention period, not from the purchase date. A customer is only anonymised once all of their orders have passed their dates, so a returning customer is never scrubbed part way through the relationship.
+
+                        **What counts as a live ticket**
+                        Paid, free, reserved and disputed orders for an event that is still to come and has not been cancelled. Cancelled, refunded, expired and voided orders do not extend retention, and neither do orders for a cancelled event. These run from the order date.
+
+                        **What is anonymised, and what is kept**
+                        The customer's name and email are replaced with a placeholder on every order they placed with your company. Order references, amounts, fees, ticket and check-in records and refunds are always kept so your accounts, payouts and disputes still add up. Anonymised data cannot be recovered, so a ticket email can no longer be resent to that customer.
+
+                        **Checking a customer**
+                        Open Customers and select the person. The Data retention panel shows the date their details will be anonymised. Their data export also includes this date. If someone asks for their data to be removed sooner, use the Anonymise tool on the same page (Owners and Admins).
+
+                        **Your own records**
+                        Every automatic run is recorded in the activity log as "Auto-anonymised customer data past retention", showing how many orders were affected but never any personal details.
+                        MD,
+                    ],
                 ],
             ],
             [

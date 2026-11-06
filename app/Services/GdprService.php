@@ -259,7 +259,7 @@ class GdprService
      *
      * @param  Collection<int, Order>  $orders
      */
-    private function lastRelevantAt($orders): ?Carbon
+    public function lastRelevantAt($orders): ?Carbon
     {
         if ($orders->isEmpty()) {
             return null;
