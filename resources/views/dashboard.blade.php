@@ -248,7 +248,7 @@
                     @if ($delta !== null)
                         @php $up = $delta >= 0; @endphp
                         <span class="trend {{ $up ? 'trend--up' : 'trend--down' }}"
-                              title="Compared with the previous {{ $chart['range_label'] }} ({{ $chartPrevious }}). The current {{ $chart['unit'] === 'month' ? 'month' : 'day' }} is still in progress.">
+                              title="Compared with the previous {{ $chart['range_label'] }} ({{ $chartPrevious }}).">
                             {{ $up ? '▲' : '▼' }} {{ number_format(abs($delta), 1) }}%
                             <span class="trend__note">vs previous {{ $chart['range_label'] }}</span>
                         </span>
