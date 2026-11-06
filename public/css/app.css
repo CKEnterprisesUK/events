@@ -1890,7 +1890,7 @@ fieldset.field > legend {
    Chart responsiveness (dashboard sales trend)
    ============================================================================= */
 .sales-chart { width: 100%; }
-.sales-chart svg { display: block; width: 100%; height: auto; }
+.sales-chart svg:not(.sales-chart__svg) { display: block; width: 100%; height: auto; }
 
 /* =============================================================================
    Form control sizing (consistent touch targets — WCAG 2.2)
@@ -2681,7 +2681,7 @@ body.pub-menu-open { overflow: hidden; }
 .app-shell .app-content .btn-sm { min-height: 30px; padding: 0 0.6rem; font-size: 0.8125rem; }
 
 /* ---- Links --------------------------------------------------------------- */
-.app-shell .app-content a:not(.btn):not(.nav-link):not(.pill):not(.cell-strong):not(.row-link) { color: var(--ck-brand); }
+.app-shell .app-content a:not(.btn):not(.nav-link):not(.pill):not(.cell-strong):not(.row-link):not(.seg__item) { color: var(--ck-brand); }
 .app-shell .app-content .panel__link { color: var(--ck-brand); font-weight: 500; }
 
 /* ---- Cards / panels: one hairline border + a whisper of elevation -------- */
