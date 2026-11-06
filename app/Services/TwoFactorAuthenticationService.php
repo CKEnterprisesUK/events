@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\User;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use PragmaRX\Google2FAQRCode\Google2FA;
 
@@ -56,7 +57,9 @@ class TwoFactorAuthenticationService
             return false;
         }
 
-        if (! $this->verifyTotp($user, $code)) {
+        // Enrolment confirmation is not a sign-in, so the code is not burned
+        // here; single-use applies to the login challenge.
+        if (! $this->verifyTotp($user, $code, singleUse: false)) {
             return false;
         }
 
@@ -86,7 +89,7 @@ class TwoFactorAuthenticationService
      * stripped so a "123 456" paste still validates. Returns false when the
      * user has no secret.
      */
-    public function verifyTotp(User $user, string $code): bool
+    public function verifyTotp(User $user, string $code, bool $singleUse = true): bool
     {
         if ($user->two_factor_secret === null) {
             return false;
@@ -94,7 +97,15 @@ class TwoFactorAuthenticationService
 
         $code = preg_replace('/\s+/', '', $code);
 
-        return $this->engine->verifyKey($user->two_factor_secret, (string) $code) !== false;
+        if ($this->engine->verifyKey($user->two_factor_secret, (string) $code) === false) {
+            return false;
+        }
+
+        // A code is single-use: once accepted it is remembered for longer than
+        // the TOTP validity window, so a shoulder-surfed or intercepted code
+        // cannot be replayed. Cache::add is atomic and fails if already present.
+        return ! $singleUse
+            || Cache::add('totp-used:'.$user->getKey().':'.$code, true, now()->addSeconds(120));
     }
 
     /**
@@ -151,7 +162,7 @@ class TwoFactorAuthenticationService
      * the exact string the QR image encodes; an authenticator app scanning it
      * adds the account. Returns null when there is no pending secret.
      *
-     * Rendered to an actual PNG by {@see \App\Services\QrService::png()} (via
+     * Rendered to an actual PNG by {@see QrService::png()} (via
      * the dedicated QR route) rather than an inline SVG data-URI, so the image
      * loads reliably across browsers and matches the rest of the app's QR
      * codes.

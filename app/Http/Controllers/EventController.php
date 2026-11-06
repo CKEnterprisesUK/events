@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\AuditLog;
 use App\Models\Event;
 use App\Models\Order;
+use App\Models\SupportRequest;
 use App\Models\TicketType;
+use App\Models\User;
 use App\Rules\SafeUpload;
 use App\Services\AuditLogger;
 use App\Services\BrandingImageStore;
@@ -14,8 +16,11 @@ use App\Services\EventReadiness;
 use App\Services\EventReportService;
 use App\Services\GeocodingService;
 use App\Services\QrService;
+use App\Services\Reporting\ReportInsights;
+use App\Services\Reporting\TicketMetrics;
 use App\Services\RoleAuthorization;
 use App\Services\StorefrontListing;
+use App\Services\SupportTicketCreator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -66,7 +71,7 @@ class EventController extends Controller
      */
     public function index(): View
     {
-        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+        Gate::authorize(RoleAuthorization::ACTION_VIEW_EVENTS);
 
         // Eager-load the Company so the listing's hero thumbnail can fall back
         // to the company poster (`$event->poster_path ?? $event->company->poster_path`)
@@ -159,7 +164,7 @@ class EventController extends Controller
      */
     public function show(Event $event): View
     {
-        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+        Gate::authorize(RoleAuthorization::ACTION_VIEW_EVENTS);
 
         // Overview screen: at-a-glance stats, capacity advisory and the
         // event-details edit form. Location/tickets/share/orders now each live
@@ -189,7 +194,7 @@ class EventController extends Controller
      */
     public function location(Event $event): View
     {
-        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+        Gate::authorize(RoleAuthorization::ACTION_VIEW_EVENTS);
 
         return view('dashboard.events.location', $this->sharedViewData($event));
     }
@@ -200,7 +205,7 @@ class EventController extends Controller
      */
     public function tickets(Event $event): View
     {
-        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+        Gate::authorize(RoleAuthorization::ACTION_VIEW_EVENTS);
 
         return view('dashboard.events.tickets', $this->sharedViewData($event) + [
             'ticketTypes' => $event->ticketTypes()->latest()->get(),
@@ -231,7 +236,7 @@ class EventController extends Controller
      */
     public function orders(Event $event): View
     {
-        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+        Gate::authorize(RoleAuthorization::ACTION_VIEW_EVENTS);
 
         return view('dashboard.events.orders', $this->sharedViewData($event) + [
             'recentOrders' => $event->orders()->latest()->limit(25)->get(),
@@ -252,7 +257,7 @@ class EventController extends Controller
      */
     public function history(Event $event): View
     {
-        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+        Gate::authorize(RoleAuthorization::ACTION_VIEW_EVENTS);
 
         $logs = AuditLog::query()
             ->with(['actor', 'impersonator'])
@@ -339,11 +344,18 @@ class EventController extends Controller
             ->get()
             ->keyBy('event_id');
 
+        // Sold comes from the shared TicketMetrics definition (valid tickets on
+        // confirmed orders) so it matches the dashboard KPI exactly.
+        $ticketsByEvent = [];
+        foreach ($events->groupBy('company_id') as $companyId => $companyEvents) {
+            $ticketsByEvent += app(TicketMetrics::class)->forEvents((int) $companyId, $companyEvents->pluck('id')->all());
+        }
+
         foreach ($events as $event) {
             $event->confirmed_orders_count = (int) ($confirmedByEvent[$event->id] ?? 0);
             $agg = $soldByEvent->get($event->id);
             $event->sell_through = $event->sellThrough(
-                (int) ($agg->sold ?? 0),
+                $ticketsByEvent[$event->id]->sold ?? 0,
                 (int) ($agg->capped_capacity ?? 0),
             );
         }
@@ -558,6 +570,24 @@ class EventController extends Controller
     }
 
     /**
+     * The Cancel / Delete screen. Deliberately a page of its own rather than a
+     * prominent top-bar button: it explains what cancelling does and how to
+     * refund customers before offering the (confirmed) action. An Event with
+     * bookings can only be cancelled; one without can only be deleted, so the
+     * page shows whichever applies.
+     */
+    public function cancellation(Event $event, ReportInsights $insights): View
+    {
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+
+        return view('dashboard.events.cancellation', $this->sharedViewData($event) + [
+            'hasBookings' => $event->hasBookings(),
+            'report' => $this->reports->for($event),
+            'refunds' => $insights->refunds(null, null, (int) $event->getKey()),
+        ]);
+    }
+
+    /**
      * Cancel an Event that has taken bookings. Cancellation (rather than
      * deletion) is the only option once confirmed bookings exist: the Order
      * records must survive so customers can be contacted and refunds arranged
@@ -568,7 +598,7 @@ class EventController extends Controller
      * bookings — that Event should be deleted via destroy() instead, so the two
      * actions never overlap. (Deletion vs. cancellation rule.)
      */
-    public function cancel(Event $event): RedirectResponse
+    public function cancel(Request $request, Event $event, SupportTicketCreator $tickets): RedirectResponse
     {
         Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
 
@@ -577,6 +607,14 @@ class EventController extends Controller
                 ->route('dashboard.events.show', $event)
                 ->with('status', 'This event has no bookings — delete it instead of cancelling.');
         }
+
+        $data = $request->validate([
+            'note' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        // Only a first-time cancellation raises the refund ticket, so
+        // re-posting to an already-cancelled event can't spam support.
+        $firstCancellation = ! $event->isCancelled();
 
         $event->cancel();
 
@@ -590,9 +628,49 @@ class EventController extends Controller
         // storefront listing cache.
         $this->storefrontListing->forget($event->company);
 
+        if ($firstCancellation) {
+            $this->raiseRefundTicket($tickets, $event, $request->user(), $data['note'] ?? null);
+        }
+
         return redirect()
             ->route('dashboard.events.show', $event)
-            ->with('status', 'Event cancelled. Contact your affected customers and arrange any refunds through support — their full list is in Customers.');
+            ->with('status', 'Event cancelled. We’ve sent a request to our support team to arrange refunds for your customers, and they’ll be in touch by email.');
+    }
+
+    /**
+     * Open a support ticket (which also emails the support inbox) so the team
+     * can arrange bulk refunds for a cancelled event. The message carries the
+     * figures an operator needs to start without asking the organiser again.
+     */
+    private function raiseRefundTicket(SupportTicketCreator $tickets, Event $event, ?User $user, ?string $note): void
+    {
+        $report = $this->reports->for($event);
+        $currency = $event->company->currency ?? 'GBP';
+
+        $lines = [
+            'The organiser has cancelled this event and needs refunds arranging for their customers.',
+            '',
+            'Event: '.$event->name.' (ID '.$event->getKey().')',
+            'Event date: '.($event->starts_at?->format('j M Y, H:i') ?? 'not set'),
+            'Confirmed orders: '.$report->confirmedOrders,
+            'Tickets sold: '.$report->ticketsSold,
+            'Collected: '.number_format($report->grossRevenueMinor / 100, 2).' '.$currency,
+            'Orders: '.route('dashboard.orders.index', ['event' => $event->getKey(), 'status' => 'paid']),
+        ];
+
+        if ($note !== null && trim($note) !== '') {
+            $lines[] = '';
+            $lines[] = 'Note from the organiser:';
+            $lines[] = trim($note);
+        }
+
+        $tickets->raise(
+            company: $event->company,
+            user: $user,
+            category: SupportRequest::CATEGORY_ORDERS,
+            subject: 'Refunds needed: "'.$event->name.'" cancelled',
+            message: implode("\n", $lines),
+        );
     }
 
     /**

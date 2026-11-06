@@ -11,6 +11,7 @@ use App\Services\EventReadiness;
 use App\Services\EventReportService;
 use App\Services\Reporting\ReportDateRange;
 use App\Services\RoleAuthorization;
+use App\Support\Csv;
 use App\Support\PlatformBrand;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
@@ -160,7 +161,7 @@ class EventQuestionController extends Controller
             foreach ($questions as $question) {
                 $header[] = $question->label;
             }
-            fputcsv($out, $header);
+            Csv::put($out, $header);
 
             foreach ($orders as $order) {
                 // Index this order's answers by question id for a quick lookup.
@@ -178,12 +179,12 @@ class EventQuestionController extends Controller
                     $row[] = $answer?->answer ?? '';
                 }
 
-                fputcsv($out, $row);
+                Csv::put($out, $row);
             }
 
             // Platform attribution footer.
-            fputcsv($out, []);
-            fputcsv($out, [PlatformBrand::line()]);
+            Csv::put($out, []);
+            Csv::put($out, [PlatformBrand::line()]);
 
             fclose($out);
         }, $filename, [

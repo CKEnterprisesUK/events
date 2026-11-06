@@ -48,6 +48,7 @@ class RolePermissionMatrixTest extends PbtTestCase
             // plus everything delegated to Admin/Accountant/Scanner).
             User::ROLE_OWNER => RoleAuthorization::actions(),
             User::ROLE_ADMIN => [
+                RoleAuthorization::ACTION_VIEW_EVENTS,
                 RoleAuthorization::ACTION_MANAGE_EVENTS,
                 RoleAuthorization::ACTION_MANAGE_TICKET_TYPES,
                 RoleAuthorization::ACTION_MANAGE_ORDERS,
@@ -66,14 +67,11 @@ class RolePermissionMatrixTest extends PbtTestCase
                 // connected account (fee handling) stays Owner-only.
                 RoleAuthorization::ACTION_SETUP_STRIPE,
             ],
-            // Box_Office is a cut-down Admin: the operational set plus check-in,
-            // with no reports, company-settings, GDPR, or check-in reset access.
+            // Box_Office is read-mostly: view events, view/resend orders, comps
+            // and check-in. No event/price edits, cancellations or refunds.
             User::ROLE_BOX_OFFICE => [
-                RoleAuthorization::ACTION_MANAGE_EVENTS,
-                RoleAuthorization::ACTION_MANAGE_TICKET_TYPES,
+                RoleAuthorization::ACTION_VIEW_EVENTS,
                 RoleAuthorization::ACTION_MANAGE_ORDERS,
-                RoleAuthorization::ACTION_CANCEL_ORDER,
-                RoleAuthorization::ACTION_REFUND_ORDER,
                 RoleAuthorization::ACTION_ISSUE_COMP,
                 RoleAuthorization::ACTION_CHECK_IN,
             ],

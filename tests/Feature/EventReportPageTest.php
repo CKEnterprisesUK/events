@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\Ticket;
 use App\Models\TicketType;
 use App\Models\User;
+use App\Services\Reporting\EventReport;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\View;
 use Tests\TestCase;
@@ -138,7 +139,7 @@ class EventReportPageTest extends TestCase
         // produces against them.
         $response->assertViewHas('report');
         $report = $response->viewData('report');
-        $this->assertInstanceOf(\App\Services\Reporting\EventReport::class, $report);
+        $this->assertInstanceOf(EventReport::class, $report);
 
         // One confirmed paid order, two valid tickets, £50.00 gross, less the
         // £3.00 application fee = £47.00 net. (Req 6.2, 6.6)
@@ -239,5 +240,23 @@ class EventReportPageTest extends TestCase
                 ->{$verb}(route('dashboard.events.report', $event))
                 ->assertStatus(405);
         }
+    }
+
+    // ---- Analytics additions ------------------------------------------------
+
+    public function test_event_report_shows_refund_amount_sell_through_and_live_link(): void
+    {
+        $accountant = User::factory()->accountant()->create();
+        $company = Company::find($accountant->company_id);
+        [$event] = $this->eventWithConfirmedSales($company);
+        $event->orders()->first()->forceFill(['refunded_total_minor' => 1_500])->save();
+
+        $response = $this->actingAs($accountant)->get(route('dashboard.events.report', $event));
+
+        $response->assertOk();
+        $this->assertSame(1_500, $response->viewData('refunds')['amount_minor']);
+        $response->assertSee('Revenue per order');
+        $response->assertSee('Sell-through');
+        $response->assertSee(route('dashboard.events.live', $event), false);
     }
 }

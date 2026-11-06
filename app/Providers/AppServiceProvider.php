@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\Auth\LoginFlow;
 use App\Services\Branding\BrandingResolver;
 use App\Services\CronRuns;
 use App\Services\Mail\FakeRefundMailer;
@@ -334,15 +335,35 @@ class AppServiceProvider extends ServiceProvider
         // TOTP submission on the API two-factor endpoint. Keyed per email+IP so
         // code guessing against one account is capped without one IP locking
         // out every account. (Requirement 15.1)
-        RateLimiter::for('2fa', function (Request $request) use ($unlimited): Limit {
+        RateLimiter::for('2fa', function (Request $request) use ($unlimited): Limit|array {
             if ($unlimited) {
                 return Limit::none();
             }
 
             $email = Str::lower((string) $request->input('email'));
+            $perMinute = (int) config('api.throttle.2fa');
+
+            // Two ceilings: per email+IP, plus a looser per-account cap so
+            // guessing spread across many IPs still hits a wall.
+            return [
+                Limit::perMinute($perMinute)->by($email.'|'.$request->ip()),
+                Limit::perMinute($perMinute * 3)->by('2fa-account|'.$email),
+            ];
+        });
+
+        // TOTP / recovery-code submission on the WEB two-factor challenge. The
+        // challenge form carries no email, so it is keyed on the user held
+        // "pending two-factor" in the session. That caps guessing per account
+        // (not per shared IP, which would lock out a whole office).
+        RateLimiter::for('two-factor-web', function (Request $request) use ($unlimited): Limit {
+            if ($unlimited) {
+                return Limit::none();
+            }
+
+            $pending = $request->hasSession() ? $request->session()->get(LoginFlow::PENDING_USER) : null;
 
             return Limit::perMinute((int) config('api.throttle.2fa'))
-                ->by($email.'|'.$request->ip());
+                ->by($pending !== null ? 'two-factor-user|'.$pending : 'two-factor-ip|'.$request->ip());
         });
 
         // Check-in submission on the API scan endpoint. Keyed per authenticated

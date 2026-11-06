@@ -19,9 +19,10 @@ use App\Models\User;
  *                  management, and Stripe Connect *setup* (getting the account
  *                  connected) — but NOT ongoing Stripe management (fee handling)
  *                  or billing, which stay Owner-only
- *   - Box_Office:  manage Events, Ticket_Types, Orders (incl. cancel/refund/comp)
- *                  and check attendees in — a cut-down Admin with no reports,
- *                  Company settings, GDPR access or check-in reset
+ *   - Box_Office:  view Events, view/search/resend Orders, issue comps and check
+ *                  attendees in — but no event editing, ticket price changes,
+ *                  cancellations or refunds, and no reports, Company settings,
+ *                  GDPR access or check-in reset
  *   - Accountant:  read-only reports/payouts, plus order management and
  *                  cancel/refund handling
  *   - Scanner:     check-in only
@@ -54,6 +55,10 @@ class RoleAuthorization
     public const ACTION_MANAGE_SETTINGS = 'settings';
 
     public const ACTION_MANAGE_USERS = 'users';
+
+    // Read-only access to events, ticket availability and prices. Held by the
+    // Owner, Admin and Box_Office. Editing is ACTION_MANAGE_EVENTS (Owner/Admin).
+    public const ACTION_VIEW_EVENTS = 'view_events';
 
     // Admin actions (event/ticket/order management including money operations).
     public const ACTION_MANAGE_EVENTS = 'events';
@@ -109,6 +114,7 @@ class RoleAuthorization
             self::ACTION_MANAGE_USERS,
         ],
         User::ROLE_ADMIN => [
+            self::ACTION_VIEW_EVENTS,
             self::ACTION_MANAGE_EVENTS,
             self::ACTION_MANAGE_TICKET_TYPES,
             self::ACTION_MANAGE_ORDERS,
@@ -129,16 +135,15 @@ class RoleAuthorization
             // via ACTION_MANAGE_STRIPE.
             self::ACTION_SETUP_STRIPE,
         ],
-        // Box_Office is a cut-down Admin: it runs the box office (events,
-        // ticket types, orders incl. cancel/refund/comp) and checks attendees
-        // in, but is NOT trusted with reports, Company settings, users, Stripe,
-        // billing, GDPR handling, or resetting check-ins.
+        // Box_Office is a read-mostly door role: it can VIEW events and ticket
+        // availability/prices, search and view orders and attendees, resend
+        // tickets, issue complimentary tickets and check attendees in. It
+        // cannot edit events (dates, venue, publish), change ticket prices,
+        // cancel orders/tickets, process refunds, or touch reports, Company
+        // settings, users, Stripe, billing, GDPR handling or check-in resets.
         User::ROLE_BOX_OFFICE => [
-            self::ACTION_MANAGE_EVENTS,
-            self::ACTION_MANAGE_TICKET_TYPES,
+            self::ACTION_VIEW_EVENTS,
             self::ACTION_MANAGE_ORDERS,
-            self::ACTION_CANCEL_ORDER,
-            self::ACTION_REFUND_ORDER,
             self::ACTION_ISSUE_COMP,
             self::ACTION_CHECK_IN,
         ],
@@ -217,6 +222,7 @@ class RoleAuthorization
     public function capabilityMatrix(): array
     {
         $capabilities = [
+            'View events & ticket availability' => self::ACTION_VIEW_EVENTS,
             'Manage events' => self::ACTION_MANAGE_EVENTS,
             'Manage ticket types' => self::ACTION_MANAGE_TICKET_TYPES,
             'Manage orders' => self::ACTION_MANAGE_ORDERS,

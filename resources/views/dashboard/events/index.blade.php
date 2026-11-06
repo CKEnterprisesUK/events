@@ -53,7 +53,9 @@
             <p class="page-header__desc">Create and manage your organisation's events.</p>
         </div>
         <div class="page-header__actions">
-            <a class="btn" href="{{ route('dashboard.events.create') }}">New event</a>
+            @can('events')
+                <a class="btn" href="{{ route('dashboard.events.create') }}">New event</a>
+            @endcan
         </div>
     </div>
 
@@ -65,8 +67,12 @@
         {{-- True empty state — no fake dashboard content to fill the canvas. --}}
         <div class="empty-state">
             <h2>No events yet</h2>
-            <p>Create your first event to start selling tickets.</p>
-            <a class="btn" href="{{ route('dashboard.events.create') }}">Create event</a>
+            @can('events')
+                <p>Create your first event to start selling tickets.</p>
+                <a class="btn" href="{{ route('dashboard.events.create') }}">Create event</a>
+            @else
+                <p>No events have been created for this organisation.</p>
+            @endcan
         </div>
     @else
         {{-- Client-side search + status filter. Genuinely functional (filters
@@ -159,10 +165,12 @@
                             <td class="num">
                                 <span class="row-actions">
                                     <a class="panel__link row-action" href="{{ route('dashboard.events.show', $event) }}">Manage</a>
-                                    <form method="POST" action="{{ route('dashboard.events.duplicate', $event) }}" class="row-action-form">
-                                        @csrf
-                                        <button type="submit" class="panel__link row-action row-action--muted">Duplicate</button>
-                                    </form>
+                                    @can('events')
+                                        <form method="POST" action="{{ route('dashboard.events.duplicate', $event) }}" class="row-action-form">
+                                            @csrf
+                                            <button type="submit" class="panel__link row-action row-action--muted">Duplicate</button>
+                                        </form>
+                                    @endcan
                                 </span>
                             </td>
                         </tr>
@@ -201,10 +209,12 @@
                     </div>
                     <div class="record-card__actions">
                         <a class="btn btn-outline btn-sm record-card__action" href="{{ route('dashboard.events.show', $event) }}">Manage</a>
-                        <form method="POST" action="{{ route('dashboard.events.duplicate', $event) }}">
-                            @csrf
-                            <button type="submit" class="btn btn-outline btn-sm record-card__action">Duplicate</button>
-                        </form>
+                        @can('events')
+                            <form method="POST" action="{{ route('dashboard.events.duplicate', $event) }}">
+                                @csrf
+                                <button type="submit" class="btn btn-outline btn-sm record-card__action">Duplicate</button>
+                            </form>
+                        @endcan
                     </div>
                 </div>
             @endforeach

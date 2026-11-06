@@ -7,6 +7,36 @@
 @section('active_section', 'tickets')
 
 @section('section')
+    @cannot('events')
+        {{-- Read-only view for roles that may see availability and prices but
+             not change them (e.g. Box_Office). --}}
+        @php
+            $symbols = ['GBP' => '£', 'USD' => '$', 'EUR' => '€'];
+            $currency = $event->company?->currency ?? auth()->user()->company?->currency ?? 'GBP';
+            $symbol = $symbols[$currency] ?? '';
+        @endphp
+        <div class="panel">
+            <div class="panel__head"><h2>Ticket availability</h2></div>
+            <table class="data-table">
+                <thead>
+                    <tr><th>Ticket</th><th>Price</th><th>Remaining</th></tr>
+                </thead>
+                <tbody>
+                    @forelse ($ticketTypes as $ticketType)
+                        @php $remaining = $ticketType->availabilityFor($eventRemaining); @endphp
+                        <tr>
+                            <td>{{ $ticketType->name }}</td>
+                            <td>{{ $ticketType->isFree() ? 'Free' : $symbol.number_format($ticketType->price_minor / 100, 2) }}</td>
+                            <td>{{ $remaining === null ? 'Unlimited' : $remaining }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="3">No ticket types yet.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    @endcannot
+    @can('events')
     {{-- Ticket types come first — the main job of this screen. The inline
          accordion (Req 6) replaces the old show/hide table; it derives its
          currency symbol and store/update/destroy routes itself, so it only
@@ -39,7 +69,7 @@
              capacities. Non-blocking; explains which limit binds first. --}}
         @include('dashboard.events._capacity', ['capacity' => $capacity, 'event' => $event])
     </div>
-
+    @endcan
     {{-- Comp issuance is a secondary, occasional action — clearly separated and
          placed last so it never competes with the primary ticket-type setup. --}}
     <p class="section-divider">Complimentary tickets</p>

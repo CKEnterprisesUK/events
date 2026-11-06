@@ -140,6 +140,7 @@ class ClientController extends Controller
             ->withoutGlobalScopes()
             ->where('company_id', $companyId)
             ->where('is_super_admin', false)
+            ->withAppAccess()
             ->orderBy('name')
             ->get();
 

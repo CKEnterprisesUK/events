@@ -2,11 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Mail\SupportRequestReceivedMail;
 use App\Models\Company;
 use App\Models\Event;
 use App\Models\Order;
+use App\Models\SupportRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 /**
@@ -139,5 +142,102 @@ class EventDeleteCancelTest extends TestCase
             ->assertNotFound();
 
         $this->assertDatabaseHas('events', ['id' => $foreign->id]);
+    }
+
+    public function test_cancellation_page_explains_the_support_refund_flow_for_an_event_with_bookings(): void
+    {
+        $company = Company::factory()->create();
+        $admin = $this->adminForCompany($company);
+        $event = Event::factory()->for($company)->create(['is_published' => true]);
+        Order::factory()->forEvent($event)->create(['status' => Order::STATUS_PAID]);
+
+        $this->actingAs($admin)
+            ->get(route('dashboard.events.cancellation', $event))
+            ->assertOk()
+            ->assertSee('support team')
+            ->assertSee(route('dashboard.events.cancel', $event), false)
+            ->assertDontSee(route('dashboard.events.destroy', $event), false);
+    }
+
+    public function test_cancellation_page_offers_delete_for_an_event_without_bookings(): void
+    {
+        $company = Company::factory()->create();
+        $admin = $this->adminForCompany($company);
+        $event = Event::factory()->for($company)->create();
+
+        $this->actingAs($admin)
+            ->get(route('dashboard.events.cancellation', $event))
+            ->assertOk()
+            ->assertSee(route('dashboard.events.destroy', $event), false)
+            ->assertDontSee('How to refund your customers');
+    }
+
+    public function test_cancel_is_no_longer_a_top_bar_button(): void
+    {
+        $company = Company::factory()->create();
+        $admin = $this->adminForCompany($company);
+        $event = Event::factory()->for($company)->create(['is_published' => true]);
+        Order::factory()->forEvent($event)->create(['status' => Order::STATUS_PAID]);
+
+        $this->actingAs($admin)
+            ->get(route('dashboard.events.show', $event))
+            ->assertOk()
+            ->assertDontSee('data-open-event-cancel', false)
+            ->assertSee(route('dashboard.events.cancellation', $event), false);
+    }
+
+    public function test_cancelling_raises_a_refund_ticket_and_emails_support_once(): void
+    {
+        Mail::fake();
+        config(['mail.support.address' => 'support@example.test']);
+
+        $company = Company::factory()->create();
+        $admin = $this->adminForCompany($company);
+        $event = Event::factory()->for($company)->create(['is_published' => true, 'name' => 'Bonfire']);
+        Order::factory()->forEvent($event)->create(['status' => Order::STATUS_PAID]);
+
+        $this->actingAs($admin)
+            ->post(route('dashboard.events.cancel', $event), ['note' => 'Refund everyone in full'])
+            ->assertRedirect(route('dashboard.events.show', $event));
+
+        $ticket = SupportRequest::withoutGlobalScopes()->where('company_id', $company->id)->sole();
+        $this->assertSame(SupportRequest::CATEGORY_ORDERS, $ticket->category);
+        $this->assertSame(SupportRequest::STATUS_OPEN, $ticket->status);
+        $this->assertStringContainsString('Bonfire', $ticket->subject);
+        $this->assertStringContainsString('Refund everyone in full', $ticket->message);
+        Mail::assertSent(SupportRequestReceivedMail::class, 1);
+
+        // Posting again to the already-cancelled event must not raise a second ticket.
+        $this->actingAs($admin)->post(route('dashboard.events.cancel', $event));
+
+        $this->assertSame(1, SupportRequest::withoutGlobalScopes()->where('company_id', $company->id)->count());
+    }
+
+    public function test_refused_cancellation_raises_no_ticket(): void
+    {
+        Mail::fake();
+
+        $company = Company::factory()->create();
+        $admin = $this->adminForCompany($company);
+        $event = Event::factory()->for($company)->create();
+
+        $this->actingAs($admin)->post(route('dashboard.events.cancel', $event));
+
+        $this->assertSame(0, SupportRequest::withoutGlobalScopes()->count());
+        Mail::assertNothingSent();
+    }
+
+    public function test_cancellation_page_no_longer_shows_refund_steps_and_offers_unpublish(): void
+    {
+        $company = Company::factory()->create();
+        $admin = $this->adminForCompany($company);
+        $event = Event::factory()->for($company)->create(['is_published' => true]);
+        Order::factory()->forEvent($event)->create(['status' => Order::STATUS_PAID]);
+
+        $this->actingAs($admin)
+            ->get(route('dashboard.events.cancellation', $event))
+            ->assertOk()
+            ->assertDontSee('How to refund your customers')
+            ->assertSee(route('dashboard.events.unpublish', $event), false);
     }
 }

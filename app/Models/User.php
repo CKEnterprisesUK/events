@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\HasApiTokens;
 
 /**
@@ -254,6 +255,23 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Adds `app_tokens_count`: the user's live (unexpired) API tokens, i.e. the
+     * number of app sessions that are currently signed in. Non-zero means the
+     * user has the app enabled.
+     *
+     * @param  Builder<User>  $query
+     * @return Builder<User>
+     */
+    public function scopeWithAppAccess(Builder $query): Builder
+    {
+        return $query->withCount(['tokens as app_tokens_count' => function ($q): void {
+            $q->where(function ($q): void {
+                $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
+            });
+        }]);
+    }
+
+    /**
      * Keep the `company_user` pivot (what the iOS API reads) in step with the
      * web-side `users.company_id` / `users.role`, which every create and role
      * change path writes. Without this, invited / newly registered users have no
@@ -261,6 +279,24 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     protected static function booted(): void
     {
+        // Sign the iOS app out whenever something that underpins its trust
+        // changes: the password, a Super_Admin disabling the account, the
+        // Company role (token abilities would be stale), or two-factor being
+        // switched off. The user simply signs in again. Without this a stolen
+        // token would outlive a password reset for its full lifetime.
+        static::updated(function (User $user): void {
+            $disabledNow = $user->wasChanged('disabled_at') && $user->disabled_at !== null;
+            $twoFactorOff = $user->wasChanged('two_factor_confirmed_at') && $user->two_factor_confirmed_at === null;
+
+            if ($user->wasChanged(['password', 'role']) || $disabledNow || $twoFactorOff) {
+                $user->tokens()->delete();
+            }
+        });
+
+        static::deleting(function (User $user): void {
+            $user->tokens()->delete();
+        });
+
         static::saved(function (User $user): void {
             if ($user->company_id === null || $user->role === null) {
                 return;
@@ -272,7 +308,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
             $now = now();
 
-            \Illuminate\Support\Facades\DB::table('company_user')->upsert(
+            DB::table('company_user')->upsert(
                 [[
                     'company_id' => $user->company_id,
                     'user_id' => $user->getKey(),

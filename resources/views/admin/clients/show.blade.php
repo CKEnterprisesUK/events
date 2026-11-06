@@ -19,6 +19,8 @@
     }
     .user-actions__row { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid var(--border); }
     .user-actions__row form { margin: 0; }
+    .admin-head .admin-head__actions { margin-left: auto; }
+    .client-logo { order: 3; height: 4rem; max-width: 12rem; width: auto; object-fit: contain; padding: 0.35rem 0.6rem; background: #fff; border: 1px solid var(--border); border-radius: 0.5rem; }
     .btn-sm { padding: 0.3rem 0.7rem; font-size: 0.82rem; }
 </style>
 @endpush
@@ -33,6 +35,11 @@
                 &nbsp;/{{ $company->slug }}
             </p>
         </div>
+        @if (filled($company->logo_path))
+            <img class="client-logo"
+                 src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($company->logo_path) }}"
+                 alt="{{ $company->name }} logo">
+        @endif
         <div class="admin-head__actions">
             @if (! $company->isSuspended())
                 <form method="POST" action="{{ route('admin.impersonate.start', $company) }}">
@@ -336,6 +343,7 @@
                             <th scope="col">Email</th>
                             <th scope="col">Role</th>
                             <th scope="col">Status</th>
+                            <th scope="col">iOS app</th>
                             <th scope="col"></th>
                         </tr>
                     </thead>
@@ -354,6 +362,17 @@
                                     <span class="admin-pill {{ $member->isDisabled() ? 'admin-pill--suspended' : 'admin-pill--active' }}">
                                         {{ $member->isDisabled() ? 'Disabled' : 'Active' }}
                                     </span>
+                                </td>
+                                <td>
+                                    @if ($member->app_tokens_count > 0)
+                                        <span class="admin-pill admin-pill--active">Enabled</span>
+                                        <form method="POST" action="{{ route('admin.users.app-access.revoke', $member->id) }}" style="display:inline;">
+                                            @csrf
+                                            <button type="submit" class="btn btn-outline btn-sm" onclick="return confirm('Revoke app access for {{ addslashes($member->email) }}? They will be signed out of the app on every device.');">Revoke</button>
+                                        </form>
+                                    @else
+                                        <span class="cell-dim">Not enabled</span>
+                                    @endif
                                 </td>
                                 <td>
                                     <details class="user-actions">

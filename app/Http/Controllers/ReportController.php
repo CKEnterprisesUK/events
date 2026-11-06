@@ -7,9 +7,11 @@ use App\Models\Order;
 use App\Models\Ticket;
 use App\Services\EventComparisonService;
 use App\Services\EventReportService;
+use App\Services\Reporting\ReportInsights;
 use App\Services\RoleAuthorization;
 use App\Services\SimpleXlsxWriter;
 use App\Services\TenantContext;
+use App\Support\Csv;
 use App\Support\PlatformBrand;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\View\View;
@@ -68,9 +70,27 @@ class ReportController extends Controller
      */
     private const CONFIRMED_STATUSES = EventReportService::CONFIRMED_STATUSES;
 
+    /**
+     * The report sections, in tab order. `sales` is the default.
+     *
+     * @var list<string>
+     */
+    private const TABS = ['sales', 'tickets', 'finance', 'attendance'];
+
+    /**
+     * @var array<string, string>
+     */
+    private const TAB_LABELS = [
+        'sales' => 'Sales & Revenue',
+        'tickets' => 'Ticket Performance',
+        'finance' => 'Finance & Payouts',
+        'attendance' => 'Attendance',
+    ];
+
     public function __construct(
         private readonly EventReportService $reports,
         private readonly TenantContext $tenantContext,
+        private readonly ReportInsights $insights,
     ) {}
 
     /**
@@ -108,18 +128,93 @@ class ReportController extends Controller
         $eventId = $request->query('event');
         $eventId = is_numeric($eventId) ? (int) $eventId : null;
 
-        $confirmedOrders = $this->confirmedOrders($from, $to, $eventId);
+        $tab = $request->query('tab');
+        $tab = in_array($tab, self::TABS, true) ? $tab : self::TABS[0];
 
-        return view('dashboard.reports.index', [
-            'totals' => $this->companyTotals($confirmedOrders),
+        $confirmedOrders = $this->confirmedOrders($from, $to, $eventId);
+        $totals = $this->companyTotals($confirmedOrders);
+
+        $data = [
+            'tab' => $tab,
+            'tabs' => self::TAB_LABELS,
+            'totals' => $totals,
             'perEvent' => $this->perEventBreakdown($confirmedOrders, $ranged),
             'salesTimeline' => $this->salesTimeline($confirmedOrders),
             'currency' => $this->currency(),
             'from' => $from?->toDateString(),
             'to' => $to?->toDateString(),
             'events' => $this->companyEvents(),
+            'eventOptions' => $this->eventOptions(),
             'eventId' => $eventId,
-        ]);
+            'averageOrderMinor' => $totals['orders'] > 0
+                ? intdiv($totals['gross_sales_minor'], $totals['orders'])
+                : 0,
+            'comparison' => null,
+            'ticketTypes' => [],
+            'refunds' => null,
+            'attendanceEvents' => collect(),
+        ];
+
+        // Only the active tab's extra analysis is computed.
+        if ($tab === 'sales') {
+            $data['comparison'] = $this->previousPeriodComparison($from, $to, $eventId, $totals);
+        } elseif ($tab === 'tickets') {
+            $data['ticketTypes'] = $this->insights->ticketTypeBreakdown($confirmedOrders, $eventId);
+        } elseif ($tab === 'finance') {
+            $data['refunds'] = $this->insights->refunds($from, $to, $eventId);
+        } elseif ($tab === 'attendance') {
+            $data['attendanceEvents'] = $this->insights->attendanceEvents($eventId);
+        }
+
+        return view('dashboard.reports.index', $data);
+    }
+
+    /**
+     * Compare the current period with the equally long one before it: headline
+     * deltas plus a day-for-day gross-sales overlay. Null for an open-ended
+     * range, where there is no meaningful previous period.
+     *
+     * @param  array<string, int>  $totals
+     * @return array{label:string, deltas:array<string, array{previous:int, change:?float}>, series:list<array{label:string, value:int}>, previous_series:list<array{label:string, value:int}>}|null
+     */
+    private function previousPeriodComparison(?Carbon $from, ?Carbon $to, ?int $eventId, array $totals): ?array
+    {
+        $period = $this->insights->previousPeriod($from, $to);
+
+        if ($period === null) {
+            return null;
+        }
+
+        [$previousFrom, $previousTo] = $period;
+
+        $previousOrders = $this->confirmedOrders($previousFrom, $previousTo, $eventId);
+        $previousTotals = $this->companyTotals($previousOrders);
+
+        $deltas = [];
+        foreach (['gross_sales_minor', 'orders', 'tickets_sold', 'net_payout_minor'] as $metric) {
+            $deltas[$metric] = [
+                'previous' => $previousTotals[$metric],
+                'change' => $this->insights->percentChange($totals[$metric], $previousTotals[$metric]),
+            ];
+        }
+
+        $current = $this->insights->dailyGross($this->confirmedOrders($from, $to, $eventId), $from, $to);
+        $previous = $this->insights->dailyGross($previousOrders, $previousFrom, $previousTo);
+
+        $series = [];
+        $previousSeries = [];
+        foreach ($current as $index => $value) {
+            $label = $from->copy()->addDays($index)->format('j M');
+            $series[] = ['label' => $label, 'value' => $value];
+            $previousSeries[] = ['label' => $label, 'value' => $previous[$index] ?? 0];
+        }
+
+        return [
+            'label' => $this->rangeLabel($previousFrom, $previousTo),
+            'deltas' => $deltas,
+            'series' => $series,
+            'previous_series' => $previousSeries,
+        ];
     }
 
     /**
@@ -213,11 +308,38 @@ class ReportController extends Controller
 
         return view('dashboard.reports.compare', [
             'events' => $this->companyEvents(),
+            'eventOptions' => $this->eventOptions(),
             'selected' => $events,
             'selectedIds' => $events->pluck('id')->all(),
             'comparison' => $events->count() >= 2 ? $comparison->compare($events) : null,
             'currency' => $this->currency(),
         ]);
+    }
+
+    /**
+     * Dropdown labels for the event pickers: the event name plus where it is in
+     * its life (Cancelled, Draft, Upcoming or Past) and its date, so an
+     * organiser can tell at a glance whether an event has already happened.
+     * Newest first, keyed id => label.
+     *
+     * @return Collection<int, string>
+     */
+    private function eventOptions()
+    {
+        return Event::query()
+            ->orderByDesc('id')
+            ->get(['id', 'name', 'starts_at', 'is_published', 'cancelled_at'])
+            ->mapWithKeys(function (Event $event): array {
+                $state = match (true) {
+                    $event->cancelled_at !== null => 'Cancelled',
+                    ! $event->is_published => 'Draft',
+                    $event->starts_at !== null && $event->starts_at->isPast() => 'Past',
+                    default => 'Upcoming',
+                };
+                $date = $event->starts_at?->format('j M Y');
+
+                return [$event->id => $event->name.' ('.$state.($date ? ', '.$date : '').')'];
+            });
     }
 
     /**
@@ -260,31 +382,31 @@ class ReportController extends Controller
             $out = fopen('php://output', 'wb');
 
             // Period the figures cover, so the exported file is self-describing.
-            fputcsv($out, ['Period', $rangeLabel]);
-            fputcsv($out, []);
+            Csv::put($out, ['Period', $rangeLabel]);
+            Csv::put($out, []);
 
             // Company totals block. Money columns are written in major units.
-            fputcsv($out, ['Company totals', 'Value ('.$currency.')']);
-            fputcsv($out, ['Confirmed orders', $totals['orders']]);
-            fputcsv($out, ['Tickets sold', $totals['tickets_sold']]);
-            fputcsv($out, ['Gross sales', $this->major($totals['gross_sales_minor'])]);
-            fputcsv($out, ['Booking fees collected', $this->major($totals['booking_fees_minor'])]);
-            fputcsv($out, ['Platform fees', $this->major($totals['application_fees_minor'])]);
-            fputcsv($out, ['Total collected', $this->major($totals['order_total_minor'])]);
-            fputcsv($out, ['Net after platform fee', $this->major($totals['net_to_company_minor'])]);
-            fputcsv($out, ['Stripe processing fees', $this->major($totals['stripe_fees_minor'])]);
-            fputcsv($out, ['Net payout to bank', $this->major($totals['net_payout_minor'])]);
+            Csv::put($out, ['Company totals', 'Value ('.$currency.')']);
+            Csv::put($out, ['Confirmed orders', $totals['orders']]);
+            Csv::put($out, ['Tickets sold', $totals['tickets_sold']]);
+            Csv::put($out, ['Gross sales', $this->major($totals['gross_sales_minor'])]);
+            Csv::put($out, ['Booking fees collected', $this->major($totals['booking_fees_minor'])]);
+            Csv::put($out, ['Platform fees', $this->major($totals['application_fees_minor'])]);
+            Csv::put($out, ['Total collected', $this->major($totals['order_total_minor'])]);
+            Csv::put($out, ['Net after platform fee', $this->major($totals['net_to_company_minor'])]);
+            Csv::put($out, ['Stripe processing fees', $this->major($totals['stripe_fees_minor'])]);
+            Csv::put($out, ['Net payout to bank', $this->major($totals['net_payout_minor'])]);
 
             // Blank separator, then the per-Event breakdown table.
-            fputcsv($out, []);
-            fputcsv($out, [
+            Csv::put($out, []);
+            Csv::put($out, [
                 'Event', 'Orders', 'Tickets sold', 'Gross sales', 'Booking fees',
                 'Platform fees', 'Total collected', 'Net after platform fee',
                 'Stripe fees', 'Net payout',
             ]);
 
             foreach ($perEvent as $row) {
-                fputcsv($out, [
+                Csv::put($out, [
                     $row['event_name'],
                     $row['orders'],
                     $row['tickets_sold'],
@@ -299,8 +421,8 @@ class ReportController extends Controller
             }
 
             // Platform attribution footer.
-            fputcsv($out, []);
-            fputcsv($out, [PlatformBrand::line()]);
+            Csv::put($out, []);
+            Csv::put($out, [PlatformBrand::line()]);
 
             fclose($out);
         }, $filename, [

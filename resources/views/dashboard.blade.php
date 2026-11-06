@@ -24,7 +24,7 @@
                 <p class="muted">{{ $company->name }}</p>
             @endif
         </div>
-        @can('events')
+        @can('view_events')
             <div class="dash-head__actions">
                 <a class="btn" href="{{ route('dashboard.events.index') }}">Manage events</a>
             </div>
@@ -83,7 +83,7 @@
             <div class="metric-card">
                 <span class="metric-card__label">Tickets sold</span>
                 <span class="metric-card__value">{{ number_format($stats['tickets_sold']) }}</span>
-                <span class="metric-card__sub">Valid, confirmed orders</span>
+                <span class="metric-card__sub">Valid tickets on confirmed orders</span>
             </div>
             <div class="metric-card">
                 <span class="metric-card__label">Confirmed orders</span>
@@ -103,64 +103,76 @@
         </div>
     @endif
 
-    {{-- Sales-over-time trend: last 30 days of gross sales, with an up/down
-         comparison against the preceding 30 days. Rendered as a dependency-free
-         inline SVG sparkline. Shown to users who can manage events. --}}
-    @if (!empty($salesChart) && $salesChart['max_minor'] > 0)
-        @can('events')
-            @php
-                $chart = $salesChart;
-                $points = $chart['points'];
-                $count = count($points);
-                $delta = $chart['delta_pct'];
-                // Shape the daily points for the shared line-chart partial, with
-                // money formatted in major units via the view's $money helper.
-                // Values stay in minor units so the $money formatter (which
-                // divides by 100 and adds the currency symbol) renders the axis
-                // and tooltips correctly.
-                $chartSeries = [[
-                    'name' => 'Gross sales',
-                    'color' => 'var(--brand)',
-                    'points' => array_map(fn ($p) => [
-                        'label' => $p['label'],
-                        'value' => $p['total_minor'],
-                    ], $points),
-                ]];
-            @endphp
-            <div class="panel">
+    {{-- Event-day operations: events starting within the next 24 hours or
+         already under way get a compact action panel, check-in progress and a
+         link to the full-screen live dashboard. --}}
+    @can('view_events')
+        @if ($operationalEvents->isNotEmpty())
+            <div class="panel ops-panel">
                 <div class="panel__head">
                     <div>
-                        <h2>Sales over the last 30 days</h2>
-                        <p class="muted">{{ $money($chart['current_total_minor']) }} in gross sales</p>
+                        <h2>Happening soon</h2>
+                        <p class="muted">Events starting within 24 hours, or under way now.</p>
                     </div>
-                    @if ($delta !== null)
-                        @php $up = $delta >= 0; @endphp
-                        <span class="trend {{ $up ? 'trend--up' : 'trend--down' }}"
-                              title="Compared with the previous 30 days ({{ $money($chart['previous_total_minor']) }})">
-                            {{ $up ? '▲' : '▼' }} {{ number_format(abs($delta), 1) }}%
-                            <span class="trend__note">vs prior 30 days</span>
-                        </span>
-                    @else
-                        <span class="trend trend--flat" title="No sales in the previous 30 days to compare against">
-                            New activity
-                        </span>
-                    @endif
                 </div>
-                <div class="chart-body">
-                    @include('dashboard.partials.line-chart', [
-                        'series' => $chartSeries,
-                        'formatY' => $money,
-                        'height' => 240,
-                        'yLabel' => 'gross sales',
-                    ])
-                </div>
+                @foreach ($operationalEvents as $event)
+                    @php
+                        $counts = $event->ticket_counts;
+                        $checkInPct = $counts->sold > 0 ? min(100, round($counts->checkedIn / $counts->sold * 100, 1)) : 0;
+                    @endphp
+                    <div class="ops-event">
+                        <div class="ops-event__info">
+                            <a class="cell-strong row-link" href="{{ route('dashboard.events.show', $event) }}">{{ $event->name }}</a>
+                            <span class="cell-dim">
+                                {{ $event->starts_at->format('D j M, H:i') }}
+                                &middot; {{ $event->doors_open ? 'Doors open' : $event->starts_at->diffForHumans() }}
+                            </span>
+                        </div>
+                        <div class="ops-event__progress">
+                            <div class="ops-event__figures">
+                                <strong>{{ number_format($counts->checkedIn) }}</strong>
+                                <span class="muted">of {{ number_format($counts->sold) }} checked in</span>
+                                <span class="ops-event__pct">{{ number_format($checkInPct, 1) }}%</span>
+                            </div>
+                            <span class="sell-through__bar ops-event__bar" role="img"
+                                  aria-label="{{ number_format($checkInPct, 1) }} percent checked in ({{ number_format($counts->checkedIn) }} of {{ number_format($counts->sold) }})">
+                                <span class="sell-through__fill" style="width: {{ $checkInPct }}%"></span>
+                            </span>
+                            <span class="cell-dim">{{ number_format($counts->awaitingCheckIn()) }} still to arrive</span>
+                        </div>
+                        <div class="ops-event__actions">
+                            <a class="btn btn-sm" href="{{ route('dashboard.events.orders', $event) }}">View orders</a>
+                            @can('check_in')
+                                <a class="btn btn-sm" href="{{ route('dashboard.scan.index') }}">Scan tickets</a>
+                            @endcan
+                            @can('view_reports')
+                                <a class="btn btn-sm" href="{{ route('dashboard.events.attendance', $event) }}">View attendees</a>
+                            @endcan
+                            <a class="btn btn-sm" href="{{ route('dashboard.events.show', $event) }}">Manage event</a>
+                            @can('view_reports')
+                                <a class="btn btn-sm btn--live" href="{{ route('dashboard.events.live', $event) }}">Live dashboard</a>
+                            @endcan
+                        </div>
+                    </div>
+                @endforeach
             </div>
-        @endcan
-    @endif
+        @endif
+    @endcan
 
     {{-- Upcoming events: soonest-first, the operationally urgent view. --}}
-    @can('events')
-        @if ($upcomingEvents->isNotEmpty())
+    @can('view_events')
+        @if ($upcomingEvents->isEmpty())
+            <div class="panel">
+                <div class="panel__head">
+                    <h2>Upcoming events</h2>
+                    <a class="panel__link" href="{{ route('dashboard.events.index') }}">View all</a>
+                </div>
+                <div class="empty">
+                    <p>{{ $stats && $stats['total_events'] > 0 ? 'You have no upcoming events.' : "You haven't created any events yet." }}</p>
+                    <a class="btn btn-sm" href="{{ route('dashboard.events.index') }}">{{ $stats && $stats['total_events'] > 0 ? 'Manage events' : 'Create your first event' }}</a>
+                </div>
+            </div>
+        @else
             <div class="panel">
                 <div class="panel__head">
                     <h2>Upcoming events</h2>
@@ -215,64 +227,66 @@
         @endif
     @endcan
 
-    @can('events')
-        <div class="panel">
-            <div class="panel__head">
-                <h2>Recently created</h2>
-                <a class="panel__link" href="{{ route('dashboard.events.index') }}">View all</a>
-            </div>
+    {{-- Sales trend: selectable window and metric, with a same-length previous
+         period overlaid for comparison and hover tooltips with exact figures. --}}
+    @if (!empty($salesChart))
+        @can('view_events')
+            @php
+                $chart = $salesChart;
+                $delta = $chart['delta_pct'];
+                $isTickets = $chart['metric'] === 'tickets';
+                $chartTotal = $isTickets ? number_format($chart['current_total']) . ' tickets sold' : $money($chart['current_total']) . ' in gross sales';
+                $chartPrevious = $isTickets ? number_format($chart['previous_total']) . ' tickets' : $money($chart['previous_total']);
+                $hasChartData = $chart['max_value'] > 0;
+            @endphp
+            <div class="panel">
+                <div class="panel__head panel__head--wrap">
+                    <div>
+                        <h2>{{ $isTickets ? 'Tickets sold' : 'Sales' }} over the last {{ $chart['range_label'] }}</h2>
+                        <p class="muted">{{ $chartTotal }}</p>
+                    </div>
+                    @if ($delta !== null)
+                        @php $up = $delta >= 0; @endphp
+                        <span class="trend {{ $up ? 'trend--up' : 'trend--down' }}"
+                              title="Compared with the previous {{ $chart['range_label'] }} ({{ $chartPrevious }}). The current {{ $chart['unit'] === 'month' ? 'month' : 'day' }} is still in progress.">
+                            {{ $up ? '▲' : '▼' }} {{ number_format(abs($delta), 1) }}%
+                            <span class="trend__note">vs previous {{ $chart['range_label'] }}</span>
+                        </span>
+                    @else
+                        <span class="trend trend--flat" title="Nothing recorded in the previous {{ $chart['range_label'] }} to compare against">
+                            New activity
+                        </span>
+                    @endif
+                </div>
 
-            @if ($recentEvents->isEmpty())
-                <div class="empty">
-                    <p>You haven't created any events yet.</p>
-                    <a class="btn btn-sm" href="{{ route('dashboard.events.index') }}">Create your first event</a>
-                </div>
-            @else
-                <table class="data-table only-desktop">
-                    <thead>
-                        <tr>
-                            <th scope="col">Event</th>
-                            <th scope="col">When</th>
-                            <th scope="col">Status</th>
-                            <th scope="col">Sold</th>
-                            <th scope="col" class="num">Orders</th>
-                            <th scope="col"><span class="sr-only">Actions</span></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($recentEvents as $event)
-                            <tr class="row-nav">
-                                <td>
-                                    <a class="cell-strong row-link" href="{{ route('dashboard.events.show', $event) }}">{{ $event->name }}</a>
-                                    @if ($event->venue)
-                                        <span class="cell-dim">{{ $event->venue }}</span>
-                                    @endif
-                                </td>
-                                <td>{{ $event->starts_at ? $event->starts_at->format('j M Y, H:i') : '—' }}</td>
-                                <td>
-                                    <span class="pill {{ $event->isPublished() ? 'pill--live' : 'pill--draft' }}">
-                                        {{ $event->isPublished() ? 'Published' : 'Draft' }}
-                                    </span>
-                                </td>
-                                <td>@include('dashboard.partials.sell-through', ['sellThrough' => $event->sell_through])</td>
-                                <td class="num">{{ number_format($event->confirmed_orders_count) }}</td>
-                                <td class="num">
-                                    <a class="row-go row-action" href="{{ route('dashboard.events.show', $event) }}" aria-label="Open {{ $event->name }}">
-                                        <x-icon name="chevron" />
-                                    </a>
-                                </td>
-                            </tr>
+                <div class="chart-controls">
+                    <div class="seg" role="group" aria-label="Time range">
+                        @foreach (\App\Http\Controllers\DashboardController::CHART_RANGES as $key => $def)
+                            <a class="seg__item {{ $chartRange === $key ? 'is-active' : '' }}"
+                               href="{{ route('dashboard.home', ['range' => $key, 'metric' => $chartMetric]) }}"
+                               @if ($chartRange === $key) aria-current="true" @endif>{{ $key === '12m' ? '12 months' : $def[0] . ' days' }}</a>
                         @endforeach
-                    </tbody>
-                </table>
-                <div class="only-mobile record-list" style="padding: 1rem 1.25rem;">
-                    @foreach ($recentEvents as $event)
-                        @include('dashboard.partials.event-card', ['event' => $event])
-                    @endforeach
+                    </div>
+                    <div class="seg" role="group" aria-label="Metric">
+                        <a class="seg__item {{ $chartMetric === 'revenue' ? 'is-active' : '' }}"
+                           href="{{ route('dashboard.home', ['range' => $chartRange, 'metric' => 'revenue']) }}"
+                           @if ($chartMetric === 'revenue') aria-current="true" @endif>Revenue</a>
+                        <a class="seg__item {{ $chartMetric === 'tickets' ? 'is-active' : '' }}"
+                           href="{{ route('dashboard.home', ['range' => $chartRange, 'metric' => 'tickets']) }}"
+                           @if ($chartMetric === 'tickets') aria-current="true" @endif>Tickets sold</a>
+                    </div>
                 </div>
-            @endif
-        </div>
-    @endcan
+
+                <div class="chart-body">
+                    @if ($hasChartData)
+                        @include('dashboard.partials.sales-chart', ['chart' => $chart, 'money' => $money])
+                    @else
+                        <p class="chart-empty">No {{ $isTickets ? 'ticket sales' : 'sales' }} in this period or the one before it.</p>
+                    @endif
+                </div>
+            </div>
+        @endcan
+    @endif
 
     {{-- Quick tool entry points, shown to anyone holding the relevant
          permission — Owners and Admins see everything they're allowed, not
@@ -373,6 +387,35 @@
     .onboarding__desc { font-size: 0.82rem; color: var(--muted); }
     .onboarding__status { font-size: 0.8rem; font-weight: 600; color: #047857; white-space: nowrap; }
     .field-hint { display: block; font-size: 0.8rem; color: var(--muted); margin-top: 0.2rem; }
+
+
+    .panel__head--wrap { flex-wrap: wrap; gap: .5rem 1rem; }
+    .panel__head .muted { margin: .15rem 0 0; font-size: .85rem; }
+    .chart-controls { display: flex; flex-wrap: wrap; gap: .5rem 1rem; padding: .5rem 1.25rem 0; }
+    .seg { display: inline-flex; border: 1px solid var(--border); border-radius: .5rem; overflow: hidden; background: var(--surface); }
+    .seg__item { padding: .25rem .7rem; font-size: .8rem; font-weight: 600; color: var(--muted); text-decoration: none; border-right: 1px solid var(--border); }
+    .seg__item:last-child { border-right: none; }
+    .seg__item:hover { color: var(--ink); background: #f9fafb; }
+    .seg__item.is-active { background: var(--brand); color: #fff; }
+    .chart-body { padding: .75rem 1.25rem 1rem; }
+    .chart-empty { margin: 0; padding: 1.5rem 0; text-align: center; color: var(--muted); }
+
+    .ops-panel { border-top: 3px solid #d97706; }
+    .ops-panel .panel__head .muted { margin: .15rem 0 0; font-size: .85rem; }
+    .ops-event { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 1rem 1.5rem; align-items: center; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); }
+    .ops-event:last-child { border-bottom: none; }
+    .ops-event__figures { display: flex; align-items: baseline; gap: .4rem; font-variant-numeric: tabular-nums; }
+    .ops-event__figures strong { font-size: 1.25rem; }
+    .ops-event__pct { margin-left: auto; font-weight: 700; color: var(--ink); }
+    .ops-event__bar { display: block; width: 100%; height: 8px; margin: .35rem 0 .2rem; }
+    .ops-event__actions { display: flex; flex-wrap: wrap; gap: .4rem; justify-content: flex-end; }
+    .btn--live { background: #111827; color: #fff; }
+    @media (max-width: 900px) {
+        .ops-event { grid-template-columns: 1fr; }
+        .ops-event__actions { justify-content: flex-start; }
+    }
+
+    .sell-through__meta { font-size: .72rem; color: var(--muted); }
 
     .trend {
         display: inline-flex; align-items: baseline; gap: 0.35rem;

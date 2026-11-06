@@ -16,6 +16,6 @@ return [
     |
     */
 
-    'hmac_secret' => env('QR_HMAC_SECRET', env('APP_KEY')),
+    'hmac_secret' => env('QR_HMAC_SECRET') ?: env('APP_KEY'),
 
 ];

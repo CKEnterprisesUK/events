@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AppAccessController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\LoginController;
@@ -36,7 +37,6 @@ use App\Http\Controllers\StorefrontController;
 use App\Http\Controllers\StripeConnectController;
 use App\Http\Controllers\StripeReturnController;
 use App\Http\Controllers\SuperAdmin\AnnouncementController as SuperAdminAnnouncementController;
-use App\Http\Controllers\SuperAdmin\TemplatedEmailController as SuperAdminTemplatedEmailController;
 use App\Http\Controllers\SuperAdmin\AuditController as SuperAdminAuditController;
 use App\Http\Controllers\SuperAdmin\ClientController as SuperAdminClientController;
 use App\Http\Controllers\SuperAdmin\CompanyController as SuperAdminCompanyController;
@@ -56,6 +56,7 @@ use App\Http\Controllers\SuperAdmin\SettingsController as SuperAdminSettingsCont
 use App\Http\Controllers\SuperAdmin\StripeAccountController as SuperAdminStripeAccountController;
 use App\Http\Controllers\SuperAdmin\SupportRequestController as SuperAdminSupportRequestController;
 use App\Http\Controllers\SuperAdmin\SystemHealthController as SuperAdminSystemHealthController;
+use App\Http\Controllers\SuperAdmin\TemplatedEmailController as SuperAdminTemplatedEmailController;
 use App\Http\Controllers\SuperAdmin\TransactionController as SuperAdminTransactionController;
 use App\Http\Controllers\SuperAdmin\TwoFactorController as SuperAdminTwoFactorController;
 use App\Http\Controllers\SuperAdmin\UserController as SuperAdminUserController;
@@ -224,7 +225,7 @@ Route::middleware('guest')->group(function () {
     Route::get('/two-factor-challenge', [TwoFactorChallengeController::class, 'show'])
         ->name('two-factor.challenge');
     Route::post('/two-factor-challenge', [TwoFactorChallengeController::class, 'store'])
-        ->middleware('throttle:login')
+        ->middleware('throttle:two-factor-web')
         ->name('two-factor.challenge.store');
 });
 
@@ -290,6 +291,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::get('/invitations/{token}', [InvitationController::class, 'showAccept'])
     ->name('invitations.accept.show');
 Route::post('/invitations/{token}', [InvitationController::class, 'accept'])
+    ->middleware('throttle:auth')
     ->name('invitations.accept');
 
 /*
@@ -326,6 +328,8 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
             ->withoutMiddleware('dashboard.tenant')->name('profile.password');
         Route::post('/profile/logout-other-sessions', [ProfileController::class, 'logoutOtherSessions'])
             ->withoutMiddleware('dashboard.tenant')->name('profile.logout-other-sessions');
+        Route::post('/profile/app-access/revoke', [AppAccessController::class, 'revokeOwn'])
+            ->withoutMiddleware('dashboard.tenant')->name('profile.app-access.revoke');
         Route::get('/profile/data', [ProfileController::class, 'downloadData'])
             ->withoutMiddleware('dashboard.tenant')->name('profile.data');
 
@@ -398,6 +402,10 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
         // contacted and refunds arranged via support. Each action refuses the
         // other's precondition, so they never overlap. Scoped to the user's
         // Company by the `dashboard.tenant` group (foreign Events 404).
+        // The explanatory screen behind the sidebar's "Cancel event" / "Delete
+        // event" link: what cancelling does, how refunds work, and the confirm
+        // form that posts to the two routes below.
+        Route::get('/events/{event}/cancellation', [EventController::class, 'cancellation'])->name('events.cancellation');
         Route::post('/events/{event}/cancel', [EventController::class, 'cancel'])->name('events.cancel');
         Route::delete('/events/{event}', [EventController::class, 'destroy'])->name('events.destroy');
 
@@ -584,6 +592,8 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
         Route::put('/users/{user}/role', [InvitationController::class, 'updateRole'])->name('users.role');
         Route::patch('/users/{user}/role', [InvitationController::class, 'updateRole']);
         Route::delete('/users/{user}', [InvitationController::class, 'destroy'])->name('users.destroy');
+        Route::post('/users/{user}/app-access/revoke', [AppAccessController::class, 'revokeForMember'])
+            ->where('user', '[0-9]+')->name('users.app-access.revoke');
 
         // Stripe Connect onboarding (Owner-gated in the controller). The Owner
         // sees their connection status, starts Connect Standard onboarding, and
@@ -921,6 +931,8 @@ Route::middleware(['auth', 'super.admin', 'session.timeout', 'migrations.pending
             ->where('user', '[0-9]+')->name('users.destroy');
         Route::post('/users/{user}/password-reset', [SuperAdminUserController::class, 'sendPasswordReset'])
             ->where('user', '[0-9]+')->name('users.password-reset');
+        Route::post('/users/{user}/app-access/revoke', [AppAccessController::class, 'revokeForAdmin'])
+            ->where('user', '[0-9]+')->name('users.app-access.revoke');
         Route::post('/users/{user}/resend-verification', [SuperAdminUserController::class, 'resendVerification'])
             ->where('user', '[0-9]+')->name('users.resend-verification');
 

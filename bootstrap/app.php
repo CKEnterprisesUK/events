@@ -8,6 +8,7 @@ use App\Http\Middleware\RedirectToBuildPageWhenMigrationsPending;
 use App\Http\Middleware\ResolveApiTenant;
 use App\Http\Middleware\ResolveDashboardTenant;
 use App\Http\Middleware\ResolveTenant;
+use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SessionTimeout;
 use App\Http\Middleware\VerifyStripeSignature;
 use App\Services\ErrorReporter;
@@ -105,6 +106,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'ability' => CheckForAnyAbility::class,
             'abilities' => CheckAbilities::class,
         ]);
+
+        // Baseline security headers (anti-clickjacking, nosniff, referrer and
+        // permissions policy, HSTS) on every response.
+        $middleware->append(SecurityHeaders::class);
 
         // Stripe posts webhooks to a fixed URL with no session/CSRF token, so
         // the webhook endpoint is excluded from CSRF verification; its

@@ -6,7 +6,9 @@ use App\Models\Event;
 use App\Services\EventReadiness;
 use App\Services\EventReportService;
 use App\Services\Reporting\ReportDateRange;
+use App\Services\Reporting\ReportInsights;
 use App\Services\RoleAuthorization;
+use App\Support\Csv;
 use App\Support\PlatformBrand;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
@@ -48,7 +50,7 @@ class EventReportController extends Controller
      * The per-Event financial report, scoped to the authenticated user's own
      * Company. (Requirements 6.1, 6.2)
      */
-    public function show(Request $request, Event $event): View
+    public function show(Request $request, Event $event, ReportInsights $insights): View
     {
         Gate::authorize(RoleAuthorization::ACTION_VIEW_REPORTS);
 
@@ -60,6 +62,15 @@ class EventReportController extends Controller
             'event' => $event,
             'report' => $this->reports->for($event, $range),
             'range' => $range,
+            'refunds' => $insights->refunds($range->from, $range->to, (int) $event->getKey()),
+            'ticketTypeInsights' => collect($insights->ticketTypeBreakdown(
+                $event->orders()
+                    ->whereIn('status', EventReportService::CONFIRMED_STATUSES)
+                    ->when($range->from !== null, fn ($q) => $q->where('created_at', '>=', $range->from))
+                    ->when($range->to !== null, fn ($q) => $q->where('created_at', '<=', $range->to))
+                    ->get(),
+                (int) $event->getKey(),
+            ))->keyBy('type_id'),
             // Supplied so the report renders inside the event-context layout
             // (single sidebar) rather than as a standalone dashboard page.
             'readiness' => $this->readiness->checklist($event),
@@ -114,33 +125,33 @@ class EventReportController extends Controller
             $out = fopen('php://output', 'wb');
 
             // Headline figures.
-            fputcsv($out, ['Metric', 'Value']);
-            fputcsv($out, ['Confirmed orders', $report->confirmedOrders]);
-            fputcsv($out, ['Checked-in orders', $report->checkedInOrders]);
-            fputcsv($out, ['No-show orders', $report->noShowOrders()]);
-            fputcsv($out, ['Attendance rate (orders)', $pct($report->attendanceRate())]);
-            fputcsv($out, ['No-show rate (orders)', $pct($report->noShowRate())]);
-            fputcsv($out, ['Tickets sold', $report->ticketsSold]);
-            fputcsv($out, ['Tickets checked in', $report->ticketsCheckedIn]);
-            fputcsv($out, ['Attendance rate (headcount)', $pct($report->headcountRate())]);
+            Csv::put($out, ['Metric', 'Value']);
+            Csv::put($out, ['Confirmed orders', $report->confirmedOrders]);
+            Csv::put($out, ['Checked-in orders', $report->checkedInOrders]);
+            Csv::put($out, ['No-show orders', $report->noShowOrders()]);
+            Csv::put($out, ['Attendance rate (orders)', $pct($report->attendanceRate())]);
+            Csv::put($out, ['No-show rate (orders)', $pct($report->noShowRate())]);
+            Csv::put($out, ['Tickets sold', $report->ticketsSold]);
+            Csv::put($out, ['Tickets checked in', $report->ticketsCheckedIn]);
+            Csv::put($out, ['Attendance rate (headcount)', $pct($report->headcountRate())]);
 
             // Check-ins by staff.
-            fputcsv($out, []);
-            fputcsv($out, ['Checked in by', 'Orders', 'Tickets']);
+            Csv::put($out, []);
+            Csv::put($out, ['Checked in by', 'Orders', 'Tickets']);
             foreach ($report->byStaff as $row) {
-                fputcsv($out, [$row['name'], $row['orders'], $row['tickets']]);
+                Csv::put($out, [$row['name'], $row['orders'], $row['tickets']]);
             }
 
             // Hourly arrival timeline.
-            fputcsv($out, []);
-            fputcsv($out, ['Hour', 'Orders', 'Tickets']);
+            Csv::put($out, []);
+            Csv::put($out, ['Hour', 'Orders', 'Tickets']);
             foreach ($report->timeline as $row) {
-                fputcsv($out, [$row['hour'], $row['orders'], $row['tickets']]);
+                Csv::put($out, [$row['hour'], $row['orders'], $row['tickets']]);
             }
 
             // Platform attribution footer.
-            fputcsv($out, []);
-            fputcsv($out, [PlatformBrand::line()]);
+            Csv::put($out, []);
+            Csv::put($out, [PlatformBrand::line()]);
 
             fclose($out);
         }, $filename, [

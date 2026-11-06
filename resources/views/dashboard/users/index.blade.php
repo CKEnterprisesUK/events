@@ -54,7 +54,7 @@
         @else
             <table class="data-table">
                 <thead>
-                    <tr><th>Name</th><th>Email</th><th style="width:160px;">Role</th><th style="width:160px;">Last login</th><th class="num">Actions</th></tr>
+                    <tr><th>Name</th><th>Email</th><th style="width:160px;">Role</th><th style="width:160px;">Last login</th><th style="width:170px;">iOS app</th><th class="num">Actions</th></tr>
                 </thead>
                 <tbody>
                     @foreach ($users as $member)
@@ -81,6 +81,20 @@
                                     <span title="{{ $member->last_login_at->toDayDateTimeString() }}">{{ $member->last_login_at->diffForHumans() }}</span>
                                 @else
                                     <span class="cell-dim">Never</span>
+                                @endif
+                            </td>
+                            <td>
+                                @if ($member->app_tokens_count > 0)
+                                    <span class="pill pill--live">Enabled</span>
+                                    <form method="POST"
+                                          action="{{ $isSelf ? route('dashboard.profile.app-access.revoke') : route('dashboard.users.app-access.revoke', $member) }}"
+                                          class="inline-form"
+                                          onsubmit="return confirm('Revoke app access for {{ addslashes($member->name) }}? They will be signed out of the app on every device.');">
+                                        @csrf
+                                        <button type="submit" class="btn btn-outline btn-sm">Revoke</button>
+                                    </form>
+                                @else
+                                    <span class="cell-dim">Not enabled</span>
                                 @endif
                             </td>
                             <td class="num">
