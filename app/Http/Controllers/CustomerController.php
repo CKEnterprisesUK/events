@@ -11,6 +11,7 @@ use App\Services\AuditLogger;
 use App\Services\GdprService;
 use App\Services\RoleAuthorization;
 use App\Services\TenantContext;
+use App\Support\Csv;
 use App\Support\PlatformBrand;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -268,10 +269,10 @@ class CustomerController extends Controller
         return response()->streamDownload(function () use ($customers): void {
             $out = fopen('php://output', 'wb');
 
-            fputcsv($out, ['Name', 'Email', 'Orders', 'Confirmed spend (minor units)', 'Last order']);
+            Csv::put($out, ['Name', 'Email', 'Orders', 'Confirmed spend (minor units)', 'Last order']);
 
             foreach ($customers as $customer) {
-                fputcsv($out, [
+                Csv::put($out, [
                     $customer->customer_name,
                     $customer->customer_email,
                     (int) $customer->orders_count,
@@ -281,8 +282,8 @@ class CustomerController extends Controller
             }
 
             // Platform attribution footer.
-            fputcsv($out, []);
-            fputcsv($out, [PlatformBrand::line()]);
+            Csv::put($out, []);
+            Csv::put($out, [PlatformBrand::line()]);
 
             fclose($out);
         }, $filename, [

@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\AuditLog;
 use App\Models\Event;
 use App\Models\Order;
+use App\Models\SupportRequest;
 use App\Models\TicketType;
+use App\Models\User;
 use App\Rules\SafeUpload;
 use App\Services\AuditLogger;
 use App\Services\BrandingImageStore;
@@ -18,6 +20,7 @@ use App\Services\Reporting\ReportInsights;
 use App\Services\Reporting\TicketMetrics;
 use App\Services\RoleAuthorization;
 use App\Services\StorefrontListing;
+use App\Services\SupportTicketCreator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -595,7 +598,7 @@ class EventController extends Controller
      * bookings — that Event should be deleted via destroy() instead, so the two
      * actions never overlap. (Deletion vs. cancellation rule.)
      */
-    public function cancel(Event $event): RedirectResponse
+    public function cancel(Request $request, Event $event, SupportTicketCreator $tickets): RedirectResponse
     {
         Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
 
@@ -604,6 +607,14 @@ class EventController extends Controller
                 ->route('dashboard.events.show', $event)
                 ->with('status', 'This event has no bookings — delete it instead of cancelling.');
         }
+
+        $data = $request->validate([
+            'note' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        // Only a first-time cancellation raises the refund ticket, so
+        // re-posting to an already-cancelled event can't spam support.
+        $firstCancellation = ! $event->isCancelled();
 
         $event->cancel();
 
@@ -617,9 +628,49 @@ class EventController extends Controller
         // storefront listing cache.
         $this->storefrontListing->forget($event->company);
 
+        if ($firstCancellation) {
+            $this->raiseRefundTicket($tickets, $event, $request->user(), $data['note'] ?? null);
+        }
+
         return redirect()
             ->route('dashboard.events.show', $event)
-            ->with('status', 'Event cancelled. Contact your affected customers and arrange any refunds through support — their full list is in Customers.');
+            ->with('status', 'Event cancelled. We’ve sent a request to our support team to arrange refunds for your customers, and they’ll be in touch by email.');
+    }
+
+    /**
+     * Open a support ticket (which also emails the support inbox) so the team
+     * can arrange bulk refunds for a cancelled event. The message carries the
+     * figures an operator needs to start without asking the organiser again.
+     */
+    private function raiseRefundTicket(SupportTicketCreator $tickets, Event $event, ?User $user, ?string $note): void
+    {
+        $report = $this->reports->for($event);
+        $currency = $event->company->currency ?? 'GBP';
+
+        $lines = [
+            'The organiser has cancelled this event and needs refunds arranging for their customers.',
+            '',
+            'Event: '.$event->name.' (ID '.$event->getKey().')',
+            'Event date: '.($event->starts_at?->format('j M Y, H:i') ?? 'not set'),
+            'Confirmed orders: '.$report->confirmedOrders,
+            'Tickets sold: '.$report->ticketsSold,
+            'Collected: '.number_format($report->grossRevenueMinor / 100, 2).' '.$currency,
+            'Orders: '.route('dashboard.orders.index', ['event' => $event->getKey(), 'status' => 'paid']),
+        ];
+
+        if ($note !== null && trim($note) !== '') {
+            $lines[] = '';
+            $lines[] = 'Note from the organiser:';
+            $lines[] = trim($note);
+        }
+
+        $tickets->raise(
+            company: $event->company,
+            user: $user,
+            category: SupportRequest::CATEGORY_ORDERS,
+            subject: 'Refunds needed: "'.$event->name.'" cancelled',
+            message: implode("\n", $lines),
+        );
     }
 
     /**

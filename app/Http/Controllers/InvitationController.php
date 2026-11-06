@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -250,8 +251,17 @@ class InvitationController extends Controller
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => ['required', 'string', 'confirmed', Password::defaults()],
         ]);
+
+        // An account may already exist for this address (e.g. an earlier
+        // invitation was accepted, or they signed up themselves). Fail with a
+        // clear message instead of a database unique-key error.
+        if (User::query()->where('email', $invitation->email)->exists()) {
+            throw ValidationException::withMessages([
+                'password' => __('An account already exists for this email address. Sign in instead.'),
+            ]);
+        }
 
         // Create the Company_User scoped to the *inviting* Company with the
         // invitation's assigned role (always a non-Owner invitable role). (4.2)

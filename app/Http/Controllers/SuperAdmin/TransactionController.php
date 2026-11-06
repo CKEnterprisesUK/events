@@ -5,6 +5,7 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Order;
+use App\Support\Csv;
 use App\Support\Money;
 use App\Support\PlatformBrand;
 use Illuminate\Contracts\View\View;
@@ -111,16 +112,16 @@ class TransactionController extends Controller
             $out = fopen('php://output', 'wb');
 
             // Summary line: total platform fees earned across all fee-earning orders.
-            fputcsv($out, ['Total platform fees earned (GBP)', $major($totalApplicationFeesMinor)]);
-            fputcsv($out, []);
+            Csv::put($out, ['Total platform fees earned (GBP)', $major($totalApplicationFeesMinor)]);
+            Csv::put($out, []);
 
-            fputcsv($out, [
+            Csv::put($out, [
                 'Order ID', 'Company', 'Order reference', 'Status',
                 'Order total', 'Platform fee', 'Stripe fee',
             ]);
 
             foreach ($orders as $order) {
-                fputcsv($out, [
+                Csv::put($out, [
                     $order->id,
                     (string) $companyNames->get($order->company_id, 'Unknown company'),
                     $order->order_reference,
@@ -133,8 +134,8 @@ class TransactionController extends Controller
             }
 
             // Platform attribution footer.
-            fputcsv($out, []);
-            fputcsv($out, [PlatformBrand::line()]);
+            Csv::put($out, []);
+            Csv::put($out, [PlatformBrand::line()]);
 
             fclose($out);
         }, $filename, [

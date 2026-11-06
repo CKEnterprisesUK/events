@@ -82,18 +82,18 @@
     </div>
 
     {{-- A cancelled event keeps its bookings; remind the organiser of the
-         out-of-band follow-up (customer contact + refunds via support). Kept
+         follow-up (refunds are arranged by the support team via the ticket raised on cancel). Kept
          compact: one line of guidance plus two direct actions, not a tall
          alarm banner. (UI: cancelled event state) --}}
     @if ($isCancelled)
         <div class="event-cancelled" role="note">
             <div class="event-cancelled__text">
                 <strong>Event cancelled</strong>
-                <span>Bookings have been retained. Refund affected customers from the Orders page.</span>
+                <span>Bookings have been retained and our support team will be in touch about refunds.</span>
             </div>
             <div class="event-cancelled__actions">
                 <a class="btn btn-outline btn-sm" href="{{ route('dashboard.customers.index', ['event' => $event->id]) }}">View customers</a>
-                <a class="btn btn-outline btn-sm" href="{{ route('dashboard.events.cancellation', $event) }}">Refund guidance</a>
+                <a class="btn btn-outline btn-sm" href="{{ route('dashboard.events.cancellation', $event) }}">Cancellation details</a>
             </div>
         </div>
     @endif

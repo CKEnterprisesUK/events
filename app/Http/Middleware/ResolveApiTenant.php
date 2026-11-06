@@ -53,7 +53,7 @@ class ResolveApiTenant
             // Device other than the one it was issued to before any Company
             // lookup, so a mismatch has no tenant-resolving side effect.
             if ($token !== null && $token->device_id !== null
-                && $request->header('X-Device-Id') !== $token->device_id) {
+                && ! hash_equals((string) $token->device_id, (string) $request->header('X-Device-Id'))) {
                 abort(401);
             }
 

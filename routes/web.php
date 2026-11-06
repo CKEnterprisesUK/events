@@ -225,7 +225,7 @@ Route::middleware('guest')->group(function () {
     Route::get('/two-factor-challenge', [TwoFactorChallengeController::class, 'show'])
         ->name('two-factor.challenge');
     Route::post('/two-factor-challenge', [TwoFactorChallengeController::class, 'store'])
-        ->middleware('throttle:login')
+        ->middleware('throttle:two-factor-web')
         ->name('two-factor.challenge.store');
 });
 
@@ -291,6 +291,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::get('/invitations/{token}', [InvitationController::class, 'showAccept'])
     ->name('invitations.accept.show');
 Route::post('/invitations/{token}', [InvitationController::class, 'accept'])
+    ->middleware('throttle:auth')
     ->name('invitations.accept');
 
 /*

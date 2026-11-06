@@ -16,6 +16,7 @@ use App\Services\RoleAuthorization;
 use App\Services\SimpleXlsxWriter;
 use App\Services\TenantContext;
 use App\Services\TicketPdfService;
+use App\Support\Csv;
 use App\Support\PlatformBrand;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -184,15 +185,15 @@ class OrderController extends Controller
         return response()->streamDownload(function () use ($orders, $money): void {
             $out = fopen('php://output', 'wb');
 
-            fputcsv($out, $this->exportHeader());
+            Csv::put($out, $this->exportHeader());
 
             foreach ($orders as $order) {
-                fputcsv($out, $this->exportRow($order, $money));
+                Csv::put($out, $this->exportRow($order, $money));
             }
 
             // Platform attribution footer.
-            fputcsv($out, []);
-            fputcsv($out, [PlatformBrand::line()]);
+            Csv::put($out, []);
+            Csv::put($out, [PlatformBrand::line()]);
 
             fclose($out);
         }, $filename, [

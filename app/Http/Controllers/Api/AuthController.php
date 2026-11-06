@@ -76,6 +76,8 @@ class AuthController extends Controller
         /** @var User $user */
         $user = Auth::getLastAttempted();
 
+        $this->assertAccountUsable($user);
+
         // A two-factor user on an untrusted Device must prove the second factor
         // before any token is minted. The password alone grants nothing.
         if ($user->hasTwoFactorEnabled() && ! $this->deviceTrust->isTrusted($user, $data['device_id'])) {
@@ -119,6 +121,8 @@ class AuthController extends Controller
 
         /** @var User $user */
         $user = Auth::getLastAttempted();
+
+        $this->assertAccountUsable($user);
 
         $code = $data['code'] ?? null;
         $recoveryCode = $data['recovery_code'] ?? null;
@@ -212,6 +216,29 @@ class AuthController extends Controller
             'permitted_actions' => $this->roles->permittedActions((string) $user->role),
             'companies' => $memberships,
         ]);
+    }
+
+    /**
+     * Refuse to mint a token for an account the web login would also block: one
+     * a Super_Admin has disabled, or one whose Company is suspended. Runs after
+     * the password is proven so the response never reveals account state to
+     * someone without valid credentials.
+     *
+     * @throws ValidationException
+     */
+    private function assertAccountUsable(User $user): void
+    {
+        if ($user->isDisabled()) {
+            throw ValidationException::withMessages([
+                'email' => __('This account has been disabled.'),
+            ]);
+        }
+
+        if ($user->company?->isSuspended()) {
+            throw ValidationException::withMessages([
+                'email' => __('This account has been suspended.'),
+            ]);
+        }
     }
 
     /**

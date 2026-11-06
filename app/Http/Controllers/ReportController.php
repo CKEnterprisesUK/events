@@ -11,6 +11,7 @@ use App\Services\Reporting\ReportInsights;
 use App\Services\RoleAuthorization;
 use App\Services\SimpleXlsxWriter;
 use App\Services\TenantContext;
+use App\Support\Csv;
 use App\Support\PlatformBrand;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\View\View;
@@ -381,31 +382,31 @@ class ReportController extends Controller
             $out = fopen('php://output', 'wb');
 
             // Period the figures cover, so the exported file is self-describing.
-            fputcsv($out, ['Period', $rangeLabel]);
-            fputcsv($out, []);
+            Csv::put($out, ['Period', $rangeLabel]);
+            Csv::put($out, []);
 
             // Company totals block. Money columns are written in major units.
-            fputcsv($out, ['Company totals', 'Value ('.$currency.')']);
-            fputcsv($out, ['Confirmed orders', $totals['orders']]);
-            fputcsv($out, ['Tickets sold', $totals['tickets_sold']]);
-            fputcsv($out, ['Gross sales', $this->major($totals['gross_sales_minor'])]);
-            fputcsv($out, ['Booking fees collected', $this->major($totals['booking_fees_minor'])]);
-            fputcsv($out, ['Platform fees', $this->major($totals['application_fees_minor'])]);
-            fputcsv($out, ['Total collected', $this->major($totals['order_total_minor'])]);
-            fputcsv($out, ['Net after platform fee', $this->major($totals['net_to_company_minor'])]);
-            fputcsv($out, ['Stripe processing fees', $this->major($totals['stripe_fees_minor'])]);
-            fputcsv($out, ['Net payout to bank', $this->major($totals['net_payout_minor'])]);
+            Csv::put($out, ['Company totals', 'Value ('.$currency.')']);
+            Csv::put($out, ['Confirmed orders', $totals['orders']]);
+            Csv::put($out, ['Tickets sold', $totals['tickets_sold']]);
+            Csv::put($out, ['Gross sales', $this->major($totals['gross_sales_minor'])]);
+            Csv::put($out, ['Booking fees collected', $this->major($totals['booking_fees_minor'])]);
+            Csv::put($out, ['Platform fees', $this->major($totals['application_fees_minor'])]);
+            Csv::put($out, ['Total collected', $this->major($totals['order_total_minor'])]);
+            Csv::put($out, ['Net after platform fee', $this->major($totals['net_to_company_minor'])]);
+            Csv::put($out, ['Stripe processing fees', $this->major($totals['stripe_fees_minor'])]);
+            Csv::put($out, ['Net payout to bank', $this->major($totals['net_payout_minor'])]);
 
             // Blank separator, then the per-Event breakdown table.
-            fputcsv($out, []);
-            fputcsv($out, [
+            Csv::put($out, []);
+            Csv::put($out, [
                 'Event', 'Orders', 'Tickets sold', 'Gross sales', 'Booking fees',
                 'Platform fees', 'Total collected', 'Net after platform fee',
                 'Stripe fees', 'Net payout',
             ]);
 
             foreach ($perEvent as $row) {
-                fputcsv($out, [
+                Csv::put($out, [
                     $row['event_name'],
                     $row['orders'],
                     $row['tickets_sold'],
@@ -420,8 +421,8 @@ class ReportController extends Controller
             }
 
             // Platform attribution footer.
-            fputcsv($out, []);
-            fputcsv($out, [PlatformBrand::line()]);
+            Csv::put($out, []);
+            Csv::put($out, [PlatformBrand::line()]);
 
             fclose($out);
         }, $filename, [
