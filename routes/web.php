@@ -53,6 +53,7 @@ use App\Http\Controllers\SuperAdmin\ProfileController as SuperAdminProfileContro
 use App\Http\Controllers\SuperAdmin\ReferralCodeController as SuperAdminReferralCodeController;
 use App\Http\Controllers\SuperAdmin\ReservedSlugController as SuperAdminReservedSlugController;
 use App\Http\Controllers\SuperAdmin\SettingsController as SuperAdminSettingsController;
+use App\Http\Controllers\SuperAdmin\StressTestController as SuperAdminStressTestController;
 use App\Http\Controllers\SuperAdmin\StripeAccountController as SuperAdminStripeAccountController;
 use App\Http\Controllers\SuperAdmin\SupportRequestController as SuperAdminSupportRequestController;
 use App\Http\Controllers\SuperAdmin\SystemHealthController as SuperAdminSystemHealthController;
@@ -818,6 +819,21 @@ Route::middleware(['auth', 'super.admin', 'session.timeout', 'migrations.pending
         // with the controller's own production guard).
         if (app()->environment(['local', 'staging', 'preprod', 'development'])) {
             Route::post('/ops/reseed', [SuperAdminOpsController::class, 'reseed'])->name('ops.reseed');
+        }
+
+        // Door-load stress test: seeds a synthetic fixture (10 scanners, a
+        // live event, thousands of scannable orders) and serves the
+        // in-browser runner that hammers POST /api/scan and the live
+        // dashboard feed. Registered ONLY in non-production (`testing` is
+        // included so the test suite can reach it; the fixture still refuses
+        // unless APP_ENV is on its own allow-list), so it can never exist on
+        // the live site.
+        if (app()->environment(['local', 'staging', 'preprod', 'development', 'testing'])) {
+            Route::get('/stress-test', [SuperAdminStressTestController::class, 'index'])->name('stress-test.index');
+            Route::post('/stress-test/seed', [SuperAdminStressTestController::class, 'seed'])->name('stress-test.seed');
+            Route::post('/stress-test/session', [SuperAdminStressTestController::class, 'session'])->name('stress-test.session');
+            Route::post('/stress-test/reset-scans', [SuperAdminStressTestController::class, 'resetScans'])->name('stress-test.reset-scans');
+            Route::post('/stress-test/teardown', [SuperAdminStressTestController::class, 'teardown'])->name('stress-test.teardown');
         }
 
         // Support ticket queue: the operator view of every in-dashboard

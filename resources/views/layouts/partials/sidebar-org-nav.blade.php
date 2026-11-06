@@ -33,6 +33,9 @@
     <a class="nav-link {{ $navActive('admin.errors.*') ? 'active' : '' }}" @if($navActive('admin.errors.*')) aria-current="page" @endif href="{{ route('admin.errors.index') }}"><x-icon name="warning" class="nav-ico" /> Error reports</a>
     <a class="nav-link {{ $navActive('admin.system.*') ? 'active' : '' }}" @if($navActive('admin.system.*')) aria-current="page" @endif href="{{ route('admin.system.index') }}"><x-icon name="activity" class="nav-ico" /> System health</a>
     <a class="nav-link {{ $navActive('admin.ops.*') ? 'active' : '' }}" @if($navActive('admin.ops.*')) aria-current="page" @endif href="{{ route('admin.ops.index') }}"><x-icon name="settings" class="nav-ico" /> Build / deploy</a>
+    @if (\Illuminate\Support\Facades\Route::has('admin.stress-test.index'))
+    <a class="nav-link {{ $navActive('admin.stress-test.*') ? 'active' : '' }}" @if($navActive('admin.stress-test.*')) aria-current="page" @endif href="{{ route('admin.stress-test.index') }}"><x-icon name="activity" class="nav-ico" /> Stress test</a>
+    @endif
     <p class="nav-section">Configuration</p>
     <a class="nav-link {{ $navActive('admin.settings.*', 'admin.fees.*', 'admin.reserved-slugs.*') ? 'active' : '' }}" @if($navActive('admin.settings.*', 'admin.fees.*', 'admin.reserved-slugs.*')) aria-current="page" @endif href="{{ route('admin.settings.index') }}"><x-icon name="settings" class="nav-ico" /> Settings</a>
 @else
