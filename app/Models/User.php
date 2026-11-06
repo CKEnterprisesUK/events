@@ -254,6 +254,39 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Keep the `company_user` pivot (what the iOS API reads) in step with the
+     * web-side `users.company_id` / `users.role`, which every create and role
+     * change path writes. Without this, invited / newly registered users have no
+     * membership row and the app sits on "selecting company" forever.
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (User $user): void {
+            if ($user->company_id === null || $user->role === null) {
+                return;
+            }
+
+            if (! $user->wasRecentlyCreated && ! $user->wasChanged(['company_id', 'role'])) {
+                return;
+            }
+
+            $now = now();
+
+            \Illuminate\Support\Facades\DB::table('company_user')->upsert(
+                [[
+                    'company_id' => $user->company_id,
+                    'user_id' => $user->getKey(),
+                    'role' => $user->role,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]],
+                ['company_id', 'user_id'],
+                ['role', 'updated_at'],
+            );
+        });
+    }
+
+    /**
      * Whether this user holds the given Company role.
      */
     public function hasRole(string $role): bool

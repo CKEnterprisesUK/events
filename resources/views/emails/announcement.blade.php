@@ -13,7 +13,8 @@
 </head>
 <body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;color:#111827;">
     <div style="max-width:600px;margin:0 auto;padding:24px;">
-        <div style="background:#ffffff;border-radius:8px;overflow:hidden;border-top:6px solid #111827;">
+        <div style="background:#ffffff;border-radius:8px;overflow:hidden;">
+            @include('emails.partials.platform-logo')
             <div style="padding:24px 24px 8px;">
                 <h1 style="margin:0;font-size:20px;color:#111827;">{{ $subjectLine }}</h1>
             </div>
