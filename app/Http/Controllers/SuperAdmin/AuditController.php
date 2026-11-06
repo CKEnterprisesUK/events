@@ -56,6 +56,7 @@ class AuditController extends Controller
             'impersonatedOnly' => $impersonatedOnly,
             'categoryOptions' => AuditLog::CATEGORY_LABELS,
             'actionOptions' => $this->auditActionOptions(),
+            'channelOptions' => AuditLog::CHANNEL_LABELS,
             'companies' => Company::query()->orderBy('name')->pluck('name', 'id'),
         ]);
     }

@@ -22,6 +22,7 @@
                     <a href="{{ route('pricing') }}">Pricing</a>
                     <a href="{{ route('how-it-works') }}">How it works</a>
                     <a href="{{ route('for-charities') }}">For charities</a>
+                    <a href="{{ route('help.index') }}">Help centre</a>
                 </div>
 
                 <div class="pub-footer__col">

@@ -57,6 +57,7 @@ class AuditLogger
             'actor_user_id' => $actor?->getKey(),
             'actor_label' => $this->actorLabel($actor),
             'actor_type' => $this->actorType($actor, $impersonatedCompanyId !== null),
+            'channel' => $this->channel(),
             'is_impersonated' => $impersonatedCompanyId !== null,
             'impersonator_user_id' => $impersonatedCompanyId !== null ? $actor?->getKey() : null,
             'action' => $action,
@@ -87,6 +88,7 @@ class AuditLogger
             'actor_user_id' => null,
             'actor_label' => 'System',
             'actor_type' => AuditLog::ACTOR_SYSTEM,
+            'channel' => AuditLog::CHANNEL_SYSTEM,
             'is_impersonated' => false,
             'impersonator_user_id' => null,
             'action' => $action,
@@ -115,6 +117,22 @@ class AuditLogger
         $id = session(ImpersonationController::SESSION_KEY);
 
         return $id !== null ? (int) $id : null;
+    }
+
+    /**
+     * The surface the current request came in on: the native iOS scanner app
+     * (`app`) for the Sanctum-authenticated `/api/*` routes it exclusively uses,
+     * or the web dashboard (`web`) for everything else. The API group is the
+     * only consumer of the `/api` prefix, so the path is an unambiguous signal
+     * and needs no per-call-site plumbing. Events with no request surface are
+     * written through {@see self::recordSystem()}, which stamps `system`
+     * directly.
+     */
+    private function channel(): string
+    {
+        return Request::is('api/*')
+            ? AuditLog::CHANNEL_APP
+            : AuditLog::CHANNEL_WEB;
     }
 
     /**

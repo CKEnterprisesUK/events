@@ -2822,3 +2822,95 @@ body.pub-menu-open { overflow: hidden; }
     .app-shell .app-content .btn,
     .app-shell .app-content .row-go { transition: none; }
 }
+
+/* =============================================================================
+   Knowledge Base / Help centre (public) + shared legal-doc prose
+   Styles the public /help category + article pages, and the shared `.legal-doc`
+   / `.prose` used by both the Help articles and the Trust & Legal Centre
+   document pages (which previously rendered unstyled).
+   ============================================================================= */
+.kb { max-width: 820px; margin: 0 auto; }
+
+.kb__breadcrumb,
+.legal-doc__breadcrumb {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
+    font-size: 0.9rem; color: var(--muted); margin-bottom: 1.25rem;
+}
+.kb__breadcrumb a,
+.legal-doc__breadcrumb a { color: var(--brand); text-decoration: none; }
+.kb__breadcrumb a:hover,
+.legal-doc__breadcrumb a:hover { text-decoration: underline; }
+
+.kb__head { margin-bottom: 1.5rem; }
+.kb__head h1 { margin: 0 0 0.4rem; font-size: 1.9rem; }
+.kb__lede { color: var(--muted); font-size: 1.0625rem; max-width: 640px; margin: 0; }
+
+.kb__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
+.kb__list-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 0.7rem;
+    padding: 1rem 1.25rem; text-decoration: none; color: var(--ink);
+    transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+.kb__list-item:hover {
+    border-color: #c7cbff; transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(15, 22, 196, 0.1);
+}
+.kb__list-title { font-weight: 600; }
+.kb__list-go { color: var(--brand); font-weight: 700; }
+
+.kb__layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2.5rem; }
+@media (min-width: 880px) {
+    .kb__layout { grid-template-columns: minmax(0, 1fr) 220px; }
+}
+
+.kb__article h1,
+.legal-doc__body h1 { margin: 0 0 0.35rem; font-size: 1.9rem; }
+.kb__meta,
+.legal-doc__meta { font-size: 0.875rem; margin: 0 0 1.5rem; }
+
+.kb__aside {
+    align-self: start; border-left: 1px solid var(--border); padding-left: 1.25rem;
+}
+.kb__aside h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 0 0 0.75rem; }
+.kb__aside ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.kb__aside a { color: var(--ink); text-decoration: none; font-size: 0.9375rem; }
+.kb__aside a:hover { color: var(--brand); }
+.kb__aside a.is-current { color: var(--brand); font-weight: 600; }
+
+.kb__still-stuck { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--border); }
+
+.kb__topics { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+.kb__topics h2 { font-size: 1.1rem; margin: 0 0 0.9rem; }
+.kb__topics-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.kb__topics-grid a {
+    display: inline-block; padding: 0.4rem 0.85rem; border: 1px solid var(--border);
+    border-radius: 999px; font-size: 0.9rem; text-decoration: none; color: inherit;
+}
+.kb__topics-grid a:hover { border-color: var(--brand); color: var(--brand); }
+
+/* Shared, legible prose for Help articles and legal documents. */
+.legal-doc { max-width: 820px; margin: 0 auto; }
+.legal-doc__more { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+.legal-doc__more h2 { font-size: 1.1rem; margin: 0 0 0.75rem; }
+.legal-doc__more ul { margin: 0; padding-left: 1.1rem; }
+.legal-doc__more a { color: var(--brand); }
+
+.prose { color: var(--ink); line-height: 1.65; font-size: 1rem; max-width: 70ch; }
+.prose > :first-child { margin-top: 0; }
+.prose p { margin: 0 0 1rem; }
+.prose h2 { font-size: 1.35rem; margin: 2rem 0 0.75rem; }
+.prose h3 { font-size: 1.1rem; margin: 1.5rem 0 0.5rem; }
+.prose ul, .prose ol { margin: 0 0 1rem; padding-left: 1.4rem; }
+.prose li { margin-bottom: 0.4rem; }
+.prose a { color: var(--brand); text-decoration: underline; }
+.prose a:hover { color: var(--brand-dark); }
+.prose strong { font-weight: 700; }
+.prose code {
+    background: #eef0ff; border-radius: 0.3rem; padding: 0.1rem 0.35rem;
+    font-size: 0.9em;
+}
+.prose blockquote {
+    margin: 0 0 1rem; padding: 0.5rem 1rem; border-left: 3px solid var(--brand);
+    color: var(--muted);
+}

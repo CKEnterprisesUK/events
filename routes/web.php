@@ -23,6 +23,7 @@ use App\Http\Controllers\EventWizardController;
 use App\Http\Controllers\GdprController;
 use App\Http\Controllers\HelpController;
 use App\Http\Controllers\InvitationController;
+use App\Http\Controllers\KnowledgeBaseController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProfileController;
@@ -35,6 +36,7 @@ use App\Http\Controllers\StorefrontController;
 use App\Http\Controllers\StripeConnectController;
 use App\Http\Controllers\StripeReturnController;
 use App\Http\Controllers\SuperAdmin\AnnouncementController as SuperAdminAnnouncementController;
+use App\Http\Controllers\SuperAdmin\TemplatedEmailController as SuperAdminTemplatedEmailController;
 use App\Http\Controllers\SuperAdmin\AuditController as SuperAdminAuditController;
 use App\Http\Controllers\SuperAdmin\ClientController as SuperAdminClientController;
 use App\Http\Controllers\SuperAdmin\CompanyController as SuperAdminCompanyController;
@@ -42,6 +44,8 @@ use App\Http\Controllers\SuperAdmin\CompanyUserController as SuperAdminCompanyUs
 use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboardController;
 use App\Http\Controllers\SuperAdmin\ErrorReportController as SuperAdminErrorReportController;
 use App\Http\Controllers\SuperAdmin\FeeController as SuperAdminFeeController;
+use App\Http\Controllers\SuperAdmin\HelpArticleController as SuperAdminHelpArticleController;
+use App\Http\Controllers\SuperAdmin\HelpCategoryController as SuperAdminHelpCategoryController;
 use App\Http\Controllers\SuperAdmin\ImpersonationController as SuperAdminImpersonationController;
 use App\Http\Controllers\SuperAdmin\LegalDocumentController as SuperAdminLegalDocumentController;
 use App\Http\Controllers\SuperAdmin\OpsController as SuperAdminOpsController;
@@ -132,6 +136,28 @@ Route::get('/trust', [TrustController::class, 'index'])->name('trust.index');
 Route::get('/trust/{slug}', [TrustController::class, 'show'])
     ->where('slug', '[A-Za-z0-9-]+')
     ->name('trust.show');
+
+/*
+|--------------------------------------------------------------------------
+| Public Knowledge Base / Help centre (reserved prefix, no tenant / auth)
+|--------------------------------------------------------------------------
+| `/help` is the Platform-level Help centre of Events by CK Enterprises UK: the
+| self-service articles that explain how the product works, authored by a
+| Super_Admin and stored in `help_categories` / `help_articles` (the DB-backed
+| replacement for the former in-code App\Support\HelpCentre). Declared before
+| the `/{company-slug}` catch-all so `/help` and its sub-paths render the Help
+| centre rather than being treated as storefront slugs. Establishes no active
+| Company; only published, non-empty categories/articles are exposed
+| (unknown/draft slugs 404). The same published content is shown to signed-in
+| users inside the app at `dashboard.help.index`.
+*/
+Route::get('/help', [KnowledgeBaseController::class, 'index'])->name('help.index');
+Route::get('/help/{category}', [KnowledgeBaseController::class, 'category'])
+    ->where('category', '[A-Za-z0-9-]+')
+    ->name('help.category');
+Route::get('/help/{category}/{article}', [KnowledgeBaseController::class, 'article'])
+    ->where(['category' => '[A-Za-z0-9-]+', 'article' => '[A-Za-z0-9-]+'])
+    ->name('help.article');
 
 /*
 |--------------------------------------------------------------------------
@@ -810,6 +836,28 @@ Route::middleware(['auth', 'super.admin', 'session.timeout', 'migrations.pending
         Route::get('/legal/{legalDocument}/edit', [SuperAdminLegalDocumentController::class, 'edit'])->name('legal.edit');
         Route::put('/legal/{legalDocument}', [SuperAdminLegalDocumentController::class, 'update'])->name('legal.update');
 
+        // Knowledge Base management: author the public Help centre (`/help`).
+        // Two levels — sections (help_categories) each holding articles
+        // (help_articles). The index lists sections; a section's "show" screen
+        // is its per-section manage view (edit the section + CRUD its articles).
+        // Slugs are stable (not editable) so public URLs never silently break.
+        // Articles are nested under their section so a slug need only be unique
+        // within the section. (DB-backed Knowledge Base)
+        Route::get('/help', [SuperAdminHelpCategoryController::class, 'index'])->name('help.index');
+        Route::get('/help/create', [SuperAdminHelpCategoryController::class, 'create'])->name('help.create');
+        Route::post('/help', [SuperAdminHelpCategoryController::class, 'store'])->name('help.store');
+        Route::get('/help/{helpCategory}', [SuperAdminHelpCategoryController::class, 'show'])->name('help.show');
+        Route::get('/help/{helpCategory}/edit', [SuperAdminHelpCategoryController::class, 'edit'])->name('help.edit');
+        Route::put('/help/{helpCategory}', [SuperAdminHelpCategoryController::class, 'update'])->name('help.update');
+        Route::delete('/help/{helpCategory}', [SuperAdminHelpCategoryController::class, 'destroy'])->name('help.destroy');
+
+        // Articles within a section (nested resource).
+        Route::get('/help/{helpCategory}/articles/create', [SuperAdminHelpArticleController::class, 'create'])->name('help.articles.create');
+        Route::post('/help/{helpCategory}/articles', [SuperAdminHelpArticleController::class, 'store'])->name('help.articles.store');
+        Route::get('/help/{helpCategory}/articles/{helpArticle}/edit', [SuperAdminHelpArticleController::class, 'edit'])->name('help.articles.edit');
+        Route::put('/help/{helpCategory}/articles/{helpArticle}', [SuperAdminHelpArticleController::class, 'update'])->name('help.articles.update');
+        Route::delete('/help/{helpCategory}/articles/{helpArticle}', [SuperAdminHelpArticleController::class, 'destroy'])->name('help.articles.destroy');
+
         // Company_Slug blocklist: the reserved slugs a Company may never claim
         // at self-signup or on a slug change (reserved platform routes / infra
         // paths that path-based tenancy would otherwise shadow, plus brand/abuse
@@ -843,6 +891,16 @@ Route::middleware(['auth', 'super.admin', 'session.timeout', 'migrations.pending
         Route::post('/announcements/review', [SuperAdminAnnouncementController::class, 'review'])->name('announcements.review');
         Route::post('/announcements/edit', [SuperAdminAnnouncementController::class, 'edit'])->name('announcements.edit');
         Route::post('/announcements', [SuperAdminAnnouncementController::class, 'send'])->name('announcements.send');
+
+        // Templated client emails: the super admin manually triggers a prebuilt
+        // email (pre-event scanning guidance, or a per-event sales report built
+        // from the live figures) to selected Company_Users by role, optionally
+        // within one Company. Same compose → review → send safety and queued
+        // fan-out as announcements. (Platform communications)
+        Route::get('/templated-emails', [SuperAdminTemplatedEmailController::class, 'create'])->name('templated-emails.create');
+        Route::post('/templated-emails/review', [SuperAdminTemplatedEmailController::class, 'review'])->name('templated-emails.review');
+        Route::post('/templated-emails/edit', [SuperAdminTemplatedEmailController::class, 'edit'])->name('templated-emails.edit');
+        Route::post('/templated-emails', [SuperAdminTemplatedEmailController::class, 'send'])->name('templated-emails.send');
 
         // Cross-tenant user management: a platform-wide directory of every
         // Company_User plus per-user actions (edit, disable/enable, delete,

@@ -10,6 +10,11 @@
     .audit-filter label { display: block; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 0.25rem; }
     .audit-filter .check { display: flex; align-items: center; gap: 0.4rem; }
     .badge-staff { display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 0.1rem 0.45rem; border-radius: 0.4rem; background: #fde68a; color: #713f12; margin-left: 0.4rem; }
+    .badge-source { display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 0.1rem 0.45rem; border-radius: 0.4rem; }
+    .badge-source.source-app { background: #dbeafe; color: #1e3a8a; }
+    .badge-source.source-web { background: #dcfce7; color: #14532d; }
+    .badge-source.source-system { background: #e5e7eb; color: #374151; }
+    .badge-source.source-unknown { background: #f3f4f6; color: #6b7280; }
     .audit-context { margin: 0.3rem 0 0; padding: 0; list-style: none; font-size: 0.8rem; color: var(--muted); }
     .audit-context li { display: inline-block; margin-right: 0.9rem; }
     .audit-context code { background: #f3f4f6; padding: 0.05rem 0.3rem; border-radius: 0.3rem; }
@@ -54,6 +59,15 @@
             </select>
         </div>
         <div class="field">
+            <label for="channel">Source</label>
+            <select name="channel" id="channel">
+                <option value="">Any</option>
+                @foreach ($channelOptions as $value => $label)
+                    <option value="{{ $value }}" @selected($filters['channel'] === $value)>{{ $label }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="field">
             <label for="from">From</label>
             <input type="date" name="from" id="from" value="{{ $filters['from'] }}">
         </div>
@@ -84,6 +98,7 @@
                         <th scope="col">When</th>
                         <th scope="col">Company</th>
                         <th scope="col">Who</th>
+                        <th scope="col">Source</th>
                         <th scope="col">Action</th>
                         <th scope="col">Details</th>
                     </tr>
@@ -98,6 +113,9 @@
                                 @if ($log->is_impersonated)
                                     <span class="badge-staff">impersonated</span>
                                 @endif
+                            </td>
+                            <td>
+                                <span class="badge-source source-{{ $log->channel ?? 'unknown' }}">{{ $log->channelLabel() }}</span>
                             </td>
                             <td>{{ $log->actionLabel() }}</td>
                             <td>

@@ -28,6 +28,7 @@ class AuditLogFactory extends Factory
             'actor_user_id' => null,
             'actor_label' => fake()->name().' <'.fake()->unique()->safeEmail().'>',
             'actor_type' => AuditLog::ACTOR_USER,
+            'channel' => AuditLog::CHANNEL_WEB,
             'is_impersonated' => false,
             'impersonator_user_id' => null,
             'action' => AuditLog::EVENT_UPDATED,
@@ -75,8 +76,25 @@ class AuditLogFactory extends Factory
             'actor_user_id' => null,
             'actor_label' => 'System',
             'actor_type' => AuditLog::ACTOR_SYSTEM,
+            'channel' => AuditLog::CHANNEL_SYSTEM,
             'is_impersonated' => false,
             'impersonator_user_id' => null,
         ]);
+    }
+
+    /**
+     * An action taken in the native iOS scanner app.
+     */
+    public function app(): static
+    {
+        return $this->state(fn (array $attributes) => ['channel' => AuditLog::CHANNEL_APP]);
+    }
+
+    /**
+     * An action taken on the web dashboard.
+     */
+    public function web(): static
+    {
+        return $this->state(fn (array $attributes) => ['channel' => AuditLog::CHANNEL_WEB]);
     }
 }
