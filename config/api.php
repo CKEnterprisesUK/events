@@ -29,4 +29,20 @@ return [
         'scan' => (int) env('API_THROTTLE_SCAN', 120),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Live dashboard snapshot cache (seconds)
+    |--------------------------------------------------------------------------
+    |
+    | How long the assembled live-door snapshot (headline counts, per-operator
+    | split and recent-scan feed) is shared between viewers. Every open door
+    | display and scanner dashboard polls every couple of seconds, so a short
+    | cache turns N viewers into one database build per window, at the cost of
+    | figures being at most this many seconds old. Keep it below the poll
+    | interval (2.5s). Set to 0 to disable the cache.
+    |
+    */
+
+    'snapshot_ttl' => (int) env('API_SNAPSHOT_TTL', 2),
+
 ];
