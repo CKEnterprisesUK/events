@@ -189,12 +189,17 @@
         // Sales period (Req 8.3–8.6, 8.9): a checked "use default" checkbox
         // hides AND disables its datetime input so it isn't submitted (the
         // controller then persists null); unchecking reveals + enables it.
+        // The group's hint (e.g. "Sales close automatically at the event start
+        // time …") describes the default, so it shows only while ticked.
         function bindSales(chk, box) {
             if (!chk || !box) return;
             var input = box.querySelector('input');
+            var group = chk.closest('[data-sales-group]');
+            var hint = group ? group.querySelector('[data-sales-hint]') : null;
             function sync() {
                 box.hidden = chk.checked;
                 if (input) input.disabled = chk.checked;
+                if (hint) hint.hidden = !chk.checked;
             }
             // Avoid double-binding when re-syncing a cloned/reset row.
             if (!chk.__salesBound) {
@@ -210,10 +215,10 @@
         function syncControls(scope) {
             (scope || root).querySelectorAll('.ticket-form__availability').forEach(syncAvailability);
             (scope || root).querySelectorAll('[data-sales-start-default]').forEach(function (chk) {
-                bindSales(chk, chk.closest('fieldset').querySelector('[data-sales-start]'));
+                bindSales(chk, chk.closest('[data-sales-group]').querySelector('[data-sales-start]'));
             });
             (scope || root).querySelectorAll('[data-sales-end-default]').forEach(function (chk) {
-                bindSales(chk, chk.closest('fieldset').querySelector('[data-sales-end]'));
+                bindSales(chk, chk.closest('[data-sales-group]').querySelector('[data-sales-end]'));
             });
         }
         window.__ticketSyncControls = syncControls;

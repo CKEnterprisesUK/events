@@ -42,6 +42,9 @@
         <!-- Stable QR HMAC secret for tests so QR tokens are deterministic and
              independent of the local APP_KEY. (Requirements 14.2, 16.4) -->
         <env name="QR_HMAC_SECRET" value="test_qr_hmac_secret_do_not_use_in_prod"/>
+        <!-- Live snapshot cache off by default so tests see fresh figures after
+             every scan; the cache has its own test that enables it. -->
+        <env name="API_SNAPSHOT_TTL" value="0"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>

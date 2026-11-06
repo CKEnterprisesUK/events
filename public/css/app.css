@@ -1555,7 +1555,23 @@ fieldset.field > legend {
 .ticket-form__availability [data-capacity-field] { margin-top: 0.5rem; }
 .ticket-form__sales .consent { margin: 0.35rem 0; }
 .ticket-form__sales [data-sales-start],
-.ticket-form__sales [data-sales-end] { margin-bottom: 0.5rem; }
+.ticket-form__sales [data-sales-end] { margin: 0.35rem 0 0; }
+/* "Sales open" and "Sales close" each sit in their own box so a date input is
+   never read as belonging to the other checkbox. */
+.ticket-form__sales-group {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    padding: 0.65rem 0.85rem;
+    margin-top: 0.5rem;
+}
+.ticket-form__sales-title { margin: 0 0 0.15rem; font-weight: 600; font-size: 0.875rem; }
+.ticket-form__sales-group .hint { margin: 0.15rem 0 0; }
+.ticket-form__sales-group label input[type="datetime-local"] { display: block; margin-top: 0.3rem; }
+@media (min-width: 720px) {
+    .ticket-form__sales { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
+    .ticket-form__sales > legend { grid-column: 1 / -1; }
+}
 .ticket-form__delete { margin-left: auto; }
 
 /* ---- Whole-row navigation (stretched-link) ----

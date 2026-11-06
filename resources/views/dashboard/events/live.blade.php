@@ -27,12 +27,7 @@
       $snapshot — the embedded first-paint figures, same shape as the feed JSON.
 --}}
 @php
-    use Illuminate\Support\Facades\Storage;
-
     $accent = $branding->hasPrimaryColour() ? $branding->primaryColour : '#3b82f6';
-    $logoUrl = $branding->hasLogo()
-        ? Storage::disk('public')->url($branding->logoPath)
-        : null;
     $feedUrl = route('dashboard.events.live.feed', $event);
     $platformUrl = route('dashboard.events.show', $event);
     $doorsAtMs = $doorsAt !== null ? $doorsAt->getTimestampMs() : 0;
@@ -100,6 +95,24 @@
             white-space: nowrap; transition: color .15s;
         }
         .topbar .back:hover { color: var(--ink); }
+        .topbar .right { display: flex; align-items: center; gap: 1.5rem; }
+
+        /* Connection status: green while fresh, amber while reconnecting, red
+           when signed out — so a frozen wall display is never mistaken for a
+           quiet door. */
+        .conn {
+            display: inline-flex; align-items: center; gap: .5rem;
+            font-size: .85rem; font-weight: 600; color: var(--ink-dim);
+            white-space: nowrap; font-variant-numeric: tabular-nums;
+            background: none; border: 0; padding: 0; font-family: inherit; cursor: default;
+        }
+        .conn .dot { width: .6rem; height: .6rem; border-radius: 50%; background: var(--ok); flex: 0 0 auto; }
+        .conn--stale { color: var(--dup); }
+        .conn--stale .dot { background: var(--dup); animation: conn-pulse 1s ease-in-out infinite; }
+        .conn--down { color: #fff; background: var(--err); padding: .3rem .7rem; border-radius: 6px; cursor: pointer; }
+        .conn--down .dot { background: #fff; }
+        @keyframes conn-pulse { 50% { opacity: .25; } }
+        @media (prefers-reduced-motion: reduce) { .conn--stale .dot { animation: none; } }
         .topbar .back svg { width: 16px; height: 16px; }
 
         .body { flex: 1 1 auto; position: relative; min-height: 0; }
@@ -237,6 +250,10 @@
             .grid { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
             .left { border-right: none; border-bottom: 1px solid var(--hair); }
         }
+        @media (max-width: 600px) {
+            .topbar { flex-wrap: wrap; gap: .5rem; padding: .7rem 1rem; }
+            .topbar .right { gap: 1rem; }
+        }
     </style>
 </head>
 <body>
@@ -250,10 +267,20 @@
             <span class="live-tag">Live</span>
             <span class="event-name">{{ $event->name }}</span>
         </div>
-        <a class="back" href="{{ $platformUrl }}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            Return to platform
-        </a>
+        <div class="right">
+            {{-- Connection status, updated by poll(). role=status so a screen
+                 reader announces state changes (not the per-second counter). --}}
+            <button type="button" class="conn" id="conn" disabled>
+                <span class="dot" aria-hidden="true"></span>
+                <span id="conn-text">Connecting…</span>
+            </button>
+            <span class="visually-hidden" id="conn-announce" role="status" aria-live="polite"
+                  style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap"></span>
+            <a class="back" href="{{ $platformUrl }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                Return to platform
+            </a>
+        </div>
     </header>
 
     <div class="body">
@@ -313,15 +340,12 @@
             </div>
         </section>
 
-        @if ($logoUrl)
-            <img class="logo" src="{{ $logoUrl }}" alt="{{ $event->name }}">
-        @else
-            <span class="wordmark" aria-label="Events by CK Enterprises">
-                <span class="events">Events</span>
-                <span class="by">by</span>
-                <span class="ck">CK Enterprises</span>
-            </span>
-        @endif
+        {{-- Always the platform wordmark, never the company's own logo. --}}
+        <span class="wordmark" aria-label="Events by CK Enterprises">
+            <span class="events">Events</span>
+            <span class="by">by</span>
+            <span class="ck">CK Enterprises</span>
+        </span>
     </div>
 </div>
 
@@ -465,11 +489,87 @@
         }
     }
 
+    // ---- Connection status --------------------------------------------------
+    // On a failed poll the page keeps showing the last good figures, so the
+    // status pill says how fresh they are: "Updated Xs ago" while healthy,
+    // "Reconnecting…" once updates stop arriving, and "Signed out" (a reload
+    // button) when the session has expired, which never recovers by itself.
+    var STALE_AFTER_MS = POLL_MS * 3;
+    var elConn = document.getElementById('conn');
+    var elConnText = document.getElementById('conn-text');
+    var elConnAnnounce = document.getElementById('conn-announce');
+    var lastOkAt = 0;
+    var signedOut = false;
+    var inFlight = false;
+    var announced = '';
+
+    function agoLabel(ms) {
+        var s = Math.max(0, Math.round(ms / 1000));
+        if (s < 60) return s + 's ago';
+        var m = Math.floor(s / 60);
+        return m + 'm ' + (s % 60) + 's ago';
+    }
+
+    function setConn(state, text) {
+        elConn.className = 'conn' + (state === 'ok' ? '' : ' conn--' + state);
+        elConn.disabled = state !== 'down';
+        elConnText.textContent = text;
+        // Announce state changes only, not the ticking seconds.
+        if (state !== announced) {
+            announced = state;
+            elConnAnnounce.textContent = state === 'ok' ? 'Live updates connected'
+                : state === 'stale' ? 'Live updates interrupted, reconnecting'
+                : 'Signed out, live updates stopped. Reload to sign in again.';
+        }
+    }
+
+    function renderConn() {
+        if (signedOut) {
+            setConn('down', 'Signed out · reload to sign in');
+            return;
+        }
+        if (!lastOkAt) {
+            setConn('stale', 'Connecting…');
+            return;
+        }
+        var age = Date.now() - lastOkAt;
+        if (age > STALE_AFTER_MS) {
+            setConn('stale', 'Reconnecting… last update ' + agoLabel(age));
+        } else {
+            setConn('ok', 'Updated ' + agoLabel(age));
+        }
+    }
+
+    elConn.addEventListener('click', function () { window.location.reload(); });
+
     function poll() {
+        // Never stack requests: a slow server would otherwise get a growing
+        // pile of overlapping polls from every open display.
+        if (inFlight || signedOut) return;
+        inFlight = true;
+
         fetch(FEED_URL, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
-            .then(function (r) { return r.ok ? r.json() : null; })
-            .then(function (data) { if (data) apply(data); })
-            .catch(function () { /* transient error: keep last good view, retry next tick */ });
+            .then(function (r) {
+                // 401 = session expired/idle timeout, 419 = CSRF/session gone,
+                // and a redirect to the sign-in page all mean the display will
+                // never recover on its own.
+                if (r.status === 401 || r.status === 419 || (r.redirected && /\/login/.test(r.url))) {
+                    signedOut = true;
+                    return null;
+                }
+                return r.ok ? r.json() : null;
+            })
+            .then(function (data) {
+                if (data) {
+                    apply(data);
+                    lastOkAt = Date.now();
+                }
+            })
+            .catch(function () { /* transient error: keep last good view, retry next tick */ })
+            .then(function () {
+                inFlight = false;
+                renderConn();
+            });
     }
 
     @if ($snapshot['doorsOpen'])
@@ -479,6 +579,7 @@
     @endif
 
     setInterval(tickCountdown, 1000); tickCountdown();
+    setInterval(renderConn, 1000); renderConn();
     setInterval(poll, POLL_MS); poll();
 })();
 </script>

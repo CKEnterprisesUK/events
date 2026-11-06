@@ -210,6 +210,9 @@ class EventController extends Controller
         return view('dashboard.events.tickets', $this->sharedViewData($event) + [
             'ticketTypes' => $event->ticketTypes()->latest()->get(),
             'eventRemaining' => $event->overallRemaining(),
+            // Seats temporarily held by in-progress checkouts. They count
+            // against availability here but are not yet sold.
+            'heldInCheckout' => (int) $event->ticketTypes()->sum('reserved_count'),
             // The advisory event-vs-types capacity comparison lives on this
             // screen now, next to the overall-capacity field it explains.
             'capacity' => $this->readiness->capacity($event),
