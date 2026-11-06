@@ -5,6 +5,7 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\ErrorReport;
+use App\Services\ErrorStats;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -63,6 +64,7 @@ class ErrorReportController extends Controller
             'search' => $search,
             'companies' => Company::query()->orderBy('name')->pluck('name', 'id'),
             'unresolvedCount' => ErrorReport::query()->whereNull('resolved_at')->count(),
+            'stats' => app(ErrorStats::class)->daily(30),
         ]);
     }
 

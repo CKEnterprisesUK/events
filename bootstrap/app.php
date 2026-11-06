@@ -11,6 +11,7 @@ use App\Http\Middleware\ResolveTenant;
 use App\Http\Middleware\SessionTimeout;
 use App\Http\Middleware\VerifyStripeSignature;
 use App\Services\ErrorReporter;
+use App\Services\ErrorStats;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -166,6 +167,19 @@ return Application::configure(basePath: dirname(__DIR__))
         // 404/403/419/422 which have their own friendly handling), and the
         // client is expecting HTML (JSON/API clients keep the default JSON
         // error shape via shouldRenderJsonWhen above).
+        // Count every 403 / 404 / 500 into the hourly `error_stats` counter that
+        // drives the baseline graph and spike alerts. Always returns null so the
+        // callbacks below (and Laravel's default rendering) still run.
+        $exceptions->render(function (Throwable $e, Request $request) {
+            $status = ErrorStats::statusFor($e);
+
+            if ($status !== null) {
+                app(ErrorStats::class)->record($status);
+            }
+
+            return null;
+        });
+
         $exceptions->render(function (Throwable $e, Request $request) {
             if (config('app.debug')) {
                 return null; // dev: fall through to the detailed trace page.

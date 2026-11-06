@@ -235,6 +235,11 @@ class AuditLog extends Model
 
     public const GDPR_RETENTION_SWEEP = 'gdpr.retention_sweep';
 
+    // Scheduled (cron) jobs
+    public const CRON_RUN_COMPLETED = 'cron.run_completed';
+
+    public const CRON_RUN_FAILED = 'cron.run_failed';
+
     // System (no actor)
     public const WEBHOOK_PAYMENT_CONFIRMED = 'webhook.payment_confirmed';
 
@@ -321,6 +326,8 @@ class AuditLog extends Model
         self::GDPR_CUSTOMER_ANONYMISED => ['category' => self::CATEGORY_PRIVACY, 'label' => 'Anonymised customer data'],
         self::GDPR_RETENTION_SWEEP => ['category' => self::CATEGORY_PRIVACY, 'label' => 'Auto-anonymised customer data past retention'],
 
+        self::CRON_RUN_COMPLETED => ['category' => self::CATEGORY_SYSTEM, 'label' => 'Scheduled job ran'],
+        self::CRON_RUN_FAILED => ['category' => self::CATEGORY_SYSTEM, 'label' => 'Scheduled job failed'],
         self::WEBHOOK_PAYMENT_CONFIRMED => ['category' => self::CATEGORY_SYSTEM, 'label' => 'Payment confirmed'],
         self::WEBHOOK_REFUND_PROCESSED => ['category' => self::CATEGORY_SYSTEM, 'label' => 'Refund processed'],
         self::WEBHOOK_DISPUTE_CREATED => ['category' => self::CATEGORY_SYSTEM, 'label' => 'Dispute opened'],

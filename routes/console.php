@@ -6,6 +6,7 @@ use App\Jobs\PruneAuditLogsJob;
 use App\Jobs\ReconcilePaidOrdersJob;
 use App\Jobs\RefreshStripeAccountStateJob;
 use App\Jobs\ReleaseExpiredReservationsJob;
+use App\Services\CronRuns;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -26,8 +27,12 @@ Artisan::command('inspire', function () {
 //
 // (Requirements 10.7, 10.12 — Design: ReleaseExpiredReservationsJob)
 Artisan::command('reservations:release-expired', function () {
-    dispatch_sync(new ReleaseExpiredReservationsJob);
-    $this->info('Expired reservations released.');
+    return CronRuns::track('reservations:release-expired', function () {
+        dispatch_sync(new ReleaseExpiredReservationsJob);
+        $this->info('Expired reservations released.');
+
+        return 'Swept expired reservations';
+    });
 })->purpose('Release capacity held by reservations whose window has elapsed');
 
 // Prune audit-log rows past the retention window (24 months). Runs the job
@@ -40,8 +45,12 @@ Artisan::command('reservations:release-expired', function () {
 //
 // (Security — audit retention; Hosting and Deployment Notes)
 Artisan::command('audit:prune', function () {
-    $deleted = dispatch_sync(new PruneAuditLogsJob);
-    $this->info("Pruned {$deleted} audit log row(s) past retention.");
+    return CronRuns::track('audit:prune', function () {
+        $deleted = (int) dispatch_sync(new PruneAuditLogsJob);
+        $this->info("Pruned {$deleted} audit log row(s) past retention.");
+
+        return ['summary' => "Pruned {$deleted} audit log row(s) past retention", 'actions' => $deleted];
+    });
 })->purpose('Delete audit-log records older than the retention window');
 
 // Enforce each Company's customer-data retention policy: anonymise the personal
@@ -57,14 +66,19 @@ Artisan::command('audit:prune', function () {
 Artisan::command('customers:anonymise-expired', function () {
     // Run the job in-process and read its per-run summary off the same instance
     // (dispatch_sync can serialize the job, which would blank our local copy).
-    $job = new AnonymiseExpiredCustomerDataJob;
-    app()->call([$job, 'handle']);
-    $s = $job->summary;
+    return CronRuns::track('customers:anonymise-expired', function () {
+        $job = new AnonymiseExpiredCustomerDataJob;
+        app()->call([$job, 'handle']);
+        $s = $job->summary;
 
-    $this->info(
-        "Anonymised customer data on {$s['orders_anonymised']} order(s) across "
-        ."{$s['companies_swept']} company(ies) past their retention window."
-    );
+        $msg = "Anonymised customer data on {$s['orders_anonymised']} order(s) across "
+            ."{$s['companies_swept']} company(ies) past their retention window.";
+        $this->info($msg);
+
+        // The job already writes its own per-company GDPR audit rows, so the
+        // generic cron audit entry is skipped (audit: false) to avoid duplicates.
+        return ['summary' => $msg, 'actions' => $s['orders_anonymised']];
+    }, audit: false);
 })->purpose('Anonymise customer personal data past each company\'s retention window');
 
 // Backfill the ACTUAL Stripe processing fee onto paid Orders where it is still
@@ -81,8 +95,12 @@ Artisan::command('customers:anonymise-expired', function () {
 //
 // (Truthful-payout feature)
 Artisan::command('stripe:backfill-fees', function () {
-    $captured = dispatch_sync(new BackfillStripeFeesJob);
-    $this->info("Captured Stripe fees for {$captured} order(s).");
+    return CronRuns::track('stripe:backfill-fees', function () {
+        $captured = (int) dispatch_sync(new BackfillStripeFeesJob);
+        $this->info("Captured Stripe fees for {$captured} order(s).");
+
+        return ['summary' => "Captured Stripe fees for {$captured} order(s)", 'actions' => $captured];
+    });
 })->purpose('Backfill actual Stripe processing fees onto paid orders missing them');
 
 // Reconcile Orders against Stripe to recover any whose payment SUCCEEDED but
@@ -107,18 +125,31 @@ Artisan::command('stripe:backfill-fees', function () {
 Artisan::command('orders:reconcile-paid {order_reference? : Recover a single order by reference; omit to sweep all}', function () {
     $reference = $this->argument('order_reference');
 
-    $job = new ReconcilePaidOrdersJob($reference);
-    app()->call([$job, 'handle']);
-    $s = $job->summary;
+    $body = function () use ($reference) {
+        $job = new ReconcilePaidOrdersJob($reference);
+        app()->call([$job, 'handle']);
+        $s = $job->summary;
 
-    $this->info(
-        "Reconcile complete: examined {$s['examined']}, recovered {$s['recovered']}, skipped {$s['skipped']}."
-        .($reference !== null ? " (order {$reference})" : '')
-    );
+        $msg = "Reconcile complete: examined {$s['examined']}, recovered {$s['recovered']}, skipped {$s['skipped']}."
+            .($reference !== null ? " (order {$reference})" : '');
+        $this->info($msg);
 
-    if ($reference !== null && $s['examined'] === 0) {
-        $this->warn("No order found with reference '{$reference}'.");
+        if ($reference !== null && $s['examined'] === 0) {
+            $this->warn("No order found with reference '{$reference}'.");
+        }
+
+        return ['summary' => $msg, 'actions' => (int) $s['recovered']];
+    };
+
+    // A manual single-order recovery is not the scheduled sweep, so it must not
+    // overwrite the cron health record.
+    if ($reference !== null) {
+        $body();
+
+        return 0;
     }
+
+    return CronRuns::track('orders:reconcile-paid', $body);
 })->purpose('Reconcile orders against Stripe and recover any paid-but-unconfirmed order');
 
 // Refresh the connected-account onboarding/verification snapshot for every
@@ -141,26 +172,73 @@ Artisan::command('stripe:refresh-accounts', function () {
     // instance. We call handle() through the container (not the bus) so the very
     // instance we hold is the one that ran — dispatch_sync can hand the job
     // through serialization, which would leave our local $job->summary empty.
-    $job = new RefreshStripeAccountStateJob;
-    app()->call([$job, 'handle']);
-    $s = $job->summary;
+    return CronRuns::track('stripe:refresh-accounts', function () {
+        $job = new RefreshStripeAccountStateJob;
+        app()->call([$job, 'handle']);
+        $s = $job->summary;
 
-    $this->info("Refreshed Stripe account state for {$s['refreshed']} company(ies).");
-    $this->line("Database: connection '{$s['connection']}', database '{$s['database']}', total companies {$s['total_companies']}.");
-    $this->line(
-        "Connected accounts found: {$s['matched']} "
-        ."(refreshed {$s['refreshed']}, blank id {$s['skipped_blank']}, failed {$s['failed']})."
-    );
+        $this->info("Refreshed Stripe account state for {$s['refreshed']} company(ies).");
+        $this->line("Database: connection '{$s['connection']}', database '{$s['database']}', total companies {$s['total_companies']}.");
+        $this->line(
+            "Connected accounts found: {$s['matched']} "
+            ."(refreshed {$s['refreshed']}, blank id {$s['skipped_blank']}, failed {$s['failed']})."
+        );
 
-    if ($s['total_companies'] === 0) {
-        $this->warn('This database has NO companies at all. The app is almost certainly connected to the wrong database — check the .env DB_* settings (a partial .env falls back to sqlite). Compare the connection/database above with the one you inspect in phpMyAdmin.');
-    } elseif ($s['matched'] === 0) {
-        $this->warn('Companies exist but none has a Stripe account id stored. If a company shows as "connected" in the UI, its onboarding may have started without the account id being saved.');
-    } elseif ($s['failed'] > 0) {
-        $this->warn('One or more accounts could not be read from Stripe — see the application log (storage/logs) for the reason.');
-    }
+        if ($s['total_companies'] === 0) {
+            $this->warn('This database has NO companies at all. The app is almost certainly connected to the wrong database — check the .env DB_* settings (a partial .env falls back to sqlite). Compare the connection/database above with the one you inspect in phpMyAdmin.');
+        } elseif ($s['matched'] === 0) {
+            $this->warn('Companies exist but none has a Stripe account id stored. If a company shows as "connected" in the UI, its onboarding may have started without the account id being saved.');
+        } elseif ($s['failed'] > 0) {
+            $this->warn('One or more accounts could not be read from Stripe — see the application log (storage/logs) for the reason.');
+        }
+
+        return [
+            'summary' => "Refreshed {$s['refreshed']} of {$s['matched']} connected account(s); {$s['failed']} failed.",
+            'actions' => (int) $s['refreshed'],
+        ];
+    });
 })->purpose('Re-read connected Stripe accounts and refresh their verification/requirements state');
 
+// Compare the current hour's 403/404/500 counts with the last 14 days and email
+// every Super_Admin if any is well above its usual level (see App\Services\
+// ErrorStats). Runs SYNCHRONOUSLY, like the sweepers above (no proc_open). Run
+// it every 10-15 minutes by cron:
+//
+//   */15 * * * * cd /home/<user>/<app> && /opt/cpanel/ea-php85/root/usr/bin/php \
+//       artisan errors:check-spikes >> /dev/null 2>&1
+Artisan::command('errors:check-spikes', function () {
+    return CronRuns::track('errors:check-spikes', function () {
+        $alerted = app(\App\Services\ErrorStats::class)->alertOnSpikes();
+        if ($alerted === []) {
+            $this->info('No error spikes above baseline.');
+
+            return 'No error spikes above baseline';
+        }
+        $parts = [];
+        foreach ($alerted as $s) {
+            $this->warn("HTTP {$s['status']}: {$s['current']} this hour (usual {$s['mean']}, alert level {$s['threshold']}).");
+            $parts[] = "HTTP {$s['status']} ({$s['current']} vs usual {$s['mean']})";
+        }
+        $this->info('Super_Admins alerted.');
+
+        return ['summary' => 'Alerted Super_Admins: '.implode(', ', $parts), 'actions' => count($alerted)];
+    });
+})->purpose('Email Super_Admins when 403/404/500 errors exceed their baseline');
+// Delete captured error reports older than 90 days (they hold URLs, IPs, user
+// agents and traces) and hourly error counts older than 400 days. Synchronous,
+// like the other sweepers. A DAILY cron is ample:
+//
+//   30 3 * * * cd /home/<user>/<app> && /opt/cpanel/ea-php85/root/usr/bin/php \
+//       artisan errors:prune >> /dev/null 2>&1
+Artisan::command('errors:prune', function () {
+    return CronRuns::track('errors:prune', function () {
+        $d = app(\App\Services\ErrorStats::class)->prune();
+        $msg = "Pruned {$d['reports']} error report(s) and {$d['stats']} hourly count row(s) past retention.";
+        $this->info($msg);
+
+        return ['summary' => $msg, 'actions' => $d['reports'] + $d['stats']];
+    });
+})->purpose('Delete error reports and error counts past their retention windows');
 // NOTE ON DRAINING THE QUEUE (ticket emails, webhook processing):
 // Do NOT use `schedule:run` here. On shared cPanel hosting `proc_open` is
 // disabled, so `schedule:run` cannot spawn the `queue:work` child process it
