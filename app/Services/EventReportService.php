@@ -16,6 +16,7 @@ use App\Services\Reporting\ReportDateRange;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * The single accounting source of truth for a single Event's figures.
@@ -309,6 +310,101 @@ class EventReportService
             byStaff: $this->checkInsByStaff($checkedIn, $validTicketsByOrder),
             timeline: $this->checkInsByHour($checkedIn, $validTicketsByOrder),
         );
+    }
+
+    /**
+     * The headline attendance figures for the live door dashboard, computed
+     * with SQL aggregates instead of hydrating models.
+     *
+     * {@see attendanceFor()} loads every confirmed Order and every valid Ticket
+     * as an Eloquent model and counts them in PHP, which is right for the
+     * report page (it needs the arrival curve and first/last check-in) but far
+     * too heavy to run on every poll of a door display: thousands of models per
+     * request. The live dashboard only needs the counts and the per-operator
+     * split, so this returns exactly those, using the SAME definitions —
+     * confirmed orders ({@see CONFIRMED_STATUSES}), `valid` tickets only, a
+     * check-in being a non-null `scanned_at`, operators resolved by
+     * `scanned_by` with a missing/deleted user falling under "Unknown" and rows
+     * ordered by orders scanned (descending) then name — in a handful of cheap
+     * queries. The two methods are tested against each other so they cannot
+     * drift apart.
+     *
+     * The queries use the query builder (which bypasses the global tenant
+     * scope), so every one is explicitly bound to the Event's own `company_id`
+     * and `event_id`.
+     *
+     * @return array{
+     *     confirmedOrders: int,
+     *     checkedInOrders: int,
+     *     ticketsSold: int,
+     *     ticketsCheckedIn: int,
+     *     byStaff: list<array{name:string,orders:int,tickets:int}>
+     * }
+     */
+    public function liveAttendanceFor(Event $event): array
+    {
+        $confirmedOrders = DB::table('orders')
+            ->where('orders.company_id', $event->company_id)
+            ->where('orders.event_id', $event->getKey())
+            ->whereIn('orders.status', self::CONFIRMED_STATUSES);
+
+        $validTickets = DB::table('tickets')
+            ->join('orders', 'orders.id', '=', 'tickets.order_id')
+            ->where('orders.company_id', $event->company_id)
+            ->where('orders.event_id', $event->getKey())
+            ->whereIn('orders.status', self::CONFIRMED_STATUSES)
+            ->where('tickets.status', Ticket::STATUS_VALID);
+
+        $orderTotals = (clone $confirmedOrders)
+            ->selectRaw('COUNT(*) AS confirmed_orders')
+            ->selectRaw('COALESCE(SUM(CASE WHEN orders.scanned_at IS NOT NULL THEN 1 ELSE 0 END), 0) AS checked_in_orders')
+            ->first();
+
+        $ticketTotals = (clone $validTickets)
+            ->selectRaw('COUNT(*) AS tickets_sold')
+            ->selectRaw('COALESCE(SUM(CASE WHEN orders.scanned_at IS NOT NULL THEN 1 ELSE 0 END), 0) AS tickets_checked_in')
+            ->first();
+
+        $ordersByStaff = (clone $confirmedOrders)
+            ->whereNotNull('orders.scanned_at')
+            ->selectRaw('orders.scanned_by AS scanned_by, COUNT(*) AS orders')
+            ->groupBy('orders.scanned_by')
+            ->get();
+
+        $ticketsByStaff = (clone $validTickets)
+            ->whereNotNull('orders.scanned_at')
+            ->selectRaw('orders.scanned_by AS scanned_by, COUNT(*) AS tickets')
+            ->groupBy('orders.scanned_by')
+            ->get()
+            ->mapWithKeys(fn ($row): array => [(string) ($row->scanned_by ?? '') => (int) $row->tickets]);
+
+        $userIds = $ordersByStaff->pluck('scanned_by')->filter()->unique()->all();
+        $names = $userIds === []
+            ? collect()
+            : User::query()->whereIn('id', $userIds)->pluck('name', 'id');
+
+        $byStaff = $ordersByStaff
+            ->map(function ($row) use ($names, $ticketsByStaff): array {
+                $key = (string) ($row->scanned_by ?? '');
+
+                return [
+                    'name' => $key === '' ? 'Unknown' : (string) ($names->get((int) $row->scanned_by) ?? 'Unknown'),
+                    'orders' => (int) $row->orders,
+                    'tickets' => (int) $ticketsByStaff->get($key, 0),
+                ];
+            })
+            ->all();
+
+        usort($byStaff, fn (array $a, array $b): int => $b['orders'] <=> $a['orders']
+            ?: strcmp($a['name'], $b['name']));
+
+        return [
+            'confirmedOrders' => (int) $orderTotals->confirmed_orders,
+            'checkedInOrders' => (int) $orderTotals->checked_in_orders,
+            'ticketsSold' => (int) $ticketTotals->tickets_sold,
+            'ticketsCheckedIn' => (int) $ticketTotals->tickets_checked_in,
+            'byStaff' => $byStaff,
+        ];
     }
 
     /**

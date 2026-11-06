@@ -8,6 +8,7 @@ use App\Models\Event;
 use App\Models\ScanEvent;
 use App\Models\Ticket;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -21,10 +22,13 @@ use Illuminate\Support\Facades\DB;
  * controller used to assemble inline (doors-open flag, headline stats,
  * per-operator breakdown, recent feed, generated-at).
  *
- * The headline counts (scanned / sold / %) come from the shared
- * {@see EventReportService::attendanceFor()} — valid tickets on confirmed
- * orders — so they never diverge from the attendance report and sold is always
- * consistent with scanned. The live FEED comes from the `scan_events`
+ * The headline counts (scanned / sold / %) come from
+ * {@see EventReportService::liveAttendanceFor()} — the aggregate-query twin of
+ * {@see EventReportService::attendanceFor()}, using the same definition (valid
+ * tickets on confirmed orders) — so they never diverge from the attendance
+ * report and sold is always consistent with scanned. The assembled snapshot is
+ * cached for `api.snapshot_ttl` seconds so many viewers share one build. The
+ * live FEED comes from the `scan_events`
  * breadcrumb table, which — unlike `orders.scanned_at` — records every
  * operator's attempts, successes AND failures (duplicates, rejections, invalid
  * codes), so rejected tickets show in the feed too.
@@ -57,16 +61,46 @@ class EventSnapshotService
      */
     public function snapshot(Event $event): array
     {
-        $attendance = $this->reports->attendanceFor($event);
+        $ttl = (int) config('api.snapshot_ttl', 0);
 
-        // Both figures come from the SAME authoritative source — the attendance
-        // report, which counts valid Ticket rows on confirmed orders — so "sold"
-        // and "scanned" are always consistent (sold ≥ scanned). We deliberately
-        // do NOT read Event::sellThrough() here: that uses the denormalised
-        // ticket_types.sold_count counter, which can read 0 for orders inserted
-        // directly (e.g. pre-prod seed data) even though real tickets exist.
-        $sold = $attendance->ticketsSold;
-        $scanned = $attendance->ticketsCheckedIn;
+        if ($ttl <= 0) {
+            return $this->buildSnapshot($event);
+        }
+
+        // Every open door display and scanner dashboard polls this every couple
+        // of seconds, and each poll costs several queries. A very short shared
+        // cache means N viewers cost one build per TTL window instead of N, at
+        // the price of figures being at most `$ttl` seconds old. Keyed by
+        // Company AND Event so it can never cross tenants.
+        $key = sprintf('event-snapshot:%d:%d', $event->company_id, $event->getKey());
+
+        return Cache::remember($key, $ttl, fn (): array => $this->buildSnapshot($event));
+    }
+
+    /**
+     * Assemble the snapshot from the database, uncached.
+     *
+     * @return array{
+     *     doorsOpen: bool,
+     *     stats: array{scanned:int, sold:int, percent:float|null, checkedInOrders:int, confirmedOrders:int},
+     *     byOperator: list<array{name:string, tickets:int, orders:int}>,
+     *     recent: list<array{id:int, outcome:string, reference:?string, name:?string, operator:string, tickets:int, at:string, atLabel:string, breakdown:string, message:string}>,
+     *     generatedAt: string
+     * }
+     */
+    private function buildSnapshot(Event $event): array
+    {
+        $attendance = $this->reports->liveAttendanceFor($event);
+
+        // Both figures come from the SAME authoritative definition — valid
+        // Ticket rows on confirmed orders, the one the attendance report uses —
+        // so "sold" and "scanned" are always consistent (sold ≥ scanned). We
+        // deliberately do NOT read Event::sellThrough() here: that uses the
+        // denormalised ticket_types.sold_count counter, which can read 0 for
+        // orders inserted directly (e.g. pre-prod seed data) even though real
+        // tickets exist.
+        $sold = $attendance['ticketsSold'];
+        $scanned = $attendance['ticketsCheckedIn'];
 
         // Scanned as a percentage of tickets sold (the headline dial). Null when
         // nothing has sold, so the view can show an em dash rather than 0%.
@@ -78,10 +112,10 @@ class EventSnapshotService
                 'scanned' => $scanned,
                 'sold' => $sold,
                 'percent' => $percent,
-                'checkedInOrders' => $attendance->checkedInOrders,
-                'confirmedOrders' => $attendance->confirmedOrders,
+                'checkedInOrders' => $attendance['checkedInOrders'],
+                'confirmedOrders' => $attendance['confirmedOrders'],
             ],
-            'byOperator' => $attendance->byStaff,
+            'byOperator' => $attendance['byStaff'],
             'recent' => $this->recentScans($event),
             'generatedAt' => now()->toIso8601String(),
         ];
