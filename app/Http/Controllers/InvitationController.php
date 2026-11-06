@@ -66,7 +66,7 @@ class InvitationController extends Controller
         $companyId = Auth::user()->company_id;
 
         return view('dashboard.users.index', [
-            'users' => User::query()->where('company_id', $companyId)->get(),
+            'users' => User::query()->withAppAccess()->where('company_id', $companyId)->get(),
             'invitations' => Invitation::query()->whereNull('accepted_at')->get(),
             'capabilityMatrix' => $authorization->capabilityMatrix(),
         ]);

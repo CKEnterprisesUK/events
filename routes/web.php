@@ -38,6 +38,7 @@ use App\Http\Controllers\StripeReturnController;
 use App\Http\Controllers\SuperAdmin\AnnouncementController as SuperAdminAnnouncementController;
 use App\Http\Controllers\SuperAdmin\TemplatedEmailController as SuperAdminTemplatedEmailController;
 use App\Http\Controllers\SuperAdmin\AuditController as SuperAdminAuditController;
+use App\Http\Controllers\AppAccessController;
 use App\Http\Controllers\SuperAdmin\ClientController as SuperAdminClientController;
 use App\Http\Controllers\SuperAdmin\CompanyController as SuperAdminCompanyController;
 use App\Http\Controllers\SuperAdmin\CompanyUserController as SuperAdminCompanyUserController;
@@ -326,6 +327,8 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
             ->withoutMiddleware('dashboard.tenant')->name('profile.password');
         Route::post('/profile/logout-other-sessions', [ProfileController::class, 'logoutOtherSessions'])
             ->withoutMiddleware('dashboard.tenant')->name('profile.logout-other-sessions');
+        Route::post('/profile/app-access/revoke', [AppAccessController::class, 'revokeOwn'])
+            ->withoutMiddleware('dashboard.tenant')->name('profile.app-access.revoke');
         Route::get('/profile/data', [ProfileController::class, 'downloadData'])
             ->withoutMiddleware('dashboard.tenant')->name('profile.data');
 
@@ -584,6 +587,8 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
         Route::put('/users/{user}/role', [InvitationController::class, 'updateRole'])->name('users.role');
         Route::patch('/users/{user}/role', [InvitationController::class, 'updateRole']);
         Route::delete('/users/{user}', [InvitationController::class, 'destroy'])->name('users.destroy');
+        Route::post('/users/{user}/app-access/revoke', [AppAccessController::class, 'revokeForMember'])
+            ->where('user', '[0-9]+')->name('users.app-access.revoke');
 
         // Stripe Connect onboarding (Owner-gated in the controller). The Owner
         // sees their connection status, starts Connect Standard onboarding, and
@@ -921,6 +926,8 @@ Route::middleware(['auth', 'super.admin', 'session.timeout', 'migrations.pending
             ->where('user', '[0-9]+')->name('users.destroy');
         Route::post('/users/{user}/password-reset', [SuperAdminUserController::class, 'sendPasswordReset'])
             ->where('user', '[0-9]+')->name('users.password-reset');
+        Route::post('/users/{user}/app-access/revoke', [AppAccessController::class, 'revokeForAdmin'])
+            ->where('user', '[0-9]+')->name('users.app-access.revoke');
         Route::post('/users/{user}/resend-verification', [SuperAdminUserController::class, 'resendVerification'])
             ->where('user', '[0-9]+')->name('users.resend-verification');
 

@@ -184,6 +184,17 @@
                 <button type="submit" class="btn btn-outline">Sign out other sessions</button>
             </form>
 
+            <form method="POST" action="{{ route('dashboard.profile.app-access.revoke') }}" class="profile-form"
+                  style="border-top: 1px solid var(--border);"
+                  onsubmit="return confirm('Sign out of the iOS app on every device?');">
+                @csrf
+                <p class="muted" style="margin-top: 0;">
+                    iOS app: @if (($appTokenCount ?? 0) > 0) <strong>enabled</strong> on {{ $appTokenCount }} {{ \Illuminate\Support\Str::plural('device', $appTokenCount) }}. @else not signed in on any device. @endif
+                    Revoking signs the app out everywhere; you will need to sign in again.
+                </p>
+                <button type="submit" class="btn btn-outline">Revoke app access</button>
+            </form>
+
             <div class="profile-form" style="border-top: 1px solid var(--border);">
                 <p class="muted" style="margin-top: 0;">
                     Download a copy of the personal data held on your account as a

@@ -336,6 +336,7 @@
                             <th scope="col">Email</th>
                             <th scope="col">Role</th>
                             <th scope="col">Status</th>
+                            <th scope="col">iOS app</th>
                             <th scope="col"></th>
                         </tr>
                     </thead>
@@ -354,6 +355,17 @@
                                     <span class="admin-pill {{ $member->isDisabled() ? 'admin-pill--suspended' : 'admin-pill--active' }}">
                                         {{ $member->isDisabled() ? 'Disabled' : 'Active' }}
                                     </span>
+                                </td>
+                                <td>
+                                    @if ($member->app_tokens_count > 0)
+                                        <span class="admin-pill admin-pill--active">Enabled</span>
+                                        <form method="POST" action="{{ route('admin.users.app-access.revoke', $member->id) }}" style="display:inline;">
+                                            @csrf
+                                            <button type="submit" class="btn btn-outline btn-sm" onclick="return confirm('Revoke app access for {{ addslashes($member->email) }}? They will be signed out of the app on every device.');">Revoke</button>
+                                        </form>
+                                    @else
+                                        <span class="cell-dim">Not enabled</span>
+                                    @endif
                                 </td>
                                 <td>
                                     <details class="user-actions">

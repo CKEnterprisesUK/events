@@ -24,6 +24,8 @@
         .app-header .brand .logo .events { font-size: 1.35rem; color: #2dd4bf; }
         .app-header .brand .logo .by { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight: 500; font-size: .7rem; letter-spacing: .05em; color: var(--dark-text-dim); text-transform: uppercase; }
         .app-header .brand .logo .ck { font-size: 1.35rem; color: #fff; }
+        .app-header .header-company-logo { height: 2.25rem; max-width: 9rem; width: auto; object-fit: contain; background: #fff; padding: .2rem .4rem; border-radius: .35rem; margin-right: .75rem; flex: none; }
+        @media (max-width: 640px) { .app-header .header-company-logo { display: none; } }
         .app-header .header-user .profile-link { color: inherit; text-decoration: none; }
         .app-header .header-user .profile-link:hover strong { color: #fff; text-decoration: underline; }
 
@@ -205,6 +207,13 @@
                 ->implode('');
             $initials = $initials !== '' ? $initials : '?';
         @endphp
+
+        {{-- The company's own logo, when they've uploaded one. --}}
+        @if ($company && filled($company->logo_path))
+            <img class="header-company-logo"
+                 src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($company->logo_path) }}"
+                 alt="{{ $company->name }} logo">
+        @endif
 
         <div class="header-user" id="headerUser">
             <button type="button" class="user-chip" id="userChipToggle" aria-haspopup="true" aria-expanded="false" aria-controls="userMenu">

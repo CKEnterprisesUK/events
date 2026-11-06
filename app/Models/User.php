@@ -254,6 +254,23 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Adds `app_tokens_count`: the user's live (unexpired) API tokens, i.e. the
+     * number of app sessions that are currently signed in. Non-zero means the
+     * user has the app enabled.
+     *
+     * @param  Builder<User>  $query
+     * @return Builder<User>
+     */
+    public function scopeWithAppAccess(Builder $query): Builder
+    {
+        return $query->withCount(['tokens as app_tokens_count' => function ($q): void {
+            $q->where(function ($q): void {
+                $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
+            });
+        }]);
+    }
+
+    /**
      * Keep the `company_user` pivot (what the iOS API reads) in step with the
      * web-side `users.company_id` / `users.role`, which every create and role
      * change path writes. Without this, invited / newly registered users have no

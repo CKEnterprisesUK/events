@@ -29,6 +29,9 @@ class ProfileController extends Controller
     {
         return view('dashboard.profile.edit', [
             'user' => $request->user(),
+            'appTokenCount' => $request->user()->tokens()
+                ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+                ->count(),
         ]);
     }
 
