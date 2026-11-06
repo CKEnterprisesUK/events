@@ -27,12 +27,7 @@
       $snapshot — the embedded first-paint figures, same shape as the feed JSON.
 --}}
 @php
-    use Illuminate\Support\Facades\Storage;
-
     $accent = $branding->hasPrimaryColour() ? $branding->primaryColour : '#3b82f6';
-    $logoUrl = $branding->hasLogo()
-        ? Storage::disk('public')->url($branding->logoPath)
-        : null;
     $feedUrl = route('dashboard.events.live.feed', $event);
     $platformUrl = route('dashboard.events.show', $event);
     $doorsAtMs = $doorsAt !== null ? $doorsAt->getTimestampMs() : 0;
@@ -345,15 +340,12 @@
             </div>
         </section>
 
-        @if ($logoUrl)
-            <img class="logo" src="{{ $logoUrl }}" alt="{{ $event->name }}">
-        @else
-            <span class="wordmark" aria-label="Events by CK Enterprises">
-                <span class="events">Events</span>
-                <span class="by">by</span>
-                <span class="ck">CK Enterprises</span>
-            </span>
-        @endif
+        {{-- Always the platform wordmark, never the company's own logo. --}}
+        <span class="wordmark" aria-label="Events by CK Enterprises">
+            <span class="events">Events</span>
+            <span class="by">by</span>
+            <span class="ck">CK Enterprises</span>
+        </span>
     </div>
 </div>
 
