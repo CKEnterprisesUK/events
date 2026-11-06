@@ -141,7 +141,7 @@ class DashboardController extends Controller
 
         $chartRange = array_key_exists((string) $request->query('range'), self::CHART_RANGES)
             ? (string) $request->query('range')
-            : '30d';
+            : $this->defaultChartRange($companyId);
         $chartMetric = $request->query('metric') === 'tickets' ? 'tickets' : 'revenue';
         $salesChart = $this->buildSalesChart($companyId, $chartRange, $chartMetric);
 
@@ -224,6 +224,40 @@ class DashboardController extends Controller
             'currency' => $company?->currency ?? 'GBP',
             'onboarding' => $onboarding,
         ]);
+    }
+
+    /**
+     * Pick the chart window that best fits how long the Company has been selling,
+     * used when no range is chosen explicitly.
+     *
+     * The span runs from the first confirmed order to today, so a company that
+     * started selling yesterday sees 7 days rather than a mostly-empty 30, and
+     * one selling for over 90 days sees 12 months. With no sales yet, 30 days
+     * is the neutral default.
+     */
+    private function defaultChartRange(int $companyId): string
+    {
+        $firstSaleAt = Order::query()
+            ->withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->whereIn('status', [Order::STATUS_PAID, Order::STATUS_FREE_CONFIRMED])
+            ->min('created_at');
+
+        if ($firstSaleAt === null) {
+            return '30d';
+        }
+
+        $daysSelling = (int) Carbon::parse($firstSaleAt)->startOfDay()->diffInDays(Carbon::today()) + 1;
+
+        if ($daysSelling <= 7) {
+            return '7d';
+        }
+
+        if ($daysSelling <= 30) {
+            return '30d';
+        }
+
+        return $daysSelling <= 90 ? '90d' : '12m';
     }
 
     /**
