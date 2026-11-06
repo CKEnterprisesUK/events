@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\Branding\BrandingResolver;
+use App\Services\CronRuns;
 use App\Services\Mail\FakeRefundMailer;
 use App\Services\Mail\FakeTicketMailer;
 use App\Services\Mail\Graph\GraphMailClient;
@@ -23,11 +24,14 @@ use App\Services\Stripe\StripePaymentServiceStripeSdk;
 use App\Services\TenantContext;
 use App\Services\TicketPdfService;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Console\Events\CommandFinished;
+use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Mail\Mailer;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
@@ -199,6 +203,27 @@ class AppServiceProvider extends ServiceProvider
         $this->registerGraphMailTransport();
         $this->applyMailTransport();
         $this->configurePasswordRules();
+        $this->registerQueueWorkerHeartbeat();
+    }
+
+    /**
+     * `queue:work` is a framework command we cannot wrap, so record its cron
+     * heartbeat from the console events. Lets the System health page show
+     * whether the queue worker cron is firing.
+     */
+    private function registerQueueWorkerHeartbeat(): void
+    {
+        Event::listen(CommandStarting::class, function (CommandStarting $event): void {
+            if ($event->command === 'queue:work') {
+                CronRuns::started('queue:work');
+            }
+        });
+
+        Event::listen(CommandFinished::class, function (CommandFinished $event): void {
+            if ($event->command === 'queue:work') {
+                CronRuns::finished('queue:work', (int) $event->exitCode);
+            }
+        });
     }
 
     /**

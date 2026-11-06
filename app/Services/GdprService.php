@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Company;
 use App\Models\Concerns\BelongsToCompany;
+use App\Models\Event;
 use App\Models\Order;
 use App\Models\OrderConsent;
 use App\Models\Ticket;
@@ -51,6 +52,19 @@ class GdprService
     public const ANONYMISED_NAME = '[anonymised]';
 
     public const ANONYMISED_EMAIL = 'anonymised@redacted.invalid';
+
+    /**
+     * Order statuses that mean the Customer still holds (or may hold) tickets,
+     * so their data is needed until the Event has happened.
+     *
+     * @var list<string>
+     */
+    private const LIVE_ORDER_STATUSES = [
+        Order::STATUS_RESERVED,
+        Order::STATUS_PAID,
+        Order::STATUS_FREE_CONFIRMED,
+        Order::STATUS_DISPUTED,
+    ];
 
     /**
      * Export every stored personal field the requesting Company holds about the
@@ -176,13 +190,28 @@ class GdprService
         // the max(created_at) aggregation in SQL means a Customer with even one
         // order newer than the cutoff is excluded wholesale. The sentinel email
         // is excluded so already-anonymised Customers are not re-processed.
+        //
+        // The clock for each order is its creation date, EXCEPT a live order
+        // (reserved / paid / free / disputed) for an Event that is still to
+        // happen and has not been cancelled: that runs from the Event's start,
+        // so a ticket bought years ahead is never scrubbed before the Event.
+        // Cancelled / refunded / expired / voided orders (or a cancelled
+        // Event) fall back to the order date, so they never extend retention.
+        $live = "'".implode("','", self::LIVE_ORDER_STATUSES)."'";
+        $relevantAt = "CASE WHEN orders.status IN ({$live}) "
+            .'AND events.cancelled_at IS NULL '
+            .'AND events.starts_at IS NOT NULL '
+            .'AND events.starts_at > orders.created_at '
+            .'THEN events.starts_at ELSE orders.created_at END';
+
         $expiredEmails = Order::query()
             ->withoutGlobalScopes()
-            ->where('company_id', $companyId)
-            ->where('customer_email', '!=', self::ANONYMISED_EMAIL)
-            ->groupBy('customer_email')
-            ->havingRaw('MAX(created_at) < ?', [$cutoff])
-            ->pluck('customer_email');
+            ->leftJoin('events', 'events.id', '=', 'orders.event_id')
+            ->where('orders.company_id', $companyId)
+            ->where('orders.customer_email', '!=', self::ANONYMISED_EMAIL)
+            ->groupBy('orders.customer_email')
+            ->havingRaw("MAX({$relevantAt}) < ?", [$cutoff])
+            ->pluck('orders.customer_email');
 
         if ($expiredEmails->isEmpty()) {
             return 0;
@@ -204,7 +233,7 @@ class GdprService
                     ->get();
 
                 // Belt-and-braces: skip if a fresh order arrived after the read.
-                $lastOrderAt = $orders->max('created_at');
+                $lastOrderAt = $this->lastRelevantAt($orders);
                 if ($lastOrderAt !== null && $lastOrderAt >= $cutoff) {
                     continue;
                 }
@@ -220,6 +249,43 @@ class GdprService
 
             return $anonymised;
         });
+    }
+
+    /**
+     * The date the retention clock runs from for these Orders: the latest of
+     * each order's creation date and, for a live order on an upcoming,
+     * non-cancelled Event, that Event's start. Mirrors the SQL in
+     * {@see anonymiseExpiredForCompany()}.
+     *
+     * @param  Collection<int, Order>  $orders
+     */
+    public function lastRelevantAt($orders): ?Carbon
+    {
+        if ($orders->isEmpty()) {
+            return null;
+        }
+
+        $events = Event::withoutGlobalScopes()
+            ->whereIn('id', $orders->pluck('event_id')->filter()->unique())
+            ->get()
+            ->keyBy('id');
+
+        return $orders
+            ->map(function (Order $order) use ($events): Carbon {
+                $created = Carbon::parse($order->created_at);
+                $event = $events->get($order->event_id);
+
+                if ($event !== null
+                    && in_array($order->status, self::LIVE_ORDER_STATUSES, true)
+                    && $event->cancelled_at === null
+                    && $event->starts_at !== null
+                    && $event->starts_at->greaterThan($created)) {
+                    return $event->starts_at->copy();
+                }
+
+                return $created;
+            })
+            ->max();
     }
 
     /**
@@ -259,8 +325,9 @@ class GdprService
             ?? Company::RETENTION_MONTHS_DEFAULT;
 
         $lastOrderAt = $orders->max('created_at');
-        $deletionDueAt = $lastOrderAt !== null
-            ? Carbon::parse($lastOrderAt)->addMonths($months)
+        $relevantAt = $this->lastRelevantAt($orders);
+        $deletionDueAt = $relevantAt !== null
+            ? Carbon::parse($relevantAt)->addMonths($months)
             : null;
 
         return [

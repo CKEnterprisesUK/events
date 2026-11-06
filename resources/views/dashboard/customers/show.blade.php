@@ -60,7 +60,7 @@
                     @endif
                 </div>
                 <div class="detail__label" style="text-transform: none; letter-spacing: 0; margin-top: 0.25rem;">
-                    Personal data auto-anonymised after {{ $retentionMonths }} months (from last order).
+                    Personal data auto-anonymised after {{ $retentionMonths }} months (from their last order, or from the event date for tickets to an upcoming event).
                 </div>
             </div>
         </div>

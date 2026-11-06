@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
+use App\Services\CronRuns;
 use App\Services\SystemHealth;
 use Illuminate\Contracts\View\View;
 
@@ -19,12 +20,25 @@ use Illuminate\Contracts\View\View;
  */
 class SystemHealthController extends Controller
 {
-    public function __construct(private readonly SystemHealth $health) {}
+    public function __construct(
+        private readonly SystemHealth $health,
+        private readonly CronRuns $cron,
+    ) {}
 
     public function index(): View
     {
+        $report = $this->health->report();
+        $jobs = $this->cron->health();
+
+        // A cron job that is failing, overdue or stuck makes the platform
+        // "attention needed". A job that has never run is shown but does not
+        // flip the overall status, so a fresh deploy isn't alarming.
+        $cronOk = ! collect($jobs)->contains(fn (array $j): bool => in_array($j['status'], ['failed', 'overdue', 'stuck'], true));
+        $report['healthy'] = $report['healthy'] && $cronOk;
+
         return view('admin.system.index', [
-            'report' => $this->health->report(),
+            'report' => $report,
+            'jobs' => $jobs,
         ]);
     }
 }
