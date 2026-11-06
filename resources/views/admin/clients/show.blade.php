@@ -19,6 +19,8 @@
     }
     .user-actions__row { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid var(--border); }
     .user-actions__row form { margin: 0; }
+    .admin-head .admin-head__actions { margin-left: auto; }
+    .client-logo { order: 3; height: 4rem; max-width: 12rem; width: auto; object-fit: contain; padding: 0.35rem 0.6rem; background: #fff; border: 1px solid var(--border); border-radius: 0.5rem; }
     .btn-sm { padding: 0.3rem 0.7rem; font-size: 0.82rem; }
 </style>
 @endpush
@@ -33,6 +35,11 @@
                 &nbsp;/{{ $company->slug }}
             </p>
         </div>
+        @if (filled($company->logo_path))
+            <img class="client-logo"
+                 src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($company->logo_path) }}"
+                 alt="{{ $company->name }} logo">
+        @endif
         <div class="admin-head__actions">
             @if (! $company->isSuspended())
                 <form method="POST" action="{{ route('admin.impersonate.start', $company) }}">

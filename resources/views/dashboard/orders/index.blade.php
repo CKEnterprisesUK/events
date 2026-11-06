@@ -8,6 +8,8 @@
 <style>
     .filter-bar { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: flex-end; margin-bottom: 1.25rem; }
     .filter-bar .field { margin: 0; }
+    .filter-bar .field:first-child { flex: 1 1 360px; max-width: 520px; }
+    .filter-bar .field:first-child input { width: 100%; box-sizing: border-box; }
     .filter-bar input, .filter-bar select {
         padding: 0.5rem 0.7rem; border: 1px solid var(--border); border-radius: 0.5rem; min-width: 220px;
     }

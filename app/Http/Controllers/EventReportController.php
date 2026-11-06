@@ -6,6 +6,7 @@ use App\Models\Event;
 use App\Services\EventReadiness;
 use App\Services\EventReportService;
 use App\Services\Reporting\ReportDateRange;
+use App\Services\Reporting\ReportInsights;
 use App\Services\RoleAuthorization;
 use App\Support\PlatformBrand;
 use Illuminate\Contracts\View\View;
@@ -48,7 +49,7 @@ class EventReportController extends Controller
      * The per-Event financial report, scoped to the authenticated user's own
      * Company. (Requirements 6.1, 6.2)
      */
-    public function show(Request $request, Event $event): View
+    public function show(Request $request, Event $event, ReportInsights $insights): View
     {
         Gate::authorize(RoleAuthorization::ACTION_VIEW_REPORTS);
 
@@ -60,6 +61,15 @@ class EventReportController extends Controller
             'event' => $event,
             'report' => $this->reports->for($event, $range),
             'range' => $range,
+            'refunds' => $insights->refunds($range->from, $range->to, (int) $event->getKey()),
+            'ticketTypeInsights' => collect($insights->ticketTypeBreakdown(
+                $event->orders()
+                    ->whereIn('status', EventReportService::CONFIRMED_STATUSES)
+                    ->when($range->from !== null, fn ($q) => $q->where('created_at', '>=', $range->from))
+                    ->when($range->to !== null, fn ($q) => $q->where('created_at', '<=', $range->to))
+                    ->get(),
+                (int) $event->getKey(),
+            ))->keyBy('type_id'),
             // Supplied so the report renders inside the event-context layout
             // (single sidebar) rather than as a standalone dashboard page.
             'readiness' => $this->readiness->checklist($event),

@@ -6,7 +6,7 @@
 
     - Unlimited / no resolvable capacity: a plain sold count with an em dash.
     - Otherwise: "sold / capacity" with a mini progress bar and percentage, and
-      a "Sold out" / "Almost full" flag once the event is 90%+ committed.
+      the percentage sold, tickets remaining, and a "Sold out" / "Almost full" flag once the event is 90%+ committed.
 --}}
 @php
     $sold = (int) ($sellThrough['sold'] ?? 0);
@@ -28,6 +28,7 @@
               aria-label="{{ number_format($percent, 1) }} percent sold ({{ number_format($sold) }} of {{ number_format($capacity) }})">
             <span class="sell-through__fill" style="width: {{ min(100, $percent) }}%"></span>
         </span>
+        <span class="sell-through__meta">{{ rtrim(rtrim(number_format($percent, 1), '0'), '.') }}% sold &middot; {{ number_format(max(0, $capacity - $sold)) }} left</span>
         @if ($isSoldOut)
             <span class="sell-through__flag">Sold out</span>
         @elseif ($isAlmostFull)

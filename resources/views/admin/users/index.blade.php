@@ -6,6 +6,8 @@
 <style>
     .user-filters { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: flex-end; margin: 0 0 1rem; }
     .user-filters .field { display: flex; flex-direction: column; gap: 0.25rem; }
+    .user-filters .field:first-child { flex: 1 1 360px; max-width: 520px; }
+    .user-filters .field:first-child input { width: 100%; box-sizing: border-box; }
     .user-filters label { font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.03em; }
     .user-filters input, .user-filters select {
         padding: 0.45rem 0.6rem; border: 1px solid var(--border); border-radius: 0.4rem; font-size: 0.9rem; min-width: 12rem;

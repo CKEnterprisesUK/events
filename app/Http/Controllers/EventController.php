@@ -14,6 +14,7 @@ use App\Services\EventReadiness;
 use App\Services\EventReportService;
 use App\Services\GeocodingService;
 use App\Services\QrService;
+use App\Services\Reporting\TicketMetrics;
 use App\Services\RoleAuthorization;
 use App\Services\StorefrontListing;
 use Illuminate\Contracts\View\View;
@@ -339,11 +340,18 @@ class EventController extends Controller
             ->get()
             ->keyBy('event_id');
 
+        // Sold comes from the shared TicketMetrics definition (valid tickets on
+        // confirmed orders) so it matches the dashboard KPI exactly.
+        $ticketsByEvent = [];
+        foreach ($events->groupBy('company_id') as $companyId => $companyEvents) {
+            $ticketsByEvent += app(TicketMetrics::class)->forEvents((int) $companyId, $companyEvents->pluck('id')->all());
+        }
+
         foreach ($events as $event) {
             $event->confirmed_orders_count = (int) ($confirmedByEvent[$event->id] ?? 0);
             $agg = $soldByEvent->get($event->id);
             $event->sell_through = $event->sellThrough(
-                (int) ($agg->sold ?? 0),
+                $ticketsByEvent[$event->id]->sold ?? 0,
                 (int) ($agg->capped_capacity ?? 0),
             );
         }

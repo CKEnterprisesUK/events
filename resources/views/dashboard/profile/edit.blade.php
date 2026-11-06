@@ -2,39 +2,37 @@
 
 @section('title', 'Your profile')
 
-@push('head')
-<style>
-    .profile-grid { display: grid; gap: 1.5rem; max-width: 560px; }
-    .profile-form { padding: 1.25rem; }
-    .profile-form .field { margin-bottom: 1rem; }
-    .profile-form label { display: block; font-weight: 600; margin-bottom: 0.3rem; }
-    .profile-form input {
-        width: 100%; padding: 0.55rem 0.7rem; border: 1px solid var(--border); border-radius: 0.5rem;
-    }
-    .profile-form .error { color: #b91c1c; font-size: 0.85rem; margin: 0.25rem 0 0; }
-    .btn-danger { color: #b91c1c; border-color: #f0c2c2; }
-    .btn-danger:hover { background: #fdecec; }
-    .mfa-on { display: flex; align-items: flex-start; gap: 0.5rem; margin-top: 0; }
-    .mfa-dot { flex: none; width: 10px; height: 10px; margin-top: 0.5rem; border-radius: 50%; background: #1b7a4b; }
-    .mfa-qr { display: flex; justify-content: center; padding: 1rem; background: #fff; border: 1px solid var(--border); border-radius: 0.5rem; margin: 0.5rem 0 1rem; }
-    .mfa-qr svg, .mfa-qr img { width: 200px; height: 200px; }
-    .mfa-secret { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1rem; letter-spacing: 0.08em; background: #f5f6fa; border: 1px solid var(--border); border-radius: 0.4rem; padding: 0.6rem 0.75rem; word-break: break-all; }
-    .mfa-codes-box { margin-top: 1rem; padding: 0.9rem 1rem; background: #f5f6fa; border: 1px solid var(--border); border-radius: 0.5rem; }
-    .mfa-codes { list-style: none; margin: 0.25rem 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem 1rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.95rem; letter-spacing: 0.04em; }
-</style>
-@endpush
-
 @section('content')
-    <div class="page-head">
-        <h1>Your profile</h1>
+    @php
+        $initials = \Illuminate\Support\Str::of($user->name)->explode(' ')->filter()->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))->take(2)->implode('');
+    @endphp
+    <div class="page-header">
+        <div class="page-header__text">
+            <h1>Your profile</h1>
+            <p class="page-header__desc">Manage your details, password, sign-in security and app access.</p>
+        </div>
     </div>
 
-    <div class="profile-grid">
+    <div class="profile-identity">
+        <span class="profile-avatar" aria-hidden="true">{{ $initials }}</span>
+        <div class="profile-identity__text">
+            <p class="profile-identity__name">{{ $user->name }}</p>
+            <p class="profile-identity__meta">{{ $user->email }}</p>
+        </div>
+        <div class="profile-identity__badges">
+            @if ($user->role)<span class="pill pill--draft">{{ \App\Models\User::roleLabel($user->role) }}</span>@endif
+            <span class="pill {{ $user->hasTwoFactorEnabled() ? 'pill--live' : 'pill--cancelled' }}">2FA {{ $user->hasTwoFactorEnabled() ? 'on' : 'off' }}</span>
+            @if (($appTokenCount ?? 0) > 0)<span class="pill pill--live">App enabled</span>@endif
+        </div>
+    </div>
+
+    <div class="profile-layout">
+      <div class="profile-col">
         {{-- Name + email --}}
         <div class="panel">
             <div class="panel__head"><h2>Account details</h2></div>
             @if (session('status'))
-                <p class="status" data-status="saved" style="margin: 1rem 1.25rem 0;">{{ session('status') }}</p>
+                <p class="status profile-status" data-status="saved">{{ session('status') }}</p>
             @endif
             <form method="POST" action="{{ route('dashboard.profile.update') }}" class="profile-form">
                 @csrf
@@ -57,7 +55,7 @@
         <div class="panel">
             <div class="panel__head"><h2>Change password</h2></div>
             @if (session('password_status'))
-                <p class="status" data-status="saved" style="margin: 1rem 1.25rem 0;">{{ session('password_status') }}</p>
+                <p class="status profile-status" data-status="saved">{{ session('password_status') }}</p>
             @endif
             <form method="POST" action="{{ route('dashboard.profile.password') }}" class="profile-form">
                 @csrf
@@ -67,25 +65,29 @@
                     <input type="password" name="current_password" id="current_password" required autocomplete="current-password">
                     @error('current_password')<p class="error">{{ $message }}</p>@enderror
                 </div>
-                <div class="field">
-                    <label for="password">New password</label>
-                    <input type="password" name="password" id="password" required autocomplete="new-password">
-                    @error('password')<p class="error">{{ $message }}</p>@enderror
-                </div>
-                <div class="field">
-                    <label for="password_confirmation">Confirm new password</label>
-                    <input type="password" name="password_confirmation" id="password_confirmation" required autocomplete="new-password">
+                <div class="field-row">
+                    <div class="field">
+                        <label for="password">New password</label>
+                        <input type="password" name="password" id="password" required autocomplete="new-password">
+                        @error('password')<p class="error">{{ $message }}</p>@enderror
+                    </div>
+                    <div class="field">
+                        <label for="password_confirmation">Confirm new password</label>
+                        <input type="password" name="password_confirmation" id="password_confirmation" required autocomplete="new-password">
+                    </div>
                 </div>
                 <button type="submit" class="btn">Update password</button>
             </form>
         </div>
 
+      </div>
+      <div class="profile-col">
         {{-- Two-factor authentication --}}
         <div class="panel" id="two-factor">
             <div class="panel__head"><h2>Two-factor authentication</h2></div>
 
             @if (session('mfa_status'))
-                <p class="status" data-status="saved" style="margin: 1rem 1.25rem 0;">{{ session('mfa_status') }}</p>
+                <p class="status profile-status" data-status="saved">{{ session('mfa_status') }}</p>
             @endif
 
             @if ($user->hasTwoFactorEnabled())
@@ -99,7 +101,7 @@
 
                     @if (session('mfa_recovery_codes'))
                         <div class="mfa-codes-box">
-                            <p class="muted" style="margin-top:0;">Your new recovery codes. Save them somewhere safe &mdash; each can be used once if you lose your device.</p>
+                            <p class="muted">Your new recovery codes. Save them somewhere safe &mdash; each can be used once if you lose your device.</p>
                             <ul class="mfa-codes">
                                 @foreach (session('mfa_recovery_codes') as $rc)
                                     <li>{{ $rc }}</li>
@@ -109,9 +111,9 @@
                     @endif
                 </div>
 
-                <form method="POST" action="{{ route('dashboard.profile.two-factor.recovery-codes') }}" class="profile-form" style="border-top: 1px solid var(--border);">
+                <form method="POST" action="{{ route('dashboard.profile.two-factor.recovery-codes') }}" class="profile-form">
                     @csrf
-                    <p class="muted" style="margin-top:0;">Generate a fresh set of recovery codes. Your current codes will stop working.</p>
+                    <p class="muted">Generate a fresh set of recovery codes. Your current codes will stop working.</p>
                     <div class="field">
                         <label for="rc_current_password">Current password</label>
                         <input type="password" name="current_password" id="rc_current_password" required autocomplete="current-password">
@@ -120,10 +122,10 @@
                     <button type="submit" class="btn btn-outline">Regenerate recovery codes</button>
                 </form>
 
-                <form method="POST" action="{{ route('dashboard.profile.two-factor.disable') }}" class="profile-form" style="border-top: 1px solid var(--border);">
+                <form method="POST" action="{{ route('dashboard.profile.two-factor.disable') }}" class="profile-form">
                     @csrf
                     @method('DELETE')
-                    <p class="muted" style="margin-top:0;">Turn two-factor authentication off. We recommend keeping it on.</p>
+                    <p class="muted">Turn two-factor authentication off. We recommend keeping it on.</p>
                     <div class="field">
                         <label for="disable_current_password">Current password</label>
                         <input type="password" name="current_password" id="disable_current_password" required autocomplete="current-password">
@@ -136,7 +138,7 @@
                      recovery codes and confirm step live on the dedicated setup
                      screen. --}}
                 <div class="profile-form">
-                    <p class="muted" style="margin-top:0;">
+                    <p class="muted">
                         You've started setting up two-factor authentication but haven't
                         confirmed it yet. Continue where you left off to finish.
                     </p>
@@ -148,7 +150,7 @@
                      and takes the user to the dedicated setup screen. --}}
                 <form method="POST" action="{{ route('dashboard.profile.two-factor.enable') }}" class="profile-form">
                     @csrf
-                    <p class="muted" style="margin-top:0;">
+                    <p class="muted">
                         Add a second step to your login using an authenticator app. Enter
                         your current password to begin.
                     </p>
@@ -166,12 +168,13 @@
         <div class="panel">
             <div class="panel__head"><h2>Security &amp; data</h2></div>
             @if (session('sessions_status'))
-                <p class="status" data-status="saved" style="margin: 1rem 1.25rem 0;">{{ session('sessions_status') }}</p>
+                <p class="status profile-status" data-status="saved">{{ session('sessions_status') }}</p>
             @endif
 
             <form method="POST" action="{{ route('dashboard.profile.logout-other-sessions') }}" class="profile-form">
                 @csrf
-                <p class="muted" style="margin-top: 0;">
+                <h3 class="profile-sub">Other browser sessions</h3>
+                <p class="muted">
                     Signed in on another device you no longer use? Sign out of every
                     other session while keeping this one active. Enter your current
                     password to confirm.
@@ -185,18 +188,20 @@
             </form>
 
             <form method="POST" action="{{ route('dashboard.profile.app-access.revoke') }}" class="profile-form"
-                  style="border-top: 1px solid var(--border);"
+                 
                   onsubmit="return confirm('Sign out of the iOS app on every device?');">
                 @csrf
-                <p class="muted" style="margin-top: 0;">
+                <h3 class="profile-sub">iOS app <span class="profile-state {{ ($appTokenCount ?? 0) > 0 ? 'profile-state--on' : '' }}">{{ ($appTokenCount ?? 0) > 0 ? 'Enabled' : 'Not enabled' }}</span></h3>
+                <p class="muted">
                     iOS app: @if (($appTokenCount ?? 0) > 0) <strong>enabled</strong> on {{ $appTokenCount }} {{ \Illuminate\Support\Str::plural('device', $appTokenCount) }}. @else not signed in on any device. @endif
                     Revoking signs the app out everywhere; you will need to sign in again.
                 </p>
                 <button type="submit" class="btn btn-outline">Revoke app access</button>
             </form>
 
-            <div class="profile-form" style="border-top: 1px solid var(--border);">
-                <p class="muted" style="margin-top: 0;">
+            <div class="profile-form">
+                <h3 class="profile-sub">Your data</h3>
+                <p class="muted">
                     Download a copy of the personal data held on your account as a
                     JSON file.
                 </p>
@@ -205,5 +210,6 @@
                 </a>
             </div>
         </div>
+      </div>
     </div>
 @endsection

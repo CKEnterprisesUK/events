@@ -8,7 +8,8 @@
 <style>
     .filter-bar { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: flex-end; margin-bottom: 1.25rem; }
     .filter-bar .field { margin: 0; }
-    .filter-bar input { padding: 0.5rem 0.7rem; border: 1px solid var(--border); border-radius: 0.5rem; min-width: 260px; }
+    .filter-bar .field:first-child { flex: 1 1 360px; max-width: 520px; }
+    .filter-bar input { padding: 0.5rem 0.7rem; border: 1px solid var(--border); border-radius: 0.5rem; min-width: 260px; width: 100%; box-sizing: border-box; }
     .filter-bar select { padding: 0.5rem 0.7rem; border: 1px solid var(--border); border-radius: 0.5rem; min-width: 180px; background: #fff; }
     .filter-bar label { display: block; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 0.25rem; }
     .pager { display: flex; justify-content: center; padding: 1rem; }

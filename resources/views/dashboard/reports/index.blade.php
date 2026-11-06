@@ -12,32 +12,43 @@
     @endphp
 
     <section>
+        @php
+            // Every filter the page offers, carried through tabs, export links
+            // and the compare view so what is exported matches what is on screen.
+            $filterQuery = array_filter(['from' => $from ?? null, 'to' => $to ?? null, 'event' => $eventId ?? null], fn ($v) => $v !== null && $v !== '');
+            $exportQuery = $filterQuery + ['tab' => $tab];
+            $hasFilters = ! empty($from) || ! empty($to) || ! empty($eventId);
+            $percent = fn (?float $change) => $change === null
+                ? null
+                : ($change > 0 ? '+' : '').rtrim(rtrim(number_format($change, 1), '0'), '.').'%';
+        @endphp
         <div class="page-header">
             <div class="page-header__text">
-                <h1>Reports &amp; Payouts</h1>
+                <h1>Reports &amp; Analytics</h1>
                 <p class="page-header__desc">
-                    Read-only view of your organisation's realised sales from paid and confirmed orders,
+                    Understand ticket performance, revenue and payouts from paid and confirmed orders,
                     shown in {{ $currency }} ({{ $symbol !== '' ? $symbol : $currency }}).
                 </p>
             </div>
             <div class="page-header__actions">
-                {{-- Export carries the current date range AND event filter
-                     through so the file matches what's on screen. Secondary
-                     actions — outline, not the primary blue. --}}
-                @php $exportQuery = array_filter(['from' => $from ?? null, 'to' => $to ?? null, 'event' => $eventId ?? null], fn ($v) => $v !== null && $v !== ''); @endphp
                 <a class="btn btn-outline" href="{{ route('dashboard.reports.compare') }}">Compare events</a>
-                <button type="button" class="btn btn-outline" onclick="window.print()">Print / Save&nbsp;PDF</button>
-                <a class="btn btn-outline" href="{{ route('dashboard.reports.export', $exportQuery) }}" download>Export CSV</a>
-                <a class="btn btn-outline" href="{{ route('dashboard.reports.export-excel', $exportQuery) }}" download>Export Excel</a>
-                <a class="btn btn-outline" href="{{ route('dashboard.reports.export-pdf', $exportQuery) }}">Export PDF</a>
+                {{-- One export menu. Every link carries the current filters. --}}
+                <details class="export-menu">
+                    <summary class="btn btn-outline">Export report</summary>
+                    <div class="export-menu__list">
+                        <a href="{{ route('dashboard.reports.export', $exportQuery) }}" download>CSV</a>
+                        <a href="{{ route('dashboard.reports.export-excel', $exportQuery) }}" download>Excel</a>
+                        <a href="{{ route('dashboard.reports.export-pdf', $exportQuery) }}">PDF statement</a>
+                        <button type="button" onclick="window.print()">Print this page</button>
+                    </div>
+                </details>
             </div>
         </div>
 
-        {{-- Date-range filter. Both bounds are optional and inclusive; leaving
-             them blank shows all realised sales. Submitting reloads the report,
-             the totals, the per-event breakdown and the export links for the
-             chosen period. --}}
+        {{-- Event and date-range filters stay visible across every tab. Both
+             dates are optional and inclusive. --}}
         <form method="GET" action="{{ route('dashboard.reports.index') }}" class="report-filter">
+            <input type="hidden" name="tab" value="{{ $tab }}">
             <div class="field">
                 <label for="event">Event</label>
                 <select id="event" name="event">
@@ -57,13 +68,13 @@
             </div>
             <div class="report-filter__actions">
                 <button type="submit" class="btn btn-sm">Apply</button>
-                @if (! empty($from) || ! empty($to) || ! empty($eventId))
-                    <a class="btn btn-sm btn-outline" href="{{ route('dashboard.reports.index') }}">Clear</a>
+                @if ($hasFilters)
+                    <a class="btn btn-sm btn-outline" href="{{ route('dashboard.reports.index', ['tab' => $tab]) }}">Clear</a>
                 @endif
             </div>
         </form>
 
-        @if (! empty($from) || ! empty($to) || ! empty($eventId))
+        @if ($hasFilters)
             <p class="panel__note" data-report-period>
                 Showing
                 @if (! empty($eventId))
@@ -79,47 +90,152 @@
             </p>
         @endif
 
-        {{-- Small summary row for the headline figures. Not oversized cards. --}}
+        <nav class="tab-list" aria-label="Report sections">
+            @foreach ($tabs as $key => $label)
+                <a class="tab-btn" href="{{ route('dashboard.reports.index', $filterQuery + ['tab' => $key]) }}"
+                   @if ($key === $tab) aria-selected="true" aria-current="page" @endif>{{ $label }}</a>
+            @endforeach
+        </nav>
+
+        {{-- Headline figures for the current filters (sales-side tabs only). --}}
+        @if ($tab !== 'attendance')
         <div class="summary-row">
             <div class="metric-card">
                 <span class="metric-card__label">Confirmed orders</span>
                 <span class="metric-card__value">{{ number_format($totals['orders']) }}</span>
+                @if (($comparison['deltas']['orders']['change'] ?? null) !== null)
+                    <span class="metric-card__sub">{{ $percent($comparison['deltas']['orders']['change']) }} vs previous period</span>
+                @endif
             </div>
             <div class="metric-card">
                 <span class="metric-card__label">Tickets sold</span>
                 <span class="metric-card__value">{{ number_format($totals['tickets_sold']) }}</span>
+                @if (($comparison['deltas']['tickets_sold']['change'] ?? null) !== null)
+                    <span class="metric-card__sub">{{ $percent($comparison['deltas']['tickets_sold']['change']) }} vs previous period</span>
+                @endif
             </div>
             <div class="metric-card">
                 <span class="metric-card__label">Gross sales</span>
                 <span class="metric-card__value">{{ $money($totals['gross_sales_minor']) }}</span>
+                @if (($comparison['deltas']['gross_sales_minor']['change'] ?? null) !== null)
+                    <span class="metric-card__sub">{{ $percent($comparison['deltas']['gross_sales_minor']['change']) }} vs previous period</span>
+                @endif
+            </div>
+            <div class="metric-card">
+                <span class="metric-card__label">Revenue per order</span>
+                <span class="metric-card__value">{{ $money($averageOrderMinor) }}</span>
+                <span class="metric-card__sub">Gross sales ÷ orders</span>
             </div>
             <div class="metric-card">
                 <span class="metric-card__label">Net payout</span>
                 <span class="metric-card__value">{{ $money($totals['net_payout_minor']) }}</span>
+                @if (($comparison['deltas']['net_payout_minor']['change'] ?? null) !== null)
+                    <span class="metric-card__sub">{{ $percent($comparison['deltas']['net_payout_minor']['change']) }} vs previous period</span>
+                @endif
             </div>
         </div>
+        @endif
 
-        {{-- Gross-sales trend over the covered period. Daily points (or weekly
-             for a very long span), built from the same confirmed orders as the
-             tables so the chart and figures agree. --}}
-        @if (! empty($salesTimeline))
-            <div class="panel">
-                <div class="panel__head"><h2>Gross sales over the period</h2></div>
-                <div class="chart-body">
-                    @include('dashboard.partials.line-chart', [
-                        'series' => [[
-                            'name' => 'Gross sales',
-                            'color' => 'var(--brand)',
-                            'points' => $salesTimeline,
-                        ]],
-                        'formatY' => $money,
-                        'height' => 240,
-                        'yLabel' => 'gross sales',
-                    ])
+        @if ($tab === 'sales')
+            @if ($comparison)
+                <div class="panel">
+                    <div class="panel__head"><h2>Gross sales vs previous period</h2></div>
+                    <div class="chart-body">
+                        @include('dashboard.partials.line-chart', [
+                            'series' => [
+                                ['name' => 'This period', 'color' => 'var(--brand)', 'points' => $comparison['series']],
+                                ['name' => 'Previous period ('.$comparison['label'].')', 'color' => '#9ca3af', 'points' => $comparison['previous_series']],
+                            ],
+                            'formatY' => $money,
+                            'height' => 240,
+                            'yLabel' => 'gross sales',
+                        ])
+                    </div>
+                    <p class="panel__note">
+                        The previous period is the same number of days immediately before the selected range,
+                        compared day for day.
+                    </p>
                 </div>
+            @elseif (! empty($salesTimeline))
+                <div class="panel">
+                    <div class="panel__head"><h2>Gross sales over the period</h2></div>
+                    <div class="chart-body">
+                        @include('dashboard.partials.line-chart', [
+                            'series' => [[
+                                'name' => 'Gross sales',
+                                'color' => 'var(--brand)',
+                                'points' => $salesTimeline,
+                            ]],
+                            'formatY' => $money,
+                            'height' => 240,
+                            'yLabel' => 'gross sales',
+                        ])
+                    </div>
+                    <p class="panel__note">Choose both a From and To date to compare against the previous period.</p>
+                </div>
+            @else
+                <div class="panel"><p class="table-empty-filter">No confirmed sales for these filters.</p></div>
+            @endif
+        @endif
+
+        @if ($tab === 'tickets')
+            <div class="panel">
+                <div class="panel__head"><h2>Sales by ticket type</h2></div>
+                @if (empty($ticketTypes))
+                    <p class="table-empty-filter">No ticket sales for these filters.</p>
+                @else
+                    <div class="table-scroll">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Ticket type</th>
+                                    <th scope="col">Event</th>
+                                    <th scope="col" class="num">Price</th>
+                                    <th scope="col" class="num">Sold</th>
+                                    <th scope="col" class="num">Revenue</th>
+                                    <th scope="col" class="num">Share</th>
+                                    <th scope="col" class="num">Remaining</th>
+                                    <th scope="col">Sell-through</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($ticketTypes as $row)
+                                    <tr data-ticket-type-id="{{ $row['type_id'] }}">
+                                        <td class="cell-strong">{{ $row['type_name'] }}</td>
+                                        <td>{{ $row['event_name'] }}</td>
+                                        <td class="num">{{ $row['price_minor'] === 0 ? 'Free' : $money($row['price_minor']) }}</td>
+                                        <td class="num" data-metric="sold">{{ number_format($row['sold']) }}</td>
+                                        <td class="num" data-metric="revenue_minor">{{ $money($row['revenue_minor']) }}</td>
+                                        <td class="num">{{ rtrim(rtrim(number_format($row['share_percent'], 1), '0'), '.') }}%</td>
+                                        <td class="num">{{ $row['remaining'] === null ? '—' : number_format($row['remaining']) }}</td>
+                                        <td>
+                                            @if ($row['sell_through_percent'] === null)
+                                                <span class="cell-dim">No fixed allocation</span>
+                                            @else
+                                                <span class="sell-through {{ $row['sell_through_percent'] >= 100 ? 'is-sold-out' : ($row['sell_through_percent'] >= 90 ? 'is-almost-full' : '') }}">
+                                                    <span class="sell-through__bar" role="img"
+                                                          aria-label="{{ $row['sell_through_percent'] }} percent of {{ number_format($row['capacity']) }} allocated">
+                                                        <span class="sell-through__fill" style="width: {{ min(100, $row['sell_through_percent']) }}%"></span>
+                                                    </span>
+                                                    <span class="sell-through__meta">{{ rtrim(rtrim(number_format($row['sell_through_percent'], 1), '0'), '.') }}% of {{ number_format($row['capacity']) }}</span>
+                                                </span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+                <p class="panel__note">
+                    Sold and revenue follow the selected filters. Remaining and sell-through describe each
+                    ticket type's whole allocation (sold plus held in checkout), so they are not date-filtered.
+                    Revenue is quantity sold × current ticket price.
+                </p>
             </div>
         @endif
 
+        @if ($tab === 'finance')
         {{-- Full financial reconciliation — the detail matters, so it stays a
              table (with the fee/collected breakdown), not a wall of cards. --}}
         <div class="panel">
@@ -164,6 +280,28 @@
                 finalises it (usually within minutes).
             </p>
         </div>
+
+            @if ($refunds)
+                <div class="panel">
+                    <div class="panel__head"><h2>Refunds</h2></div>
+                    <table class="data-table">
+                        <tbody>
+                            <tr>
+                                <th scope="row">Orders with a refund</th>
+                                <td class="num" data-metric="refund_orders">{{ number_format($refunds['orders']) }}</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Amount refunded</th>
+                                <td class="num" data-metric="refunded_minor">{{ $money($refunds['amount_minor']) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p class="panel__note">
+                        Shown for information. Fully refunded orders are already excluded from the figures above;
+                        partial refunds are not deducted from them.
+                    </p>
+                </div>
+            @endif
 
         <div class="panel">
             <div class="panel__head"><h2>Per-event breakdown</h2></div>
@@ -230,5 +368,43 @@
                 </div>
             @endif
         </div>
+        @endif
+
+        @if ($tab === 'attendance')
+            <div class="panel">
+                <div class="panel__head"><h2>Attendance &amp; check-in</h2></div>
+                <p class="panel__note">
+                    Attendance is reported per event once doors open. Open the live dashboard for scans as they
+                    happen, or the attendance report for no-shows, check-ins by staff and the arrival timeline.
+                </p>
+                @if ($attendanceEvents->isEmpty())
+                    <p class="table-empty-filter">No events yet.</p>
+                @else
+                    <div class="table-scroll">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Event</th>
+                                    <th scope="col">Starts</th>
+                                    <th scope="col"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($attendanceEvents as $attendanceEvent)
+                                    <tr>
+                                        <td class="cell-strong">{{ $attendanceEvent->name }}</td>
+                                        <td>{{ $attendanceEvent->starts_at?->format('j M Y, H:i') ?? '—' }}</td>
+                                        <td class="num">
+                                            <a class="btn btn-sm btn-outline" href="{{ route('dashboard.events.live', $attendanceEvent) }}">Live dashboard</a>
+                                            <a class="btn btn-sm btn-outline" href="{{ route('dashboard.events.attendance', $attendanceEvent) }}">Attendance report</a>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </div>
+        @endif
     </section>
 @endsection

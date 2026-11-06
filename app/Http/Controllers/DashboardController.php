@@ -9,10 +9,11 @@ use App\Models\Order;
 use App\Models\Ticket;
 use App\Models\TicketType;
 use App\Services\Onboarding\OnboardingChecklist;
+use App\Services\Reporting\TicketCounts;
+use App\Services\Reporting\TicketMetrics;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -27,7 +28,27 @@ use Illuminate\Support\Facades\DB;
  */
 class DashboardController extends Controller
 {
-    public function __construct(private readonly OnboardingChecklist $onboarding) {}
+    /**
+     * Selectable chart windows: key => [length, unit].
+     *
+     * @var array<string, array{0:int, 1:string, 2:string}>
+     */
+    public const CHART_RANGES = [
+        '7d' => [7, 'day', '7 days'],
+        '30d' => [30, 'day', '30 days'],
+        '90d' => [90, 'day', '90 days'],
+        '12m' => [12, 'month', '12 months'],
+    ];
+
+    /**
+     * Hours before doors that the live dashboard / ops panel surfaces.
+     */
+    public const OPERATIONS_LEAD_HOURS = 24;
+
+    public function __construct(
+        private readonly OnboardingChecklist $onboarding,
+        private readonly TicketMetrics $ticketMetrics,
+    ) {}
 
     /**
      * Show an at-a-glance overview for the signed-in user's Company.
@@ -55,7 +76,10 @@ class DashboardController extends Controller
                 'stats' => null,
                 'recentEvents' => collect(),
                 'upcomingEvents' => collect(),
+                'operationalEvents' => collect(),
                 'salesChart' => null,
+                'chartRange' => '30d',
+                'chartMetric' => 'revenue',
                 'currency' => 'GBP',
                 'onboarding' => null,
             ]);
@@ -101,21 +125,11 @@ class DashboardController extends Controller
         $stripeFeesMinor = (int) (clone $ordersQuery)->sum('stripe_fee_minor');
         $netPayoutMinor = $orderTotalMinor - $applicationFeesMinor - $stripeFeesMinor;
 
-        // Tickets sold: valid tickets on the company's confirmed orders. Voided
-        // tickets (from a later cancel/refund) do not count. Scoped explicitly
-        // to the company; the tenant global scope is not active on this route.
-        $ticketsSold = Ticket::query()
-            ->withoutGlobalScopes()
-            ->where('company_id', $companyId)
-            ->where('status', Ticket::STATUS_VALID)
-            ->whereExists(function ($query) use ($companyId): void {
-                $query->select(DB::raw(1))
-                    ->from('orders')
-                    ->whereColumn('orders.id', 'tickets.order_id')
-                    ->where('orders.company_id', $companyId)
-                    ->whereIn('orders.status', [Order::STATUS_PAID, Order::STATUS_FREE_CONFIRMED]);
-            })
-            ->count();
+        // Tickets sold: valid tickets on the company's confirmed orders, from
+        // the shared TicketMetrics definitions so this KPI and the per-event
+        // rows below can never disagree.
+        $companyTickets = $this->ticketMetrics->forCompany($companyId);
+        $ticketsSold = $companyTickets->sold;
 
         // Recent events (most recently created) for the activity table.
         $recentEvents = (clone $eventsQuery)
@@ -132,7 +146,11 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
-        $salesChart = $this->buildSalesChart($companyId);
+        $chartRange = array_key_exists((string) $request->query('range'), self::CHART_RANGES)
+            ? (string) $request->query('range')
+            : '30d';
+        $chartMetric = $request->query('metric') === 'tickets' ? 'tickets' : 'revenue';
+        $salesChart = $this->buildSalesChart($companyId, $chartRange, $chartMetric);
 
         // Confirmed-order counts per event, scoped explicitly (the tenant
         // global scope is not active here, so we bypass it and filter by
@@ -163,17 +181,39 @@ class DashboardController extends Controller
             ->get()
             ->keyBy('event_id');
 
-        $attachCounts = function (Event $event) use ($confirmedByEvent, $soldByEvent): void {
+        // Ticket counts per event from the SAME definitions as the KPI above
+        // (valid tickets on confirmed orders) rather than the denormalised
+        // ticket_types.sold_count counter, which can drift.
+        $ticketsByEvent = $this->ticketMetrics->forEvents($companyId, $eventIdsForCounts->all());
+
+        $attachCounts = function (Event $event) use ($confirmedByEvent, $soldByEvent, $ticketsByEvent): void {
             $event->confirmed_orders_count = (int) ($confirmedByEvent[$event->id] ?? 0);
 
             $agg = $soldByEvent->get($event->id);
+            $counts = $ticketsByEvent[$event->id] ?? new TicketCounts;
+            $event->ticket_counts = $counts;
             $event->sell_through = $event->sellThrough(
-                (int) ($agg->sold ?? 0),
+                $counts->sold,
                 (int) ($agg->capped_capacity ?? 0),
             );
         };
         $recentEvents->each($attachCounts);
         $upcomingEvents->each($attachCounts);
+
+        // Events needing operational attention: starting within the lead window
+        // (default 24h) or already under way (started in the last 12 hours).
+        $operationalEvents = (clone $eventsQuery)
+            ->where('is_published', true)
+            ->whereNotNull('starts_at')
+            ->where('starts_at', '>=', now()->subHours(12))
+            ->where('starts_at', '<=', now()->addHours(self::OPERATIONS_LEAD_HOURS))
+            ->orderBy('starts_at')
+            ->get();
+        $operationalCounts = $this->ticketMetrics->forEvents($companyId, $operationalEvents->pluck('id')->all());
+        $operationalEvents->each(function (Event $event) use ($operationalCounts): void {
+            $event->ticket_counts = $operationalCounts[$event->id] ?? new TicketCounts;
+            $event->doors_open = $event->starts_at->lte(now());
+        });
 
         return view('dashboard', [
             'company' => $company,
@@ -188,86 +228,149 @@ class DashboardController extends Controller
             ],
             'recentEvents' => $recentEvents,
             'upcomingEvents' => $upcomingEvents,
+            'operationalEvents' => $operationalEvents,
             'salesChart' => $salesChart,
+            'chartRange' => $chartRange,
+            'chartMetric' => $chartMetric,
             'currency' => $company?->currency ?? 'GBP',
             'onboarding' => $onboarding,
         ]);
     }
 
     /**
-     * Build a 30-day daily gross-sales series for the company plus a comparison
-     * against the preceding 30-day window, so the dashboard can show a trend
-     * line and an up/down delta.
+     * Build the sales chart series for the selected window, plus the same-length
+     * window immediately before it for comparison.
      *
-     * Gross sales = ticket subtotal (matching the "Gross sales" stat), summed
-     * over confirmed orders by the day the order was created. Scoped explicitly
-     * to the company; the tenant global scope is not active on this route.
+     * Daily buckets for 7/30/90 days, monthly buckets for 12 months. Each point
+     * carries BOTH revenue (ticket subtotal on confirmed orders) and tickets
+     * (valid tickets on confirmed orders), bucketed by the order's created_at,
+     * so tooltips can show exact figures whichever metric is plotted. The last
+     * point is the current day/month and is flagged `partial` because it is
+     * still in progress and not comparable with complete periods.
      *
      * @return array{
-     *     points: list<array{date: string, label: string, total_minor: int}>,
-     *     current_total_minor: int,
-     *     previous_total_minor: int,
+     *     range: string,
+     *     metric: string,
+     *     unit: string,
+     *     range_label: string,
+     *     points: list<array{label: string, full_label: string, previous_label: string, revenue_minor: int, tickets: int, previous_revenue_minor: int, previous_tickets: int, partial: bool}>,
+     *     current_total: int,
+     *     previous_total: int,
+     *     current_revenue_minor: int,
+     *     current_tickets: int,
      *     delta_pct: float|null,
-     *     max_minor: int
+     *     max_value: int
      * }
      */
-    private function buildSalesChart(int $companyId): array
+    private function buildSalesChart(int $companyId, string $range, string $metric): array
     {
-        $today = Carbon::today();
-        $windowDays = 30;
-        $currentStart = $today->copy()->subDays($windowDays - 1); // inclusive of today
-        $previousStart = $currentStart->copy()->subDays($windowDays);
+        [$length, $unit, $rangeLabel] = self::CHART_RANGES[$range];
+        $monthly = $unit === 'month';
 
-        // One grouped query across both windows (60 days), then bucket per day.
-        $rows = Order::query()
+        $today = Carbon::today();
+        $currentStart = $monthly
+            ? $today->copy()->startOfMonth()->subMonths($length - 1)
+            : $today->copy()->subDays($length - 1);
+        $previousStart = $monthly
+            ? $currentStart->copy()->subMonths($length)
+            : $currentStart->copy()->subDays($length);
+
+        $confirmed = [Order::STATUS_PAID, Order::STATUS_FREE_CONFIRMED];
+
+        $revenueRows = Order::query()
             ->withoutGlobalScopes()
             ->where('company_id', $companyId)
-            ->whereIn('status', [Order::STATUS_PAID, Order::STATUS_FREE_CONFIRMED])
+            ->whereIn('status', $confirmed)
             ->where('created_at', '>=', $previousStart->copy()->startOfDay())
             ->where('created_at', '<=', $today->copy()->endOfDay())
             ->selectRaw('DATE(created_at) as day, SUM(ticket_subtotal_minor) as total_minor')
             ->groupBy('day')
             ->pluck('total_minor', 'day');
 
-        $totalsByDay = (new Collection($rows))->map(fn ($v) => (int) $v);
+        $ticketRows = DB::table('tickets')
+            ->join('orders', 'orders.id', '=', 'tickets.order_id')
+            ->where('orders.company_id', $companyId)
+            ->whereIn('orders.status', $confirmed)
+            ->where('tickets.status', Ticket::STATUS_VALID)
+            ->where('orders.created_at', '>=', $previousStart->copy()->startOfDay())
+            ->where('orders.created_at', '<=', $today->copy()->endOfDay())
+            ->selectRaw('DATE(orders.created_at) as day, COUNT(*) as qty')
+            ->groupBy('day')
+            ->pluck('qty', 'day');
 
-        // Current-window daily points (oldest → newest), zero-filled.
+        // Sum the daily rows into the bucket key used by the series.
+        $bucketKey = fn (string $day): string => $monthly ? substr($day, 0, 7) : $day;
+        $revenueByBucket = [];
+        foreach ($revenueRows as $day => $value) {
+            $key = $bucketKey((string) $day);
+            $revenueByBucket[$key] = ($revenueByBucket[$key] ?? 0) + (int) $value;
+        }
+        $ticketsByBucket = [];
+        foreach ($ticketRows as $day => $value) {
+            $key = $bucketKey((string) $day);
+            $ticketsByBucket[$key] = ($ticketsByBucket[$key] ?? 0) + (int) $value;
+        }
+
+        $keyFor = fn (Carbon $date): string => $monthly ? $date->format('Y-m') : $date->toDateString();
+        $at = fn (Carbon $start, int $i): Carbon => $monthly ? $start->copy()->addMonths($i) : $start->copy()->addDays($i);
+
         $points = [];
-        $currentTotal = 0;
-        $maxMinor = 0;
-        for ($i = 0; $i < $windowDays; $i++) {
-            $date = $currentStart->copy()->addDays($i);
-            $key = $date->toDateString();
-            $value = (int) ($totalsByDay[$key] ?? 0);
-            $currentTotal += $value;
-            $maxMinor = max($maxMinor, $value);
+        $currentRevenue = $currentTickets = $previousRevenue = $previousTickets = 0;
+        $maxValue = 0;
+
+        for ($i = 0; $i < $length; $i++) {
+            $date = $at($currentStart, $i);
+            $previousDate = $at($previousStart, $i);
+            $key = $keyFor($date);
+            $previousKey = $keyFor($previousDate);
+
+            $revenue = (int) ($revenueByBucket[$key] ?? 0);
+            $tickets = (int) ($ticketsByBucket[$key] ?? 0);
+            $prevRevenue = (int) ($revenueByBucket[$previousKey] ?? 0);
+            $prevTickets = (int) ($ticketsByBucket[$previousKey] ?? 0);
+
+            $currentRevenue += $revenue;
+            $currentTickets += $tickets;
+            $previousRevenue += $prevRevenue;
+            $previousTickets += $prevTickets;
+
+            $maxValue = max(
+                $maxValue,
+                $metric === 'tickets' ? max($tickets, $prevTickets) : max($revenue, $prevRevenue),
+            );
+
             $points[] = [
-                'date' => $key,
-                'label' => $date->format('j M'),
-                'total_minor' => $value,
+                'label' => $monthly ? $date->format('M') : $date->format('j M'),
+                'full_label' => $monthly ? $date->format('F Y') : $date->format('D j M Y'),
+                'previous_label' => $monthly ? $previousDate->format('F Y') : $previousDate->format('D j M Y'),
+                'revenue_minor' => $revenue,
+                'tickets' => $tickets,
+                'previous_revenue_minor' => $prevRevenue,
+                'previous_tickets' => $prevTickets,
+                'partial' => $i === $length - 1,
             ];
         }
 
-        // Previous-window total for the comparison delta.
-        $previousTotal = 0;
-        for ($i = 0; $i < $windowDays; $i++) {
-            $key = $previousStart->copy()->addDays($i)->toDateString();
-            $previousTotal += (int) ($totalsByDay[$key] ?? 0);
-        }
+        $currentTotal = $metric === 'tickets' ? $currentTickets : $currentRevenue;
+        $previousTotal = $metric === 'tickets' ? $previousTickets : $previousRevenue;
 
-        // Percentage change vs the prior window. Null when there's no prior
-        // baseline to compare against (avoids a divide-by-zero / misleading
-        // "+100%" when the company simply had no earlier sales).
+        // Null when there is no prior baseline (avoids a misleading "+100%").
         $deltaPct = $previousTotal > 0
             ? (($currentTotal - $previousTotal) / $previousTotal) * 100
             : null;
 
         return [
+            'range' => $range,
+            'metric' => $metric,
+            'unit' => $unit,
+            'range_label' => $rangeLabel,
             'points' => $points,
-            'current_total_minor' => $currentTotal,
-            'previous_total_minor' => $previousTotal,
+            'current_total' => $currentTotal,
+            'previous_total' => $previousTotal,
+            'current_revenue_minor' => $currentRevenue,
+            'current_tickets' => $currentTickets,
             'delta_pct' => $deltaPct,
-            'max_minor' => $maxMinor,
+            'max_value' => $maxValue,
         ];
     }
 }

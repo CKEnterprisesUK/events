@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\Ticket;
 use App\Services\EventComparisonService;
 use App\Services\EventReportService;
+use App\Services\Reporting\ReportInsights;
 use App\Services\RoleAuthorization;
 use App\Services\SimpleXlsxWriter;
 use App\Services\TenantContext;
@@ -68,9 +69,27 @@ class ReportController extends Controller
      */
     private const CONFIRMED_STATUSES = EventReportService::CONFIRMED_STATUSES;
 
+    /**
+     * The report sections, in tab order. `sales` is the default.
+     *
+     * @var list<string>
+     */
+    private const TABS = ['sales', 'tickets', 'finance', 'attendance'];
+
+    /**
+     * @var array<string, string>
+     */
+    private const TAB_LABELS = [
+        'sales' => 'Sales & Revenue',
+        'tickets' => 'Ticket Performance',
+        'finance' => 'Finance & Payouts',
+        'attendance' => 'Attendance',
+    ];
+
     public function __construct(
         private readonly EventReportService $reports,
         private readonly TenantContext $tenantContext,
+        private readonly ReportInsights $insights,
     ) {}
 
     /**
@@ -108,10 +127,16 @@ class ReportController extends Controller
         $eventId = $request->query('event');
         $eventId = is_numeric($eventId) ? (int) $eventId : null;
 
-        $confirmedOrders = $this->confirmedOrders($from, $to, $eventId);
+        $tab = $request->query('tab');
+        $tab = in_array($tab, self::TABS, true) ? $tab : self::TABS[0];
 
-        return view('dashboard.reports.index', [
-            'totals' => $this->companyTotals($confirmedOrders),
+        $confirmedOrders = $this->confirmedOrders($from, $to, $eventId);
+        $totals = $this->companyTotals($confirmedOrders);
+
+        $data = [
+            'tab' => $tab,
+            'tabs' => self::TAB_LABELS,
+            'totals' => $totals,
             'perEvent' => $this->perEventBreakdown($confirmedOrders, $ranged),
             'salesTimeline' => $this->salesTimeline($confirmedOrders),
             'currency' => $this->currency(),
@@ -119,7 +144,75 @@ class ReportController extends Controller
             'to' => $to?->toDateString(),
             'events' => $this->companyEvents(),
             'eventId' => $eventId,
-        ]);
+            'averageOrderMinor' => $totals['orders'] > 0
+                ? intdiv($totals['gross_sales_minor'], $totals['orders'])
+                : 0,
+            'comparison' => null,
+            'ticketTypes' => [],
+            'refunds' => null,
+            'attendanceEvents' => collect(),
+        ];
+
+        // Only the active tab's extra analysis is computed.
+        if ($tab === 'sales') {
+            $data['comparison'] = $this->previousPeriodComparison($from, $to, $eventId, $totals);
+        } elseif ($tab === 'tickets') {
+            $data['ticketTypes'] = $this->insights->ticketTypeBreakdown($confirmedOrders, $eventId);
+        } elseif ($tab === 'finance') {
+            $data['refunds'] = $this->insights->refunds($from, $to, $eventId);
+        } elseif ($tab === 'attendance') {
+            $data['attendanceEvents'] = $this->insights->attendanceEvents($eventId);
+        }
+
+        return view('dashboard.reports.index', $data);
+    }
+
+    /**
+     * Compare the current period with the equally long one before it: headline
+     * deltas plus a day-for-day gross-sales overlay. Null for an open-ended
+     * range, where there is no meaningful previous period.
+     *
+     * @param  array<string, int>  $totals
+     * @return array{label:string, deltas:array<string, array{previous:int, change:?float}>, series:list<array{label:string, value:int}>, previous_series:list<array{label:string, value:int}>}|null
+     */
+    private function previousPeriodComparison(?Carbon $from, ?Carbon $to, ?int $eventId, array $totals): ?array
+    {
+        $period = $this->insights->previousPeriod($from, $to);
+
+        if ($period === null) {
+            return null;
+        }
+
+        [$previousFrom, $previousTo] = $period;
+
+        $previousOrders = $this->confirmedOrders($previousFrom, $previousTo, $eventId);
+        $previousTotals = $this->companyTotals($previousOrders);
+
+        $deltas = [];
+        foreach (['gross_sales_minor', 'orders', 'tickets_sold', 'net_payout_minor'] as $metric) {
+            $deltas[$metric] = [
+                'previous' => $previousTotals[$metric],
+                'change' => $this->insights->percentChange($totals[$metric], $previousTotals[$metric]),
+            ];
+        }
+
+        $current = $this->insights->dailyGross($this->confirmedOrders($from, $to, $eventId), $from, $to);
+        $previous = $this->insights->dailyGross($previousOrders, $previousFrom, $previousTo);
+
+        $series = [];
+        $previousSeries = [];
+        foreach ($current as $index => $value) {
+            $label = $from->copy()->addDays($index)->format('j M');
+            $series[] = ['label' => $label, 'value' => $value];
+            $previousSeries[] = ['label' => $label, 'value' => $previous[$index] ?? 0];
+        }
+
+        return [
+            'label' => $this->rangeLabel($previousFrom, $previousTo),
+            'deltas' => $deltas,
+            'series' => $series,
+            'previous_series' => $previousSeries,
+        ];
     }
 
     /**
