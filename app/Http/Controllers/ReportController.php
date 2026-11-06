@@ -143,6 +143,7 @@ class ReportController extends Controller
             'from' => $from?->toDateString(),
             'to' => $to?->toDateString(),
             'events' => $this->companyEvents(),
+            'eventOptions' => $this->eventOptions(),
             'eventId' => $eventId,
             'averageOrderMinor' => $totals['orders'] > 0
                 ? intdiv($totals['gross_sales_minor'], $totals['orders'])
@@ -306,11 +307,38 @@ class ReportController extends Controller
 
         return view('dashboard.reports.compare', [
             'events' => $this->companyEvents(),
+            'eventOptions' => $this->eventOptions(),
             'selected' => $events,
             'selectedIds' => $events->pluck('id')->all(),
             'comparison' => $events->count() >= 2 ? $comparison->compare($events) : null,
             'currency' => $this->currency(),
         ]);
+    }
+
+    /**
+     * Dropdown labels for the event pickers: the event name plus where it is in
+     * its life (Cancelled, Draft, Upcoming or Past) and its date, so an
+     * organiser can tell at a glance whether an event has already happened.
+     * Newest first, keyed id => label.
+     *
+     * @return Collection<int, string>
+     */
+    private function eventOptions()
+    {
+        return Event::query()
+            ->orderByDesc('id')
+            ->get(['id', 'name', 'starts_at', 'is_published', 'cancelled_at'])
+            ->mapWithKeys(function (Event $event): array {
+                $state = match (true) {
+                    $event->cancelled_at !== null => 'Cancelled',
+                    ! $event->is_published => 'Draft',
+                    $event->starts_at !== null && $event->starts_at->isPast() => 'Past',
+                    default => 'Upcoming',
+                };
+                $date = $event->starts_at?->format('j M Y');
+
+                return [$event->id => $event->name.' ('.$state.($date ? ', '.$date : '').')'];
+            });
     }
 
     /**

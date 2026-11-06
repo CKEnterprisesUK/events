@@ -44,7 +44,7 @@
     <p class="nav-section">Overview</p>
     <a class="nav-link {{ $navActive('dashboard.home') ? 'active' : '' }}" @if($navActive('dashboard.home')) aria-current="page" @endif href="{{ route('dashboard.home') }}"><x-icon name="dashboard" class="nav-ico" /> Dashboard</a>
 
-    @can('events')
+    @can('view_events')
         <p class="nav-section">Manage</p>
         <a class="nav-link {{ $navActive('dashboard.events.*') ? 'active' : '' }}" @if($navActive('dashboard.events.*')) aria-current="page" @endif href="{{ route('dashboard.events.index') }}"><x-icon name="events" class="nav-ico" /> Events</a>
         <a class="nav-link {{ $navActive('dashboard.sharing.*') ? 'active' : '' }}" @if($navActive('dashboard.sharing.*')) aria-current="page" @endif href="{{ route('dashboard.sharing.index') }}"><x-icon name="share" class="nav-ico" /> Sharing</a>

@@ -20,17 +20,16 @@
     $valueOf = fn (array $p): int => $isTickets ? $p['tickets'] : $p['revenue_minor'];
     $previousOf = fn (array $p): int => $isTickets ? $p['previous_tickets'] : $p['previous_revenue_minor'];
 
-    $niceCeil = function (float $v): float {
-        if ($v <= 0) {
-            return 1.0;
-        }
-        $pow = 10 ** floor(log10($v));
-        $frac = $v / $pow;
-        $nice = $frac <= 1 ? 1 : ($frac <= 2 ? 2 : ($frac <= 2.5 ? 2.5 : ($frac <= 5 ? 5 : 10)));
-
-        return $nice * $pow;
-    };
-    $niceMax = $niceCeil((float) $chart['max_value']);
+    // Dynamic scale: four intervals with a "nice" step, sized to the data plus
+    // ~8% headroom so the peak never touches the top edge or floats far below it.
+    $gridIntervals = 4;
+    $targetMax = max((float) $chart['max_value'], 1.0) * 1.08;
+    $rawStep = $targetMax / $gridIntervals;
+    $stepPow = 10 ** floor(log10($rawStep));
+    $stepFrac = $rawStep / $stepPow;
+    $niceStep = max(1.0, ($stepFrac <= 1 ? 1 : ($stepFrac <= 2 ? 2 : ($stepFrac <= 2.5 ? 2.5 : ($stepFrac <= 5 ? 5 : 10)))) * $stepPow);
+    $gridIntervals = max(1, (int) ceil($targetMax / $niceStep));
+    $niceMax = $niceStep * $gridIntervals;
 
     // Wide, short-padding plot so the data fills the panel.
     $vbW = 960.0;
@@ -46,8 +45,8 @@
     $yAt = fn (float $v): float => $padT + $plotH - (($v / $niceMax) * $plotH);
 
     $grid = [];
-    for ($g = 0; $g <= 4; $g++) {
-        $grid[] = $niceMax * ($g / 4);
+    for ($g = 0; $g <= $gridIntervals; $g++) {
+        $grid[] = $niceStep * $g;
     }
 
     $maxTicks = $monthly ? 12 : 8;
@@ -140,12 +139,12 @@
     @push('head')
     <style>
         .sales-chart { margin: 0; }
-        .sales-chart__legend { display: flex; flex-wrap: wrap; gap: 1rem; font-size: .78rem; color: var(--muted); margin-bottom: .5rem; }
+        .sales-chart__legend { display: flex; flex-wrap: wrap; gap: 1rem; font-size: .78rem; color: var(--muted); margin-bottom: .35rem; }
         .sales-chart__legend-item { display: inline-flex; align-items: center; gap: .4rem; }
         .sales-chart__swatch { display: inline-block; width: 1.4rem; height: 0; border-top: 2.5px solid var(--brand); }
         .sales-chart__swatch--previous { border-top: 2px dashed #9ca3af; }
         .sales-chart__swatch--partial { border-top: 2.5px dotted var(--brand); opacity: .75; }
-        .sales-chart__plot { position: relative; height: clamp(260px, 38vw, 400px); margin-left: 0; color: var(--ink); cursor: crosshair; touch-action: pan-y; }
+        .sales-chart__plot { position: relative; height: clamp(240px, 30vw, 300px); margin-left: 0; color: var(--ink); cursor: crosshair; touch-action: pan-y; }
         .sales-chart__svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
         .sales-chart__ylabel { position: absolute; left: 0; transform: translateY(-50%); font-size: .72rem; color: var(--muted); font-variant-numeric: tabular-nums; pointer-events: none; }
         .sales-chart__xlabel { position: absolute; bottom: 0; transform: translateX(-50%); font-size: .72rem; color: var(--muted); white-space: nowrap; pointer-events: none; }

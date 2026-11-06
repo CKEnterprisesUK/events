@@ -53,6 +53,7 @@ class RoleAuthorizationTest extends TestCase
     public function test_admin_permitted_set(): void
     {
         foreach ([
+            RoleAuthorization::ACTION_VIEW_EVENTS,
             RoleAuthorization::ACTION_MANAGE_EVENTS,
             RoleAuthorization::ACTION_MANAGE_TICKET_TYPES,
             RoleAuthorization::ACTION_MANAGE_ORDERS,
@@ -106,14 +107,11 @@ class RoleAuthorizationTest extends TestCase
 
     public function test_box_office_permitted_set(): void
     {
-        // Box_Office runs the box office: events, ticket types and orders
-        // (including cancel/refund/comp), the same operational set as Admin.
+        // Box_Office can view events, view/search/resend orders, issue comps
+        // and check attendees in.
         foreach ([
-            RoleAuthorization::ACTION_MANAGE_EVENTS,
-            RoleAuthorization::ACTION_MANAGE_TICKET_TYPES,
+            RoleAuthorization::ACTION_VIEW_EVENTS,
             RoleAuthorization::ACTION_MANAGE_ORDERS,
-            RoleAuthorization::ACTION_CANCEL_ORDER,
-            RoleAuthorization::ACTION_REFUND_ORDER,
             RoleAuthorization::ACTION_ISSUE_COMP,
             // Box_Office also checks attendees in at the door.
             RoleAuthorization::ACTION_CHECK_IN,
@@ -124,6 +122,12 @@ class RoleAuthorizationTest extends TestCase
         // But it is NOT trusted with reports, company settings, users, Stripe,
         // billing, GDPR handling, resetting check-ins, or the audit trail.
         foreach ([
+            // No event edits (dates, venue, publish), price changes, order or
+            // ticket cancellations, or refunds.
+            RoleAuthorization::ACTION_MANAGE_EVENTS,
+            RoleAuthorization::ACTION_MANAGE_TICKET_TYPES,
+            RoleAuthorization::ACTION_CANCEL_ORDER,
+            RoleAuthorization::ACTION_REFUND_ORDER,
             RoleAuthorization::ACTION_VIEW_REPORTS,
             RoleAuthorization::ACTION_RESET_SCANS,
             RoleAuthorization::ACTION_MANAGE_SETTINGS,

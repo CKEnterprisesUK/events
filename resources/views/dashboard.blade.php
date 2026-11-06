@@ -24,7 +24,7 @@
                 <p class="muted">{{ $company->name }}</p>
             @endif
         </div>
-        @can('events')
+        @can('view_events')
             <div class="dash-head__actions">
                 <a class="btn" href="{{ route('dashboard.events.index') }}">Manage events</a>
             </div>
@@ -106,7 +106,7 @@
     {{-- Event-day operations: events starting within the next 24 hours or
          already under way get a compact action panel, check-in progress and a
          link to the full-screen live dashboard. --}}
-    @can('events')
+    @can('view_events')
         @if ($operationalEvents->isNotEmpty())
             <div class="panel ops-panel">
                 <div class="panel__head">
@@ -159,10 +159,78 @@
         @endif
     @endcan
 
+    {{-- Upcoming events: soonest-first, the operationally urgent view. --}}
+    @can('view_events')
+        @if ($upcomingEvents->isEmpty())
+            <div class="panel">
+                <div class="panel__head">
+                    <h2>Upcoming events</h2>
+                    <a class="panel__link" href="{{ route('dashboard.events.index') }}">View all</a>
+                </div>
+                <div class="empty">
+                    <p>{{ $stats && $stats['total_events'] > 0 ? 'You have no upcoming events.' : "You haven't created any events yet." }}</p>
+                    <a class="btn btn-sm" href="{{ route('dashboard.events.index') }}">{{ $stats && $stats['total_events'] > 0 ? 'Manage events' : 'Create your first event' }}</a>
+                </div>
+            </div>
+        @else
+            <div class="panel">
+                <div class="panel__head">
+                    <h2>Upcoming events</h2>
+                    <a class="panel__link" href="{{ route('dashboard.events.index') }}">View all</a>
+                </div>
+                <table class="data-table only-desktop">
+                    <thead>
+                        <tr>
+                            <th scope="col">Event</th>
+                            <th scope="col">When</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Sold</th>
+                            <th scope="col" class="num">Orders</th>
+                            <th scope="col"><span class="sr-only">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($upcomingEvents as $event)
+                            <tr class="row-nav">
+                                <td>
+                                    <a class="cell-strong row-link" href="{{ route('dashboard.events.show', $event) }}">{{ $event->name }}</a>
+                                    @if ($event->venue)
+                                        <span class="cell-dim">{{ $event->venue }}</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    {{ $event->starts_at->format('j M Y, H:i') }}
+                                    <span class="cell-dim">{{ $event->starts_at->diffForHumans() }}</span>
+                                </td>
+                                <td>
+                                    <span class="pill {{ $event->isPublished() ? 'pill--live' : 'pill--draft' }}">
+                                        {{ $event->isPublished() ? 'Published' : 'Draft' }}
+                                    </span>
+                                </td>
+                                <td>@include('dashboard.partials.sell-through', ['sellThrough' => $event->sell_through])</td>
+                                <td class="num">{{ number_format($event->confirmed_orders_count) }}</td>
+                                <td class="num">
+                                    <a class="row-go row-action" href="{{ route('dashboard.events.show', $event) }}" aria-label="Open {{ $event->name }}">
+                                        <x-icon name="chevron" />
+                                    </a>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+                <div class="only-mobile record-list" style="padding: 1rem 1.25rem;">
+                    @foreach ($upcomingEvents as $event)
+                        @include('dashboard.partials.event-card', ['event' => $event])
+                    @endforeach
+                </div>
+            </div>
+        @endif
+    @endcan
+
     {{-- Sales trend: selectable window and metric, with a same-length previous
          period overlaid for comparison and hover tooltips with exact figures. --}}
     @if (!empty($salesChart))
-        @can('events')
+        @can('view_events')
             @php
                 $chart = $salesChart;
                 $delta = $chart['delta_pct'];
@@ -219,122 +287,6 @@
             </div>
         @endcan
     @endif
-
-    {{-- Upcoming events: soonest-first, the operationally urgent view. --}}
-    @can('events')
-        @if ($upcomingEvents->isNotEmpty())
-            <div class="panel">
-                <div class="panel__head">
-                    <h2>Upcoming events</h2>
-                    <a class="panel__link" href="{{ route('dashboard.events.index') }}">View all</a>
-                </div>
-                <table class="data-table only-desktop">
-                    <thead>
-                        <tr>
-                            <th scope="col">Event</th>
-                            <th scope="col">When</th>
-                            <th scope="col">Status</th>
-                            <th scope="col">Sold</th>
-                            <th scope="col" class="num">Orders</th>
-                            <th scope="col"><span class="sr-only">Actions</span></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($upcomingEvents as $event)
-                            <tr class="row-nav">
-                                <td>
-                                    <a class="cell-strong row-link" href="{{ route('dashboard.events.show', $event) }}">{{ $event->name }}</a>
-                                    @if ($event->venue)
-                                        <span class="cell-dim">{{ $event->venue }}</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    {{ $event->starts_at->format('j M Y, H:i') }}
-                                    <span class="cell-dim">{{ $event->starts_at->diffForHumans() }}</span>
-                                </td>
-                                <td>
-                                    <span class="pill {{ $event->isPublished() ? 'pill--live' : 'pill--draft' }}">
-                                        {{ $event->isPublished() ? 'Published' : 'Draft' }}
-                                    </span>
-                                </td>
-                                <td>@include('dashboard.partials.sell-through', ['sellThrough' => $event->sell_through])</td>
-                                <td class="num">{{ number_format($event->confirmed_orders_count) }}</td>
-                                <td class="num">
-                                    <a class="row-go row-action" href="{{ route('dashboard.events.show', $event) }}" aria-label="Open {{ $event->name }}">
-                                        <x-icon name="chevron" />
-                                    </a>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-                <div class="only-mobile record-list" style="padding: 1rem 1.25rem;">
-                    @foreach ($upcomingEvents as $event)
-                        @include('dashboard.partials.event-card', ['event' => $event])
-                    @endforeach
-                </div>
-            </div>
-        @endif
-    @endcan
-
-    @can('events')
-        <div class="panel">
-            <div class="panel__head">
-                <h2>Recently created</h2>
-                <a class="panel__link" href="{{ route('dashboard.events.index') }}">View all</a>
-            </div>
-
-            @if ($recentEvents->isEmpty())
-                <div class="empty">
-                    <p>You haven't created any events yet.</p>
-                    <a class="btn btn-sm" href="{{ route('dashboard.events.index') }}">Create your first event</a>
-                </div>
-            @else
-                <table class="data-table only-desktop">
-                    <thead>
-                        <tr>
-                            <th scope="col">Event</th>
-                            <th scope="col">When</th>
-                            <th scope="col">Status</th>
-                            <th scope="col">Sold</th>
-                            <th scope="col" class="num">Orders</th>
-                            <th scope="col"><span class="sr-only">Actions</span></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($recentEvents as $event)
-                            <tr class="row-nav">
-                                <td>
-                                    <a class="cell-strong row-link" href="{{ route('dashboard.events.show', $event) }}">{{ $event->name }}</a>
-                                    @if ($event->venue)
-                                        <span class="cell-dim">{{ $event->venue }}</span>
-                                    @endif
-                                </td>
-                                <td>{{ $event->starts_at ? $event->starts_at->format('j M Y, H:i') : '—' }}</td>
-                                <td>
-                                    <span class="pill {{ $event->isPublished() ? 'pill--live' : 'pill--draft' }}">
-                                        {{ $event->isPublished() ? 'Published' : 'Draft' }}
-                                    </span>
-                                </td>
-                                <td>@include('dashboard.partials.sell-through', ['sellThrough' => $event->sell_through])</td>
-                                <td class="num">{{ number_format($event->confirmed_orders_count) }}</td>
-                                <td class="num">
-                                    <a class="row-go row-action" href="{{ route('dashboard.events.show', $event) }}" aria-label="Open {{ $event->name }}">
-                                        <x-icon name="chevron" />
-                                    </a>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-                <div class="only-mobile record-list" style="padding: 1rem 1.25rem;">
-                    @foreach ($recentEvents as $event)
-                        @include('dashboard.partials.event-card', ['event' => $event])
-                    @endforeach
-                </div>
-            @endif
-        </div>
-    @endcan
 
     {{-- Quick tool entry points, shown to anyone holding the relevant
          permission — Owners and Admins see everything they're allowed, not
@@ -439,14 +391,14 @@
 
     .panel__head--wrap { flex-wrap: wrap; gap: .5rem 1rem; }
     .panel__head .muted { margin: .15rem 0 0; font-size: .85rem; }
-    .chart-controls { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; padding: .75rem 1.25rem 0; }
+    .chart-controls { display: flex; flex-wrap: wrap; gap: .5rem 1rem; padding: .5rem 1.25rem 0; }
     .seg { display: inline-flex; border: 1px solid var(--border); border-radius: .5rem; overflow: hidden; background: var(--surface); }
-    .seg__item { padding: .35rem .8rem; font-size: .8rem; font-weight: 600; color: var(--muted); text-decoration: none; border-right: 1px solid var(--border); }
+    .seg__item { padding: .25rem .7rem; font-size: .8rem; font-weight: 600; color: var(--muted); text-decoration: none; border-right: 1px solid var(--border); }
     .seg__item:last-child { border-right: none; }
     .seg__item:hover { color: var(--ink); background: #f9fafb; }
     .seg__item.is-active { background: var(--brand); color: #fff; }
-    .chart-body { padding: 1rem 1.25rem 1.25rem; }
-    .chart-empty { margin: 0; padding: 2rem 0; text-align: center; color: var(--muted); }
+    .chart-body { padding: .75rem 1.25rem 1rem; }
+    .chart-empty { margin: 0; padding: 1.5rem 0; text-align: center; color: var(--muted); }
 
     .ops-panel { border-top: 3px solid #d97706; }
     .ops-panel .panel__head .muted { margin: .15rem 0 0; font-size: .85rem; }

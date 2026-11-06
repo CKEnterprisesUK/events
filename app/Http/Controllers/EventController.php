@@ -14,6 +14,7 @@ use App\Services\EventReadiness;
 use App\Services\EventReportService;
 use App\Services\GeocodingService;
 use App\Services\QrService;
+use App\Services\Reporting\ReportInsights;
 use App\Services\Reporting\TicketMetrics;
 use App\Services\RoleAuthorization;
 use App\Services\StorefrontListing;
@@ -67,7 +68,7 @@ class EventController extends Controller
      */
     public function index(): View
     {
-        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+        Gate::authorize(RoleAuthorization::ACTION_VIEW_EVENTS);
 
         // Eager-load the Company so the listing's hero thumbnail can fall back
         // to the company poster (`$event->poster_path ?? $event->company->poster_path`)
@@ -160,7 +161,7 @@ class EventController extends Controller
      */
     public function show(Event $event): View
     {
-        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+        Gate::authorize(RoleAuthorization::ACTION_VIEW_EVENTS);
 
         // Overview screen: at-a-glance stats, capacity advisory and the
         // event-details edit form. Location/tickets/share/orders now each live
@@ -190,7 +191,7 @@ class EventController extends Controller
      */
     public function location(Event $event): View
     {
-        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+        Gate::authorize(RoleAuthorization::ACTION_VIEW_EVENTS);
 
         return view('dashboard.events.location', $this->sharedViewData($event));
     }
@@ -201,7 +202,7 @@ class EventController extends Controller
      */
     public function tickets(Event $event): View
     {
-        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+        Gate::authorize(RoleAuthorization::ACTION_VIEW_EVENTS);
 
         return view('dashboard.events.tickets', $this->sharedViewData($event) + [
             'ticketTypes' => $event->ticketTypes()->latest()->get(),
@@ -232,7 +233,7 @@ class EventController extends Controller
      */
     public function orders(Event $event): View
     {
-        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+        Gate::authorize(RoleAuthorization::ACTION_VIEW_EVENTS);
 
         return view('dashboard.events.orders', $this->sharedViewData($event) + [
             'recentOrders' => $event->orders()->latest()->limit(25)->get(),
@@ -253,7 +254,7 @@ class EventController extends Controller
      */
     public function history(Event $event): View
     {
-        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+        Gate::authorize(RoleAuthorization::ACTION_VIEW_EVENTS);
 
         $logs = AuditLog::query()
             ->with(['actor', 'impersonator'])
@@ -563,6 +564,24 @@ class EventController extends Controller
         return redirect()
             ->route('dashboard.events.show', $event)
             ->with('status', 'Event unpublished.');
+    }
+
+    /**
+     * The Cancel / Delete screen. Deliberately a page of its own rather than a
+     * prominent top-bar button: it explains what cancelling does and how to
+     * refund customers before offering the (confirmed) action. An Event with
+     * bookings can only be cancelled; one without can only be deleted, so the
+     * page shows whichever applies.
+     */
+    public function cancellation(Event $event, ReportInsights $insights): View
+    {
+        Gate::authorize(RoleAuthorization::ACTION_MANAGE_EVENTS);
+
+        return view('dashboard.events.cancellation', $this->sharedViewData($event) + [
+            'hasBookings' => $event->hasBookings(),
+            'report' => $this->reports->for($event),
+            'refunds' => $insights->refunds(null, null, (int) $event->getKey()),
+        ]);
     }
 
     /**

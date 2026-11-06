@@ -81,6 +81,7 @@
     @include('dashboard.events._setup_checklist', ['event' => $event, 'readiness' => $readiness])
 
     {{-- Details editing — a clearly separated section, not the top of the page. --}}
+    @can('events')
     <div class="panel form-panel" id="event-details">
         <div class="panel__head">
             <h2>Details</h2>
@@ -96,4 +97,5 @@
             </div>
         </form>
     </div>
+    @endcan
 @endsection

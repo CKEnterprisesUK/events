@@ -219,7 +219,7 @@ class HelpContentSeeder extends Seeder
 
                         - **Owner** — full access, including company settings, team, Stripe fees and billing.
                         - **Admin** — events, ticket types, orders (including cancel/refund/comp), reports, check-in, GDPR handling, the activity log, the team and Stripe setup — but not billing, Stripe fees or company settings.
-                        - **Box office** — runs events, ticketing, orders and check-in, but not reports, settings, users, Stripe, billing or GDPR.
+                        - **Box office** — views events and ticket availability, searches orders, resends tickets, issues complimentary tickets and checks people in. It cannot edit events or ticket prices, cancel orders, process refunds, or access reports, settings, users, Stripe, billing or GDPR.
                         - **Accountant** — reports and payout figures, plus managing and cancelling/refunding orders.
                         - **Scanner** — check-in only.
                         MD,

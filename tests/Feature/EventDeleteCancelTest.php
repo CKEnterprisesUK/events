@@ -140,4 +140,46 @@ class EventDeleteCancelTest extends TestCase
 
         $this->assertDatabaseHas('events', ['id' => $foreign->id]);
     }
+
+    public function test_cancellation_page_explains_refunds_for_an_event_with_bookings(): void
+    {
+        $company = Company::factory()->create();
+        $admin = $this->adminForCompany($company);
+        $event = Event::factory()->for($company)->create(['is_published' => true]);
+        Order::factory()->forEvent($event)->create(['status' => Order::STATUS_PAID]);
+
+        $this->actingAs($admin)
+            ->get(route('dashboard.events.cancellation', $event))
+            ->assertOk()
+            ->assertSee('How to refund your customers')
+            ->assertSee(route('dashboard.events.cancel', $event), false)
+            ->assertDontSee(route('dashboard.events.destroy', $event), false);
+    }
+
+    public function test_cancellation_page_offers_delete_for_an_event_without_bookings(): void
+    {
+        $company = Company::factory()->create();
+        $admin = $this->adminForCompany($company);
+        $event = Event::factory()->for($company)->create();
+
+        $this->actingAs($admin)
+            ->get(route('dashboard.events.cancellation', $event))
+            ->assertOk()
+            ->assertSee(route('dashboard.events.destroy', $event), false)
+            ->assertDontSee('How to refund your customers');
+    }
+
+    public function test_cancel_is_no_longer_a_top_bar_button(): void
+    {
+        $company = Company::factory()->create();
+        $admin = $this->adminForCompany($company);
+        $event = Event::factory()->for($company)->create(['is_published' => true]);
+        Order::factory()->forEvent($event)->create(['status' => Order::STATUS_PAID]);
+
+        $this->actingAs($admin)
+            ->get(route('dashboard.events.show', $event))
+            ->assertOk()
+            ->assertDontSee('data-open-event-cancel', false)
+            ->assertSee(route('dashboard.events.cancellation', $event), false);
+    }
 }

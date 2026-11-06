@@ -9,6 +9,16 @@
 @section('active_section', 'location')
 
 @section('section')
+    @cannot('events')
+        <div class="panel">
+            <div class="panel__head"><h2>Location</h2></div>
+            <dl class="stack">
+                <div><dt class="muted">Venue</dt><dd>{{ $event->venue ?: '—' }}</dd></div>
+                <div><dt class="muted">Address</dt><dd>{{ $event->address ?: '—' }}</dd></div>
+            </dl>
+        </div>
+    @endcannot
+    @can('events')
     <form method="POST" action="{{ route('dashboard.events.location.update', $event) }}" class="stack">
         @csrf
         @method('PATCH')
@@ -17,4 +27,5 @@
             <button type="submit" class="btn">Save location</button>
         </div>
     </form>
+    @endcan
 @endsection

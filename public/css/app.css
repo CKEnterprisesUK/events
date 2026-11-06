@@ -3019,3 +3019,7 @@ a.tab-btn { text-decoration: none; }
 .export-menu__list a:hover,
 .export-menu__list button:hover { background: #f3f4f6; }
 @media print { .export-menu, .tab-list { display: none; } }
+
+/* Quiet destructive link at the foot of the event sidebar. */
+.nav-link--danger { color: var(--dark-text-dim); font-size: 0.85rem; }
+.nav-link--danger:hover { color: #fca5a5; }

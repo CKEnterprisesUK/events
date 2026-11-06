@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AppAccessController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\LoginController;
@@ -36,9 +37,7 @@ use App\Http\Controllers\StorefrontController;
 use App\Http\Controllers\StripeConnectController;
 use App\Http\Controllers\StripeReturnController;
 use App\Http\Controllers\SuperAdmin\AnnouncementController as SuperAdminAnnouncementController;
-use App\Http\Controllers\SuperAdmin\TemplatedEmailController as SuperAdminTemplatedEmailController;
 use App\Http\Controllers\SuperAdmin\AuditController as SuperAdminAuditController;
-use App\Http\Controllers\AppAccessController;
 use App\Http\Controllers\SuperAdmin\ClientController as SuperAdminClientController;
 use App\Http\Controllers\SuperAdmin\CompanyController as SuperAdminCompanyController;
 use App\Http\Controllers\SuperAdmin\CompanyUserController as SuperAdminCompanyUserController;
@@ -57,6 +56,7 @@ use App\Http\Controllers\SuperAdmin\SettingsController as SuperAdminSettingsCont
 use App\Http\Controllers\SuperAdmin\StripeAccountController as SuperAdminStripeAccountController;
 use App\Http\Controllers\SuperAdmin\SupportRequestController as SuperAdminSupportRequestController;
 use App\Http\Controllers\SuperAdmin\SystemHealthController as SuperAdminSystemHealthController;
+use App\Http\Controllers\SuperAdmin\TemplatedEmailController as SuperAdminTemplatedEmailController;
 use App\Http\Controllers\SuperAdmin\TransactionController as SuperAdminTransactionController;
 use App\Http\Controllers\SuperAdmin\TwoFactorController as SuperAdminTwoFactorController;
 use App\Http\Controllers\SuperAdmin\UserController as SuperAdminUserController;
@@ -401,6 +401,10 @@ Route::middleware(['auth', 'verified', 'company.active', 'session.timeout', 'das
         // contacted and refunds arranged via support. Each action refuses the
         // other's precondition, so they never overlap. Scoped to the user's
         // Company by the `dashboard.tenant` group (foreign Events 404).
+        // The explanatory screen behind the sidebar's "Cancel event" / "Delete
+        // event" link: what cancelling does, how refunds work, and the confirm
+        // form that posts to the two routes below.
+        Route::get('/events/{event}/cancellation', [EventController::class, 'cancellation'])->name('events.cancellation');
         Route::post('/events/{event}/cancel', [EventController::class, 'cancel'])->name('events.cancel');
         Route::delete('/events/{event}', [EventController::class, 'destroy'])->name('events.destroy');
 

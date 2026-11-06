@@ -70,7 +70,7 @@
     $groups = [
         'Event' => array_filter([
             ['key' => 'overview', 'label' => 'Overview', 'icon' => 'overview', 'url' => route('dashboard.events.show', $event)],
-            ['key' => 'details',  'label' => 'Details',  'icon' => 'events',   'url' => route('dashboard.events.show', $event) . '#event-details'],
+            ['key' => 'details',  'label' => 'Details',  'icon' => 'events',   'url' => route('dashboard.events.show', $event) . '#event-details', 'gate' => 'events'],
             ['key' => 'location', 'label' => 'Location', 'icon' => 'location', 'url' => route('dashboard.events.location', $event)],
             ['key' => 'tickets',  'label' => 'Tickets',  'icon' => 'tickets',  'url' => route('dashboard.events.tickets', $event)],
             $canManageBranding ? ['key' => 'branding', 'label' => 'Branding', 'icon' => 'branding', 'url' => route('dashboard.branding.event.edit', $event)] : null,
@@ -78,19 +78,28 @@
         ]),
         'Sales' => [
             ['key' => 'orders',    'label' => 'Orders',    'icon' => 'orders',    'url' => route('dashboard.events.orders', $event)],
-            ['key' => 'questions', 'label' => 'Questions', 'icon' => 'tickets',   'url' => route('dashboard.events.questions', $event)],
-            ['key' => 'report',    'label' => 'Reports',   'icon' => 'reports',   'url' => route('dashboard.events.report', $event)],
-            ['key' => 'attendance', 'label' => 'Attendance', 'icon' => 'scan',    'url' => route('dashboard.events.attendance', $event)],
-            ['key' => 'live',      'label' => 'Live dashboard', 'icon' => 'scan', 'url' => route('dashboard.events.live', $event)],
+            ['key' => 'questions', 'label' => 'Questions', 'icon' => 'tickets',   'url' => route('dashboard.events.questions', $event), 'gate' => 'events'],
+            ['key' => 'report',    'label' => 'Reports',   'icon' => 'reports',   'url' => route('dashboard.events.report', $event), 'gate' => 'view_reports'],
+            ['key' => 'attendance', 'label' => 'Attendance', 'icon' => 'scan',    'url' => route('dashboard.events.attendance', $event), 'gate' => 'view_reports'],
+            ['key' => 'live',      'label' => 'Live dashboard', 'icon' => 'scan', 'url' => route('dashboard.events.live', $event), 'gate' => 'view_reports'],
         ],
         'Promotion' => [
-            ['key' => 'share', 'label' => 'Share', 'icon' => 'share', 'url' => route('dashboard.events.share', $event)],
+            ['key' => 'share', 'label' => 'Share', 'icon' => 'share', 'url' => route('dashboard.events.share', $event), 'gate' => 'events'],
         ],
         'Other' => [
             ['key' => 'history', 'label' => 'History', 'icon' => 'history', 'url' => route('dashboard.events.history', $event)],
         ],
     ];
 
+    // Drop links the user's role cannot open (each link may name a `gate`).
+    $user = auth()->user();
+    $groups = array_map(
+        fn (array $links) => array_values(array_filter(
+            $links,
+            fn (array $link) => ! isset($link['gate']) || $user?->can($link['gate'])
+        )),
+        $groups
+    );
     // Event status label + modifier for the badge under the event name.
     if ($event->isCancelled()) {
         $statusLabel = 'Cancelled';
@@ -136,6 +145,16 @@
 @endforeach
 
 <div class="event-nav__foot">
+    {{-- Destructive and rarely needed, so it sits quietly at the bottom and
+         opens an explanatory page rather than a one-click button. --}}
+    @can('events')
+        <a class="nav-link nav-link--danger {{ $activeSection === 'cancellation' ? 'active' : '' }}"
+           href="{{ route('dashboard.events.cancellation', $event) }}"
+           @if ($activeSection === 'cancellation') aria-current="page" @endif>
+            <x-icon name="cross" class="nav-ico" />
+            <span class="nav-link__label">{{ $event->isCancelled() ? 'Cancellation' : ($event->hasBookings() ? 'Cancel event' : 'Delete event') }}</span>
+        </a>
+    @endcan
     @if ($company)
         <span class="event-nav__org">{{ $company->name }}</span>
     @endif

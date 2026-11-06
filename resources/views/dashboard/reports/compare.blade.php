@@ -38,7 +38,7 @@
                     <label for="event-{{ $i }}">{{ $i === 0 ? 'Event A' : ($i === 1 ? 'Event B' : 'Event C (optional)') }}</label>
                     <select id="event-{{ $i }}" name="events[]">
                         <option value="">{{ $i < 2 ? 'Choose an event' : 'None' }}</option>
-                        @foreach ($events as $id => $name)
+                        @foreach ($eventOptions as $id => $name)
                             <option value="{{ $id }}" @selected((string) ($selectedIds[$i] ?? '') === (string) $id)>{{ $name }}</option>
                         @endforeach
                     </select>

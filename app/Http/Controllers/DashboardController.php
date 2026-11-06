@@ -74,7 +74,6 @@ class DashboardController extends Controller
             return view('dashboard', [
                 'company' => null,
                 'stats' => null,
-                'recentEvents' => collect(),
                 'upcomingEvents' => collect(),
                 'operationalEvents' => collect(),
                 'salesChart' => null,
@@ -131,12 +130,6 @@ class DashboardController extends Controller
         $companyTickets = $this->ticketMetrics->forCompany($companyId);
         $ticketsSold = $companyTickets->sold;
 
-        // Recent events (most recently created) for the activity table.
-        $recentEvents = (clone $eventsQuery)
-            ->latest()
-            ->limit(5)
-            ->get();
-
         // Upcoming events: published-or-not events starting from now, ordered by
         // soonest first — the operationally urgent view an organiser wants.
         $upcomingEvents = (clone $eventsQuery)
@@ -154,10 +147,8 @@ class DashboardController extends Controller
 
         // Confirmed-order counts per event, scoped explicitly (the tenant
         // global scope is not active here, so we bypass it and filter by
-        // company + event ids directly). Computed once for both tables.
-        $eventIdsForCounts = $recentEvents->pluck('id')
-            ->merge($upcomingEvents->pluck('id'))
-            ->unique();
+        // company + event ids directly).
+        $eventIdsForCounts = $upcomingEvents->pluck('id')->unique();
 
         $confirmedByEvent = Order::query()
             ->withoutGlobalScopes()
@@ -197,7 +188,6 @@ class DashboardController extends Controller
                 (int) ($agg->capped_capacity ?? 0),
             );
         };
-        $recentEvents->each($attachCounts);
         $upcomingEvents->each($attachCounts);
 
         // Events needing operational attention: starting within the lead window
@@ -226,7 +216,6 @@ class DashboardController extends Controller
                 'stripe_fees_minor' => $stripeFeesMinor,
                 'net_payout_minor' => $netPayoutMinor,
             ],
-            'recentEvents' => $recentEvents,
             'upcomingEvents' => $upcomingEvents,
             'operationalEvents' => $operationalEvents,
             'salesChart' => $salesChart,

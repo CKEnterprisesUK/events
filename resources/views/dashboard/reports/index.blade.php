@@ -53,7 +53,7 @@
                 <label for="event">Event</label>
                 <select id="event" name="event">
                     <option value="">All events</option>
-                    @foreach ($events as $id => $name)
+                    @foreach ($eventOptions as $id => $name)
                         <option value="{{ $id }}" @selected((string) ($eventId ?? '') === (string) $id)>{{ $name }}</option>
                     @endforeach
                 </select>
