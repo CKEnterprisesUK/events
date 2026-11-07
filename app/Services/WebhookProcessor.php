@@ -230,7 +230,10 @@ class WebhookProcessor
                 }
             }
 
-            $this->fulfilment->fulfil($order);
+            // In the recovery path the units were already added to sold_count
+            // above, so fulfilment must not run the reserved → sold commit too:
+            // it would pull other Customers' live holds into sold_count.
+            $this->fulfilment->fulfil($order, capacityAlreadyCommitted: $wasExpired);
 
             // Capture the ACTUAL card-processing fee Stripe took on the connected
             // account, so the dashboard and reports can show a truthful net
