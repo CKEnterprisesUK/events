@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Models\Order;
 use App\Models\ScanEvent;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * The shared ticket check-in decision tree — written once, read by both the
@@ -97,10 +98,49 @@ final class TicketCheckInService
         $reference = $this->qr->verifyPayload($payload);
 
         if ($reference === null) {
-            return ScanResult::invalid();
+            return $this->resolveUnverifiedToken($payload, $operator, $expectedEventId);
         }
 
         return $this->checkIn($reference, $operator, $expectedEventId);
+    }
+
+    /**
+     * Handle a well-shaped `reference.token` payload whose HMAC did not verify.
+     *
+     * Strict mode returns `invalid`. With `qr.accept_unverified_tokens` on
+     * (tickets issued under a since-changed secret), the reference half is
+     * treated exactly like a manually typed reference: the tenant-scoped load,
+     * event, confirmed and already-scanned checks all still apply. A reference
+     * that matches no Order stays `invalid`, and every fallback is logged.
+     */
+    private function resolveUnverifiedToken(string $payload, Operator $operator, ?int $expectedEventId): ScanResult
+    {
+        if (! config('qr.accept_unverified_tokens')) {
+            return ScanResult::invalid();
+        }
+
+        [$rawReference] = $this->qr->decode($payload) ?? [''];
+        $reference = $this->normaliseReference($rawReference);
+
+        if ($reference === '') {
+            return ScanResult::invalid();
+        }
+
+        $result = $this->checkIn($reference, $operator, $expectedEventId);
+
+        // No Order in this tenant for that reference: keep reporting the
+        // unverifiable code as invalid rather than "not found".
+        if ($result->status === ScanResult::STATUS_REJECTED && $result->order === null) {
+            return ScanResult::invalid();
+        }
+
+        Log::warning('QR token failed HMAC verification; accepted by order reference.', [
+            'reference' => $reference,
+            'status' => $result->status,
+            'operator_id' => $operator->id,
+        ]);
+
+        return $result;
     }
 
     /**

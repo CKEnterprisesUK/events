@@ -192,6 +192,41 @@ class ScanCheckInTest extends TestCase
         $this->assertNull($order->fresh()->scanned_at);
     }
 
+    public function test_unverified_token_checks_in_by_reference_when_fallback_enabled(): void
+    {
+        config()->set('qr.accept_unverified_tokens', true);
+
+        $scanner = User::factory()->scanner()->create();
+        $order = $this->confirmedOrderFor($scanner);
+
+        // A token minted under an old secret no longer verifies, but the
+        // reference is real, so the fallback checks the Order in.
+        $staleToken = $order->order_reference.'.'.str_repeat('0', 64);
+
+        $response = $this->actingAs($scanner)->post('/dashboard/scan', [
+            'payload' => $staleToken,
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertDontSee('Invalid code');
+        $this->assertNotNull($order->fresh()->scanned_at);
+    }
+
+    public function test_unverified_token_for_unknown_reference_stays_invalid_when_fallback_enabled(): void
+    {
+        config()->set('qr.accept_unverified_tokens', true);
+
+        $scanner = User::factory()->scanner()->create();
+        $this->confirmedOrderFor($scanner);
+
+        $response = $this->actingAs($scanner)->post('/dashboard/scan', [
+            'payload' => 'ZZZZZZZZZZZZ.'.str_repeat('0', 64),
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertSee('Invalid code');
+    }
+
     // ---- Tenant scoping (16.6) ----------------------------------------------
 
     public function test_order_of_another_company_is_rejected(): void
