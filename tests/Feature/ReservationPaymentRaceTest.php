@@ -217,6 +217,39 @@ class ReservationPaymentRaceTest extends TestCase
         $this->assertSame(4, $type->fresh()->sold_count);
     }
 
+    public function test_recovery_does_not_consume_other_customers_live_holds(): void
+    {
+        // Another Customer holds 3 seats of the same type when an expired order
+        // is recovered. Only the recovered order's 4 units may reach sold_count;
+        // the other hold must stay in reserved_count untouched.
+        $event = Event::factory()->unlimitedCapacity()->create();
+        $type = TicketType::factory()->forEvent($event)->create([
+            'capacity' => 100, 'sold_count' => 0, 'reserved_count' => 3,
+        ]);
+
+        $order = Order::factory()->forEvent($event)->create([
+            'status' => Order::STATUS_EXPIRED,
+            'order_total_minor' => 2000,
+            'stripe_session_id' => 'cs_other_holds',
+        ]);
+        for ($i = 0; $i < 4; $i++) {
+            Ticket::withoutGlobalScopes()->create([
+                'company_id' => $event->company_id, 'order_id' => $order->id,
+                'ticket_type_id' => $type->id, 'status' => Ticket::STATUS_VOIDED,
+            ]);
+        }
+
+        app(WebhookProcessor::class)->process(new StripeWebhookEvent(
+            id: 'evt_other_holds_1',
+            type: 'checkout.session.completed',
+            data: ['id' => 'cs_other_holds', 'payment_intent' => 'pi_other_holds'],
+        ));
+
+        $this->assertSame(Order::STATUS_PAID, $order->fresh()->status);
+        $this->assertSame(4, $type->fresh()->sold_count, 'Only the recovered order is counted as sold.');
+        $this->assertSame(3, $type->fresh()->reserved_count, 'Other Customers\' holds are left alone.');
+    }
+
     public function test_recovery_honours_seats_even_when_event_is_now_full(): void
     {
         // The last seats were resold in the gap: committing the recovered order

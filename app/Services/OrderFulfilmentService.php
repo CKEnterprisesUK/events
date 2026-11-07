@@ -48,12 +48,20 @@ class OrderFulfilmentService
      * already been fulfilled. Returns true when this call performed fulfilment
      * (committed capacity, stamped `fulfilled_at`, enqueued the email), false
      * when it was skipped as a duplicate or a non-confirmed Order.
+     *
+     * Pass `$capacityAlreadyCommitted = true` when the caller has already moved
+     * this Order's units into `sold_count` itself (the expired-recovery path,
+     * via {@see CapacityReservationService::commitSoldDirect()}). The reserved →
+     * sold {@see CapacityReservationService::commit()} is then skipped:
+     * `reserved_count` is a per-Ticket_Type total across ALL Orders, so
+     * committing again would move OTHER Customers' live holds into
+     * `sold_count` and permanently over-count sales.
      */
-    public function fulfil(Order $order): bool
+    public function fulfil(Order $order, bool $capacityAlreadyCommitted = false): bool
     {
         $qrPayload = $this->qr->payloadFor($order);
 
-        $fulfilled = DB::transaction(function () use ($order): bool {
+        $fulfilled = DB::transaction(function () use ($order, $capacityAlreadyCommitted): bool {
             // Re-read under a row lock so concurrent confirmations (webhook
             // redelivery racing a retry) serialise on this Order. (14.3)
             $locked = Order::withoutGlobalScopes()
@@ -70,7 +78,7 @@ class OrderFulfilmentService
             // Ticket_Types. (Requirements 6.6, 6.7, 10.6)
             $event = Event::withoutGlobalScopes()->find($locked->event_id);
 
-            if ($event !== null) {
+            if ($event !== null && ! $capacityAlreadyCommitted) {
                 $this->capacity->commit($event, $this->quantitiesFor($locked));
             }
 
