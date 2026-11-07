@@ -500,6 +500,22 @@
         elFsText.textContent = on ? 'Exit full screen' : 'Full screen';
     });
 
+    // Keep the display awake (Screen Wake Lock API). The browser drops the
+    // lock whenever the tab is hidden, so re-request it on return; some
+    // browsers also need a user gesture, so retry on any click/tap.
+    var wakeLock = null;
+    function requestWakeLock() {
+        if (!('wakeLock' in navigator) || wakeLock || document.visibilityState !== 'visible') return;
+        navigator.wakeLock.request('screen').then(function (lock) {
+            wakeLock = lock;
+            lock.addEventListener('release', function () { wakeLock = null; });
+        }).catch(function () { /* unsupported or refused: retry on next gesture */ });
+    }
+    document.addEventListener('visibilitychange', requestWakeLock);
+    document.addEventListener('click', requestWakeLock);
+    document.addEventListener('touchend', requestWakeLock);
+    requestWakeLock();
+
     function renderStats(st) {
         lastStats = st;
         elScanned.textContent = nf(st.scanned);

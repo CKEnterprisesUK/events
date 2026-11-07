@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Jobs\SendTicketEmailJob;
 use App\Mail\SupportRequestReceivedMail;
+use App\Models\Company;
 use App\Models\Event;
 use App\Models\Order;
 use App\Models\SupportRequest;
@@ -48,6 +49,12 @@ class EventPageController extends Controller
      */
     private const LIMITED_THRESHOLD = 0.2;
 
+    /**
+     * Remaining-stock ratio at or below which the storefront shows
+     * "Nearly sold out". 0.05 = the final 5% of the type's capacity.
+     */
+    private const NEARLY_SOLD_OUT_THRESHOLD = 0.05;
+
     public function show(
         string $companySlug,
         Event $event,
@@ -70,7 +77,7 @@ class EventPageController extends Controller
         // (the same source the checkout total uses) so the displayed price and
         // the charged amount always agree. In Absorb mode there is no add-on, so
         // the display price is simply the ticket price.
-        $passOn = $company->fee_handling_mode === \App\Models\Company::FEE_MODE_PASS_ON;
+        $passOn = $company->fee_handling_mode === Company::FEE_MODE_PASS_ON;
 
         $ticketTypes = $event->ticketTypes()
             ->orderBy('id')
@@ -351,6 +358,9 @@ class EventPageController extends Controller
      * Coarse public availability signal derived from remaining stock, so the
      * storefront never exposes exact inventory counts to Customers:
      *   - `sold_out`  — nothing left;
+     *   - `nearly_sold_out` — at or below
+     *                   {@see self::NEARLY_SOLD_OUT_THRESHOLD} of the type's
+     *                   own capacity (capped types only);
      *   - `limited`   — at or below {@see self::LIMITED_THRESHOLD} of the
      *                   type's own capacity (capped types only);
      *   - `available` — otherwise, including shared-pool/unlimited types with
@@ -366,6 +376,10 @@ class EventPageController extends Controller
         // against; shared-pool / unlimited types are simply "available".
         if ($type->isCapped() && (int) $type->capacity > 0) {
             $ratio = $available / (int) $type->capacity;
+
+            if ($ratio <= self::NEARLY_SOLD_OUT_THRESHOLD) {
+                return 'nearly_sold_out';
+            }
 
             if ($ratio <= self::LIMITED_THRESHOLD) {
                 return 'limited';
