@@ -53,7 +53,7 @@ class EventSnapshotService
      *
      * @return array{
      *     doorsOpen: bool,
-     *     stats: array{scanned:int, sold:int, percent:float|null, checkedInOrders:int, confirmedOrders:int},
+     *     stats: array{scanned:int, sold:int, capacity:int|null, percent:float|null, checkedInOrders:int, confirmedOrders:int},
      *     byOperator: list<array{name:string, tickets:int, orders:int}>,
      *     recent: list<array{id:int, outcome:string, reference:?string, name:?string, operator:string, tickets:int, at:string, atLabel:string, breakdown:string, message:string}>,
      *     generatedAt: string
@@ -82,7 +82,7 @@ class EventSnapshotService
      *
      * @return array{
      *     doorsOpen: bool,
-     *     stats: array{scanned:int, sold:int, percent:float|null, checkedInOrders:int, confirmedOrders:int},
+     *     stats: array{scanned:int, sold:int, capacity:int|null, percent:float|null, checkedInOrders:int, confirmedOrders:int},
      *     byOperator: list<array{name:string, tickets:int, orders:int}>,
      *     recent: list<array{id:int, outcome:string, reference:?string, name:?string, operator:string, tickets:int, at:string, atLabel:string, breakdown:string, message:string}>,
      *     generatedAt: string
@@ -111,6 +111,8 @@ class EventSnapshotService
             'stats' => [
                 'scanned' => $scanned,
                 'sold' => $sold,
+                // Ceiling for sales (null = unlimited); drives "tickets left".
+                'capacity' => $event->sellThrough()['capacity'],
                 'percent' => $percent,
                 'checkedInOrders' => $attendance['checkedInOrders'],
                 'confirmedOrders' => $attendance['confirmedOrders'],
