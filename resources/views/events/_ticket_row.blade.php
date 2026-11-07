@@ -38,13 +38,17 @@
             @elseif ($type['sale_state'] === 'ended')
                 Sale ended
             @elseif ($type['sale_state'] === 'on_sale')
-                @if ($type['availability_status'] === 'limited')
+                @if ($type['availability_status'] === 'nearly_sold_out')
+                    On sale &middot; Nearly sold out
+                @elseif ($type['availability_status'] === 'limited')
                     On sale &middot; Limited availability
                 @else
                     On sale
                 @endif
             @else
-                @if ($type['availability_status'] === 'limited')
+                @if ($type['availability_status'] === 'nearly_sold_out')
+                    Nearly sold out
+                @elseif ($type['availability_status'] === 'limited')
                     Limited availability
                 @else
                     Available

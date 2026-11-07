@@ -215,6 +215,28 @@ class StorefrontAndEventPageTest extends TestCase
         $response->assertDontSee('10 remaining');
     }
 
+    public function test_event_page_shows_nearly_sold_out_when_five_percent_or_less_remains(): void
+    {
+        // 100 capacity, 96 sold => 4 remaining (4% <= 5% threshold).
+        $company = Company::factory()->create();
+        $event = Event::factory()->for($company)->published()->create();
+        TicketType::factory()->forEvent($event)->create([
+            'name' => 'Last Few',
+            'capacity' => 100,
+            'sold_count' => 96,
+            'reserved_count' => 0,
+            'sale_starts_at' => Carbon::now()->subDay(),
+            'sale_ends_at' => Carbon::now()->addDay(),
+        ]);
+
+        $response = $this->get("/{$company->slug}/{$event->id}");
+
+        $response->assertOk();
+        $response->assertSee('Nearly sold out');
+        $response->assertDontSee('Limited availability');
+        $response->assertDontSee('4 remaining');
+    }
+
     public function test_event_page_shows_sold_out_when_no_availability(): void
     {
         // Requirement 6.10 — zero remaining renders as sold out.
