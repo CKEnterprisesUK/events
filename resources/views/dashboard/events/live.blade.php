@@ -78,7 +78,7 @@
         /* ---- Top bar ---- */
         .topbar {
             flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between;
-            padding: .9rem 1.75rem; border-bottom: 1px solid var(--hair);
+            padding: 1.1rem 1.75rem; border-bottom: 1px solid var(--hair);
         }
         .topbar .mark { display: flex; align-items: center; gap: .85rem; min-width: 0; }
         .topbar .live-tag {
@@ -86,7 +86,7 @@
             color: #fff; background: var(--err); padding: .22rem .5rem; border-radius: 4px; white-space: nowrap;
         }
         .topbar .event-name {
-            font-weight: 600; font-size: 1.1rem; letter-spacing: -.01em;
+            font-weight: 800; font-size: clamp(1.4rem, 2.4vw, 2.25rem); letter-spacing: -.02em; line-height: 1.1;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .topbar .back {
@@ -114,6 +114,23 @@
         @keyframes conn-pulse { 50% { opacity: .25; } }
         @media (prefers-reduced-motion: reduce) { .conn--stale .dot { animation: none; } }
         .topbar .back svg { width: 16px; height: 16px; }
+        /* Healthy state shows only the green dot; text appears when something is wrong. */
+        .conn--ok { gap: 0; }
+        .conn--ok #conn-text { display: none; }
+        .tbtn {
+            display: inline-flex; align-items: center; gap: .45rem; cursor: pointer;
+            background: none; border: 1px solid var(--hair); border-radius: 6px; padding: .3rem .65rem;
+            color: var(--ink-dim); font: inherit; font-size: .8rem; font-weight: 600; white-space: nowrap;
+            transition: color .15s, border-color .15s;
+        }
+        .tbtn:hover { color: var(--ink); border-color: rgba(255,255,255,.3); }
+        .tbtn svg { width: 14px; height: 14px; }
+        .seg { display: inline-flex; border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; margin-top: .6rem; }
+        .seg button {
+            background: none; border: 0; cursor: pointer; font: inherit; font-size: .72rem; font-weight: 700;
+            letter-spacing: .08em; text-transform: uppercase; color: var(--ink-dim); padding: .3rem .6rem;
+        }
+        .seg button[aria-pressed="true"] { background: rgba(255,255,255,.14); color: var(--ink); }
 
         .body { flex: 1 1 auto; position: relative; min-height: 0; }
 
@@ -121,6 +138,10 @@
         .countdown {
             position: absolute; inset: 0; display: flex; flex-direction: column;
             align-items: center; justify-content: center; gap: 2rem; padding: 1.5rem;
+        }
+        .countdown .title {
+            margin: 0; text-align: center; font-weight: 900; letter-spacing: -.03em; line-height: 1.05;
+            font-size: min(6vw, 4.5rem); max-width: 90vw; color: var(--ink);
         }
         .countdown .eyebrow {
             font-size: 1rem; font-weight: 600; letter-spacing: .35em; text-transform: uppercase;
@@ -270,12 +291,16 @@
         <div class="right">
             {{-- Connection status, updated by poll(). role=status so a screen
                  reader announces state changes (not the per-second counter). --}}
-            <button type="button" class="conn" id="conn" disabled>
+            <button type="button" class="conn conn--ok" id="conn" disabled>
                 <span class="dot" aria-hidden="true"></span>
                 <span id="conn-text">Connecting…</span>
             </button>
             <span class="visually-hidden" id="conn-announce" role="status" aria-live="polite"
                   style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap"></span>
+            <button type="button" class="tbtn" id="fsBtn" aria-pressed="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+                <span id="fsText">Full screen</span>
+            </button>
             <a class="back" href="{{ $platformUrl }}">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
                 Return to platform
@@ -286,6 +311,7 @@
     <div class="body">
         {{-- Countdown phase --}}
         <section class="countdown" id="countdown" @if($snapshot['doorsOpen']) hidden @endif>
+            <h1 class="title">{{ $event->name }}</h1>
             <div class="eyebrow">Doors open in</div>
             <div class="clock" id="clock">
                 <div class="unit"><span class="num" data-cd="days">00</span><span class="cap">Days</span></div>
@@ -320,8 +346,12 @@
                             <span class="bar"><i id="statProgress" style="width: {{ $snapshot['stats']['percent'] ?? 0 }}%"></i></span>
                         </div>
                         <div class="figure">
-                            <span class="k">Total sold</span>
+                            <span class="k" id="soldLabel">Total sold</span>
                             <span class="v" id="statSold">{{ number_format($snapshot['stats']['sold']) }}</span>
+                            <div class="seg" role="group" aria-label="Ticket figure">
+                                <button type="button" id="modeSold" aria-pressed="true">Total sold</button>
+                                <button type="button" id="modeLeft" aria-pressed="false">Tickets left</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -412,10 +442,53 @@
         cd.secs.textContent = pad(s);
     }
 
+    // Secondary figure: 'sold' = total tickets sold, 'left' = sold - scanned.
+    var MODE_KEY = 'live.ticketFigureMode';
+    var figureMode = 'sold';
+    try { if (localStorage.getItem(MODE_KEY) === 'left') figureMode = 'left'; } catch (e) {}
+    var lastStats = null;
+    var elSoldLabel = document.getElementById('soldLabel');
+    var elModeSold = document.getElementById('modeSold');
+    var elModeLeft = document.getElementById('modeLeft');
+
+    function renderFigure() {
+        var left = figureMode === 'left';
+        elModeSold.setAttribute('aria-pressed', left ? 'false' : 'true');
+        elModeLeft.setAttribute('aria-pressed', left ? 'true' : 'false');
+        elSoldLabel.textContent = left ? 'Tickets left' : 'Total sold';
+        if (!lastStats) return;
+        var sold = lastStats.sold || 0;
+        elSold.textContent = nf(left ? Math.max(0, sold - (lastStats.scanned || 0)) : sold);
+    }
+    function setMode(m) {
+        figureMode = m;
+        try { localStorage.setItem(MODE_KEY, m); } catch (e) {}
+        renderFigure();
+    }
+    elModeSold.addEventListener('click', function () { setMode('sold'); });
+    elModeLeft.addEventListener('click', function () { setMode('left'); });
+
+    // Full screen toggle (Fullscreen API).
+    var elFs = document.getElementById('fsBtn');
+    var elFsText = document.getElementById('fsText');
+    if (!document.documentElement.requestFullscreen) {
+        elFs.hidden = true;
+    }
+    elFs.addEventListener('click', function () {
+        if (document.fullscreenElement) { document.exitFullscreen(); }
+        else { document.documentElement.requestFullscreen().catch(function () {}); }
+    });
+    document.addEventListener('fullscreenchange', function () {
+        var on = !!document.fullscreenElement;
+        elFs.setAttribute('aria-pressed', on ? 'true' : 'false');
+        elFsText.textContent = on ? 'Exit full screen' : 'Full screen';
+    });
+
     function renderStats(st) {
+        lastStats = st;
         elScanned.textContent = nf(st.scanned);
         elOrders.textContent = nf(st.checkedInOrders);
-        elSold.textContent = nf(st.sold);
+        renderFigure();
         elPercent.textContent = st.percent == null ? '—' : st.percent + '%';
         elProgress.style.width = (st.percent == null ? 0 : Math.min(100, st.percent)) + '%';
     }
@@ -511,7 +584,8 @@
     }
 
     function setConn(state, text) {
-        elConn.className = 'conn' + (state === 'ok' ? '' : ' conn--' + state);
+        elConn.className = 'conn conn--' + state;
+        elConn.setAttribute('aria-label', text);
         elConn.disabled = state !== 'down';
         elConnText.textContent = text;
         // Announce state changes only, not the ticking seconds.
@@ -536,7 +610,7 @@
         if (age > STALE_AFTER_MS) {
             setConn('stale', 'Reconnecting… last update ' + agoLabel(age));
         } else {
-            setConn('ok', 'Updated ' + agoLabel(age));
+            setConn('ok', 'Live updates connected');
         }
     }
 
@@ -572,6 +646,7 @@
             });
     }
 
+    renderFigure();
     @if ($snapshot['doorsOpen'])
         renderStats(@json($snapshot['stats']));
         renderOperators(@json($snapshot['byOperator']));
