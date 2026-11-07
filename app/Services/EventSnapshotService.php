@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Http\Controllers\Api\DashboardApiController;
 use App\Http\Controllers\EventLiveController;
 use App\Models\Event;
+use App\Models\Order;
 use App\Models\ScanEvent;
 use App\Models\Ticket;
 use Illuminate\Support\Collection;
@@ -53,7 +54,7 @@ class EventSnapshotService
      *
      * @return array{
      *     doorsOpen: bool,
-     *     stats: array{scanned:int, sold:int, capacity:int|null, percent:float|null, checkedInOrders:int, confirmedOrders:int},
+     *     stats: array{scanned:int, sold:int, capacity:int|null, percent:float|null, checkedInOrders:int, confirmedOrders:int, inCheckoutTickets:int, inCheckoutOrders:int},
      *     byOperator: list<array{name:string, tickets:int, orders:int}>,
      *     recent: list<array{id:int, outcome:string, reference:?string, name:?string, operator:string, tickets:int, at:string, atLabel:string, breakdown:string, message:string}>,
      *     generatedAt: string
@@ -82,7 +83,7 @@ class EventSnapshotService
      *
      * @return array{
      *     doorsOpen: bool,
-     *     stats: array{scanned:int, sold:int, capacity:int|null, percent:float|null, checkedInOrders:int, confirmedOrders:int},
+     *     stats: array{scanned:int, sold:int, capacity:int|null, percent:float|null, checkedInOrders:int, confirmedOrders:int, inCheckoutTickets:int, inCheckoutOrders:int},
      *     byOperator: list<array{name:string, tickets:int, orders:int}>,
      *     recent: list<array{id:int, outcome:string, reference:?string, name:?string, operator:string, tickets:int, at:string, atLabel:string, breakdown:string, message:string}>,
      *     generatedAt: string
@@ -101,6 +102,7 @@ class EventSnapshotService
         // tickets exist.
         $sold = $attendance['ticketsSold'];
         $scanned = $attendance['ticketsCheckedIn'];
+        $inCheckout = $this->inCheckout($event);
 
         // Scanned as a percentage of tickets sold (the headline dial). Null when
         // nothing has sold, so the view can show an em dash rather than 0%.
@@ -116,10 +118,39 @@ class EventSnapshotService
                 'percent' => $percent,
                 'checkedInOrders' => $attendance['checkedInOrders'],
                 'confirmedOrders' => $attendance['confirmedOrders'],
+                'inCheckoutTickets' => $inCheckout['tickets'],
+                'inCheckoutOrders' => $inCheckout['orders'],
             ],
             'byOperator' => $attendance['byStaff'],
             'recent' => $this->recentScans($event),
             'generatedAt' => now()->toIso8601String(),
+        ];
+    }
+
+    /**
+     * Tickets currently being bought: valid tickets on `reserved` Orders, i.e.
+     * seats held for a checkout that has not yet been paid, abandoned or swept.
+     * These are the same holds the storefront counts against availability
+     * (`reserved_count`), so they explain "sold out" while the confirmed sold
+     * figure still shows seats left. Not part of `sold`, which only counts
+     * confirmed Orders.
+     *
+     * @return array{tickets:int, orders:int}
+     */
+    private function inCheckout(Event $event): array
+    {
+        $row = DB::table('tickets')
+            ->join('orders', 'orders.id', '=', 'tickets.order_id')
+            ->where('orders.company_id', $event->company_id)
+            ->where('orders.event_id', $event->getKey())
+            ->where('orders.status', Order::STATUS_RESERVED)
+            ->where('tickets.status', Ticket::STATUS_VALID)
+            ->selectRaw('COUNT(*) AS tickets, COUNT(DISTINCT orders.id) AS orders')
+            ->first();
+
+        return [
+            'tickets' => (int) ($row->tickets ?? 0),
+            'orders' => (int) ($row->orders ?? 0),
         ];
     }
 

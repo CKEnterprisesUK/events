@@ -197,6 +197,8 @@
         }
         .figure .v { font-weight: 800; font-variant-numeric: tabular-nums; font-size: clamp(2.25rem, 4.5vw, 4rem); line-height: 1; letter-spacing: -.02em; }
         .figure--pct .v { color: var(--accent); }
+        .figure--checkout .v { color: var(--dup); }
+        .figure--checkout .sub { display: block; margin-top: .3rem; color: var(--ink-dim); font-size: .95rem; font-weight: 500; }
         .figure--pre { display: flex; flex-direction: column; align-items: center; text-align: center; }
         .figure--pre .v { font-size: clamp(2.5rem, 5vw, 4.5rem); }
         .figure .bar { height: 7px; width: clamp(150px, 16vw, 260px); background: rgba(255,255,255,.1); margin-top: .6rem; border-radius: 4px; overflow: hidden; }
@@ -363,6 +365,14 @@
                                 <button type="button" data-mode="left" aria-pressed="false">Tickets left</button>
                             </div>
                         </div>
+                        {{-- Seats held by checkouts still in progress: not yet
+                             paid, so not in "Total sold", but already counted
+                             against availability on the storefront. --}}
+                        <div class="figure figure--checkout">
+                            <span class="k">In checkout</span>
+                            <span class="v" id="statInCheckout">{{ number_format($snapshot['stats']['inCheckoutTickets']) }}</span>
+                            <span class="sub" id="statInCheckoutSub">{{ number_format($snapshot['stats']['inCheckoutOrders']) }} {{ $snapshot['stats']['inCheckoutOrders'] === 1 ? 'order' : 'orders' }} in progress</span>
+                        </div>
                     </div>
                 </div>
 
@@ -415,6 +425,8 @@
     var elOrders = document.getElementById('statOrders');
     var elPercent = document.getElementById('statPercent');
     var elProgress = document.getElementById('statProgress');
+    var elInCheckout = document.getElementById('statInCheckout');
+    var elInCheckoutSub = document.getElementById('statInCheckoutSub');
     var elBars = document.getElementById('bars');
     var elBarsEmpty = document.getElementById('barsEmpty');
     var elFeed = document.getElementById('feed');
@@ -523,6 +535,8 @@
         renderFigure();
         elPercent.textContent = st.percent == null ? '—' : st.percent + '%';
         elProgress.style.width = (st.percent == null ? 0 : Math.min(100, st.percent)) + '%';
+        elInCheckout.textContent = nf(st.inCheckoutTickets);
+        elInCheckoutSub.textContent = nf(st.inCheckoutOrders) + (st.inCheckoutOrders === 1 ? ' order' : ' orders') + ' in progress';
     }
 
     // Operator chart: bars by ORDERS scanned, ranked top-scanner-first, each
