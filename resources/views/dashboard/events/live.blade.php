@@ -197,6 +197,8 @@
         }
         .figure .v { font-weight: 800; font-variant-numeric: tabular-nums; font-size: clamp(2.25rem, 4.5vw, 4rem); line-height: 1; letter-spacing: -.02em; }
         .figure--pct .v { color: var(--accent); }
+        .figure--pre { display: flex; flex-direction: column; align-items: center; text-align: center; }
+        .figure--pre .v { font-size: clamp(2.5rem, 5vw, 4.5rem); }
         .figure .bar { height: 7px; width: clamp(150px, 16vw, 260px); background: rgba(255,255,255,.1); margin-top: .6rem; border-radius: 4px; overflow: hidden; }
         .figure .bar > i { display: block; height: 100%; background: var(--accent); width: 0; border-radius: 4px; transition: width .7s cubic-bezier(.2,.7,.2,1); }
 
@@ -322,6 +324,14 @@
                 <span class="sep">:</span>
                 <div class="unit"><span class="num" data-cd="secs">00</span><span class="cap">Seconds</span></div>
             </div>
+            <div class="figure figure--pre">
+                <span class="k" data-fig-label>Total sold</span>
+                <span class="v" data-fig-value>{{ number_format($snapshot['stats']['sold']) }}</span>
+                <div class="seg" role="group" aria-label="Ticket figure">
+                    <button type="button" data-mode="sold" aria-pressed="true">Total sold</button>
+                    <button type="button" data-mode="left" aria-pressed="false">Tickets left</button>
+                </div>
+            </div>
             @if ($doorsAt !== null)
                 <div class="when">{{ $doorsAt->format('l j F Y · H:i') }}</div>
             @else
@@ -346,11 +356,11 @@
                             <span class="bar"><i id="statProgress" style="width: {{ $snapshot['stats']['percent'] ?? 0 }}%"></i></span>
                         </div>
                         <div class="figure">
-                            <span class="k" id="soldLabel">Total sold</span>
-                            <span class="v" id="statSold">{{ number_format($snapshot['stats']['sold']) }}</span>
+                            <span class="k" data-fig-label>Total sold</span>
+                            <span class="v" data-fig-value>{{ number_format($snapshot['stats']['sold']) }}</span>
                             <div class="seg" role="group" aria-label="Ticket figure">
-                                <button type="button" id="modeSold" aria-pressed="true">Total sold</button>
-                                <button type="button" id="modeLeft" aria-pressed="false">Tickets left</button>
+                                <button type="button" data-mode="sold" aria-pressed="true">Total sold</button>
+                                <button type="button" data-mode="left" aria-pressed="false">Tickets left</button>
                             </div>
                         </div>
                     </div>
@@ -405,7 +415,6 @@
     var elOrders = document.getElementById('statOrders');
     var elPercent = document.getElementById('statPercent');
     var elProgress = document.getElementById('statProgress');
-    var elSold = document.getElementById('statSold');
     var elBars = document.getElementById('bars');
     var elBarsEmpty = document.getElementById('barsEmpty');
     var elFeed = document.getElementById('feed');
@@ -447,26 +456,33 @@
     var figureMode = 'sold';
     try { if (localStorage.getItem(MODE_KEY) === 'left') figureMode = 'left'; } catch (e) {}
     var lastStats = null;
-    var elSoldLabel = document.getElementById('soldLabel');
-    var elModeSold = document.getElementById('modeSold');
-    var elModeLeft = document.getElementById('modeLeft');
+    var elFigLabels = document.querySelectorAll('[data-fig-label]');
+    var elFigValues = document.querySelectorAll('[data-fig-value]');
+    var elModeBtns = document.querySelectorAll('.seg button');
 
+    // "Tickets left" = remaining capacity (capacity - sold); "Unlimited" when
+    // the event has no ceiling.
     function renderFigure() {
         var left = figureMode === 'left';
-        elModeSold.setAttribute('aria-pressed', left ? 'false' : 'true');
-        elModeLeft.setAttribute('aria-pressed', left ? 'true' : 'false');
-        elSoldLabel.textContent = left ? 'Tickets left' : 'Total sold';
+        Array.prototype.forEach.call(elModeBtns, function (b) {
+            b.setAttribute('aria-pressed', b.dataset.mode === figureMode ? 'true' : 'false');
+        });
+        Array.prototype.forEach.call(elFigLabels, function (el) { el.textContent = left ? 'Tickets left' : 'Total sold'; });
         if (!lastStats) return;
-        var sold = lastStats.sold || 0;
-        elSold.textContent = nf(left ? Math.max(0, sold - (lastStats.scanned || 0)) : sold);
+        var sold = lastStats.sold || 0, text;
+        if (!left) text = nf(sold);
+        else if (lastStats.capacity == null) text = 'Unlimited';
+        else text = nf(Math.max(0, lastStats.capacity - sold));
+        Array.prototype.forEach.call(elFigValues, function (el) { el.textContent = text; });
     }
     function setMode(m) {
         figureMode = m;
         try { localStorage.setItem(MODE_KEY, m); } catch (e) {}
         renderFigure();
     }
-    elModeSold.addEventListener('click', function () { setMode('sold'); });
-    elModeLeft.addEventListener('click', function () { setMode('left'); });
+    Array.prototype.forEach.call(elModeBtns, function (b) {
+        b.addEventListener('click', function () { setMode(b.dataset.mode); });
+    });
 
     // Full screen toggle (Fullscreen API).
     var elFs = document.getElementById('fsBtn');
@@ -555,8 +571,8 @@
 
     function apply(data) {
         if (data.doorsOpen !== doorsOpen) showPhase(data.doorsOpen);
+        renderStats(data.stats);
         if (data.doorsOpen) {
-            renderStats(data.stats);
             renderOperators(data.byOperator);
             renderFeed(data.recent);
         }
@@ -646,9 +662,8 @@
             });
     }
 
-    renderFigure();
+    renderStats(@json($snapshot['stats']));
     @if ($snapshot['doorsOpen'])
-        renderStats(@json($snapshot['stats']));
         renderOperators(@json($snapshot['byOperator']));
         renderFeed(@json($snapshot['recent']));
     @endif
