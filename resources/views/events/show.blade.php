@@ -258,7 +258,8 @@
                     @else
                         <form method="POST"
                               action="{{ route('event.checkout.show', ['companySlug' => $company->slug, 'event' => $event->id]) }}"
-                              class="ticket-select-form" id="ticket-select-form">
+                              class="ticket-select-form" id="ticket-select-form"
+                              @if (($eventRemaining ?? null) !== null) data-pool-max="{{ $eventRemaining }}" @endif>
                             @csrf
 
                             <ul class="ticket-type-list">
@@ -472,6 +473,20 @@
         var summaryFee = form.querySelector('[data-summary-fee]');
         var summaryTotal = form.querySelector('[data-summary-total]');
         var submit = form.querySelector('[data-checkout-submit]');
+        // Combined ceiling across all ticket types (event-wide remaining).
+        var poolMax = parseInt(form.getAttribute('data-pool-max'), 10);
+        function totalExcluding(except) {
+            var t = 0;
+            form.querySelectorAll('[data-qty-input]').forEach(function (i) {
+                if (i !== except) { t += parseInt(i.value, 10) || 0; }
+            });
+            return t;
+        }
+        function clampToPool(input) {
+            if (isNaN(poolMax)) return;
+            var room = Math.max(0, poolMax - totalExcluding(input));
+            if ((parseInt(input.value, 10) || 0) > room) { input.value = room; }
+        }
         var symbol = @json($symbol);
 
         // Fee context mirrors the server's FeeCalculationService so the total
@@ -531,13 +546,14 @@
                 if (next < 0) next = 0;
                 if (!isNaN(max) && next > max) next = max;
                 input.value = next;
+                clampToPool(input);
                 recalc();
             });
         });
 
         form.querySelectorAll('[data-qty-input]').forEach(function (input) {
-            input.addEventListener('input', recalc);
-            input.addEventListener('change', recalc);
+            input.addEventListener('input', function () { clampToPool(input); recalc(); });
+            input.addEventListener('change', function () { clampToPool(input); recalc(); });
         });
 
         recalc();
