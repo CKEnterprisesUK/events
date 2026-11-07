@@ -79,11 +79,18 @@ class EventPageController extends Controller
         // the display price is simply the ticket price.
         $passOn = $company->fee_handling_mode === Company::FEE_MODE_PASS_ON;
 
+        // Event-wide remaining (null = no overall ceiling). A buyer can never
+        // take more than this across all ticket types combined, so it bounds
+        // every row as well as the combined selection.
+        $eventRemaining = $event->overallRemaining();
+        $eventRemaining = $eventRemaining === null ? null : max(0, $eventRemaining);
+
         $ticketTypes = $event->ticketTypes()
             ->orderBy('id')
             ->get()
-            ->map(function (TicketType $type) use ($now, $fees, $company, $passOn): array {
-                $available = max(0, $type->availableQuantity());
+            ->map(function (TicketType $type) use ($now, $fees, $company, $passOn, $event, $eventRemaining): array {
+                $available = $type->availabilityFor($eventRemaining);
+                $available = $available === null ? PHP_INT_MAX : max(0, $available);
 
                 // Mandatory buyer fee per ticket (0 for free tickets or Absorb).
                 $feeEachMinor = ($passOn && ! $type->isFree())
@@ -104,7 +111,7 @@ class EventPageController extends Controller
                     // can't request more than remain — never rendered as a count.
                     'available' => $available,
                     'sold_out' => $available <= 0,
-                    'availability_status' => $this->availabilityStatus($type, $available),
+                    'availability_status' => $this->availabilityStatus($type, $available, $event, $eventRemaining),
                     'sale_state' => $this->saleState($type, $now),
                     'on_sale' => $type->isOnSaleAt($now),
                     // Human-readable "on sale" date for a not-yet-open type with
@@ -121,6 +128,7 @@ class EventPageController extends Controller
             'company' => $company,
             'event' => $event,
             'ticketTypes' => $ticketTypes,
+            'eventRemaining' => $eventRemaining,
             'branding' => $branding->forEvent($event),
             // Fee context so the checkout summary can mirror the server's
             // Pass_On total (subtotal + booking fee) before the customer is
@@ -366,16 +374,29 @@ class EventPageController extends Controller
      *   - `available` — otherwise, including shared-pool/unlimited types with
      *                   no finite per-type ceiling.
      */
-    private function availabilityStatus(TicketType $type, int $available): string
+    private function availabilityStatus(TicketType $type, int $available, Event $event, ?int $eventRemaining): string
     {
         if ($available <= 0) {
             return 'sold_out';
         }
 
-        // Only capped types have a finite ceiling to compute a percentage
-        // against; shared-pool / unlimited types are simply "available".
+        // Compare remaining stock against each finite ceiling that applies:
+        // the type's own capacity (capped types) and the event's overall
+        // capacity (any type, once the event has a ceiling). The tightest
+        // ratio decides the label. Unlimited, ceiling-free types stay
+        // "available".
+        $ratios = [];
+
         if ($type->isCapped() && (int) $type->capacity > 0) {
-            $ratio = $available / (int) $type->capacity;
+            $ratios[] = $available / (int) $type->capacity;
+        }
+
+        if ($eventRemaining !== null && (int) $event->capacity > 0 && ! $type->isUnlimited()) {
+            $ratios[] = $eventRemaining / (int) $event->capacity;
+        }
+
+        if ($ratios !== []) {
+            $ratio = min($ratios);
 
             if ($ratio <= self::NEARLY_SOLD_OUT_THRESHOLD) {
                 return 'nearly_sold_out';
