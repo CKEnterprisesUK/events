@@ -18,4 +18,21 @@ return [
 
     'hmac_secret' => env('QR_HMAC_SECRET') ?: env('APP_KEY'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Accept QR codes whose token no longer verifies
+    |--------------------------------------------------------------------------
+    |
+    | When true, a scanned `reference.token` whose HMAC does not verify (e.g.
+    | tickets emailed before the secret changed) falls back to looking the
+    | Order up by its reference — exactly like a manually typed reference —
+    | and still runs every tenant / event / confirmed / already-scanned check.
+    | Only a reference that matches no Order stays "invalid". Each fallback
+    | check-in is logged as a warning. Set to false to restore strict HMAC
+    | verification once all live tickets carry current-secret tokens.
+    |
+    */
+
+    'accept_unverified_tokens' => (bool) env('QR_ACCEPT_UNVERIFIED_TOKENS', true),
+
 ];
