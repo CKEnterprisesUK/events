@@ -121,6 +121,33 @@ class EventSnapshotServiceTest extends TestCase
         $this->assertSame([], $live['byStaff']);
     }
 
+    // ---- In checkout --------------------------------------------------------
+
+    public function test_snapshot_reports_tickets_in_checkout_separately_from_sold(): void
+    {
+        config(['api.snapshot_ttl' => 0]);
+
+        $this->order(Order::STATUS_PAID, valid: 3);
+        // Two live checkouts holding 2 + 1 seats; voided tickets never count.
+        $this->order(Order::STATUS_RESERVED, valid: 2, voided: 4);
+        $this->order(Order::STATUS_RESERVED, valid: 1);
+        // Finished or dead orders are not "in progress".
+        $this->order(Order::STATUS_EXPIRED, valid: 0, voided: 5);
+        $this->order(Order::STATUS_CANCELLED, valid: 0, voided: 2);
+
+        // Another Company's checkout must not leak in.
+        $other = Company::factory()->create();
+        $otherEvent = Event::factory()->published()->for($other)->create();
+        $otherOrder = Order::factory()->forEvent($otherEvent)->create(['status' => Order::STATUS_RESERVED]);
+        Ticket::factory()->count(7)->forOrder($otherOrder)->forTicketType(TicketType::factory()->forEvent($otherEvent)->create())->create();
+
+        $stats = app(EventSnapshotService::class)->snapshot($this->event)['stats'];
+
+        $this->assertSame(3, $stats['inCheckoutTickets']);
+        $this->assertSame(2, $stats['inCheckoutOrders']);
+        $this->assertSame(3, $stats['sold'], 'In-checkout seats are not counted as sold.');
+    }
+
     // ---- Snapshot cache -----------------------------------------------------
 
     public function test_snapshot_is_shared_between_viewers_within_the_cache_window(): void
