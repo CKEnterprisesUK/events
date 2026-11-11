@@ -49,7 +49,7 @@ use Illuminate\Support\Facades\Hash;
 class AppReviewDemoSeeder extends Seeder
 {
     /** One password for every demo account, printed at the end. */
-    private const DEMO_PASSWORD = 'AppReview2026!';
+    private const DEMO_PASSWORD = 'Apple2026@';
 
     private const COMPANY_SLUG = 'app-review-demo';
 
@@ -76,11 +76,10 @@ class AppReviewDemoSeeder extends Seeder
             $ticketTypes = TicketType::withoutGlobalScopes()->where('company_id', $company->id)->delete();
             $events = Event::withoutGlobalScopes()->where('company_id', $company->id)->delete();
 
-            // Users: detach the membership pivot, then delete the demo users
-            // (matched by their demo emails so we never touch a real account).
-            $users = User::where('company_id', $company->id)
-                ->where('email', 'like', '%@app-review-demo.test')
-                ->get();
+            // Users: detach the membership pivot, then delete the demo users.
+            // Scoped to the demo Company's own members, so we never touch a
+            // real account in another tenant.
+            $users = User::where('company_id', $company->id)->get();
             foreach ($users as $user) {
                 $user->companies()->detach($company->id);
             }
@@ -147,10 +146,30 @@ class AppReviewDemoSeeder extends Seeder
     private function users(Company $company): array
     {
         $defs = [
-            'owner' => ['email' => 'owner@app-review-demo.test', 'name' => 'Demo Owner', 'role' => User::ROLE_OWNER],
-            'box_office' => ['email' => 'boxoffice@app-review-demo.test', 'name' => 'Demo Box Office', 'role' => User::ROLE_BOX_OFFICE],
-            'scanner' => ['email' => 'scanner@app-review-demo.test', 'name' => 'Demo Scanner', 'role' => User::ROLE_SCANNER],
+            'owner' => ['email' => 'owner@app.test', 'name' => 'Demo Owner', 'role' => User::ROLE_OWNER],
+            'box_office' => ['email' => 'boxoffice@app.test', 'name' => 'Demo Box Office', 'role' => User::ROLE_BOX_OFFICE],
+            'scanner' => ['email' => 'scanner@app.test', 'name' => 'Demo Scanner', 'role' => User::ROLE_SCANNER],
         ];
+
+        // Never take over a real account: refuse if any demo email already
+        // belongs to a user outside the demo Company.
+        $clash = User::whereIn('email', array_column($defs, 'email'))
+            ->where(fn ($q) => $q->whereNull('company_id')->orWhere('company_id', '!=', $company->id))
+            ->exists();
+
+        if ($clash) {
+            throw new \RuntimeException('A demo email already belongs to a user outside the App Review demo company; refusing to overwrite it.');
+        }
+
+        // Remove stale demo members from earlier runs (e.g. the old
+        // @app-review-demo.test logins) so only the current logins remain.
+        $stale = User::where('company_id', $company->id)
+            ->whereNotIn('email', array_column($defs, 'email'))
+            ->get();
+        foreach ($stale as $old) {
+            $old->companies()->detach($company->id);
+            $old->delete();
+        }
 
         $users = [];
 

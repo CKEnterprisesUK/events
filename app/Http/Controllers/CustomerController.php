@@ -14,6 +14,7 @@ use App\Services\TenantContext;
 use App\Support\Csv;
 use App\Support\PlatformBrand;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -55,6 +56,35 @@ class CustomerController extends Controller
     {
         Gate::authorize(RoleAuthorization::ACTION_MANAGE_ORDERS);
 
+        [$query, $search, $eventId, $marketing] = $this->filteredRoster($request);
+
+        $customers = $query->paginate(25)->withQueryString();
+
+        // The event dropdown: the Company's events, newest first. Tenant-scoped
+        // by the global company scope, so only the acting Company's events show.
+        $events = Event::query()
+            ->orderByDesc('starts_at')
+            ->orderByDesc('id')
+            ->get(['id', 'name']);
+
+        return view('dashboard.customers.index', [
+            'customers' => $customers,
+            'search' => $search,
+            'events' => $events,
+            'eventId' => $eventId,
+            'marketing' => $marketing,
+        ]);
+    }
+
+    /**
+     * The roster query with the search / event / marketing filters from the
+     * request applied. Shared by the on-screen list and the CSV export so the
+     * file always matches what is filtered on screen.
+     *
+     * @return array{0: Builder<Order>, 1: string, 2: int|null, 3: string}
+     */
+    private function filteredRoster(Request $request): array
+    {
         $search = trim((string) $request->query('q', ''));
 
         // Optional event filter: only customers who ordered for this event. The
@@ -84,7 +114,7 @@ class CustomerController extends Controller
             .'order by oc.captured_at desc, oc.id desc limit 1'
             .') as marketing_opt_in';
 
-        $customers = Order::query()
+        $query = Order::query()
             ->selectRaw('customer_email')
             ->selectRaw('MAX(customer_name) as customer_name')
             ->selectRaw('COUNT(*) as orders_count')
@@ -126,24 +156,9 @@ class CustomerController extends Controller
                 }
             })
             ->groupBy('customer_email', 'company_id')
-            ->orderByDesc('last_order_at')
-            ->paginate(25)
-            ->withQueryString();
+            ->orderByDesc('last_order_at');
 
-        // The event dropdown: the Company's events, newest first. Tenant-scoped
-        // by the global company scope, so only the acting Company's events show.
-        $events = Event::query()
-            ->orderByDesc('starts_at')
-            ->orderByDesc('id')
-            ->get(['id', 'name']);
-
-        return view('dashboard.customers.index', [
-            'customers' => $customers,
-            'search' => $search,
-            'events' => $events,
-            'eventId' => $eventId,
-            'marketing' => $marketing,
-        ]);
+        return [$query, $search, $eventId, $marketing];
     }
 
     /**
@@ -239,29 +254,25 @@ class CustomerController extends Controller
      * and how many Customers it covered — never the exported names/emails
      * themselves — keeping the audit trail free of the very PII being exported.
      */
-    public function exportAll(): StreamedResponse
+    public function exportAll(Request $request): StreamedResponse
     {
         Gate::authorize(RoleAuthorization::ACTION_MANAGE_GDPR);
 
-        // Same aggregate shape as the roster (index), unpaginated, so the file
+        // Same filtered query as the roster (index), unpaginated, so the file
         // matches exactly what the Company sees on screen.
-        $customers = Order::query()
-            ->selectRaw('customer_email')
-            ->selectRaw('MAX(customer_name) as customer_name')
-            ->selectRaw('COUNT(*) as orders_count')
-            ->selectRaw('MAX(created_at) as last_order_at')
-            ->selectRaw(
-                'SUM(CASE WHEN status IN (?, ?) THEN order_total_minor ELSE 0 END) as spend_minor',
-                [Order::STATUS_PAID, Order::STATUS_FREE_CONFIRMED],
-            )
-            ->groupBy('customer_email')
-            ->orderByDesc('last_order_at')
-            ->get();
+        [$query, $search, $eventId, $marketing] = $this->filteredRoster($request);
+        $customers = $query->get();
+
+        $isFiltered = $search !== '' || $eventId !== null || $marketing !== '';
 
         $this->audit->record(
             action: AuditLog::GDPR_CUSTOMERS_EXPORTED,
-            summary: 'Exported the full customer list ('.$customers->count().' customer(s))',
-            context: ['customers_exported' => $customers->count()],
+            summary: ($isFiltered ? 'Exported a filtered customer list (' : 'Exported the full customer list (')
+                .$customers->count().' customer(s))',
+            context: [
+                'customers_exported' => $customers->count(),
+                'filtered' => $isFiltered,
+            ],
         );
 
         $filename = 'customers-'.now()->format('Y-m-d').'.csv';
