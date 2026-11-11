@@ -52,13 +52,14 @@
         $symbol = $symbols[$currency] ?? '';
     @endphp
 
+    @php $isFiltered = $search !== '' || $eventId !== null || $marketing !== ''; @endphp
     @php $canExportAll = \Illuminate\Support\Facades\Gate::allows(\App\Services\RoleAuthorization::ACTION_MANAGE_GDPR); @endphp
 
     <div class="page-head">
         <h1>Customers</h1>
         @if ($canExportAll && ! $customers->isEmpty())
             <button type="button" class="btn btn-outline" data-open-export>
-                Export all (CSV)
+                {{ $isFiltered ? 'Export filtered (CSV)' : 'Export all (CSV)' }}
             </button>
         @endif
     </div>
@@ -81,7 +82,7 @@
             <div class="export-modal__backdrop" data-close-export></div>
             <div class="export-modal__panel" role="dialog" aria-modal="true" aria-labelledby="export-modal-title">
                 <div class="export-modal__head">
-                    <h2 id="export-modal-title">Export all customers</h2>
+                    <h2 id="export-modal-title">{{ $isFiltered ? 'Export filtered customers' : 'Export all customers' }}</h2>
                     <button type="button" class="export-modal__close" data-close-export aria-label="Close">&times;</button>
                 </div>
 
@@ -107,7 +108,7 @@
 
                 <div class="export-modal__actions">
                     <button type="button" class="btn btn-outline" data-close-export>Cancel</button>
-                    <a class="btn" href="{{ route('dashboard.customers.export-all') }}" download
+                    <a class="btn" href="{{ route('dashboard.customers.export-all', array_filter(['q' => $search, 'event' => $eventId, 'marketing' => $marketing], fn ($v) => $v !== '' && $v !== null)) }}" download
                        data-export-download aria-disabled="true" tabindex="-1">
                         Download CSV
                     </a>

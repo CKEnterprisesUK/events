@@ -5,6 +5,7 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Jobs\ReconcilePaidOrdersJob;
 use App\Services\PendingMigrations;
+use Database\Seeders\AppReviewDemoSeeder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -252,7 +253,7 @@ class OpsController extends Controller
     {
         try {
             Artisan::call('db:seed', [
-                '--class' => \Database\Seeders\AppReviewDemoSeeder::class,
+                '--class' => AppReviewDemoSeeder::class,
                 '--force' => true,
             ]);
         } catch (\Throwable $e) {
@@ -267,14 +268,14 @@ class OpsController extends Controller
      *
      * The counterpart to {@see seedAppReviewDemo()}. It deletes ONLY rows scoped
      * to the demo Company (matched by its fixed slug) and the demo users
-     * (matched by their `@app-review-demo.test` emails), so real tenants are
+     * (the demo company's own members), so real tenants are
      * never touched. Idempotent — a no-op when the demo tenant is absent. Run
      * this once the app is approved to clean up.
      */
     public function teardownAppReviewDemo(): RedirectResponse
     {
         try {
-            $summary = \Database\Seeders\AppReviewDemoSeeder::teardown();
+            $summary = AppReviewDemoSeeder::teardown();
         } catch (\Throwable $e) {
             return back()->with('ops_error', 'App Review demo teardown failed: '.$e->getMessage());
         }
